@@ -8,11 +8,11 @@ foundation API. Public drift is still baseline and audit tracked, but framework
 authors should expect source changes while managed GPU behavior is proven across
 compositors.
 
-The preview product does not expose raw Wayland, GBM, EGL, DRM, dmabuf,
-syncobj, renderer, swapchain, scene graph, widget, or layout handles; raw GPU
-handles stay internal. External-buffer descriptor import is package-internal
-maintainer preview plumbing until a renderer-neutral public buffer boundary is
-designed. Runtime results report active, fallback, failed, unavailable,
+The preview product does not expose raw Wayland, GBM, EGL, DRM, syncobj,
+renderer, swapchain, scene graph, widget, or layout handles; raw GPU handles
+stay internal. External-buffer submission accepts a renderer-neutral descriptor
+and keeps Wayland import, commit, release, and late-release cleanup inside
+WaylandClientKit. Runtime results report active, fallback, failed, unavailable,
 advertised, and configured states through public value types.
 
 ## Topics
@@ -51,6 +51,11 @@ advertised, and configured states through public value types.
 - ``WaylandGraphicsClearFrame``
 - ``WaylandGraphicsFrameResult``
 - ``WaylandGraphicsXRGBColor``
+- ``WaylandGraphicsExternalBufferDescriptor``
+- ``WaylandGraphicsExternalBufferPlane``
+- ``WaylandGraphicsExternalBufferPlanes``
+- ``WaylandGraphicsDRMFormat``
+- ``WaylandGraphicsDRMFormatModifier``
 - ``WaylandGraphicsFrameMetadata``
 - ``WaylandGraphicsDamageRegion``
 - ``WaylandGraphicsAlphaModifier``

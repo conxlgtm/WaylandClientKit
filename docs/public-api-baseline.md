@@ -2770,6 +2770,28 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L271: `    public let blue: UInt8`
 - L273: `    public static let black = WaylandGraphicsXRGBColor(red: 0, green: 0, blue: 0)`
 - L275: `    public init(red colorRed: UInt8, green colorGreen: UInt8, blue colorBlue: UInt8) {`
+- L295: `public struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {`
+- L296: `    public let rawValue: UInt32`
+- L298: `    public init(rawValue formatRawValue: UInt32) throws {`
+- L307: `public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {`
+- L308: `    public let rawValue: UInt64`
+- L310: `    public init(rawValue modifierRawValue: UInt64) {`
+- L315: `public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {`
+- L316: `    public var fileDescriptor: OwnedFileDescriptor`
+- L317: `    public let offset: UInt32`
+- L318: `    public let stride: UInt32`
+- L319: `    public let planeIndex: Int`
+- L321: `    public init(`
+- L347: `public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {`
+- L348: `    case one(WaylandGraphicsExternalBufferPlane)`
+- L349: `    case two(WaylandGraphicsExternalBufferPlane, WaylandGraphicsExternalBufferPlane)`
+- L350: `    case three(`
+- L355: `    case four(`
+- L416: `public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {`
+- L417: `    public let size: PositivePixelSize`
+- L418: `    public let format: WaylandGraphicsDRMFormat`
+- L419: `    public let modifier: WaylandGraphicsDRMFormatModifier`
+- L422: `    public init(`
 - L661: `public struct WaylandGraphicsClearFrame: Equatable, Sendable {`
 - L662: `    public let color: WaylandGraphicsXRGBColor`
 - L663: `    public let metadata: WaylandGraphicsFrameMetadata`
@@ -2825,6 +2847,7 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L829: `    public let runtimePath: WaylandGraphicsRuntimePath`
 - L847: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
 - L854: `    public func submit(`
+- L866: `    public func submitExternalBuffer(`
 - L880: `    public func submitSoftware(`
 - L892: `    public func submitSoftware(`
 - L931: `    public func cancel() async {`

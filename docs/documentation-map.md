@@ -74,7 +74,7 @@ Canonical examples by feature:
 | Deferred desktop/output plumbing | [ForeignToplevelListSmoke](../Examples/ForeignToplevelListSmoke/main.swift), [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
 | Surface regions and damage | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift), [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
 | Subsurfaces | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
-| Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift), [GraphicsPreviewExternalBufferMaintainerSmoke](../Examples/GraphicsPreviewExternalBufferMaintainerSmoke/main.swift), [GraphicsPreviewColorMetadataSmoke](../Examples/GraphicsPreviewColorMetadataSmoke/main.swift), [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
+| Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift), [GraphicsPreviewExternalBufferSmoke](../Examples/GraphicsPreviewExternalBufferSmoke/main.swift), [GraphicsPreviewColorMetadataSmoke](../Examples/GraphicsPreviewColorMetadataSmoke/main.swift), [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 
 ## Canonical Concept Documents
 

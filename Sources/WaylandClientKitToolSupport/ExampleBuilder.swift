@@ -14,7 +14,7 @@ public struct ExampleBuilder {
         "FrameworkHostSmoke",
         "GPUPreviewSmokeClient",
         "GraphicsPreviewColorMetadataSmoke",
-        "GraphicsPreviewExternalBufferMaintainerSmoke",
+        "GraphicsPreviewExternalBufferSmoke",
         "GraphicsPreviewManagedGPUClear",
         "IdleInhibitSmoke",
         "KeyboardShortcutsInhibitSmoke",
@@ -74,7 +74,7 @@ public struct ExampleBuilder {
         // with package-internal GBM/EGL helpers; user-facing examples must stay
         // on public products.
         let allowlistedInternalImportTargets: Set<String> = [
-            "GraphicsPreviewExternalBufferMaintainerSmoke"
+            "GraphicsPreviewExternalBufferSmoke"
         ]
         let forbiddenModules = [
             "WaylandGraphicsCore",
