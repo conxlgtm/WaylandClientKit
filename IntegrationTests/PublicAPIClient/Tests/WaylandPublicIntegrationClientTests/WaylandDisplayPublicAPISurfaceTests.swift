@@ -151,6 +151,65 @@ struct WaylandDisplayPublicAPISurfaceTests {
     }
 
     @Test
+    func previewProtocolTypesAndDisplayMethodsCompileForExternalClients() throws {
+        let foreignSnapshot = ForeignToplevelSnapshot(
+            id: ForeignToplevelID(rawValue: 1),
+            protocolIdentifier: "foreign-1",
+            title: nil,
+            appID: nil
+        )
+        let foreignList = ForeignToplevelListSnapshot(
+            toplevels: [foreignSnapshot],
+            events: [.added(foreignSnapshot), .removed(foreignSnapshot.id)]
+        )
+        let outputMode = OutputManagementMode(
+            id: OutputManagementModeID(rawValue: 1),
+            size: try PositivePixelSize(width: 1_920, height: 1_080),
+            refresh: .milliHertz(try PositiveInt32(60_000)),
+            isPreferred: true,
+            isCurrent: true
+        )
+        let outputHead = OutputManagementHead(
+            id: OutputManagementHeadID(rawValue: 1),
+            name: "HDMI-A-1",
+            description: "Display",
+            modes: [outputMode],
+            enabled: true,
+            position: .zero,
+            scale: .one,
+            transform: .normal,
+            make: nil,
+            model: nil,
+            serialNumber: nil
+        )
+        let outputSnapshot = OutputManagementSnapshot(heads: [outputHead], serial: 7)
+        let proposal = OutputConfigurationProposal(current: outputSnapshot)
+        let sessionID = try CompositorSessionID("session-1")
+        let sessionSnapshot = CompositorSessionEventSnapshot(
+            events: [.created(sessionID), .restored, .replaced]
+        )
+
+        #expect(foreignList.toplevels == [foreignSnapshot])
+        #expect(outputSnapshot.heads.first?.modes == [outputMode])
+        #expect(proposal.snapshot.serial == 7)
+        #expect(sessionSnapshot.events.count == 3)
+
+        func usePreviewProtocolAPI(display: WaylandDisplay) async throws {
+            _ = try await display.foreignToplevelListSnapshot()
+            let snapshot = try await display.outputManagementSnapshot()
+            let current = OutputConfigurationProposal(current: snapshot)
+            try await display.testOutputConfiguration(current)
+            try await display.applyOutputConfiguration(current)
+            _ = try await display.compositorSessionEvents(
+                reason: .launch,
+                existingID: sessionID
+            )
+        }
+
+        _ = usePreviewProtocolAPI
+    }
+
+    @Test
     func windowManagerControlMethodsCompileForExternalClients() throws {
         let minimumSize = try PositiveLogicalSize(width: 320, height: 240)
         let maximumSize = try PositiveLogicalSize(width: 1_920, height: 1_080)

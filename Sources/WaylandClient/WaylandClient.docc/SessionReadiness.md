@@ -5,8 +5,9 @@ and window restoration. Keep scene, document, and UI policy above WaylandClientK
 
 WaylandClientKit currently exposes restoration-relevant facts through
 ``Window/restorationSnapshot`` and compositor session-management advertisement
-through ``WaylandCapabilities/compositorSessionManagement``. It does not expose
-public compositor session objects or event streams yet.
+through ``WaylandCapabilities/compositorSessionManagement``. It also exposes
+narrow preview protocol events through
+``WaylandDisplay/compositorSessionEvents(reason:existingID:timeoutMilliseconds:)``.
 
 ## When To Use This
 
@@ -38,7 +39,7 @@ for a restored window, but they are not restore tokens.
 
 Compositor session management is optional and capability-gated by
 ``WaylandCapabilities/compositorSessionManagement``. WaylandClientKit currently
-uses that as a registry fact only. Local app restoration remains
+uses it for preview protocol event facts only. Local app restoration remains
 framework-owned.
 
 ## Public APIs

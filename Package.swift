@@ -209,7 +209,7 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
-            name: "GraphicsPreviewExternalBufferMaintainerSmoke",
+            name: "GraphicsPreviewExternalBufferSmoke",
             dependencies: [
                 "WaylandClient",
                 "WaylandExampleSupport",
@@ -217,7 +217,7 @@ let package = Package(
                 "WaylandGraphicsPreview",
                 "WaylandRaw",
             ],
-            path: "Examples/GraphicsPreviewExternalBufferMaintainerSmoke",
+            path: "Examples/GraphicsPreviewExternalBufferSmoke",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .executableTarget(

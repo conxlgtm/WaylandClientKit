@@ -11,9 +11,9 @@ upstream staging protocol `xdg-session-management-v1`.
 - Vendored source: wayland-protocols 1.48 staging
 - Current product tier: preview foundation
 
-The protocol is vendored and generated, and raw wrappers exist for package
-experiments. The public API intentionally exposes only
-`WaylandCapabilities.compositorSessionManagement` for now.
+The protocol is vendored and generated, raw wrappers exist, and the public
+preview API exposes capability-gated event snapshots through
+`WaylandDisplay.compositorSessionEvents(reason:existingID:)`.
 
 ## Boundary
 
@@ -25,9 +25,17 @@ Local framework restoration remains based on app-owned state plus
 `WindowRestorationSnapshot`. `SessionStateSmoke` remains the runnable local
 restoration example.
 
-## Deferred Public API
+## Public Preview API
 
-A broader public compositor session API needs more evidence before release:
+The current public API is deliberately narrow:
+
+- capability reporting through `WaylandCapabilities.compositorSessionManagement`
+- `CompositorSessionID` as compositor protocol identity, not scene/document ID
+- `CompositorSessionReason` for protocol-shaped launch/session reasons
+- `CompositorSessionEvent` for created/restored/replaced facts
+- `CompositorSessionSmoke`, which skips cleanly when unavailable
+
+A broader compositor session API needs more evidence before release:
 
 - live compositor advertisement rows in `docs/compositor-matrix.md`
 - lifecycle smoke output for created/restored/replaced events
@@ -35,8 +43,8 @@ A broader public compositor session API needs more evidence before release:
 - a framework usage shape that keeps compositor session identities separate
   from local scene/document keys
 
-Until those are proven, `CompositorSessionSmoke` reports capability and skips
-public session binding.
+Until those are proven, local app/window restoration remains the job of
+`SessionStateSmoke` and framework-owned state.
 
 ## Text Input 1.48 Refresh
 

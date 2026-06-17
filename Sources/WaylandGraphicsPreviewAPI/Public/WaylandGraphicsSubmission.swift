@@ -415,8 +415,8 @@ package enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
 
 package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
     package let size: PositivePixelSize
-    private let format: WaylandGraphicsDRMFormat
-    private let modifier: WaylandGraphicsDRMFormatModifier
+    package let format: WaylandGraphicsDRMFormat
+    package let modifier: WaylandGraphicsDRMFormatModifier
     private var planes: WaylandGraphicsExternalBufferPlanes
 
     package init(

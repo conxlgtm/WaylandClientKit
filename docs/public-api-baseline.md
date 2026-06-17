@@ -596,6 +596,23 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L314: `    public let seatID: SeatID`
 - L315: `    public let activity: KeyboardShortcutsInhibitorActivity`
 - L317: `    public init(`
+- L330: `public struct ForeignToplevelID:`
+- L338: `    public init(rawValue toplevelRawValue: UInt64) {`
+- L342: `    public var description: String {`
+- L347: `public struct ForeignToplevelSnapshot: Equatable, Sendable, Identifiable {`
+- L348: `    public let id: ForeignToplevelID`
+- L349: `    public let protocolIdentifier: String?`
+- L350: `    public let title: String?`
+- L351: `    public let appID: String?`
+- L353: `    public init(`
+- L366: `public enum ForeignToplevelEvent: Equatable, Sendable {`
+- L367: `    case added(ForeignToplevelSnapshot)`
+- L368: `    case updated(ForeignToplevelSnapshot)`
+- L369: `    case removed(ForeignToplevelID)`
+- L372: `public struct ForeignToplevelListSnapshot: Equatable, Sendable {`
+- L373: `    public let toplevels: [ForeignToplevelSnapshot]`
+- L374: `    public let events: [ForeignToplevelEvent]`
+- L376: `    public init(`
 
 ### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
 
@@ -950,6 +967,39 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L223: `    public let name: String?`
 - L224: `    public let description: String?`
 - L226: `    public init(`
+- L315: `public struct OutputManagementHeadID:`
+- L323: `    public init(rawValue headRawValue: UInt64) {`
+- L327: `    public var description: String {`
+- L332: `public struct OutputManagementModeID:`
+- L340: `    public init(rawValue modeRawValue: UInt64) {`
+- L344: `    public var description: String {`
+- L349: `public struct OutputManagementMode: Equatable, Sendable, Identifiable {`
+- L350: `    public let id: OutputManagementModeID`
+- L351: `    public let size: PositivePixelSize?`
+- L352: `    public let refresh: OutputRefreshRate`
+- L353: `    public let isPreferred: Bool`
+- L354: `    public let isCurrent: Bool`
+- L356: `    public init(`
+- L371: `public struct OutputManagementHead: Equatable, Sendable, Identifiable {`
+- L372: `    public let id: OutputManagementHeadID`
+- L373: `    public let name: String?`
+- L374: `    public let description: String?`
+- L375: `    public let modes: [OutputManagementMode]`
+- L376: `    public let enabled: Bool`
+- L377: `    public let position: LogicalOffset?`
+- L378: `    public let scale: SurfaceScale?`
+- L379: `    public let transform: OutputTransform?`
+- L380: `    public let make: String?`
+- L381: `    public let model: String?`
+- L382: `    public let serialNumber: String?`
+- L384: `    public init(`
+- L411: `public struct OutputManagementSnapshot: Equatable, Sendable {`
+- L412: `    public let heads: [OutputManagementHead]`
+- L413: `    public let serial: UInt32`
+- L415: `    public init(heads snapshotHeads: [OutputManagementHead], serial snapshotSerial: UInt32) {`
+- L421: `public struct OutputConfigurationProposal: Equatable, Sendable {`
+- L422: `    public let snapshot: OutputManagementSnapshot`
+- L424: `    public init(current snapshot: OutputManagementSnapshot) {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandCapabilities.swift`
 
@@ -996,6 +1046,10 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L5: `    public func requestActivationToken(`
 - L34: `    public func activate(window: Window, token: ActivationToken) throws {`
 
+### `Sources/WaylandClient/Public/Display/WaylandDisplay+CompositorSession.swift`
+
+- L2: `    public func compositorSessionEvents(`
+
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 
 - L27: `    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {`
@@ -1008,7 +1062,14 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DesktopIntegration.swift`
 
-- L78: `    public func ringSystemBell() throws {`
+- L78: `    public func foreignToplevelListSnapshot(`
+- L86: `    public func ringSystemBell() throws {`
+
+### `Sources/WaylandClient/Public/Display/WaylandDisplay+OutputManagement.swift`
+
+- L2: `    public func outputManagementSnapshot(`
+- L10: `    public func testOutputConfiguration(`
+- L20: `    public func applyOutputConfiguration(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+PointerCapture.swift`
 
@@ -1097,42 +1158,50 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L15: `    case xdgDialogUnavailable`
 - L16: `    case xdgToplevelDragUnavailable`
 - L17: `    case foreignToplevelListUnavailable`
-- L18: `    case foreignDragSource(DragSourceIdentity)`
-- L19: `    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)`
-- L20: `    case unknownToplevelDrag(ToplevelDragID)`
-- L21: `    case foreignToplevelDrag(ToplevelDragID)`
-- L22: `    case toplevelDragStillActive(ToplevelDragID)`
-- L23: `    case idleInhibitUnavailable`
-- L24: `    case keyboardShortcutsInhibitUnavailable`
-- L25: `    case systemBellUnavailable`
-- L26: `    case unknownIdleInhibitor(IdleInhibitorID)`
-- L27: `    case foreignIdleInhibitor(IdleInhibitorID)`
-- L28: `    case invalidDialogParent(child: WindowID, parent: WindowID)`
-- L29: `    case dialogAlreadyExists(WindowID)`
-- L30: `    case unknownWindowDialog(WindowDialogID)`
-- L31: `    case foreignWindowDialog(WindowDialogID)`
-- L32: `    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)`
-- L33: `    case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
-- L34: `    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
-- L35: `    case emptyWindowIconName`
-- L36: `    case windowIconNameContainsNUL`
-- L37: `    case nonSquareWindowIconImage(width: Int32, height: Int32)`
-- L38: `    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)`
-- L40: `    public var description: String {`
-- L120: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
-- L121: `    case skippedUnknownSeat`
-- L122: `    case skippedNoPointer`
-- L124: `    public var description: String {`
-- L134: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
-- L135: `    public let seatID: SeatID`
-- L136: `    public let requestedCursor: PointerCursor`
-- L137: `    public let backendResult: PointerCursorBackendResult`
-- L139: `    public init(`
-- L149: `    public var description: String {`
-- L167: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L168: `    case invalidConfiguration(CursorConfigurationError)`
-- L169: `    case requestFailed(PointerCursorRequestFailure)`
-- L171: `    public var description: String {`
+- L18: `    case foreignToplevelListIncomplete`
+- L19: `    case compositorSessionManagementUnavailable`
+- L20: `    case invalidCompositorSessionID`
+- L21: `    case outputManagementUnavailable`
+- L22: `    case outputManagementIncomplete`
+- L23: `    case staleOutputConfiguration`
+- L24: `    case outputConfigurationFailed`
+- L25: `    case outputConfigurationCancelled`
+- L26: `    case foreignDragSource(DragSourceIdentity)`
+- L27: `    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)`
+- L28: `    case unknownToplevelDrag(ToplevelDragID)`
+- L29: `    case foreignToplevelDrag(ToplevelDragID)`
+- L30: `    case toplevelDragStillActive(ToplevelDragID)`
+- L31: `    case idleInhibitUnavailable`
+- L32: `    case keyboardShortcutsInhibitUnavailable`
+- L33: `    case systemBellUnavailable`
+- L34: `    case unknownIdleInhibitor(IdleInhibitorID)`
+- L35: `    case foreignIdleInhibitor(IdleInhibitorID)`
+- L36: `    case invalidDialogParent(child: WindowID, parent: WindowID)`
+- L37: `    case dialogAlreadyExists(WindowID)`
+- L38: `    case unknownWindowDialog(WindowDialogID)`
+- L39: `    case foreignWindowDialog(WindowDialogID)`
+- L40: `    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)`
+- L41: `    case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
+- L42: `    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
+- L43: `    case emptyWindowIconName`
+- L44: `    case windowIconNameContainsNUL`
+- L45: `    case nonSquareWindowIconImage(width: Int32, height: Int32)`
+- L46: `    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)`
+- L48: `    public var description: String {`
+- L144: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
+- L145: `    case skippedUnknownSeat`
+- L146: `    case skippedNoPointer`
+- L148: `    public var description: String {`
+- L158: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
+- L159: `    public let seatID: SeatID`
+- L160: `    public let requestedCursor: PointerCursor`
+- L161: `    public let backendResult: PointerCursorBackendResult`
+- L163: `    public init(`
+- L173: `    public var description: String {`
+- L191: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L192: `    case invalidConfiguration(CursorConfigurationError)`
+- L193: `    case requestFailed(PointerCursorRequestFailure)`
+- L195: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
 
@@ -2127,6 +2196,24 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L28: `    public let rectangles: [LogicalRect]`
 - L30: `    public init(rectangles damageRectangles: [LogicalRect]) throws {`
 - L38: `    public init(_ damageRectangles: [LogicalRect]) throws {`
+
+### `Sources/WaylandClient/Public/Session/CompositorSessionDomainTypes.swift`
+
+- L3: `public struct CompositorSessionID:`
+- L9: `    public let value: String`
+- L11: `    public init(_ sessionID: String) throws {`
+- L23: `    public var description: String {`
+- L28: `public enum CompositorSessionReason: Equatable, Sendable {`
+- L29: `    case launch`
+- L30: `    case recover`
+- L31: `    case sessionRestore`
+- L45: `public enum CompositorSessionEvent: Equatable, Sendable {`
+- L46: `    case created(CompositorSessionID)`
+- L47: `    case restored`
+- L48: `    case replaced`
+- L51: `public struct CompositorSessionEventSnapshot: Equatable, Sendable {`
+- L52: `    public let events: [CompositorSessionEvent]`
+- L54: `    public init(events sessionEvents: [CompositorSessionEvent]) {`
 
 ### `Sources/WaylandClient/Public/Subsurface/Subsurface.swift`
 

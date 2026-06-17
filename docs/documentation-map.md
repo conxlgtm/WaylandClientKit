@@ -71,10 +71,10 @@ Canonical examples by feature:
 | Pointer capture, warp, and gestures | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift), [PointerWarpSmoke](../Examples/PointerWarpSmoke/main.swift), [PointerGesturesSmoke](../Examples/PointerGesturesSmoke/main.swift) |
 | Cursor policy and custom cursor images | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift), [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift), [CursorAnimationSmoke](../Examples/CursorAnimationSmoke/main.swift) |
 | Desktop integration | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift), [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift), [DialogSmoke](../Examples/DialogSmoke/main.swift), [KeyboardShortcutsInhibitSmoke](../Examples/KeyboardShortcutsInhibitSmoke/main.swift), [ToplevelDragSmoke](../Examples/ToplevelDragSmoke/main.swift), [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
-| Deferred desktop/output plumbing | [ForeignToplevelListSmoke](../Examples/ForeignToplevelListSmoke/main.swift), [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
+| Foreign toplevel and output-management preview | [ForeignToplevelListSmoke](../Examples/ForeignToplevelListSmoke/main.swift), [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
 | Surface regions and damage | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift), [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
 | Subsurfaces | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
-| Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift), [GraphicsPreviewExternalBufferMaintainerSmoke](../Examples/GraphicsPreviewExternalBufferMaintainerSmoke/main.swift), [GraphicsPreviewColorMetadataSmoke](../Examples/GraphicsPreviewColorMetadataSmoke/main.swift), [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
+| Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift), maintainer-only [GraphicsPreviewExternalBufferSmoke](../Examples/GraphicsPreviewExternalBufferSmoke/main.swift), [GraphicsPreviewColorMetadataSmoke](../Examples/GraphicsPreviewColorMetadataSmoke/main.swift), [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 
 ## Canonical Concept Documents
 
@@ -97,7 +97,7 @@ Every public feature family should have one conceptual home:
 | Presentation feedback and animation | [Presentation Feedback And Frame Callbacks](../Sources/WaylandClient/WaylandClient.docc/PresentationFeedbackAndFrameCallbacks.md) |
 | Diagnostics and event overflow | [Diagnostics And Display Failures](../Sources/WaylandClient/WaylandClient.docc/DiagnosticsAndDisplayFailures.md), [Event Streams And Overflow](../Sources/WaylandClient/WaylandClient.docc/EventStreamsAndOverflow.md) |
 | Graphics preview | [Graphics Preview Overview](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md), [External Buffer Submission](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ExternalBufferSubmission.md), [Scheduling And Color Metadata](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/SchedulingAndColorMetadata.md) |
-| App/window restoration facts | [Session Readiness](../Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md) |
+| App/window restoration and compositor session facts | [Session Readiness](../Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md) |
 
 If a new public API family is added, add or update its canonical conceptual doc
 first, then link examples and maintainer evidence from that doc.

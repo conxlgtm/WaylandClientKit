@@ -32,6 +32,13 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     var keyboardShortcutsInhibitorIDsByWindowID: [WindowID: [KeyboardShortcutsInhibitorID]] = [:]
     var keyboardShortcutsInhibitorIDsBySeatID: [SeatID: [KeyboardShortcutsInhibitorID]] = [:]
     var closedKeyboardShortcutsInhibitorIDs: Set<KeyboardShortcutsInhibitorID> = []
+    var foreignToplevelIDs = IDGenerator<ForeignToplevelID>()
+    var foreignToplevelIDsByProtocolIdentifier: [String: ForeignToplevelID] = [:]
+    var outputManagementHeadIDs = IDGenerator<OutputManagementHeadID>()
+    var outputManagementHeadIDsByName: [String: OutputManagementHeadID] = [:]
+    var outputManagementModeIDs = IDGenerator<OutputManagementModeID>()
+    var outputManagementModeIDsByStableKey:
+        [OutputManagementModeStableKey: OutputManagementModeID] = [:]
     private var inputSerialActionIDs = IDGenerator<InputSerialActionID>()
     private var inputSerialActionHandlers: [InputSerialActionID: InputSerialActionHandler] = [:]
     var isClosed: Bool { lifecycle.isClosed }

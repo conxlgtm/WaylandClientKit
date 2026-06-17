@@ -25,9 +25,25 @@ enum ForeignToplevelListSmoke {
                 return
             }
 
-            log("operation: list deferred")
-            log("events: deferred until ext-foreign-toplevel-list event state is implemented")
+            let snapshot = try await display.foreignToplevelListSnapshot()
+            log("toplevels: \(snapshot.toplevels.count)")
+            log("events: \(snapshot.events.count)")
+            for event in snapshot.events {
+                log("event: \(describe(event))")
+            }
+            log("operation: list pass")
             log("cleanup: pass")
+        }
+    }
+
+    nonisolated private static func describe(_ event: ForeignToplevelEvent) -> String {
+        switch event {
+        case .added(let snapshot):
+            "added id=\(snapshot.id) title=\(snapshot.title ?? "<private>") appID=\(snapshot.appID ?? "<private>")"
+        case .updated(let snapshot):
+            "updated id=\(snapshot.id) title=\(snapshot.title ?? "<private>") appID=\(snapshot.appID ?? "<private>")"
+        case .removed(let id):
+            "removed id=\(id)"
         }
     }
 

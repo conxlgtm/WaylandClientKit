@@ -46,7 +46,7 @@ swift run OutputTopologySmoke -- --auto-close --print-summary
 swift run GPUPreviewSmokeClient
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
-swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --probe
+swift run GraphicsPreviewExternalBufferSmoke -- --probe
 swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
 swift run ColorManagementSmoke
 ```
@@ -77,8 +77,8 @@ example or manual probe has been run:
 | keyboard shortcut inhibition | `KeyboardShortcutsInhibitSmoke` request, active/inactive, and destroy operations |
 | toplevel drag | `ToplevelDragSmoke` capability and live button-serial attach/start result |
 | pointer gestures | `PointerGesturesSmoke` subscription and typed gesture events when hardware provides them |
-| foreign toplevel list | `ForeignToplevelListSmoke` capability and deferred/skip behavior |
-| output-management preview plumbing | `OutputManagementSmoke` capability and deferred/skip behavior; no monitor mutation by default |
+| foreign toplevel list | `ForeignToplevelListSmoke` capability and read-only add/update/remove facts |
+| output-management preview | `OutputManagementSmoke` capability, head/mode facts, explicit current test/apply; no monitor mutation by default |
 | system bell | `SystemBellSmoke` display/window ring operations |
 | activation | `XDGActivationSmoke` token request and activate request |
 | pointer lock/confine | `PointerCaptureSmoke` lock/confine lifecycle |
@@ -91,7 +91,7 @@ example or manual probe has been run:
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
-| external graphics buffer | `GraphicsPreviewExternalBufferMaintainerSmoke -- --probe`, `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer` import-cleanup probe |
+| external graphics buffer | Maintainer probe `GraphicsPreviewExternalBufferSmoke -- --probe`, `GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` import-cleanup probe |
 | graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
 | color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
@@ -151,9 +151,9 @@ rerun reported `requested backing: managedGPU`, `actual backing: managedGPU`,
 WaylandClientKit supports local framework-owned state through public restoration
 snapshots and `SessionStateSmoke`. It also reports staging
 `xdg_session_manager_v1` advertisement through
-`WaylandCapabilities.compositorSessionManagement`. Compositor session objects
-and event streams remain deferred until protocol evidence is strong enough to
-keep the public boundary honest.
+`WaylandCapabilities.compositorSessionManagement` and exposes narrow preview
+created/restored/replaced event facts. Framework scene/document restore policy
+remains separate.
 
 KDE/KWin live session evidence on 2026-06-09:
 `SessionStateSmoke --auto-close --print-summary --duration-seconds 3` passed.
@@ -163,7 +163,7 @@ before exit, and closed with `remainingWindows=0`.
 
 | Protocol | Upstream phase | Vendored XML | Public API | Evidence needed before broader API |
 | -------- | -------------- | ------------ | ---------- | -------------------------- |
-| `xdg_session_manager_v1` | staging | vendored/generated from wayland-protocols 1.48 | capability only through `WaylandCapabilities.compositorSessionManagement`; raw preview plumbing package-internal | compositor advertisement rows, real lifecycle smoke behavior, and a framework usage shape that does not confuse compositor session events with local scene restoration |
+| `xdg_session_manager_v1` | staging | vendored/generated from wayland-protocols 1.48 | capability plus preview `WaylandDisplay.compositorSessionEvents` facts | compositor advertisement rows, real lifecycle smoke behavior, and a framework usage shape that does not confuse compositor session events with local scene restoration |
 
 ## Framework Host Evidence
 
@@ -189,6 +189,9 @@ no physical gesture event was generated during the bounded run.
 `ForeignToplevelListSmoke --auto-close --print-summary --duration-seconds 3`
 and `OutputManagementSmoke --auto-close --print-summary --duration-seconds 3`
 skipped cleanly because their capabilities were unavailable in this session.
+When advertised, these smokes should record read-only foreign toplevel events
+and output-management list/current-test facts without changing monitor
+configuration by default.
 `ToplevelDragSmoke --auto-close --print-summary --duration-seconds 3` reported
 `xdg_toplevel_drag_manager_v1` v1 and waited for a live button serial;
 attach/start remains unproven until a manual press logs `start-toplevel-drag
@@ -251,12 +254,12 @@ KDE/KWin graphics preview addendum on 2026-06-13:
 
 KDE/KWin external-buffer addendum on 2026-06-14:
 
-- `swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer`
+- `swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
   produced `mode: renderer-dmabuf`, `renderer: active`,
   `import: active`, `submit: active`, `release: active`,
   `release/reuse: tracked-by-wayland-client-kit`, `fallback reason: none`,
   `failure: none`, and `cleanup: pass` on `wayland-0`.
-- `swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer`
+- `swift run GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer`
   produced the expected pipe-descriptor import failure
   `externalBufferImportFailed` with `cleanup: pass`.
 
