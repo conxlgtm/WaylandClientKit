@@ -28,4 +28,4 @@ before the repo has evidence.
 - Broader graphics-preview evidence across compositors.
 - More output/color-management evidence.
 - More text-input and input-method coverage.
-- Release tags after public-readiness and compatibility checks pass.
+- Regular `0.x` release tags after compatibility checks pass.

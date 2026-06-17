@@ -38,7 +38,6 @@ Use these for repository operation and release review:
 
 - [Compatibility policy](compatibility-policy.md)
 - [Versioning](versioning.md)
-- [Public readiness](public-readiness.md)
 - [Release process](release.md)
 - [Tooling](tooling.md)
 - [Public API audit](public-api-audit.md)

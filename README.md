@@ -156,7 +156,6 @@ details.
 - [Compatibility Policy](docs/compatibility-policy.md)
 - [Versioning](docs/versioning.md)
 - [Release Checklist](docs/release.md)
-- [Public Readiness](docs/public-readiness.md)
 
 ## Examples
 
