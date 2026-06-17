@@ -177,14 +177,12 @@ package final class RawLinuxDmabufBuffer: @unchecked Sendable {
         }
     }
 
-    #if DEBUG
-        package init(testingPointer bufferPointer: OpaquePointer) {
-            releaseOwner = BufferReleaseOwner()
-            proxy = RawOwnedProxy(pointer: bufferPointer) { _ in
-                // Test buffers are fake proxies and have no protocol resource to destroy.
-            }
+    package init(testingPointer bufferPointer: OpaquePointer) {
+        releaseOwner = BufferReleaseOwner()
+        proxy = RawOwnedProxy(pointer: bufferPointer) { _ in
+            // Test buffers are fake proxies and have no protocol resource to destroy.
         }
-    #endif
+    }
 
     package func setReleaseObserver(_ observer: @escaping () -> Void) {
         releaseObserver = observer
@@ -194,11 +192,9 @@ package final class RawLinuxDmabufBuffer: @unchecked Sendable {
         releaseObserver?()
     }
 
-    #if DEBUG
-        package func emitReleaseForTesting() {
-            handleRelease()
-        }
-    #endif
+    package func emitReleaseForTesting() {
+        handleRelease()
+    }
 
     package func destroy() {
         releaseObserver = nil

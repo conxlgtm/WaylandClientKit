@@ -8,7 +8,7 @@ text-input diagnostics.
 failures. Applications should treat diagnostics as observable state and display
 errors as control-flow termination for the affected stream.
 
-No public control flow requires parsing diagnostic message strings; use typed
+No public control flow requires parsing diagnostic message strings. Use typed
 diagnostic payloads and operations instead.
 
 WaylandClientKit's repository error taxonomy records which conditions use

@@ -1,40 +1,86 @@
 name: Bug report
 description: Report a correctness, crash, or compatibility problem
+title: "[Bug]: "
+labels:
+  - bug
 body:
+  - type: input
+    id: os
+    attributes:
+      label: OS or distro
+      description: Include release/version when available.
+      placeholder: Ubuntu 24.04, Fedora 41, Arch, NixOS, ...
+    validations:
+      required: true
   - type: input
     id: swift
     attributes:
       label: Swift version
-  - type: input
-    id: distro
-    attributes:
-      label: Linux distribution
+      placeholder: swift --version
+    validations:
+      required: true
   - type: input
     id: compositor
     attributes:
-      label: Compositor and version
+      label: Compositor and session
+      description: Include compositor version and whether this is a live, nested, or headless session.
+      placeholder: GNOME Mutter 46 Wayland, KDE KWin 6, Sway 1.9, Weston headless, ...
+    validations:
+      required: true
+  - type: input
+    id: wayland_display
+    attributes:
+      label: WAYLAND_DISPLAY
+      placeholder: wayland-0
+  - type: input
+    id: command
+    attributes:
+      label: Command run
+      placeholder: swift run wck smoke live
+    validations:
+      required: true
   - type: textarea
     id: steps
     attributes:
       label: Reproduction steps
+      description: Include exact steps needed to reproduce the issue.
+    validations:
+      required: true
   - type: textarea
     id: expected
     attributes:
       label: Expected behavior
+    validations:
+      required: true
   - type: textarea
     id: actual
     attributes:
       label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and command output
+      render: text
+  - type: textarea
+    id: sanitizer
+    attributes:
+      label: Sanitizer output
+      description: Include ASan, TSan, UBSan, or other sanitizer output if relevant.
+      render: text
   - type: checkboxes
     id: layers
     attributes:
-      label: Affected layers
+      label: Affected areas
       options:
-        - label: raw
-        - label: client
-        - label: cursor
-        - label: keyboard
-        - label: clipboard
-        - label: popup
-        - label: docs
-        - label: ci
+        - label: Public WaylandClient API
+        - label: Raw protocol wrappers
+        - label: Generated protocol artifacts
+        - label: C shims
+        - label: File descriptor ownership
+        - label: Data transfer
+        - label: Input, keyboard, pointer, touch, tablet, or gestures
+        - label: Graphics preview, dmabuf, GBM, or EGL
+        - label: Docs or examples
+        - label: CI or tooling

@@ -2,8 +2,8 @@
 
 Tags are reproducible development checkpoints. They do not imply API stability.
 Do not tag while docs, public API audit, support lists, and checks disagree.
-Review [foundation-candidate-status.md](foundation-candidate-status.md) before
-claiming managed GPU or foundation-candidate readiness.
+Review [compositor-matrix.md](compositor-matrix.md) before claiming managed GPU
+or foundation-candidate readiness.
 Review [compatibility-policy.md](compatibility-policy.md) before tagging any
 checkpoint with public API changes.
 
@@ -53,7 +53,7 @@ swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
 with `detect_leaks=0` is the required ASan gate. LeakSanitizer remains a
 separate informational check because it can exit with a ptrace-related fatal
-error even after the Swift test process reports passing tests; record that as
+error even after the Swift test process reports passing tests, record that as
 an environment limitation rather than a test failure. To attempt the
 LeakSanitizer path explicitly, run `swift run wck test asan` without setting
 `ASAN_OPTIONS=detect_leaks=0`. The TSan target uses
@@ -62,7 +62,7 @@ metadata-cache and Swift Testing event graph reports. It also disables TSan's
 deadlock detector because Swift runtime metadata initialization currently
 produces lock-order false positives. The target runs Swift Testing with
 parallel execution disabled so sanitizer output is not polluted by unrelated
-test-runner and runtime parallel initialization reports; project data-race
+test-runner and runtime parallel initialization reports, project data-race
 reports inside tests should remain unsuppressed.
 
 The public API baseline covers both vended library products, `WaylandClient`
@@ -72,11 +72,11 @@ reflected in the audit and baseline before tagging.
 The headless request-path sanitizer targets run the window-control and
 source-side drag request tests under a private Weston compositor. They are the
 release gate for live request wrappers under sanitizers. GPU preview sanitizer
-smoke remains optional and compositor/hardware dependent; use
+smoke remains optional and compositor/hardware dependent, use
 `WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
 when collecting compositor matrix facts. The request-path targets default to a
 600 second timeout because sanitizer builds can spend several minutes compiling
-before tests start; override it with
+before tests start, override it with
 `WAYLAND_CLIENT_KIT_REQUEST_PROCESS_TIMEOUT_SECONDS`. The request runner invokes
 the window-control and drag-source suites as separate test processes because
 both use package-wide C request-recording hooks.
@@ -94,7 +94,7 @@ optional path failures.
 `swift run wck tools toolchain-smoke` prints the active Swift wrapper version,
 the `Package.swift` tools version, the Swift 6.3.2 stable baseline, optional
 `SWIFT_NEXT_BIN` status, and the allowed-failure Swift Build preview status.
-Native SwiftPM remains the supported build system; do not block a release on the
+Native SwiftPM remains the supported build system, do not block a release on the
 Swift Build preview unless the failure is a confirmed package regression.
 
 Use repeated `swift test --filter ... --no-parallel` runs for local stress
@@ -186,14 +186,6 @@ Supported:
 - Source-side drag-and-drop sources through data-device.
 - Managed XRGB8888 drag icon surfaces for local source-side drags.
 - Seat-scoped text-input sessions and text-input event streams through text-input-v3.
-
-Not supported:
-- Widgets.
-- Client-side decorations.
-- Full output-management API.
-- Public `WaylandClient` GPU rendering APIs.
-- Multi-threaded event queues.
-- Server-side Wayland or compositor APIs.
 
 Verification:
 - swift run wck ci release

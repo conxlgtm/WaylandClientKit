@@ -9,7 +9,7 @@ nonterminal runtime diagnostics, and fatal display failure.
 | --- | --- | --- |
 | Optional protocol is not advertised | Feature-specific public error, such as `TextInputError.unavailable` or `DataTransferError.unavailable` | No |
 | Seat or public handle is unknown | Feature-specific public error when the feature owns the seat or handle lookup | No |
-| Window belongs to another display | Feature-specific error when the feature can name the offending handle; otherwise `ClientError.window` | No |
+| Window belongs to another display | Feature-specific error when the feature can name the offending handle, otherwise `ClientError.window` | No |
 | Display was closed | `ClientError.display(.closed)` or `WaylandDisplayError` from a stream iterator | Yes for the current display lifetime |
 | Public request has invalid data | Feature-specific public error | No |
 | Protocol/runtime invariant fails | `WaylandDisplayError` or `RuntimeError` routed through the owner-thread fatal path | Usually yes |
@@ -43,5 +43,5 @@ nonterminal runtime diagnostics, and fatal display failure.
   distinguish unavailable metadata protocols from missing per-surface metadata
   objects or unknown color-description references.
 - `WaylandGraphicsPreview` exposes preview fallback and unavailable reasons for
-  renderer-facing capability decisions. Software fallback is nonfatal; a
+  renderer-facing capability decisions. Software fallback is nonfatal, a
   required-GPU decision reports unavailability without closing the display.

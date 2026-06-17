@@ -6,8 +6,7 @@ through ``ClipboardOffer``, ``ClipboardSource``, ``PrimarySelectionOffer``,
 
 ``DragIcon`` supports no icon or a simple XRGB8888 ``DragIconImage``. The icon is
 a pixel payload used to create a temporary source-side Wayland surface for the
-drag. It is not a retained drag UI, renderer surface, or widget.
-Use ``DragIconImage/solid(size:color:)`` for one-color test or placeholder
+drag. Use ``DragIconImage/solid(size:color:)`` for one-color test or placeholder
 icons, and construct ``DragIconImage`` directly when supplying exact XRGB8888
 pixels.
 

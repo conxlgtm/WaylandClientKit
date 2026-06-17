@@ -23,7 +23,7 @@ callbacks or presentation feedback are requested for ordinary `Window` redraws.
 ## Capability Gate
 
 Presentation feedback requires `wp_presentation`. Missing presentation-time
-support is reported as unavailable; frame callbacks are not treated as fake
+support is reported as unavailable. Frame callbacks are not treated as fake
 presentation feedback.
 
 ## Public APIs

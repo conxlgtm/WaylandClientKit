@@ -32,8 +32,7 @@ coordinates for the active scale.
 
 Invalid rectangles and out-of-bounds damage are reported as typed client errors.
 WaylandClientKit owns coordinate conversion, clipping, and the first-frame full
-damage rule. Frameworks own hit testing, occlusion policy, and deciding which
-widgets or scene nodes caused a dirty region.
+damage rule.
 
 ## Example
 

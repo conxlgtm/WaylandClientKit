@@ -1,0 +1,60 @@
+name: Compositor evidence
+description: Record compositor support, fallback, or failure evidence
+title: "[Compositor evidence]: "
+labels:
+  - compositor-evidence
+body:
+  - type: input
+    id: compositor
+    attributes:
+      label: Compositor name and version
+      placeholder: Mutter 46, KWin 6.1, Sway 1.9, Weston 13, ...
+    validations:
+      required: true
+  - type: input
+    id: session
+    attributes:
+      label: Session type
+      placeholder: live desktop, nested, headless, VM, CI, ...
+    validations:
+      required: true
+  - type: textarea
+    id: protocols
+    attributes:
+      label: Protocol advertisement
+      description: Paste advertised globals or the relevant command output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: feature_rows
+    attributes:
+      label: Feature rows
+      description: List each feature or protocol checked and the observed result.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime_path
+    attributes:
+      label: Runtime path
+      options:
+        - active
+        - fallback
+        - failed
+        - not applicable
+    validations:
+      required: true
+  - type: textarea
+    id: command_output
+    attributes:
+      label: Exact command output
+      description: Paste the command and output. If it fits in a terminal, it fits here.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Mention GPU, seat/input, sandbox, VM, or distro details if they affect the evidence.

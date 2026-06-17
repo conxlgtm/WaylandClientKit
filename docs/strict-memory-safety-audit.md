@@ -166,7 +166,7 @@ Audit invariant:
   and is invalidated before destroy.
 - Unknown tablet tool capabilities, tool types, bus types, and pad button facts
   are preserved as raw values where needed instead of trapping. Tablet pad
-  group proxies are tracked for deterministic teardown; public ring, strip, and
+  group proxies are tracked for deterministic teardown, public ring, strip, and
   dial child-control events are deferred until their event surface is designed.
 - Public tablet events expose only typed input facts and target identities, not
   raw protocol objects, queues, pointers, or device handles.
@@ -199,7 +199,7 @@ Audit invariant:
 - Cursor-shape device listeners and raw proxies are destroyed with the cursor
   manager backend.
 - A cursor request uses compositor cursor-shape only when the requested
-  `PointerCursor` maps to a known protocol shape; otherwise the theme-surface
+  `PointerCursor` maps to a known protocol shape, otherwise the theme-surface
   path remains the fallback. Static custom cursor images allocate private SHM
   buffers and retain the image owner through the cursor surface until a
   replacement, detach, or destroy commit has been issued.
@@ -274,7 +274,7 @@ Remaining unsafe constructs:
 Audit invariant:
 
 - Public API accepts only logical `SurfaceRegion` and `SurfaceDamageRegion`
-  values; raw `wl_region` objects are not public.
+  values, raw `wl_region` objects are not public.
 - One-shot region application creates a raw region, adds its rectangles, sends
   the surface request, and destroys the region before returning.
 - `nil` input or opaque region sends a null region pointer to reset compositor
@@ -373,7 +373,7 @@ Audit invariant:
   sets before sending `create`.
 - Version-gated feedback requests require a bound linux-dmabuf object that
   supports protocol version 4.
-- Plane descriptors are released only for the `add` request path; rejected
+- Plane descriptors are released only for the `add` request path, rejected
   planes remain locally owned and are closed by their wrapper.
 - External buffer descriptors validate positive size, nonzero DRM format,
   positive stride, consecutive plane indices, and single ownership before any
@@ -417,7 +417,7 @@ Audit invariant:
 
 - Timeline fds reject negative descriptors before ownership starts.
 - A timeline fd transfers at most once. Rejected descriptors close through the
-  fd wrapper; imported descriptors close after the Wayland request has copied
+  fd wrapper, imported descriptors close after the Wayland request has copied
   the fd into the protocol call, including both successful and failed
   `import_timeline` requests.
 - Syncobj surface, FIFO, and commit-timer objects are locally limited to one
@@ -513,7 +513,7 @@ Audit invariant:
   modifier-aware API.
 - Borrowed plane layout does not expose an owned-looking raw fd.
 - Exported plane fds are transferred only through
-  `GBMDmabufExport.takePlaneFileDescriptor(at:)`; untaken fds close during
+  `GBMDmabufExport.takePlaneFileDescriptor(at:)`, untaken fds close during
   export destruction.
 - Locked GBM surface buffers cannot be exported or released after their surface
   has been destroyed.
@@ -579,9 +579,9 @@ Audit invariant:
 - A dmabuf import request starts in `createRequested`, accepts compositor
   created/failed events only in that state, and reports terminal-state events
   through the failure callback.
-- Plane descriptors are added before `create`; add/create failures destroy the
+- Plane descriptors are added before `create`, add/create failures destroy the
   params object and close any plane descriptor that remains locally owned.
-- GPU presentation uses the window's surface transaction generation authority;
+- GPU presentation uses the window's surface transaction generation authority.
   software and GPU commits do not allocate independent generation sequences.
 - Submitted GPU buffer-pool slots return to availability only after the matching
   Wayland buffer release.

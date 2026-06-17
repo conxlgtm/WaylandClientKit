@@ -2,8 +2,7 @@
 
 `WaylandGraphicsPreview` is a renderer-neutral preview product for managed
 graphics-backed windows. It lets public users request software backing or
-managed GPU backing without importing internal GPU targets or receiving raw
-protocol handles.
+managed GPU backing and inspect typed runtime-path facts.
 
 ## What It Is
 
@@ -11,12 +10,6 @@ The preview API wraps a public ``WaylandGraphicsWindowBacking`` around a
 `WaylandClient.Window`. Applications lease a frame, submit a clear frame or
 software drawing work, and receive a ``WaylandGraphicsFrameResult`` with typed
 runtime-path facts.
-
-## What It Is Not
-
-It is not a renderer, scene graph, swapchain API, retained UI framework, widget
-toolkit, layout engine, styling system, or public GPU handle layer. Frameworks
-remain responsible for renderer choice and user-interface policy.
 
 ## Choosing Backing
 

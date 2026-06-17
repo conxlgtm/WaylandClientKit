@@ -1,30 +1,69 @@
 * @conxlgtm
 
+# Repository identity, policy, and docs.
 /Package.swift @conxlgtm
-/Plugins/ @conxlgtm
-/Examples/ @conxlgtm
+/README.md @conxlgtm
+/CONTRIBUTING.md @conxlgtm
+/LICENSE @conxlgtm
+/SECURITY.md @conxlgtm
+/CODE_OF_CONDUCT.md @conxlgtm
+/SUPPORT.md @conxlgtm
 /docs/ @conxlgtm
+/docs/compatibility-policy.md @conxlgtm
+/docs/public-api-audit.md @conxlgtm
+/docs/public-api-baseline.md @conxlgtm
+/safety/ @conxlgtm
 /justfile @conxlgtm
 /flake.nix @conxlgtm
 /flake.lock @conxlgtm
-/safety/ @conxlgtm
 
+# GitHub operations.
+/.github/CODEOWNERS @conxlgtm
+/.github/ISSUE_TEMPLATE/ @conxlgtm
+/.github/PULL_REQUEST_TEMPLATE.md @conxlgtm
+/.github/workflows/ @conxlgtm
+
+# Protocol inputs, generated protocol C, headers, and project shims.
+/protocols/ @conxlgtm
 /Sources/CWaylandProtocols/ @conxlgtm
+/Sources/CWaylandProtocols/generated/ @conxlgtm
+/Sources/CWaylandProtocols/include/ @conxlgtm
+/Sources/CWaylandProtocols/shims/ @conxlgtm
+
+# C shims and system-library targets.
+/Sources/CDRMSystem/ @conxlgtm
+/Sources/CEGLShims/ @conxlgtm
+/Sources/CEGLSystem/ @conxlgtm
+/Sources/CGBMShims/ @conxlgtm
+/Sources/CGBMSystem/ @conxlgtm
+/Sources/CGLESv2System/ @conxlgtm
+/Sources/CWaylandClientSystem/ @conxlgtm
+/Sources/CWaylandCursorShims/ @conxlgtm
+/Sources/CWaylandCursorSystem/ @conxlgtm
 /Sources/CWaylandRuntimeShims/ @conxlgtm
+/Sources/CXKBCommonSystem/ @conxlgtm
+
+# Swift protocol wrappers, public overlays, preview APIs, runtime, and tooling.
+/Sources/WaylandClient/ @conxlgtm
+/Sources/WaylandClient/Public/ @conxlgtm
+/Sources/WaylandClient/WaylandClient.docc/ @conxlgtm
+/Sources/WaylandCursor/ @conxlgtm
+/Sources/WaylandExampleSupport/ @conxlgtm
+/Sources/WaylandGPUPreview/ @conxlgtm
+/Sources/WaylandGraphicsPreview/ @conxlgtm
+/Sources/WaylandGraphicsPreviewAPI/ @conxlgtm
+/Sources/WaylandGraphicsPreviewAPI/Public/ @conxlgtm
+/Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ @conxlgtm
+/Sources/WaylandKeyboard/ @conxlgtm
+/Sources/WaylandRaw/ @conxlgtm
+/Sources/WaylandRaw/Public/ @conxlgtm
+/Sources/WaylandRuntime/ @conxlgtm
+/Sources/WaylandSmokeSupport/ @conxlgtm
+/Sources/WaylandClientKitSmoke/ @conxlgtm
 /Sources/WaylandClientKitTool/ @conxlgtm
 /Sources/WaylandClientKitToolSupport/ @conxlgtm
-/Sources/WaylandRaw/ @conxlgtm
-/Sources/WaylandRuntime/ @conxlgtm
 
-/Sources/WaylandClient/ @conxlgtm
-/Sources/WaylandCursor/ @conxlgtm
-/Sources/WaylandKeyboard/ @conxlgtm
-
-/Tests/WaylandRawTests/ @conxlgtm
-/Tests/WaylandRuntimeTests/ @conxlgtm
-/Tests/WaylandClientTests/ @conxlgtm
-/Tests/WaylandCursorTests/ @conxlgtm
-/Tests/WaylandKeyboardTests/ @conxlgtm
-/Tests/WaylandClientKitToolTests/ @conxlgtm
-
-/.github/workflows/ @conxlgtm
+# Examples, plugins, and tests.
+/Examples/ @conxlgtm
+/Plugins/ @conxlgtm
+/Tests/ @conxlgtm

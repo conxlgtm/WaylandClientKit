@@ -1,5 +1,5 @@
 # SwiftLint 0.61+.
-# Keep this strict: `swift run swl lint` runs SwiftLint with `--strict`, so warnings fail.
+# Keep this strict: `swift run wck lint` runs SwiftLint with `--strict`, so warnings fail.
 
 included:
   - Package.swift
@@ -132,7 +132,7 @@ custom_rules:
 
   no_detached_task:
     name: "No Detached Task"
-    message: "Avoid Task.detached; it severs actor/task context and should require an explicit reviewed exception."
+    message: "Avoid Task.detached. It severs actor/task context and should require an explicit reviewed exception."
     regex: "\\bTask\\.detached\\s*\\("
     severity: error
 
