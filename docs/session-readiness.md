@@ -6,12 +6,11 @@ policy. This document describes that boundary.
 
 WaylandClientKit reports compositor session-management advertisement through
 `WaylandCapabilities.compositorSessionManagement`. The upstream protocol is
-`xdg_session_manager_v1` from the staging XDG Session Management protocol, and
-WaylandClientKit keeps generated/raw preview plumbing package-internal for now.
-There is not yet a public compositor session object or event stream because
-compositor coverage and the framework-facing lifecycle shape still need
-evidence. Frameworks can build useful local session restoration today with
-app-owned state and public WaylandClientKit facts.
+`xdg_session_manager_v1` from the staging XDG Session Management protocol.
+WaylandClientKit exposes narrow preview event facts through
+`WaylandDisplay.compositorSessionEvents(reason:existingID:)`. Frameworks can
+build useful local session restoration today with app-owned state and public
+WaylandClientKit facts.
 
 ## Ownership Boundary
 
@@ -23,7 +22,7 @@ WaylandClientKit owns:
 - current surface geometry, scale, output membership, and decoration mode facts
 - activation token requests and activation requests through `xdg_activation_v1`
 - typed capability reporting for optional compositor protocols
-- compositor session-management capability reporting
+- compositor session-management capability reporting and preview protocol events
 
 Frameworks own:
 
@@ -113,16 +112,17 @@ separate.
 ## Protocol Watch
 
 WaylandClientKit tracks compositor session-management protocol support as
-capability-only preview plumbing. The current implementation has:
+preview protocol facts. The current implementation has:
 
 - protocol XML vendored and generated
 - upstream phase and naming understood
 - public capability reporting through `WaylandCapabilities`
-- package-internal raw wrappers for lifecycle experiments
-- `CompositorSessionSmoke`, which prints capability and skips public session
-  binding while the API is deferred
+- package-internal raw wrappers for lifecycle handling
+- a public preview event snapshot for created/restored/replaced facts
+- `CompositorSessionSmoke`, which prints capability and logs event facts when
+  the protocol is advertised
 
-The public compositor session API should remain deferred until the project has:
+Before this grows beyond narrow preview events, the project needs:
 
 - compositor advertisement evidence in `docs/compositor-matrix.md`
 - at least one smoke or example path proving lifecycle behavior

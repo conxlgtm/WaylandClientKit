@@ -30,11 +30,30 @@ enum CompositorSessionSmoke {
                 return
             }
 
-            log("operation: bind-session skip(public-api-deferred)")
-            log("events: created=0 restored=0 replaced=0")
+            let snapshot = try await display.compositorSessionEvents()
+            log("operation: bind-session pass")
+            log("events: \(describe(snapshot.events))")
             log("local-restoration: SessionStateSmoke")
             log("cleanup: pass")
         }
+    }
+
+    nonisolated private static func describe(_ events: [CompositorSessionEvent]) -> String {
+        var created = 0
+        var restored = 0
+        var replaced = 0
+        for event in events {
+            switch event {
+            case .created:
+                created += 1
+            case .restored:
+                restored += 1
+            case .replaced:
+                replaced += 1
+            }
+        }
+
+        return "created=\(created) restored=\(restored) replaced=\(replaced)"
     }
 
     nonisolated private static func availabilityDescription(

@@ -26,12 +26,12 @@ enough; active GPU claims must be backed by public runtime-path output.
 | WaylandGraphicsPreview preview tier | partial | Preview policy documented in [compatibility-policy.md](compatibility-policy.md) and DocC. | Keep preview drift baseline/audit tracked. |
 | DocC coverage | partial | `WaylandClient` and `WaylandGraphicsPreview` catalogs exist. | Run `swift run wck docc verify` after public API/doc changes. |
 | User learning path | done | [getting-started.md](getting-started.md), [which-api-should-i-use.md](which-api-should-i-use.md), [documentation-map.md](documentation-map.md) | Keep README as portal, not full manual. |
-| Session readiness | done | [session-readiness.md](session-readiness.md), [session-management-plan.md](session-management-plan.md), `SessionStateSmoke`, `CompositorSessionSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management public API capability-only until lifecycle evidence and framework usage shape are clear. |
+| Session readiness | done | [session-readiness.md](session-readiness.md), [session-management-plan.md](session-management-plan.md), `SessionStateSmoke`, `CompositorSessionSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management preview events protocol-shaped and separate from framework scene/document restoration. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission and resize/reconfigure on KDE/KWin, active managed GPU clear-frame submission on nested Sway/wlroots, `surfaceFeedbackUnavailable` fallback on GNOME/Mutter, and `dmabufUnavailable` fallback under headless Weston. | Broaden active/fallback/failure evidence before foundation-candidate claims, especially another desktop compositor when active managed GPU is available. |
-| External GPU buffer preview | partial | Package-internal maintainer descriptor/submission/result facts exist. KDE/KWin 2026-06-14 renderer-dmabuf smoke imported, submitted, released, and cleaned up through the external-buffer path. | Design an opaque public preview-buffer or renderer-neutral descriptor boundary before exposing renderer-produced buffer submission publicly. |
+| External GPU buffer preview | partial | Package-internal descriptor submission exists in `WaylandGraphicsPreview`, and KDE/KWin 2026-06-14 renderer-dmabuf smoke imported, submitted, released, and cleaned up through the external-buffer path. | Keep live renderer evidence current before promoting beyond preview. |
 | Public graphics scheduling | partial | `WaylandGraphicsFrameSchedule` exposes sync, FIFO, commit-timing, and presentation-feedback requests with runtime-path result facts. | Keep commit-timing active evidence pending until a compositor run reports it active. |
-| Output and color facts | partial | `OutputTopologySmoke`, `ColorManagementSmoke`, and color metadata preview API exist. | Collect compositor rows for output topology and color metadata advertised/active/fallback behavior. |
+| Output and color facts | partial | `OutputTopologySmoke`, `OutputManagementSmoke`, `ColorManagementSmoke`, and color metadata preview API exist. | Collect compositor rows for output topology, output-management, and color metadata advertised/active/fallback behavior. |
 | Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. KDE/KWin now has manual proof for pointer lock/confine with relative motion, data-transfer drag-source/drop/read/finish, serial move/window-menu/resize/drag-source, managed GPU resize/reconfigure, explicit sync active, FIFO active, and metadata active. | Complete remaining GNOME/Mutter manual rows, popup-specific manual probes, broader explicit-sync compositor evidence beyond KDE/KWin, and commit-timing active evidence where practical. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `wck ci check`. | Keep external clients hardware-independent. |
 | Release checks | partial | `swift run wck ci release`, `swift run wck examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
@@ -57,10 +57,11 @@ Implemented:
   and unavailable states. Active GPU is reported only after a GPU-rendered buffer
   is imported and committed.
 - External-buffer submission keeps Wayland import/commit/release lifetime inside
-  WaylandClientKit. Plane construction consumes owned descriptors without
-  exposing raw Wayland, GBM, EGL, DRM, or syncobj handles. KDE/KWin has live
-  renderer-dmabuf import/commit/release evidence; broader compositor coverage
-  is still needed before foundation-candidate claims.
+  WaylandClientKit. Public descriptor submission avoids raw Wayland, GBM, EGL,
+  DRM, syncobj, and file-descriptor handles; fd-backed descriptor manufacturing
+  remains package-internal until a raw-handle-free renderer adapter is reviewed.
+  KDE/KWin has live renderer-dmabuf import/commit/release evidence; broader
+  compositor coverage is still needed before foundation-candidate claims.
 - Public frame schedules let callers request explicit sync, FIFO, commit timing,
   and presentation feedback per frame. Runtime path and frame result facts
   report requested versus actual compositor behavior.
@@ -161,9 +162,10 @@ swift run wck smoke live
 swift run wck smoke integration
 swift run GPUPreviewSmokeClient
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
-swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --probe
-swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer
-swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer
+# Maintainer-only external-buffer probe.
+swift run GraphicsPreviewExternalBufferSmoke -- --probe
+swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer
+swift run GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer
 swift run OutputTopologySmoke -- --auto-close --print-summary
 swift run ColorManagementSmoke
 swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async

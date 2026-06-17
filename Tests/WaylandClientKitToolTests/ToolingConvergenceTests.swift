@@ -187,7 +187,7 @@ struct ToolingConvergenceTests {
         #expect(ExampleBuilder.targets.contains("DialogSmoke"))
         #expect(ExampleBuilder.targets.contains("ForeignToplevelListSmoke"))
         #expect(ExampleBuilder.targets.contains("GraphicsPreviewColorMetadataSmoke"))
-        #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferMaintainerSmoke"))
+        #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferSmoke"))
         #expect(ExampleBuilder.targets.contains("KeyboardShortcutsInhibitSmoke"))
         #expect(ExampleBuilder.targets.contains("OutputManagementSmoke"))
         #expect(ExampleBuilder.targets.contains("OutputTopologySmoke"))

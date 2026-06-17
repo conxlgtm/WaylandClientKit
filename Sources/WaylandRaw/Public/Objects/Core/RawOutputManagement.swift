@@ -1,5 +1,44 @@
 import CWaylandProtocols
 
+package enum RawWlrOutputManagerEvent {
+    case head(RawWlrOutputHead)
+    case headEvent(RawWlrOutputHead, RawWlrOutputHeadEvent)
+    case modeEvent(RawWlrOutputHead, RawWlrOutputMode, RawWlrOutputModeEvent)
+    case done(UInt32)
+    case finished
+}
+
+package enum RawWlrOutputHeadEvent {
+    case name(String)
+    case description(String)
+    case physicalSize(width: Int32, height: Int32)
+    case mode(RawWlrOutputMode)
+    case enabled(Bool)
+    case currentMode(RawWlrOutputMode)
+    case modeEvent(RawWlrOutputMode, RawWlrOutputModeEvent)
+    case position(x: Int32, y: Int32)
+    case transform(Int32)
+    case scale(WaylandFixed)
+    case finished
+    case make(String)
+    case model(String)
+    case serialNumber(String)
+    case adaptiveSync(UInt32)
+}
+
+package enum RawWlrOutputModeEvent: Equatable, Sendable {
+    case size(width: Int32, height: Int32)
+    case refresh(Int32)
+    case preferred
+    case finished
+}
+
+package enum RawWlrOutputConfigurationEvent: Equatable, Sendable {
+    case succeeded
+    case failed
+    case cancelled
+}
+
 @safe
 package final class RawWlrOutputManager {
     package let version: RawVersion
@@ -7,6 +46,10 @@ package final class RawWlrOutputManager {
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
     private var hasStopped = false
+    private var hasFinished = false
+    private var heads: [RawWlrOutputHead] = []
+    private var listenerOwner: RawWlrOutputManagerListenerOwner?
+    private var stoppedLifetimeRetainer: RawWlrOutputManager?
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
 
@@ -14,7 +57,8 @@ package final class RawWlrOutputManager {
     init(
         pointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        onEvent: ((RawWlrOutputManagerEvent) -> Void)? = nil
     ) throws(RuntimeError) {
         version = managerVersion
         proxyAdoption = adoptionContext
@@ -24,23 +68,89 @@ package final class RawWlrOutputManager {
             proxyAdoption: adoptionContext,
             destroy: unsafe swl_zwlr_output_manager_v1_destroy
         )
+        listenerOwner = onEvent.map { eventHandler in
+            RawWlrOutputManagerListenerOwner(
+                invariantFailureSink: adoptionContext.invariantFailureSink
+            ) { [weak self] event in
+                self?.handle(event, onEvent: eventHandler)
+            }
+        }
+        do {
+            try unsafe listenerOwner?.install(on: pointer)
+        } catch {
+            listenerOwner?.cancel()
+            proxy.destroy()
+            throw error
+        }
     }
 
     @safe
-    private init(
+    package init(
         testingPointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) {
         version = managerVersion
         proxyAdoption = adoptionContext
+        listenerOwner = nil
         proxy = RawOwnedProxy(
             pointer: managerPointer,
             destroy: unsafe swl_zwlr_output_manager_v1_destroy
         )
     }
 
-    package func createConfiguration(serial: UInt32) throws -> RawWlrOutputConfiguration {
+    private func handle(
+        _ event: RawWlrOutputManagerListenerEvent,
+        onEvent eventHandler: @escaping (RawWlrOutputManagerEvent) -> Void
+    ) {
+        switch event {
+        case .head(let pointer):
+            let headBox = WeakOutputHeadBox()
+            do {
+                let head = try RawWlrOutputHead(
+                    pointer: pointer,
+                    version: version,
+                    invariantFailureSink: proxyAdoption.invariantFailureSink
+                ) { [weak self, headBox] headEvent in
+                    guard let self, let head = headBox.value else { return }
+                    self.handle(
+                        headEvent,
+                        for: head,
+                        onEvent: eventHandler
+                    )
+                }
+                headBox.value = head
+                heads.append(head)
+                eventHandler(.head(head))
+            } catch {
+                return
+            }
+        case .done(let serial):
+            eventHandler(.done(serial))
+        case .finished:
+            eventHandler(.finished)
+            finish()
+        }
+    }
+
+    private func handle(
+        _ event: RawWlrOutputHeadEvent,
+        for head: RawWlrOutputHead,
+        onEvent eventHandler: (RawWlrOutputManagerEvent) -> Void
+    ) {
+        if case .mode(let mode) = event {
+            head.trackMode(mode)
+        } else if case .modeEvent(let mode, let modeEvent) = event {
+            eventHandler(.modeEvent(head, mode, modeEvent))
+            return
+        }
+        eventHandler(.headEvent(head, event))
+    }
+
+    package func createConfiguration(
+        serial: UInt32,
+        onEvent: ((RawWlrOutputConfigurationEvent) -> Void)? = nil
+    ) throws -> RawWlrOutputConfiguration {
         guard !hasStopped else {
             throw RuntimeError.invalidArgument("zwlr_output_manager_v1 stopped")
         }
@@ -59,132 +169,37 @@ package final class RawWlrOutputManager {
             interface: "zwlr_output_configuration_v1",
             destroy: unsafe swl_zwlr_output_configuration_v1_destroy
         )
-        return RawWlrOutputConfiguration(pointer: adoptedConfiguration)
+        return try RawWlrOutputConfiguration(
+            pointer: adoptedConfiguration,
+            invariantFailureSink: proxyAdoption.invariantFailureSink,
+            onEvent: onEvent
+        )
     }
 
     package func stop() {
-        guard !hasStopped else { return }
+        guard !hasStopped, !hasFinished else { return }
 
         hasStopped = true
         unsafe swl_zwlr_output_manager_v1_stop(pointer)
         proxy.abandon()
+        stoppedLifetimeRetainer = self
     }
 
     package func destroy() {
         stop()
     }
 
-    deinit {
-        destroy()
-    }
-}
+    private func finish() {
+        guard !hasFinished else { return }
 
-extension RawWlrOutputManager {
-    @safe
-    package static func testingOutputManager(
-        pointer managerPointer: OpaquePointer,
-        version managerVersion: RawVersion,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
-    ) -> RawWlrOutputManager {
-        RawWlrOutputManager(
-            testingPointer: managerPointer,
-            version: managerVersion,
-            proxyAdoption: adoptionContext
-        )
-    }
-}
-
-@safe
-package final class RawWlrOutputHead {
-    private var proxy: RawOwnedProxy
-
-    @safe var pointer: OpaquePointer { proxy.pointer }
-
-    @safe
-    package init(pointer headPointer: OpaquePointer, version: RawVersion = RawVersion(4)) {
-        proxy = RawOwnedProxy(
-            pointer: headPointer,
-            destroy: version >= RawVersion(3)
-                ? unsafe swl_zwlr_output_head_v1_release
-                : unsafe swl_zwlr_output_head_v1_destroy
-        )
-    }
-
-    package func destroy() {
-        proxy.destroy()
-    }
-
-    deinit {
-        destroy()
-    }
-}
-
-@safe
-package final class RawWlrOutputMode {
-    private var proxy: RawOwnedProxy
-
-    @safe var pointer: OpaquePointer { proxy.pointer }
-
-    @safe
-    package init(pointer modePointer: OpaquePointer, version: RawVersion = RawVersion(3)) {
-        proxy = RawOwnedProxy(
-            pointer: modePointer,
-            destroy: version >= RawVersion(3)
-                ? unsafe swl_zwlr_output_mode_v1_release
-                : unsafe swl_zwlr_output_mode_v1_destroy
-        )
-    }
-
-    package func destroy() {
-        proxy.destroy()
-    }
-
-    deinit {
-        destroy()
-    }
-}
-
-@safe
-package final class RawWlrOutputConfiguration {
-    private var proxy: RawOwnedProxy
-
-    @safe private var pointer: OpaquePointer { proxy.pointer }
-
-    @safe
-    init(pointer configurationPointer: OpaquePointer) {
-        proxy = RawOwnedProxy(
-            pointer: configurationPointer,
-            destroy: unsafe swl_zwlr_output_configuration_v1_destroy
-        )
-    }
-
-    package func enable(head: RawWlrOutputHead) throws -> RawWlrOutputConfigurationHead {
-        guard
-            let configurationHead = unsafe swl_zwlr_output_configuration_v1_enable_head(
-                pointer,
-                head.pointer
-            )
-        else {
-            throw RuntimeError.bindFailed("zwlr_output_configuration_head_v1")
+        hasFinished = true
+        listenerOwner?.cancel()
+        for head in heads {
+            head.abandonAfterManagerFinished()
         }
-
-        return RawWlrOutputConfigurationHead(pointer: configurationHead)
-    }
-
-    package func disable(head: RawWlrOutputHead) {
-        unsafe swl_zwlr_output_configuration_v1_disable_head(pointer, head.pointer)
-    }
-
-    package func test() {
-        unsafe swl_zwlr_output_configuration_v1_test(pointer)
-    }
-
-    package func apply() {
-        unsafe swl_zwlr_output_configuration_v1_apply(pointer)
-    }
-
-    package func destroy() {
-        proxy.destroy()
+        heads.removeAll(keepingCapacity: false)
+        proxy.abandon()
+        stoppedLifetimeRetainer = nil
     }
 
     deinit {
@@ -193,49 +208,91 @@ package final class RawWlrOutputConfiguration {
 }
 
 @safe
-package final class RawWlrOutputConfigurationHead {
-    private var proxy: RawOwnedProxy
+private enum RawWlrOutputManagerListenerEvent {
+    case head(OpaquePointer)
+    case done(UInt32)
+    case finished
+}
 
-    @safe private var pointer: OpaquePointer { proxy.pointer }
+private final class WeakOutputHeadBox {
+    weak var value: RawWlrOutputHead?
+}
+
+@safe
+private final class RawWlrOutputManagerListenerOwner {
+    private let invariantFailureSink: RawInvariantFailureSink?
+    private let onEvent: (RawWlrOutputManagerListenerEvent) -> Void
+    private var isCanceled = false
+    @safe private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: unsafe swl_zwlr_output_manager_v1_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
+    )
+
+    @safe private var callbacks: UnsafeMutablePointer<swl_zwlr_output_manager_v1_listener_callbacks>
+    {
+        listenerStorage.callbacks
+    }
+
+    init(
+        invariantFailureSink failureSink: RawInvariantFailureSink?,
+        onEvent eventHandler: @escaping (RawWlrOutputManagerListenerEvent) -> Void
+    ) {
+        invariantFailureSink = failureSink
+        onEvent = eventHandler
+
+        unsafe callbacks.pointee.head = { data, _, head in
+            RawWlrOutputManagerListenerOwner.withOwner(
+                data,
+                message: "zwlr_output_manager_v1 head fired without Swift state"
+            ) { owner in
+                guard !owner.isCanceled, let head = unsafe head else { return }
+                unsafe owner.onEvent(.head(head))
+            }
+        }
+        unsafe callbacks.pointee.done = { data, _, serial in
+            RawWlrOutputManagerListenerOwner.withOwner(
+                data,
+                message: "zwlr_output_manager_v1 done fired without Swift state"
+            ) { owner in
+                guard !owner.isCanceled else { return }
+                owner.onEvent(.done(serial))
+            }
+        }
+        unsafe callbacks.pointee.finished = { data, _ in
+            RawWlrOutputManagerListenerOwner.withOwner(
+                data,
+                message: "zwlr_output_manager_v1 finished fired without Swift state"
+            ) { owner in
+                guard !owner.isCanceled else { return }
+                owner.onEvent(.finished)
+            }
+        }
+    }
+
+    func install(on manager: OpaquePointer) throws(RuntimeError) {
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        let result = unsafe swl_zwlr_output_manager_v1_add_listener(manager, callbacks)
+        guard result == 0 else {
+            throw RuntimeError.listenerInstallFailed("zwlr_output_manager_v1")
+        }
+    }
+
+    func cancel() {
+        isCanceled = true
+        listenerStorage.invalidate()
+    }
 
     @safe
-    init(pointer headPointer: OpaquePointer) {
-        proxy = RawOwnedProxy(
-            pointer: headPointer,
-            destroy: unsafe swl_zwlr_output_configuration_head_v1_destroy
-        )
-    }
-
-    package func setMode(_ mode: RawWlrOutputMode) {
-        unsafe swl_zwlr_output_configuration_head_v1_set_mode(pointer, mode.pointer)
-    }
-
-    package func setCustomMode(width: Int32, height: Int32, refresh: Int32) {
-        unsafe swl_zwlr_output_configuration_head_v1_set_custom_mode(
-            pointer,
-            width,
-            height,
-            refresh
-        )
-    }
-
-    package func setPosition(x: Int32, y: Int32) {
-        unsafe swl_zwlr_output_configuration_head_v1_set_position(pointer, x, y)
-    }
-
-    package func setTransform(_ transform: Int32) {
-        unsafe swl_zwlr_output_configuration_head_v1_set_transform(pointer, transform)
-    }
-
-    package func setScale(_ scale: WaylandFixed) {
-        unsafe swl_zwlr_output_configuration_head_v1_set_scale(pointer, scale.rawValue)
-    }
-
-    package func destroy() {
-        proxy.destroy()
-    }
-
-    deinit {
-        destroy()
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (RawWlrOutputManagerListenerOwner) -> Void
+    ) {
+        CListenerStorage<
+            RawWlrOutputManagerListenerOwner,
+            swl_zwlr_output_manager_v1_listener_callbacks
+        >
+        .withOwner(from: data, message: message(), body)
     }
 }

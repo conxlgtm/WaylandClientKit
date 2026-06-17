@@ -37,11 +37,10 @@ The completion target is:
 
 This target is not met until a GPU buffer path exists. A software-only SHM
 client is useful, but it is not a complete foundation for a modern GUI stack.
-The package-internal preview external-buffer path proves renderer-produced GPU
-buffer import/commit/release lifetime for maintainer evidence. A public shape
-still needs an opaque preview-buffer or renderer-neutral descriptor boundary
-before external renderers can call it. It remains preview
-API until live renderer integration evidence is broader.
+The preview external-buffer path keeps descriptor submission package-internal
+while WaylandClientKit owns import, commit, release tracking, and late-release
+cleanup. A raw-handle-free public renderer adapter remains deferred until live
+renderer integration evidence is broader.
 
 ## Foundation Checkpoint 1
 
@@ -135,9 +134,7 @@ The current baseline already has meaningful substrate pieces:
   capability, runtime-path, and fallback facts
 - managed software backing and managed-GPU clear-frame submission in
   `WaylandGraphicsPreview` for framework-facing preview experiments without raw
-  platform handles; package-internal maintainer external-buffer import remains
-  evidence plumbing until a raw-handle-free public boundary exists; `.managedGPU`
-  now attempts surface feedback, GBM/EGL
+  platform handles; `.managedGPU` now attempts surface feedback, GBM/EGL
   rendering, dmabuf import, and owner-thread presentation before falling back or
   failing with a typed reason
 - public graphics frame scheduling requests for explicit sync, FIFO,
@@ -161,8 +158,8 @@ The current baseline already has meaningful substrate pieces:
   accept damage, regions, metadata, and submit constraints
 - xdg-activation protocol XML, raw manager/token binding, public capability
   reporting, public token request and activate APIs, and `XDGActivationSmoke`
-- public window restoration snapshots and `SessionStateSmoke` for local
-  framework-owned session state without compositor session-management API
+- public window restoration snapshots, `SessionStateSmoke`, and preview
+  compositor session protocol facts without framework session policy
 - relative pointer and pointer-constraint protocol XML, raw wrappers, public
   capability reporting, typed input events, managed lock/confine requests, and
   `PointerCaptureSmoke`
@@ -191,8 +188,8 @@ Known foundation gaps:
 - broader live compositor coverage for explicit sync, FIFO, commit timing,
   external buffer import, output topology, and metadata protocols beyond local
   unit and smoke reporting
-- compositor session-management protocol evidence where needed by app launch
-  and restoration workflows
+- broader compositor session-management protocol evidence where needed by app
+  launch and restoration workflows
 - compositor matrix coverage beyond headless Weston
 - public DocC reference documentation
 - compatibility and release policy for stable client APIs and preview graphics
@@ -272,9 +269,9 @@ These sources shape the roadmap:
   input hints:
   <https://www.mail-archive.com/wayland-devel%40lists.freedesktop.org/msg44067.html>
 - `xdg-session-management-v1` defines compositor-managed application session
-  identity and toplevel session membership. WaylandClientKit reports the
-  capability and keeps raw preview plumbing internal until lifecycle evidence
-  and framework boundaries are stronger:
+  identity and toplevel session membership. WaylandClientKit exposes narrow
+  preview event facts while keeping framework scene/document restore policy
+  above the package:
   <https://cgit.freedesktop.org/wayland/wayland-protocols/tree/staging/xdg-session-management/xdg-session-management-v1.xml>
 - `cursor-shape-v1` is the compositor-managed cursor shape protocol:
   <https://wayland.app/protocols/cursor-shape-v1>
@@ -1055,9 +1052,8 @@ Required behavior:
 
 - expose xdg activation as a typed app-client API
 - expose local restoration facts without owning document lifecycle
-- report compositor session-management advertisement while deferring public
-  session objects/events until lifecycle evidence and framework usage shape are
-  clear
+- report compositor session-management advertisement and narrow preview protocol
+  events without owning framework scene/document policy
 - expose toplevel icon and dialog metadata only as protocol-shaped desktop
   integration facts
 - distinguish output observation from output control

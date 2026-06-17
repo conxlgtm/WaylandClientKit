@@ -2,7 +2,9 @@ import CWaylandProtocols
 
 extension RawDisplayConnection {
     @safe
-    package func bindWlrOutputManagerOneShot() throws -> RawWlrOutputManager? {
+    package func bindWlrOutputManagerOneShot(
+        onEvent: ((RawWlrOutputManagerEvent) -> Void)? = nil
+    ) throws -> RawWlrOutputManager? {
         preconditionIsOwnerThread()
         guard let global = optionalGlobal(named: "zwlr_output_manager_v1") else {
             return nil
@@ -24,7 +26,8 @@ extension RawDisplayConnection {
         return try RawWlrOutputManager(
             pointer: manager,
             version: version,
-            proxyAdoption: proxyAdoption
+            proxyAdoption: proxyAdoption,
+            onEvent: onEvent
         )
     }
 }

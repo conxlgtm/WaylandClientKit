@@ -8,8 +8,8 @@ window and popup surfaces, software rendering through shared memory, input
 events, keyboard interpretation, relative pointer and pointer constraints,
 pointer gestures, pointer warp requests, tablet input, cursor requests, data
 transfer, text-input sessions, XDG activation, desktop relationship hints,
-presentation feedback, output topology, output-management capability reporting,
-diagnostics, and capability
+presentation feedback, output topology, output-management preview facts,
+compositor session-management preview facts, diagnostics, and capability
 reporting.
 
 GPU allocation and presentation experiments live in package-internal preview
@@ -47,6 +47,8 @@ targets. They are not public `WaylandClient` API.
 - ``SurfaceScale``
 - ``OutputSnapshot``
 - ``OutputID``
+- ``OutputManagementSnapshot``
+- ``OutputConfigurationProposal``
 - ``SurfaceRegion``
 - ``SurfaceDamageRegion``
 - ``PositivePixelSize``
@@ -107,6 +109,8 @@ targets. They are not public `WaylandClient` API.
 - ``IdleInhibitor``
 - ``WindowDialog``
 - ``KeyboardShortcutsInhibitor``
+- ``ForeignToplevelListSnapshot``
+- ``CompositorSessionEventSnapshot``
 
 ### Capabilities
 

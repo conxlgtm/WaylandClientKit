@@ -75,6 +75,14 @@ extension WaylandDisplay {
         try requireCore().destroyKeyboardShortcutsInhibitor(inhibitorID)
     }
 
+    public func foreignToplevelListSnapshot(
+        timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds
+    ) throws -> ForeignToplevelListSnapshot {
+        try requireCore().foreignToplevelListSnapshot(
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+    }
+
     public func ringSystemBell() throws {
         try requireCore().ringSystemBell(windowID: nil)
     }

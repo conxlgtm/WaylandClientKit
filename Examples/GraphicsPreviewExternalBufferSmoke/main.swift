@@ -7,7 +7,7 @@ import WaylandGraphicsPreview
 import WaylandRaw
 
 @main
-enum GraphicsPreviewExternalBufferMaintainerSmoke {
+enum GraphicsPreviewExternalBufferSmoke {
     private static let drmFormatXRGB8888: UInt32 = 875_713_112
 
     static func main() async {
@@ -33,8 +33,8 @@ enum GraphicsPreviewExternalBufferMaintainerSmoke {
         try await WaylandDisplay.withConnection { display in
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: WindowConfiguration(
-                    title: "WaylandClientKit External Buffer Maintainer Smoke",
-                    appID: "wayland-client-kit-external-buffer-maintainer-smoke",
+                    title: "WaylandClientKit External Buffer Smoke",
+                    appID: "wayland-client-kit-external-buffer-smoke",
                     initialWidth: 96,
                     initialHeight: 96,
                     bufferCount: 2
@@ -46,6 +46,7 @@ enum GraphicsPreviewExternalBufferMaintainerSmoke {
             )
             let runtimePath = try await backing.runtimePath
             log("feature: external-gpu-buffer")
+            log("scope: maintainer-internal")
             log("requested backing: external-dmabuf")
             log("dmabuf: \(status(runtimePath.dmabufImport))")
             log("format: XRGB8888")
@@ -106,9 +107,9 @@ enum GraphicsPreviewExternalBufferMaintainerSmoke {
             log("format: \(renderer.formatDescription)")
             log("modifier: \(renderer.modifierDescription)")
             log("planes: \(renderer.planeCount)")
-            log("import: active")
-            log("submit: active")
-            log("release: \(status(result.runtimePath.bufferLifecycle))")
+            log("import: pass")
+            log("submit: pass")
+            log("release: \(releaseStatus(result.runtimePath.bufferLifecycle))")
             log("release/reuse: tracked-by-wayland-client-kit")
             log(
                 "fallback reason: \(result.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
@@ -121,8 +122,8 @@ enum GraphicsPreviewExternalBufferMaintainerSmoke {
             log("format: \(renderer.formatDescription)")
             log("modifier: \(renderer.modifierDescription)")
             log("planes: \(renderer.planeCount)")
-            log("import: failed(\(error))")
-            log("submit: skipped(import-failed)")
+            log("import: fail(\(error))")
+            log("submit: fail(import-failed)")
             log("release: not observed")
             log("fallback reason: none")
             log("failure: \(error)")
@@ -158,14 +159,14 @@ enum GraphicsPreviewExternalBufferMaintainerSmoke {
             _ = try await lease.submitExternalBuffer(
                 try pipeBackedExternalDescriptor(size: lease.size)
             )
-            log("import: active(unexpected)")
-            log("submit: active(unexpected)")
-            log("release: active(unexpected)")
+            log("import: pass(unexpected)")
+            log("submit: pass(unexpected)")
+            log("release: observed(unexpected)")
             log("fallback reason: none")
             log("failure: unexpected-pipe-fd-import-success")
         } catch {
-            log("import: failed(expected-cleanup: \(error))")
-            log("submit: skipped(import-failed)")
+            log("import: fail(expected-cleanup: \(error))")
+            log("submit: fail(import-failed)")
             log("release: not observed")
             log("fallback reason: none")
             log("failure: expected-negative-test(\(error))")
@@ -219,6 +220,19 @@ enum GraphicsPreviewExternalBufferMaintainerSmoke {
             "fallback(\(reason))"
         case .failed(let reason):
             "failed(\(reason))"
+        }
+    }
+
+    nonisolated private static func releaseStatus(
+        _ status: WaylandGraphicsRuntimeStatus
+    ) -> String {
+        switch status {
+        case .active:
+            "not-observed"
+        case .failed:
+            "retired"
+        default:
+            "not-observed"
         }
     }
 
@@ -392,6 +406,8 @@ private struct ExternalBufferSmokeOptions: Equatable, Sendable {
                 mode = .internalTestBuffer
             case "--negative-test-buffer":
                 mode = .negativeTestBuffer
+            case "--auto-close", "--print-summary":
+                continue
             case "--":
                 return Self(mode: mode)
             default:

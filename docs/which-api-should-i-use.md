@@ -32,11 +32,12 @@ selection, build that in your framework above WaylandClientKit.
 | Drag detachable content as a toplevel | `Window.startToplevelDrag(source:seatID:serial:icon:offset:)` | `xdg_toplevel_drag_manager_v1`, data-device drag support, and a live button serial | [ToplevelDragSmoke](../Examples/ToplevelDragSmoke/main.swift) |
 | Request activation/focus handoff | `Window.requestActivationToken`, `Window.activate(using:)` | `xdg_activation_v1` and compositor policy | [XDGActivationSmoke](../Examples/XDGActivationSmoke/main.swift) |
 | Save framework-owned window restore facts | `Window.restorationSnapshot`, `WindowStateSnapshot`, `WindowRestorationSnapshot` | initial window configure must have happened | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) |
-| Inspect compositor session-management advertisement | `WaylandDisplay.capabilities().compositorSessionManagement` | `xdg_session_manager_v1` | [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
+| Inspect compositor session protocol facts | `WaylandDisplay.compositorSessionEvents(reason:existingID:)` | `xdg_session_manager_v1`; local restore remains framework-owned | [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
+| Inspect read-only foreign toplevel facts | `WaylandDisplay.foreignToplevelListSnapshot()` | `ext_foreign_toplevel_list_v1`; titles/app IDs are optional and privacy-sensitive | [ForeignToplevelListSmoke](../Examples/ForeignToplevelListSmoke/main.swift) |
+| Inspect output-management facts or test current config | `WaylandDisplay.outputManagementSnapshot()`, `OutputConfigurationProposal(current:)`, `testOutputConfiguration(_:)` | `zwlr_output_manager_v1`; mutation is preview and explicit | [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
 | Time animation to real presentation | `Window.requestPresentationFeedback`, `Window.presentationEvents` | `wp_presentation` | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Inspect optional protocol support | `WaylandDisplay.capabilities()` | registry discovery | [Capabilities DocC](../Sources/WaylandClient/WaylandClient.docc/CapabilitiesAndOptionalProtocols.md) |
 | Try renderer-neutral GPU preview | `WaylandGraphicsPreview` values, `WaylandGraphicsWindowBacking`, frame leases | `zwp_linux_dmabuf_v1` plus surface-specific runtime setup | [Graphics preview docs](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md) |
-| Inspect external GPU buffer preview evidence | `GraphicsPreviewExternalBufferMaintainerSmoke -- --probe` | `zwp_linux_dmabuf_v1` advertisement; active import evidence uses maintainer-only plumbing | [External buffer docs](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ExternalBufferSubmission.md) |
 | Request preview frame scheduling | `WaylandGraphicsFrameSchedule` | explicit sync, FIFO, commit timing, or presentation protocols as requested | [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift) |
 | Report color metadata facts | `WaylandGraphicsFrameMetadata`, color runtime path facts | color metadata protocols where advertised | [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 | Build real widgets, layout, styling, or accessibility semantics | Your framework above WaylandClientKit | framework policy | [Building A GUI Layer](building-a-gui-layer.md) |
@@ -55,8 +56,8 @@ WaylandClientKit owns:
 - Software buffer presentation, damage validation, and capability-gated request
   plumbing.
 - Renderer-neutral graphics preview facts and fallback results.
-- Output topology and color metadata facts without monitor settings or renderer
-  color policy.
+- Output topology, output-management preview facts, and color metadata facts
+  without general monitor settings or renderer color policy.
 
 Your app or framework owns:
 
