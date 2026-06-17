@@ -13,12 +13,9 @@ WaylandClientKit uses SemVer-shaped tags, but it is pre-foundation.
 - Public docs should explain new user-facing behavior before release notes claim
   it.
 
-## First Public Tag
+## Public Tags
 
-The first public tag should be `0.1.0` after public-readiness checks pass.
-
-Use `0.1.0-preview.1` only if the repository is public but the maintainer wants
-one more explicitly pre-release checkpoint before a normal `0.1.0` tag.
+The first public tag is `0.1.0`.
 
 Do not use `1.0.0` until the foundation contract is documented, tested, and
 supported by release evidence.

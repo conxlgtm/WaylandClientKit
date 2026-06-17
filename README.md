@@ -23,8 +23,7 @@ tracked under the [compatibility policy](docs/compatibility-policy.md).
 `WaylandGraphicsPreview` is preview API and may break source compatibility while
 the graphics substrate proves itself on real compositors.
 
-Versioning is documented in [Versioning](docs/versioning.md). Public-launch
-status is tracked in [Public Readiness](docs/public-readiness.md).
+Versioning is documented in [Versioning](docs/versioning.md).
 
 ## What It Supports
 
@@ -103,7 +102,6 @@ For the full walkthrough, see [Getting Started](docs/getting-started.md).
 - [Compatibility Policy](docs/compatibility-policy.md)
 - [Versioning](docs/versioning.md)
 - [Release Checklist](docs/release.md)
-- [Public Readiness](docs/public-readiness.md)
 
 ## Examples
 
