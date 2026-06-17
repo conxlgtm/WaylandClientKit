@@ -18,7 +18,7 @@ surfaces.
 | `SubsurfaceRoleSurface` | `SurfaceRuntime<SubsurfaceRoleResources>` | public software `show` and `redraw` | public | public | internal commit metadata | internal submit constraints |
 
 `SurfaceRoleReadinessSnapshot` mirrors this table in package-internal state and
-tests. The snapshot is not a public capability API; it is a guardrail for
+tests. The snapshot is not a public capability API, it is a guardrail for
 internal role routing.
 
 ## Top-level windows
@@ -39,7 +39,7 @@ internal role routing.
   are capability-checked before commit.
 - Destroy order: role resources are removed before the raw surface is destroyed.
 - Late callback policy: frame and presentation callbacks are routed through the
-  transaction and event hubs; discarded surfaces suppress lifecycle callbacks.
+  transaction and event hubs, discarded surfaces suppress lifecycle callbacks.
 
 ## Popups
 
@@ -88,7 +88,7 @@ internal role routing.
 - Destroy order: drag cancel, finish, failed start, and display teardown retire
   SHM pools before destroying the raw surface.
 - Late callback policy: data-transfer cleanup owns source cancellation and drag
-  completion; late role cleanup is idempotent.
+  completion, late role cleanup is idempotent.
 
 ## Graphics preview backing
 
@@ -122,7 +122,7 @@ out of `DisplayResourceTable`.
   surface commits are followed by a parent surface commit. `set_sync` and
   `set_desync` are immediate protocol requests and do not commit the parent.
 - Destroy order: parent windows close managed subsurfaces before the parent role
-  surface is destroyed; subsurface role resources are destroyed before the child
+  surface is destroyed, subsurface role resources are destroyed before the child
   raw surface.
 - Late callback policy: pending frame state is cancelled during close and stale
   handles report typed display errors.

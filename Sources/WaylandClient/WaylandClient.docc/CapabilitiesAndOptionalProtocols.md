@@ -21,5 +21,5 @@ fallback for compositors that do not support them or decline a later request.
 
 ``WaylandCapabilities/compositorSessionManagement`` reports staging
 `xdg_session_manager_v1` advertisement. Public preview session events are
-protocol facts only; scene, document, and local restore policy remain framework
+protocol facts only. Scene, document, and local restore policy remain framework
 owned.

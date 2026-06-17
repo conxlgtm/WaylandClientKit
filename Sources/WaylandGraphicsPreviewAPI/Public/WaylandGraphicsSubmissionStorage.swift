@@ -880,18 +880,16 @@ extension WaylandGraphicsWindowBackingStorage {
     }
 }
 
-#if DEBUG
-    extension WaylandGraphicsWindowBackingStorage {
-        package func closeForTesting() async throws {
-            try await close()
-        }
-
-        package func externalBufferSubmittedSlotRawValuesForTesting() -> [Int] {
-            externalBufferPresenter.outstandingSubmittedSlotIDs.map(\.rawValue)
-        }
-
-        package func externalBufferAvailableSlotRawValuesForTesting() -> [Int] {
-            externalBufferPresenter.availableSlotIDs.map(\.rawValue)
-        }
+extension WaylandGraphicsWindowBackingStorage {
+    package func closeForTesting() async throws {
+        try await close()
     }
-#endif
+
+    package func externalBufferSubmittedSlotRawValuesForTesting() -> [Int] {
+        externalBufferPresenter.outstandingSubmittedSlotIDs.map(\.rawValue)
+    }
+
+    package func externalBufferAvailableSlotRawValuesForTesting() -> [Int] {
+        externalBufferPresenter.availableSlotIDs.map(\.rawValue)
+    }
+}

@@ -146,7 +146,7 @@ sudo zypper --non-interactive install \
 
 Swift 6.3.2 SwiftPM may also need a compatibility `libxml2.so.2` on
 openSUSE. The Swift tool resolver honors `$SWIFT_COMPAT_LIBS`, defaulting to
-`$HOME/.local/share/swift-compat-libs`; direct toolchain calls must expose that
+`$HOME/.local/share/swift-compat-libs`, direct toolchain calls must expose that
 directory through `LD_LIBRARY_PATH` or another runtime loader path.
 
 The support contract is SwiftPM plus system libraries resolved through

@@ -1,19 +1,44 @@
 name: Feature request
-description: Propose protocol or API work
+description: Propose higher-level API, behavior, or documentation work
+title: "[Feature]: "
+labels:
+  - enhancement
 body:
   - type: input
-    id: protocol
+    id: area
     attributes:
-      label: Protocol or subsystem
+      label: Area
+      placeholder: WaylandClient windows, data transfer, graphics preview, docs, tooling, ...
+    validations:
+      required: true
+  - type: input
+    id: related_protocol
+    attributes:
+      label: Related protocol or subsystem
+      description: Leave blank if this is not protocol-specific.
   - type: textarea
     id: problem
     attributes:
       label: User problem or use case
+      description: Describe the work the API should make possible.
+    validations:
+      required: true
   - type: textarea
     id: sketch
     attributes:
       label: Proposed API or design sketch
+      description: Keep it concrete. Pseudocode is welcome.
   - type: textarea
     id: risks
     attributes:
       label: Compatibility, safety, and compositor risks
+      description: Mention source compatibility, raw handles, lifecycle, file descriptors, or compositor support if relevant.
+  - type: checkboxes
+    id: followup
+    attributes:
+      label: Expected follow-up
+      options:
+        - label: Public API docs need updates
+        - label: Public API audit or baseline may need updates
+        - label: Examples or smoke tests should be added
+        - label: Compositor evidence is needed

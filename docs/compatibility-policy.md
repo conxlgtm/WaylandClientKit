@@ -4,11 +4,15 @@ WaylandClientKit is pre-foundation. That means public API can still change, but
 changes must be deliberate, reviewed, documented, and covered by the public API
 baseline.
 
+WaylandClientKit is distributed under the repository [Apache License 2.0](../LICENSE).
+The license grants reuse rights. This policy describes API compatibility and
+review expectations.
+
 ## Compatibility Tiers
 
 | Tier | Promise | Breaking change process | Required checks |
 | --- | --- | --- | --- |
-| `WaylandClient` public API | Main stable-ish app-substrate product. Source changes are allowed before foundation, but must be intentional. | Update public API baseline, public API audit, DocC/user docs, tests, and release notes when user-visible. | `swift run wck api verify`, `swift run wck docc verify`, public integration client. |
+| `WaylandClient` public API | Main public app-substrate product. Source changes are allowed before foundation, but must be intentional. | Update public API baseline, public API audit, DocC/user docs, tests, and release notes when user-visible. | `swift run wck api verify`, `swift run wck docc verify`, public integration client. |
 | `WaylandGraphicsPreview` public API | Source-breaking preview product. Preview drift is allowed, but not invisible. | Update baseline/audit/docs/tests. Say why preview source breakage is acceptable. Keep raw handles internal. | `swift run wck api verify`, graphics preview integration client, examples build. |
 | Executable products and examples | Examples may change, but should remain runnable, useful, and matrix-friendly. | Update docs and example checklist when adding, renaming, or changing expected output. | `swift run wck examples build`, relevant smoke command. |
 | Package-internal targets | May change without source compatibility promises. Resource, unsafe, and owner-thread invariants must stay tested. | Update strict memory-safety audit when unsafe or unchecked sendability changes. Add tests for lifetime/resource rules. | unsafe allowlist, focused unit tests, strict concurrency build. |

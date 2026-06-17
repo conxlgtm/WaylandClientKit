@@ -16,13 +16,9 @@ public struct DocumentationCoverageVerifier {
     public static let requiredFiles = [
         "README.md",
         "CONTRIBUTING.md",
-        "docs/architecture.md",
-        "docs/building-a-gui-layer.md",
         "docs/compatibility-policy.md",
         "docs/compositor-matrix.md",
         "docs/documentation-map.md",
-        "docs/foundation-candidate-status.md",
-        "docs/framework-host-contract.md",
         "docs/generation.md",
         "docs/getting-started.md",
         "docs/live-wayland-testing.md",
@@ -68,18 +64,6 @@ public struct DocumentationCoverageVerifier {
             path: "README.md",
             phrase: "docs/which-api-should-i-use.md",
             description: "README links to API chooser"),
-        RequiredPhrase(
-            path: "README.md",
-            phrase: "docs/framework-host-contract.md",
-            description: "README links to framework host contract"),
-        RequiredPhrase(
-            path: "README.md",
-            phrase: "docs/session-readiness.md",
-            description: "README links to session readiness"),
-        RequiredPhrase(
-            path: "README.md",
-            phrase: "docs/building-a-gui-layer.md",
-            description: "README links to GUI layer guidance"),
         RequiredPhrase(
             path: "docs/session-readiness.md",
             phrase: "XDG_STATE_HOME",

@@ -240,7 +240,7 @@ Current user-facing contract:
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
   hidden cursors, static XRGB8888 custom cursor images, and output-aware theme
   scale policy. Animated custom cursors are public value types built from
-  validated cursor images and positive frame durations; WaylandClientKit keeps
+  validated cursor images and positive frame durations, WaylandClientKit keeps
   frame scheduling, SHM buffers, and cursor surfaces private.
 - Presentation feedback means `wp_presentation` feedback for managed surfaces.
   Frame callbacks, presentation feedback, graphics-preview scheduling requests,
@@ -250,7 +250,7 @@ Current user-facing contract:
   connection-local output identities, logical geometry, scale, transform,
   physical size, names, descriptions, and surface output membership facts.
   `outputTopology()` returns the same output snapshot array sorted by identity.
-  WaylandClientKit reports output facts; it does not apply monitor settings or
+  WaylandClientKit reports output facts, it does not apply monitor settings or
   own display-configuration policy.
 - GPU and GBM/EGL/dmabuf work remains package-internal and is surfaced only
   through the separate preview product. There is no public renderer, swapchain,
@@ -322,17 +322,17 @@ Current preview contract:
   file descriptor handles.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
-  submission, or release failure; display-level dmabuf advertisement alone is
+  submission, or release failure, display-level dmabuf advertisement alone is
   not reported as active GPU backing.
 - Synchronization and pacing policies are active runtime requests for graphics
   preview submissions, and `WaylandGraphicsFrameSchedule` makes them
   per-frame caller-visible preview scheduling inputs. `implicitOnly` avoids
-  explicit sync objects; `preferExplicit` falls back to implicit sync with a
+  explicit sync objects, `preferExplicit` falls back to implicit sync with a
   runtime reason only before explicit sync is installed or active on the
-  surface; `requireExplicit` fails instead of silently falling back, including
+  surface, `requireExplicit` fails instead of silently falling back, including
   configurations that request software backing or forced software fallback.
   `fifo` and `commitTiming` apply submit constraints on managed GPU
-  and software/fallback commits when advertised; FIFO commits prime with
+  and software/fallback commits when advertised, FIFO commits prime with
   `set_barrier` before later commits wait and re-prime. Missing pacing
   protocols report fallback or typed failure facts. Live compositor evidence
   currently proves explicit sync and FIFO active. Commit timing remains an
@@ -357,10 +357,10 @@ Current preview contract:
   surface intersection.
 - Presentation feedback policy can request feedback when available or require
   it before creating a managed backing. Feedback observations still arrive on
-  `WindowPresentationEvents`; frame submission results only report whether
+  `WindowPresentationEvents`, frame submission results only report whether
   feedback was requested for that submit, not whether it was later observed.
 - Downstream code that wants this boundary imports `WaylandGraphicsPreview`
-  explicitly; importing `WaylandClient` alone does not opt into renderer-facing
+  explicitly, importing `WaylandClient` alone does not opt into renderer-facing
   preview API.
 
 Intentionally package-internal:
@@ -399,7 +399,7 @@ Notes:
   package implementation details. Downstream users should go through `WaylandDisplay`
   and `Window`.
 - `TopLevelWindow` owns managed toplevel surface presentation for SHM software
-  drawing and package-internal graphics-preview buffer commits; it is not
+  drawing and package-internal graphics-preview buffer commits, it is not
   public API.
 - `SoftwareFrame` is noncopyable and borrowed by drawing callbacks. User code can draw
   through row spans during the callback, but cannot copy the frame out and mutate the
@@ -415,12 +415,12 @@ Notes:
   `WaylandDisplay.setPointerCursor(_:)` applies the desired cursor to focused seats.
   Explicit cursor changes throw when the cursor stack cannot fulfill the request.
   Cursor-shape is used when advertised and the requested cursor maps to a known
-  compositor shape; otherwise the theme cursor path remains the fallback. Static
+  compositor shape, otherwise the theme cursor path remains the fallback. Static
   custom cursor images use validated XRGB8888 pixels and private SHM-backed
   cursor surfaces. Animated custom cursor values reuse that image validation and
   expose no raw cursor surface, SHM pool, buffer, timer, or queue handles.
   Diagonal resize convenience presets are deferred until cursor theme names are
-  verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
+  verified across KDE, GNOME, Sway/wlroots, and Weston, frameworks may use
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
 - Subsurface management is window-owned. Public handles expose creation,
   software show/redraw, regions, position, stacking, sync/desync, close,
@@ -458,7 +458,7 @@ Notes:
   window, request methods require an enabled or focused session, and `commit()`
   sends the protocol commit request. `TextInputSurroundingText` supports both
   protocol UTF-8 byte offsets and Swift `String.Index` construction. `disable()`
-  finalizes the disable request; callers should commit pending enabled-state
+  finalizes the disable request, callers should commit pending enabled-state
   changes before disabling and should not call `commit()` after `disable()`.
   Input-panel show/hide requests are v2 hints and can be ignored by the
   compositor.

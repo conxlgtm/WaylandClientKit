@@ -27,7 +27,7 @@ directly from WaylandClientKit.
 - ``Window/inhibitIdle()`` requires `zwp_idle_inhibit_manager_v1`.
 - ``Window/createDialog(parent:modal:)`` requires `xdg_wm_dialog_v1`.
 - ``Window/startToplevelDrag(source:seatID:serial:icon:offset:)`` requires
-  `xdg_toplevel_drag_manager_v1`; it creates the drag source and toplevel-drag
+  `xdg_toplevel_drag_manager_v1`. It creates the drag source and toplevel-drag
   object before the compositor `start_drag` request.
 - ``Window/inhibitKeyboardShortcuts(seatID:)`` requires
   `zwp_keyboard_shortcuts_inhibit_manager_v1`.

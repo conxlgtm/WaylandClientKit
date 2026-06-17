@@ -34,7 +34,7 @@ proxy lifetime for windows, seats, and display shutdown.
 
 Pointer warp is also compositor policy. The request requires an input serial and
 is scoped to the caller's managed window, seat pointer, and logical surface
-position. A successful request means the protocol request was sent; it does not
+position. A successful request means the protocol request was sent. It does not
 guarantee the compositor will visibly move the pointer.
 
 ```swift

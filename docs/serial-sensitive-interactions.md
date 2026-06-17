@@ -103,7 +103,7 @@ try await window.activate(using: token)
 ```
 
 The token is opaque and compositor policy may still decline or ignore the later
-activate request. WaylandClientKit preserves the serial, surface, and app ID facts;
+activate request. WaylandClientKit preserves the serial, surface, and app ID facts.
 the framework owns launch, command routing, and user-facing focus policy.
 
 ## Multi-Window Routing

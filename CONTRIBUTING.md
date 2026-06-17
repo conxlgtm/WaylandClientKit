@@ -2,6 +2,17 @@
 
 WaylandClientKit is an experimental Linux Wayland client package. Keep changes small, protocol-shaped, and easy to verify.
 
+## Community
+
+Contributors are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+For support channels and issue routing, see [Support](SUPPORT.md).
+
+## Security Reports
+
+Do not open public issues for vulnerabilities. Follow [SECURITY.md](SECURITY.md)
+and use GitHub private vulnerability reporting if available, or contact the
+maintainer privately at <wck.197t1@simplelogin.fr>.
+
 ## Environment
 
 Swift 6.3.2 or newer must already be installed.
@@ -31,7 +42,7 @@ Core build requirements:
 
 Install distro packages explicitly, or print the package-manager command for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, Alpine, or Gentoo systems.
 For Nix/NixOS, use `nix develop`.
-Bootstrap commands print installation guidance only; they do not mutate the machine.
+Bootstrap commands print installation guidance only. They do not mutate the machine.
 
 ```bash
 swift run wck bootstrap check

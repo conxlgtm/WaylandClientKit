@@ -46,7 +46,7 @@ reason.
 `WaylandGraphicsPacingPolicy.preferCommitTiming` apply submit constraints
 when their protocols are available. The same pacing policy is carried into
 direct software commits and allowed software fallback commits. Missing protocols
-become pacing fallback facts; rejected commit-timing timestamps become typed
+become pacing fallback facts. Rejected commit-timing timestamps become typed
 failures. Public commit timing currently uses
 the preview default target request.
 FIFO pacing uses a priming commit before waits: the first FIFO-paced frame sets
@@ -80,5 +80,5 @@ swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo
 Do not record explicit synchronization, FIFO, commit timing, or metadata as
 active unless the runtime-path output itself reports `active` for that
 component on a submitted frame. Current KDE/KWin evidence records explicit
-sync, FIFO, and metadata as active; commit timing still needs active
+sync, FIFO, and metadata as active. Commit timing still needs active
 runtime-path evidence on a compositor that advertises it.

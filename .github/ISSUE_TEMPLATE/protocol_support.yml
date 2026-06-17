@@ -1,0 +1,64 @@
+name: Protocol support
+description: Request or propose support for a Wayland protocol
+title: "[Protocol]: "
+labels:
+  - protocol
+body:
+  - type: input
+    id: protocol
+    attributes:
+      label: Protocol name
+      placeholder: xdg_toplevel_icon_v1, wp_fractional_scale_v1, ...
+    validations:
+      required: true
+  - type: input
+    id: xml
+    attributes:
+      label: Protocol XML link
+      description: Link to the upstream XML or authoritative source.
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Upstream phase
+      options:
+        - stable
+        - staging
+        - unstable
+        - wlr-unstable
+        - external or compositor-specific
+        - unknown
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Compositor evidence
+      description: Include advertised globals, compositor/version, command output, and any runtime behavior.
+      render: text
+  - type: textarea
+    id: public_api
+    attributes:
+      label: Intended public API
+      description: Describe the public WaylandClient or WaylandGraphicsPreview shape, or say raw/internal only.
+    validations:
+      required: true
+  - type: textarea
+    id: lifecycle
+    attributes:
+      label: Lifecycle and resources
+      description: Note protocol object ownership, serials, file descriptors, event ordering, and destroy rules.
+    validations:
+      required: true
+  - type: checkboxes
+    id: coverage
+    attributes:
+      label: Required coverage
+      options:
+        - label: Vendored XML keeps upstream license/provenance notices
+        - label: Generated artifacts are updated
+        - label: Raw wrappers or shims are covered
+        - label: Public docs or DocC are updated if surfaced publicly
+        - label: Smoke tests or compositor evidence are planned
+        - label: Compatibility policy impact is understood

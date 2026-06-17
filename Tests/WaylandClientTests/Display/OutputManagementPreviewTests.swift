@@ -322,9 +322,10 @@ struct OutputManagementPreviewTests {
         try collection.configureCurrentState(on: configuration)
 
         let record = unsafe swl_test_output_request_record()
-        #expect(unsafe record.call_count == 6)
-        #expect(unsafe record.kind == SWL_TEST_OUTPUT_CONFIGURATION_HEAD_DESTROY)
+        #expect(unsafe record.call_count == 5)
+        #expect(unsafe record.kind == SWL_TEST_OUTPUT_CONFIGURATION_HEAD_SET_SCALE)
         #expect(unsafe record.configuration_head != nil)
+        #expect(unsafe record.scale == 512)
     }
 
     private func withOutputRequestRecording(_ operation: () throws -> Void) async throws {

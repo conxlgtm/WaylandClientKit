@@ -1,9 +1,8 @@
 # Managed subsurface support
 
-Subsurfaces are platform surface hierarchy, not widgets. WaylandClientKit owns the
-Wayland object lifetime, parent/child cleanup, surface scale installation, and
-software frame commits. Frameworks still own layout, hit testing, z-order policy,
-and dirty-region calculation.
+Subsurfaces are platform child surfaces. WaylandClientKit owns the Wayland object
+lifetime, parent/child cleanup, surface scale installation, and software frame
+commits.
 
 The first managed API is intentionally conservative:
 

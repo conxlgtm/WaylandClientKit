@@ -1,7 +1,7 @@
 # Session Readiness
 
-Use WaylandClientKit for platform facts that a framework can use to build local app
-and window restoration. Keep scene, document, and UI policy above WaylandClientKit.
+Use WaylandClientKit for platform facts that a framework can use to build local
+app and window restoration.
 
 WaylandClientKit currently exposes restoration-relevant facts through
 ``Window/restorationSnapshot`` and compositor session-management advertisement

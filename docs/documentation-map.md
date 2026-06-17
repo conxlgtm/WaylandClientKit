@@ -1,8 +1,7 @@
 # Documentation Map
 
-WaylandClientKit documentation has five layers. Each layer has one job so users,
-framework authors, and maintainers do not have to reverse-engineer the package
-layout.
+WaylandClientKit documentation is split into public entry points, API reference,
+and maintainer policy records.
 
 ## User Entry Points
 
@@ -12,13 +11,15 @@ layout.
   dependency checks to a small window that draws pixels.
 - [Which API Should I Use?](which-api-should-i-use.md): task-oriented guide
   that maps common app/framework needs to public WaylandClientKit APIs.
-- [Session Readiness](session-readiness.md): app/window restoration boundary for
-  future framework authors.
+- [Support Matrix](support-matrix.md): public, preview, internal preview,
+  raw/generated, and unsupported protocol coverage.
+- [Linux Dependencies](linux-dependencies.md): distro package hints and
+  toolchain capability checks.
 
 ## Public API Reference And Concepts
 
 - [WaylandClient DocC catalog](../Sources/WaylandClient/WaylandClient.docc/WaylandClient.md):
-  stable-ish public app-substrate API for display lifecycle, windows, software
+  main public app-substrate API for display lifecycle, windows, software
   drawing, input, data transfer, text input, cursor policy, presentation
   feedback, diagnostics, and optional protocol capabilities.
 - [WaylandGraphicsPreview DocC catalog](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md):
@@ -31,50 +32,25 @@ public API changes are baseline and audit tracked. `WaylandGraphicsPreview` is
 explicitly preview and may change source compatibility, but preview API drift is
 still reviewed and documented.
 
-## Maintainer Docs
+## Maintainer Policy
 
-The [docs](.) directory contains project operation and design records:
+Use these for repository operation and release review:
 
-- [Architecture](architecture.md)
 - [Compatibility policy](compatibility-policy.md)
-- [Foundation candidate status](foundation-candidate-status.md)
-- [Foundation evidence report](foundation-evidence-report.md)
+- [Versioning](versioning.md)
+- [Public readiness](public-readiness.md)
 - [Release process](release.md)
 - [Tooling](tooling.md)
 - [Public API audit](public-api-audit.md)
 - [Strict memory-safety audit](strict-memory-safety-audit.md)
 - [Compositor matrix](compositor-matrix.md)
-- [Session management plan](session-management-plan.md)
-
-Maintainer docs may describe internal targets and release gates. User docs
-should link here only when the reader needs project policy, evidence, or release
-discipline.
 
 ## Runnable Examples
 
-`Examples/` contains small runnable targets. Examples are not compatibility
-promises, but they are build-gated and should remain useful as proof of public
-APIs.
-
-Canonical examples by feature:
-
-| Feature | Example |
-| --- | --- |
-| Basic software window and input | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
-| Framework host loop | [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) |
-| Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift), [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
-| Presentation timing | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
-| Output topology | [OutputTopologySmoke](../Examples/OutputTopologySmoke/main.swift) |
-| Text input | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
-| Data transfer and drag icons | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |
-| Tablet input | [TabletInputSmoke](../Examples/TabletInputSmoke/main.swift) |
-| Pointer capture, warp, and gestures | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift), [PointerWarpSmoke](../Examples/PointerWarpSmoke/main.swift), [PointerGesturesSmoke](../Examples/PointerGesturesSmoke/main.swift) |
-| Cursor policy and custom cursor images | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift), [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift), [CursorAnimationSmoke](../Examples/CursorAnimationSmoke/main.swift) |
-| Desktop integration | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift), [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift), [DialogSmoke](../Examples/DialogSmoke/main.swift), [KeyboardShortcutsInhibitSmoke](../Examples/KeyboardShortcutsInhibitSmoke/main.swift), [ToplevelDragSmoke](../Examples/ToplevelDragSmoke/main.swift), [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
-| Foreign toplevel and output-management preview | [ForeignToplevelListSmoke](../Examples/ForeignToplevelListSmoke/main.swift), [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
-| Surface regions and damage | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift), [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
-| Subsurfaces | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
-| Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift), maintainer-only [GraphicsPreviewExternalBufferSmoke](../Examples/GraphicsPreviewExternalBufferSmoke/main.swift), [GraphicsPreviewColorMetadataSmoke](../Examples/GraphicsPreviewColorMetadataSmoke/main.swift), [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
+`Examples/` contains runnable targets grouped by feature. Start with
+[WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift), then use
+[Which API Should I Use?](which-api-should-i-use.md) to find feature-specific
+examples.
 
 ## Canonical Concept Documents
 

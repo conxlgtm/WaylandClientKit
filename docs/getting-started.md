@@ -1,9 +1,7 @@
 # Getting Started
 
-This path builds one tiny client and points you at the next examples to read.
-WaylandClientKit is a Wayland platform substrate. It gives Swift code a typed client
-surface, but it does not provide widgets, layout, styling, accessibility
-semantics, a scene graph, or a renderer.
+This path builds one tiny Wayland client and points you at the next examples to
+read.
 
 ## 1. Install Dependencies
 
@@ -14,7 +12,7 @@ nix develop
 ```
 
 On other Linux distributions, install the packages listed in
-[Linux Dependencies](../README.md#linux-dependencies), then verify the
+[Linux Dependencies](linux-dependencies.md), then verify the
 environment:
 
 ```bash
@@ -115,10 +113,8 @@ constraint lifecycle events. Use `display.events` for display/window/output
 lifecycle, `display.dataTransferEvents` for clipboard and drag lifecycles, and
 `display.diagnostics` for nonfatal diagnostics such as event overflow.
 
-Frameworks built above WaylandClientKit should decide routing, focus model,
-shortcut policy, widget semantics, and accessibility semantics themselves.
-WaylandClientKit preserves Wayland identities and typed events so that higher layer
-can make those decisions.
+WaylandClientKit preserves Wayland identities and typed events for application
+and framework routing.
 
 ## 6. Close Cleanly
 

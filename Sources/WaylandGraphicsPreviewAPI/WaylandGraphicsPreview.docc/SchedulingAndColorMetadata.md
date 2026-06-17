@@ -15,7 +15,7 @@ explicit, or required explicit synchronization policy. Use
 commit-timing with WaylandClientKit's preview default target.
 
 The public schedule does not expose syncobj timelines, fences, or raw protocol
-objects. Frameworks own animation policy; WaylandClientKit exposes timing facts
+objects. Frameworks own animation policy. WaylandClientKit exposes timing facts
 and commit requests.
 
 ## Color Metadata
