@@ -3,15 +3,6 @@ import WaylandRaw
 package enum SurfaceRegionApplicator {
     package static func makeRawRegion(
         _ region: SurfaceRegion?,
-        compositor: RawCompositor
-    ) throws -> RawRegion? {
-        try makeRawRegion(region) {
-            try compositor.createRegion()
-        }
-    }
-
-    package static func makeRawRegion(
-        _ region: SurfaceRegion?,
         createRegion: () throws -> RawRegion
     ) throws -> RawRegion? {
         guard let region else { return nil }

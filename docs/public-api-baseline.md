@@ -91,58 +91,58 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L36: `public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {`
 - L37: `    public let value: String`
 - L39: `    public init(_ name: String) throws {`
-- L57: `    public var description: String {`
-- L62: `public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {`
-- L63: `    public let rawValue: Int32`
-- L65: `    public static let `default` = CursorSize(unchecked: 24)`
-- L67: `    public init(_ value: Int32) throws {`
-- L80: `    public var description: String {`
-- L84: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L89: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
-- L90: `    case displayEventCapacity`
-- L91: `    case inputEventCapacity`
-- L92: `    case textInputEventCapacity`
-- L93: `    case dataTransferEventCapacity`
-- L94: `    case presentationEventCapacity`
-- L95: `    case rawInputQueueCapacity`
-- L96: `    case pendingInputEventCapacity`
-- L97: `    case diagnosticsCapacity`
-- L99: `    public var description: String {`
-- L121: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L122: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
-- L124: `    public var description: String {`
-- L132: `public enum EventStreamCapacityField: Equatable, Sendable {`
-- L133: `    case displayEventCapacity`
-- L134: `    case inputEventCapacity`
-- L135: `    case textInputEventCapacity`
-- L136: `    case dataTransferEventCapacity`
-- L137: `    case presentationEventCapacity`
-- L155: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L156: `    public let rawValue: Int`
-- L158: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
-- L159: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
-- L160: `    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)`
-- L161: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
-- L162: `    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)`
-- L164: `    public init(`
-- L183: `    public var description: String {`
-- L187: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L192: `public enum InputQueueCapacityField: Equatable, Sendable {`
-- L193: `    case rawInputQueueCapacity`
-- L194: `    case pendingInputEventCapacity`
-- L206: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L207: `    public let rawValue: Int`
-- L209: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
-- L210: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
-- L212: `    public init(`
-- L231: `    public var description: String {`
-- L235: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L240: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L241: `    public let rawValue: Int`
-- L243: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
-- L245: `    public init(_ value: Int) throws {`
-- L261: `    public var description: String {`
-- L265: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L51: `    public var description: String {`
+- L56: `public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {`
+- L57: `    public let rawValue: Int32`
+- L59: `    public static let `default` = CursorSize(unchecked: 24)`
+- L61: `    public init(_ value: Int32) throws {`
+- L74: `    public var description: String {`
+- L78: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L83: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
+- L84: `    case displayEventCapacity`
+- L85: `    case inputEventCapacity`
+- L86: `    case textInputEventCapacity`
+- L87: `    case dataTransferEventCapacity`
+- L88: `    case presentationEventCapacity`
+- L89: `    case rawInputQueueCapacity`
+- L90: `    case pendingInputEventCapacity`
+- L91: `    case diagnosticsCapacity`
+- L93: `    public var description: String {`
+- L115: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L116: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
+- L118: `    public var description: String {`
+- L126: `public enum EventStreamCapacityField: Equatable, Sendable {`
+- L127: `    case displayEventCapacity`
+- L128: `    case inputEventCapacity`
+- L129: `    case textInputEventCapacity`
+- L130: `    case dataTransferEventCapacity`
+- L131: `    case presentationEventCapacity`
+- L149: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L150: `    public let rawValue: Int`
+- L152: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
+- L153: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
+- L154: `    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)`
+- L155: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
+- L156: `    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)`
+- L158: `    public init(`
+- L177: `    public var description: String {`
+- L181: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L186: `public enum InputQueueCapacityField: Equatable, Sendable {`
+- L187: `    case rawInputQueueCapacity`
+- L188: `    case pendingInputEventCapacity`
+- L200: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L201: `    public let rawValue: Int`
+- L203: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
+- L204: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
+- L206: `    public init(`
+- L225: `    public var description: String {`
+- L229: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L234: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L235: `    public let rawValue: Int`
+- L237: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
+- L239: `    public init(_ value: Int) throws {`
+- L255: `    public var description: String {`
+- L259: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
 
 ### `Sources/WaylandClient/Public/Configuration/DisplayConfiguration.swift`
 
@@ -501,35 +501,35 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L151: `    public let mimeTypes: [MIMEType]`
 - L152: `    public let actions: DragActionSet`
 - L172: `    public var identity: DragSourceIdentity {`
-- L181: `    public func cancel() async throws {`
-- L185: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
-- L189: `    public func hash(into hasher: inout Hasher) {`
-- L194: `public struct ToplevelDrag: Sendable, Hashable, Identifiable {`
-- L195: `    public let id: ToplevelDragID`
-- L196: `    public let windowID: WindowID`
-- L197: `    public let source: DragSourceIdentity`
-- L198: `    public let seatID: SeatID`
-- L199: `    public let serial: InputSerial`
-- L225: `    public func destroy() async throws {`
-- L233: `    public static func == (lhs: ToplevelDrag, rhs: ToplevelDrag) -> Bool {`
-- L237: `    public func hash(into hasher: inout Hasher) {`
-- L242: `public struct StartedToplevelDrag: Sendable, Hashable {`
-- L243: `    public let source: DragSource`
-- L244: `    public let drag: ToplevelDrag`
-- L252: `public struct DragSourceTargetEvent: Equatable, Sendable {`
-- L253: `    public let source: DragSourceIdentity`
-- L254: `    public let mimeType: MIMEType?`
-- L262: `public struct DragSourceActionEvent: Equatable, Sendable {`
-- L263: `    public let source: DragSourceIdentity`
-- L264: `    public let action: DragAction`
-- L272: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
-- L273: `    case copy`
-- L274: `    case move`
-- L275: `    case unknown(rawValue: UInt32)`
-- L290: `    public var description: String {`
-- L302: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
-- L303: `    public let source: DragSourceIdentity`
-- L304: `    public let finalAction: DragSourceFinalAction`
+- L177: `    public func cancel() async throws {`
+- L181: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
+- L185: `    public func hash(into hasher: inout Hasher) {`
+- L190: `public struct ToplevelDrag: Sendable, Hashable, Identifiable {`
+- L191: `    public let id: ToplevelDragID`
+- L192: `    public let windowID: WindowID`
+- L193: `    public let source: DragSourceIdentity`
+- L194: `    public let seatID: SeatID`
+- L195: `    public let serial: InputSerial`
+- L221: `    public func destroy() async throws {`
+- L229: `    public static func == (lhs: ToplevelDrag, rhs: ToplevelDrag) -> Bool {`
+- L233: `    public func hash(into hasher: inout Hasher) {`
+- L238: `public struct StartedToplevelDrag: Sendable, Hashable {`
+- L239: `    public let source: DragSource`
+- L240: `    public let drag: ToplevelDrag`
+- L248: `public struct DragSourceTargetEvent: Equatable, Sendable {`
+- L249: `    public let source: DragSourceIdentity`
+- L250: `    public let mimeType: MIMEType?`
+- L258: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L259: `    public let source: DragSourceIdentity`
+- L260: `    public let action: DragAction`
+- L268: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
+- L269: `    case copy`
+- L270: `    case move`
+- L271: `    case unknown(rawValue: UInt32)`
+- L286: `    public var description: String {`
+- L298: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
+- L299: `    public let source: DragSourceIdentity`
+- L300: `    public let finalAction: DragSourceFinalAction`
 
 ### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
 
@@ -2443,49 +2443,49 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L26: `    public func show(`
 - L61: `    public func redraw(`
 - L67: `    public func redraw(`
-- L147: `    public func close() async {`
-- L151: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L157: `    public func createSubsurface(`
-- L166: `    public func requestRedraw() async throws {`
-- L170: `    public var presentationEvents: WindowPresentationEvents {`
-- L174: `    public func requestPresentationFeedback() async throws {`
-- L178: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
-- L182: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
-- L186: `    public func setIcon(_ icon: WindowIcon) async throws {`
-- L190: `    public func inhibitIdle() async throws -> IdleInhibitor {`
-- L194: `    public func createDialog(`
-- L201: `    public func inhibitKeyboardShortcuts(`
-- L207: `    public func ringSystemBell() async throws {`
-- L211: `    public func requestActivationToken(`
-- L226: `    public func activate(using token: ActivationToken) async throws {`
-- L230: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L234: `    public func lockPointer(`
-- L249: `    public func confinePointer(`
-- L262: `    public func requestPointerWarp(`
-- L275: `    public func setTitle(_ title: WaylandString) async throws {`
-- L279: `    public func setTitle(_ title: String) async throws {`
-- L283: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L287: `    public func setAppID(_ appID: String) async throws {`
-- L291: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L295: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L299: `    public func requestMaximize() async throws {`
-- L303: `    public func requestUnmaximize() async throws {`
-- L307: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L311: `    public func requestExitFullscreen() async throws {`
-- L315: `    public func requestMinimize() async throws {`
-- L319: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L323: `    public func requestInteractiveResize(`
-- L336: `    public func requestWindowMenu(`
-- L349: `    public func startDrag(`
-- L364: `    public func startToplevelDrag(`
-- L383: `    public var isClosed: Bool {`
-- L389: `    public var needsRedraw: Bool {`
-- L395: `    public var decorationMode: WindowDecorationMode {`
-- L401: `    public var geometry: SurfaceGeometry {`
-- L407: `    public var stateSnapshot: WindowStateSnapshot {`
-- L413: `    public var restorationSnapshot: WindowRestorationSnapshot {`
-- L419: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L423: `    public func hash(into hasher: inout Hasher) {`
+- L141: `    public func close() async {`
+- L145: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L151: `    public func createSubsurface(`
+- L160: `    public func requestRedraw() async throws {`
+- L164: `    public var presentationEvents: WindowPresentationEvents {`
+- L168: `    public func requestPresentationFeedback() async throws {`
+- L172: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L176: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
+- L180: `    public func setIcon(_ icon: WindowIcon) async throws {`
+- L184: `    public func inhibitIdle() async throws -> IdleInhibitor {`
+- L188: `    public func createDialog(`
+- L195: `    public func inhibitKeyboardShortcuts(`
+- L201: `    public func ringSystemBell() async throws {`
+- L205: `    public func requestActivationToken(`
+- L220: `    public func activate(using token: ActivationToken) async throws {`
+- L224: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L228: `    public func lockPointer(`
+- L243: `    public func confinePointer(`
+- L256: `    public func requestPointerWarp(`
+- L269: `    public func setTitle(_ title: WaylandString) async throws {`
+- L273: `    public func setTitle(_ title: String) async throws {`
+- L277: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L281: `    public func setAppID(_ appID: String) async throws {`
+- L285: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L289: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L293: `    public func requestMaximize() async throws {`
+- L297: `    public func requestUnmaximize() async throws {`
+- L301: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L305: `    public func requestExitFullscreen() async throws {`
+- L309: `    public func requestMinimize() async throws {`
+- L313: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L317: `    public func requestInteractiveResize(`
+- L330: `    public func requestWindowMenu(`
+- L343: `    public func startDrag(`
+- L358: `    public func startToplevelDrag(`
+- L377: `    public var isClosed: Bool {`
+- L383: `    public var needsRedraw: Bool {`
+- L389: `    public var decorationMode: WindowDecorationMode {`
+- L395: `    public var geometry: SurfaceGeometry {`
+- L401: `    public var stateSnapshot: WindowStateSnapshot {`
+- L407: `    public var restorationSnapshot: WindowRestorationSnapshot {`
+- L413: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L417: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 
@@ -2538,36 +2538,36 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L108: `    public static let `default` = PositiveLogicalSize(`
 - L113: `    public init(width sizeWidth: PositiveInt32, height sizeHeight: PositiveInt32) {`
 - L118: `    public init(width sizeWidth: Int32, height sizeHeight: Int32) throws {`
-- L127: `    public var description: String {`
-- L132: `public struct PositivePixelSize: Equatable, Sendable, CustomStringConvertible {`
-- L133: `    public let width: PositiveInt32`
-- L134: `    public let height: PositiveInt32`
-- L136: `    public init(width sizeWidth: PositiveInt32, height sizeHeight: PositiveInt32) {`
-- L141: `    public init(width sizeWidth: Int32, height sizeHeight: Int32) throws {`
-- L150: `    public var description: String {`
-- L155: `public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {`
-- L156: `    public let numerator: UInt32`
-- L157: `    public let denominator: UInt32`
-- L159: `    public static let one = SurfaceScale(uncheckedNumerator: 1, denominator: 1)`
-- L162: `    public init(numerator scaleNumerator: UInt32, denominator scaleDenominator: UInt32)`
-- L219: `    public var description: String {`
-- L267: `public struct SurfaceGeometry: Equatable, Sendable, CustomStringConvertible {`
-- L268: `    public let logicalSize: PositiveLogicalSize`
-- L269: `    public let bufferSize: PositivePixelSize`
-- L270: `    public let scale: SurfaceScale`
-- L272: `    public init(`
-- L281: `    public var description: String {`
-- L286: `public struct SoftwareFrameGeometry: Equatable, Sendable {`
-- L287: `    public let surface: SurfaceGeometry`
-- L289: `    public var logicalSize: PositiveLogicalSize {`
-- L293: `    public var bufferSize: PositivePixelSize {`
-- L297: `    public var scale: SurfaceScale {`
-- L301: `    public init(surface surfaceGeometry: SurfaceGeometry) {`
-- L306: `public struct Milliseconds: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L307: `    public let rawValue: Int32`
-- L309: `    public init(_ value: Int32) throws {`
-- L322: `    public var description: String {`
-- L326: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L123: `    public var description: String {`
+- L128: `public struct PositivePixelSize: Equatable, Sendable, CustomStringConvertible {`
+- L129: `    public let width: PositiveInt32`
+- L130: `    public let height: PositiveInt32`
+- L132: `    public init(width sizeWidth: PositiveInt32, height sizeHeight: PositiveInt32) {`
+- L137: `    public init(width sizeWidth: Int32, height sizeHeight: Int32) throws {`
+- L146: `    public var description: String {`
+- L151: `public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {`
+- L152: `    public let numerator: UInt32`
+- L153: `    public let denominator: UInt32`
+- L155: `    public static let one = SurfaceScale(uncheckedNumerator: 1, denominator: 1)`
+- L158: `    public init(numerator scaleNumerator: UInt32, denominator scaleDenominator: UInt32)`
+- L198: `    public var description: String {`
+- L242: `public struct SurfaceGeometry: Equatable, Sendable, CustomStringConvertible {`
+- L243: `    public let logicalSize: PositiveLogicalSize`
+- L244: `    public let bufferSize: PositivePixelSize`
+- L245: `    public let scale: SurfaceScale`
+- L247: `    public init(`
+- L256: `    public var description: String {`
+- L261: `public struct SoftwareFrameGeometry: Equatable, Sendable {`
+- L262: `    public let surface: SurfaceGeometry`
+- L264: `    public var logicalSize: PositiveLogicalSize {`
+- L268: `    public var bufferSize: PositivePixelSize {`
+- L272: `    public var scale: SurfaceScale {`
+- L276: `    public init(surface surfaceGeometry: SurfaceGeometry) {`
+- L281: `public struct Milliseconds: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L282: `    public let rawValue: Int32`
+- L284: `    public init(_ value: Int32) throws {`
+- L292: `    public var description: String {`
+- L296: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
 
 ### `Sources/WaylandClient/Public/Window/WindowRestorationSnapshot.swift`
 

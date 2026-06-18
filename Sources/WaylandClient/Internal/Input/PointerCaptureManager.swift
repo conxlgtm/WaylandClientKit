@@ -425,17 +425,6 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         return seat
     }
 
-    private func requirePointerWarpSeat(
-        _ seatID: SeatID,
-        globals: BoundGlobals
-    ) throws -> RawSeat {
-        guard let seat = globals.seatRegistry.seat(for: RawSeatID(seatID)) else {
-            throw PointerWarpError.unknownSeat(seatID)
-        }
-
-        return seat
-    }
-
     private func makeRegion(
         _ region: PointerConstraintRegion?,
         globals: BoundGlobals

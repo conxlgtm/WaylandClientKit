@@ -48,12 +48,6 @@ public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {
         value = name
     }
 
-    package init(unchecked name: String) {
-        precondition(!name.isEmpty, "cursor theme name must not be empty")
-        precondition(!name.contains("\0"), "cursor theme name must not contain NUL bytes")
-        value = name
-    }
-
     public var description: String {
         value
     }

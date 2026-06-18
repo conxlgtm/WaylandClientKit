@@ -173,10 +173,6 @@ public struct DragSource: Sendable, Hashable, Identifiable {
         id
     }
 
-    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
-        ownership.isOwned(by: owningDisplay)
-    }
-
     /// Cancels this source-side drag operation by destroying the underlying data source.
     public func cancel() async throws {
         try await display.cancelDragSource(id: sourceID)

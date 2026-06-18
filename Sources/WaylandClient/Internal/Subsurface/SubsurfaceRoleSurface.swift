@@ -75,11 +75,6 @@ package final class SubsurfaceRoleSurface {
         close()
     }
 
-    package var surfaceID: RawObjectID {
-        connection.preconditionIsOwnerThread()
-        return surface.objectID
-    }
-
     package var isClosedOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
         return isClosed

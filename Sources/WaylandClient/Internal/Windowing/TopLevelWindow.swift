@@ -134,10 +134,6 @@ package final class TopLevelWindow {
         return surface
     }
 
-    package var closeRequestPolicy: CloseRequestPolicy {
-        configuration.closeRequestPolicy
-    }
-
     deinit {
         close()
     }
@@ -658,17 +654,6 @@ package final class TopLevelWindow {
 }
 
 extension TopLevelWindow {
-    package func graphicsPreviewSurfaceCapabilitySnapshotOnOwnerThread()
-        throws -> SurfaceCapabilitySnapshot
-    {
-        connection.preconditionIsOwnerThread()
-        guard !model.isClosed else {
-            throw ClientError.window(id, .invalidLifecycleTransition(.presentAfterDestroyed))
-        }
-
-        return surfaceRuntime.capabilitySnapshot()
-    }
-
     package func requestGraphicsPreviewSurfaceFeedbackOnOwnerThread(
         timeoutMilliseconds: Int32
     ) throws -> SurfaceCapabilitySnapshot {
@@ -1198,17 +1183,6 @@ extension TopLevelWindow {
     package func requestRedrawOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
         markNeedsRedraw()
-    }
-
-    package func presentPreviewBufferOnOwnerThread(
-        _ buffer: RawSurfaceBuffer
-    ) throws -> PreviewBufferPresentationResult {
-        try presentPreviewBufferOnOwnerThread(
-            buffer,
-            submitConstraints: .default,
-            metadata: .default,
-            presentationFeedback: nil
-        )
     }
 
     package func presentPreviewBufferOnOwnerThread(
@@ -1798,15 +1772,6 @@ extension TopLevelWindow {
         noasync,
         message: "Read window state from the owner-thread Wayland loop."
     )
-    package var isClosed: Bool {
-        isClosedOnOwnerThread
-    }
-
-    @available(
-        *,
-        noasync,
-        message: "Read window state from the owner-thread Wayland loop."
-    )
     package var needsRedraw: Bool {
         needsRedrawOnOwnerThread
     }
@@ -1826,27 +1791,6 @@ extension TopLevelWindow {
     ) throws {
         try showOnOwnerThread(
             timeoutMilliseconds: timeoutMilliseconds,
-            submitConstraints: submitConstraints,
-            metadata: metadata,
-            damage: damage,
-            presentationFeedback: presentationFeedback,
-            draw
-        )
-    }
-
-    @available(
-        *,
-        noasync,
-        message: "Redraw windows from the owner-thread Wayland loop."
-    )
-    package func redraw(
-        submitConstraints: SurfaceSubmitConstraints = .default,
-        metadata: SurfaceCommitMetadata = .default,
-        damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try redrawOnOwnerThread(
             submitConstraints: submitConstraints,
             metadata: metadata,
             damage: damage,

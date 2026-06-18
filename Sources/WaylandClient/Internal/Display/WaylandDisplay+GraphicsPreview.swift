@@ -170,12 +170,6 @@ extension WaylandDisplay {
         )
     }
 
-    package func graphicsPreviewSurfaceCapabilitySnapshot(
-        for windowID: WindowID
-    ) throws -> SurfaceCapabilitySnapshot {
-        try requireCore().graphicsPreviewSurfaceCapabilitySnapshot(for: windowID)
-    }
-
     package func requestGraphicsPreviewSurfaceFeedback(
         for windowID: WindowID,
         timeoutMilliseconds: Int32
@@ -239,15 +233,6 @@ extension DisplayCore {
     func graphicsPreviewSurfaceCapabilitySnapshot() throws -> SurfaceCapabilitySnapshot {
         try withFatalFailureFinalization {
             try requireSession().graphicsPreviewSurfaceCapabilitySnapshotOnOwnerThread()
-        }
-    }
-
-    func graphicsPreviewSurfaceCapabilitySnapshot(
-        for windowID: WindowID
-    ) throws -> SurfaceCapabilitySnapshot {
-        try withFatalFailureFinalization {
-            try requireOpenWindow(windowID)
-                .graphicsPreviewSurfaceCapabilitySnapshotOnOwnerThread()
         }
     }
 

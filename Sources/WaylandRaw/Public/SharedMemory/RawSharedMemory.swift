@@ -286,10 +286,7 @@ package final class RawSharedMemoryPool {
 
     private let mapping: SharedMemoryMapping
     private let buffers: [RawBuffer]
-    private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
-
-    @safe private var pointer: OpaquePointer { proxy.pointer }
 
     init(
         sharedMemory: RawSharedMemory,
@@ -338,7 +335,6 @@ package final class RawSharedMemoryPool {
             size = .init(width: width, height: height)
             layout = bufferLayout
             mapping = memoryMapping
-            proxyAdoption = adoptionContext
             proxy = RawOwnedProxy(
                 pointer: try adoptionContext.adopt(
                     poolPointer, interface: "wl_shm_pool"),

@@ -95,12 +95,6 @@ public struct Window: Sendable, Hashable {
         )
     }
 
-    package func graphicsPreviewSurfaceCapabilitySnapshot() async throws
-        -> SurfaceCapabilitySnapshot
-    {
-        try await display.graphicsPreviewSurfaceCapabilitySnapshot(for: id)
-    }
-
     package func requestGraphicsPreviewSurfaceFeedback(
         timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds
     ) async throws -> SurfaceCapabilitySnapshot {

@@ -76,8 +76,6 @@ package final class RawTabletSeat {
     private var tools: [RawObjectID: RawTabletTool] = [:]
     private var pads: [RawObjectID: RawTabletPad] = [:]
 
-    @safe private var pointer: OpaquePointer { proxy.pointer }
-
     @safe
     init(
         pointer tabletSeat: OpaquePointer,

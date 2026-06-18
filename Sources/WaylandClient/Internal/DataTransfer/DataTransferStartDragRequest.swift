@@ -1,5 +1,3 @@
-import WaylandRaw
-
 package struct DataTransferStartDragRequest {
     package let seatID: SeatID
     package let payloads: DataTransferSourcePayloadSet
