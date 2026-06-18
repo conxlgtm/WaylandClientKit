@@ -88,8 +88,6 @@ package final class RawRelativePointer {
     private let listenerOwner: RawRelativePointerOwner
     private var proxy: RawOwnedProxy
 
-    @safe private var pointer: OpaquePointer { proxy.pointer }
-
     @safe
     init(
         pointer relativePointer: OpaquePointer,

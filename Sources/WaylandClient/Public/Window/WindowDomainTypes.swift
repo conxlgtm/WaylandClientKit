@@ -120,10 +120,6 @@ public struct PositiveLogicalSize: Equatable, Sendable, CustomStringConvertible 
         height = try PositiveInt32(sizeHeight)
     }
 
-    var rawSize: TopLevelSize {
-        TopLevelSize(width: width.rawValue, height: height.rawValue)
-    }
-
     public var description: String {
         "\(width.rawValue)x\(height.rawValue)"
     }
@@ -199,33 +195,12 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
         denominator = 1
     }
 
-    package init(fractionalScaleNumerator scaleNumerator: UInt32) throws {
-        guard scaleNumerator > 0 else {
-            throw ClientError.invalidWindowConfiguration(
-                .nonPositiveScaleNumerator(scaleNumerator)
-            )
-        }
-
-        guard scaleNumerator <= UInt32(Int32.max) else {
-            throw ClientError.invalidWindowConfiguration(
-                .scaleNumeratorTooLarge(scaleNumerator)
-            )
-        }
-
-        numerator = scaleNumerator
-        denominator = SurfaceScale.fractionalScaleDenominator
-    }
-
     public var description: String {
         if denominator == 1 {
             return "\(numerator)"
         }
 
         return "\(numerator)/\(denominator)"
-    }
-
-    package var isInteger: Bool {
-        denominator == 1
     }
 
     package var integerValue: Int32? {
@@ -311,11 +286,6 @@ public struct Milliseconds: Equatable, Comparable, Sendable, CustomStringConvert
             throw ClientError.invalidWindowConfiguration(.negativeMilliseconds(value: value))
         }
 
-        rawValue = value
-    }
-
-    package init(unchecked value: Int32) {
-        precondition(value >= 0, "milliseconds value must be non-negative")
         rawValue = value
     }
 

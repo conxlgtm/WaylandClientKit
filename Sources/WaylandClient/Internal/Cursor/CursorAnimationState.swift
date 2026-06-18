@@ -40,10 +40,6 @@ package struct CursorAnimationState {
         frames[currentFrameIndex]
     }
 
-    package var currentFrameDuration: Duration {
-        currentFrame.duration
-    }
-
     package var isAnimated: Bool {
         frames.count > 1
     }

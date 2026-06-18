@@ -33,14 +33,6 @@ package struct InputSerialActionContext {
         try core.windowGeometry(windowID)
     }
 
-    package func windowStateSnapshot(_ windowID: WindowID) throws -> WindowStateSnapshot {
-        try core.windowStateSnapshot(windowID)
-    }
-
-    package func windowDecorationMode(_ windowID: WindowID) throws -> WindowDecorationMode {
-        try core.windowDecorationMode(windowID)
-    }
-
     package func requestInteractiveMove(
         _ windowID: WindowID,
         seatID: SeatID,
@@ -64,20 +56,6 @@ package struct InputSerialActionContext {
             seatID: seatID,
             serial: serial,
             edge: edge
-        )
-    }
-
-    package func requestWindowMenu(
-        _ windowID: WindowID,
-        seatID: SeatID,
-        serial: InputSerial,
-        position: LogicalOffset
-    ) throws {
-        try core.requestWindowMenu(
-            windowID,
-            seatID: seatID,
-            serial: serial,
-            position: position
         )
     }
 }

@@ -260,20 +260,6 @@
             )
         }
 
-        @safe
-        private func assertDestroy(
-            expectedKind: swl_test_desktop_destroy_kind,
-            object rawObject: OpaquePointer,
-            sourceLocation: SourceLocation = #_sourceLocation
-        ) {
-            let record = unsafe swl_test_desktop_destroy_record()
-            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-            #expect(
-                unsafe record.object == UnsafeMutableRawPointer(rawObject),
-                sourceLocation: sourceLocation
-            )
-        }
-
         private func testSurface(pointer rawPointer: UInt) throws -> RawSurface {
             try unsafe RawSurface.testingSurface(
                 pointer: testPointer(rawPointer),
