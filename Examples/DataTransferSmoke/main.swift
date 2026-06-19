@@ -15,7 +15,7 @@ enum DataTransferSmoke {
                 displayEventCapacity: 64,
                 inputEventCapacity: 128,
                 textInputEventCapacity: 16,
-                dataTransferEventCapacity: 128,
+                dataTransferEventCapacity: 4_096,
                 presentationEventCapacity: 16
             )
         ) { display in
@@ -170,7 +170,16 @@ enum DataTransferSmoke {
                 break
             }
 
-            try await window.requestRedraw()
+            switch event {
+            case .sourceSendRequested, .sourceWriteSucceeded, .clipboardSourceCancelled,
+                .primarySelectionSourceCancelled, .dragSourceCancelled,
+                .dragSourceTargetChanged, .dragSourceActionChanged,
+                .dragSourceDropPerformed, .dragSourceFinished:
+                try await window.requestRedraw()
+            case .clipboardSelectionChanged, .primarySelectionChanged, .dragEntered,
+                .dragMotion, .dragLeft, .dragDropped, .dragOfferChanged:
+                break
+            }
         }
     }
 
