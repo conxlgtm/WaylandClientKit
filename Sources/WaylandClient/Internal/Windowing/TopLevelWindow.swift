@@ -654,9 +654,11 @@ package final class TopLevelWindow {
             cancelSoftwareFrameReservation(reservation)
             return .skippedClosed
         }
-        guard let pendingReservation = pendingSoftwareFrameReservations.removeValue(
-            forKey: reservation.reservationID
-        ) else {
+        guard
+            let pendingReservation = pendingSoftwareFrameReservations.removeValue(
+                forKey: reservation.reservationID
+            )
+        else {
             throw ClientError.invalidWindowState(
                 .message("software frame reservation is not active")
             )
@@ -698,9 +700,11 @@ package final class TopLevelWindow {
     }
 
     private func cancelSoftwareFrameReservation(_ reservation: SoftwareFrameReservation) {
-        guard let pendingReservation = pendingSoftwareFrameReservations.removeValue(
-            forKey: reservation.reservationID
-        ) else {
+        guard
+            let pendingReservation = pendingSoftwareFrameReservations.removeValue(
+                forKey: reservation.reservationID
+            )
+        else {
             return
         }
 

@@ -58,10 +58,12 @@ public struct Window: Sendable, Hashable {
         preparing prepare: sending @Sendable (SoftwareFrameReservation) async throws -> Prepared,
         _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void
     ) async throws {
-        guard let reservation = try await display.reserveSoftwareFrameForShow(
-            id,
-            timeoutMilliseconds: timeoutMilliseconds
-        ) else {
+        guard
+            let reservation = try await display.reserveSoftwareFrameForShow(
+                id,
+                timeoutMilliseconds: timeoutMilliseconds
+            )
+        else {
             return
         }
 
