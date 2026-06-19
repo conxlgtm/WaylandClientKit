@@ -14,7 +14,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package let primarySelectionController: PrimarySelectionController
     package let textInputManager: TextInputManager
     package let dataTransferSourceWriter: ThreadedDataTransferSourceWriter
-    private let dataTransferEventQueue = DataTransferEventQueue()
+    package let dataTransferEventQueue = DataTransferEventQueue()
     package var pendingDataTransferDiagnostics: [DataTransferDiagnostic] = []
     package var onSeatRemoved: (SeatID) -> Void = { _ in () }
     private var windowIDs = IDGenerator<WindowID>()
