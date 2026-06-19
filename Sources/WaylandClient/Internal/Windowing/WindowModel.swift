@@ -215,8 +215,10 @@ extension WindowModel {
         var effects = unknownProtocolValueEffects(for: event.unknownValues)
         effects.append(.ackConfigure(event.serial))
         effects.append(
-            contentsOf: mapRedrawEffects(
-                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available)
+            contentsOf: Self.mapRedrawEffects(
+                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available),
+                in: nextActiveState,
+                windowID: id
             )
         )
         lifecycle = .active(nextActiveState)
@@ -370,6 +372,7 @@ extension WindowModel {
         return updateActiveWindowStateIfPresent { activeState in
             Self.mapRedrawEffects(
                 activeState.redraw.reduce(event, bufferAvailability: bufferAvailability),
+                in: activeState,
                 windowID: windowID
             )
         }
@@ -377,6 +380,16 @@ extension WindowModel {
 
     private func mapRedrawEffects(_ effects: [WindowRedrawEffect]) -> [WindowEffect] {
         Self.mapRedrawEffects(effects, windowID: id)
+    }
+
+    private static func mapRedrawEffects(
+        _ effects: [WindowRedrawEffect],
+        in activeState: ActiveWindowState,
+        windowID: WindowID
+    ) -> [WindowEffect] {
+        guard activeState.presentation.isIdle else { return [] }
+
+        return mapRedrawEffects(effects, windowID: windowID)
     }
 
     private static func mapRedrawEffects(
