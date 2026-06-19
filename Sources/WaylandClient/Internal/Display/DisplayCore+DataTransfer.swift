@@ -177,6 +177,7 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
+            try flushDataTransferSelectionMutation(from: activeSession)
             publishDrainedDataTransfer(from: activeSession)
             return source
         }
@@ -354,6 +355,7 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             try activeSession.clearClipboardOnOwnerThread(seatID: seatID, serial: serial)
+            try flushDataTransferSelectionMutation(from: activeSession)
             publishDrainedDataTransfer(from: activeSession)
         }
     }
@@ -370,6 +372,7 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
+            try flushDataTransferSelectionMutation(from: activeSession)
             publishDrainedDataTransfer(from: activeSession)
             return source
         }
@@ -379,6 +382,7 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             try activeSession.clearPrimarySelectionOnOwnerThread(seatID: seatID, serial: serial)
+            try flushDataTransferSelectionMutation(from: activeSession)
             publishDrainedDataTransfer(from: activeSession)
         }
     }
@@ -395,6 +399,7 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
+            try flushDataTransferSelectionMutation(from: activeSession)
             publishDrainedDataTransfer(from: activeSession)
         }
     }
@@ -411,8 +416,13 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
+            try flushDataTransferSelectionMutation(from: activeSession)
             publishDrainedDataTransfer(from: activeSession)
         }
+    }
+
+    private func flushDataTransferSelectionMutation(from session: DisplaySession) throws {
+        _ = try session.flushForExternalEventLoopOnOwnerThread()
     }
 
     private func publishDrainedDataTransfer(from session: DisplaySession) {
