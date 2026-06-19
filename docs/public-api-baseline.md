@@ -2167,12 +2167,22 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift`
 
-- L2: `public struct SoftwareFrame: ~Copyable {`
-- L3: `    public let width: Int32`
-- L4: `    public let height: Int32`
-- L5: `    public let stride: Int32`
-- L6: `    public let geometry: SoftwareFrameGeometry`
-- L76: `    public borrowing func withXRGB8888Rows(`
+- L2: `public struct SoftwareFrameBufferID: Hashable, Sendable {`
+- L11: `public struct SoftwareFrameBuffer: ~Copyable {`
+- L12: `    public let id: SoftwareFrameBufferID`
+- L13: `    public let width: Int32`
+- L14: `    public let height: Int32`
+- L15: `    public let stride: Int32`
+- L16: `    public let geometry: SoftwareFrameGeometry`
+- L35: `    public borrowing func withUnsafeMutableBytes<Result>(`
+- L43: `public struct SoftwareFrame: ~Copyable {`
+- L44: `    public let id: SoftwareFrameBufferID`
+- L45: `    public let width: Int32`
+- L46: `    public let height: Int32`
+- L47: `    public let stride: Int32`
+- L48: `    public let geometry: SoftwareFrameGeometry`
+- L120: `    public borrowing func withBuffer<Result>(`
+- L134: `    public borrowing func withXRGB8888Rows(`
 
 ### `Sources/WaylandClient/Public/Rendering/SurfaceCoordinateMapping.swift`
 

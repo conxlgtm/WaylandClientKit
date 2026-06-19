@@ -193,6 +193,9 @@ Current user-facing contract:
   product API.
 - `SoftwareFrame` is a scoped borrowed drawing surface. User code may draw
   during the callback and may not retain frame storage beyond that callback.
+  `SoftwareFrameBufferID` gives each reusable software buffer an opaque public
+  identity, and `SoftwareFrameBuffer` exposes scoped contiguous XRGB8888 bytes,
+  stride, and geometry without exposing raw Wayland or SHM handles.
 - Window sizes are logical surface sizes. `SurfaceGeometry` records the
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.
@@ -402,8 +405,11 @@ Notes:
   drawing and package-internal graphics-preview buffer commits, it is not
   public API.
 - `SoftwareFrame` is noncopyable and borrowed by drawing callbacks. User code can draw
-  through row spans during the callback, but cannot copy the frame out and mutate the
-  SHM storage after presentation.
+  through row spans or a scoped `SoftwareFrameBuffer` byte borrow during the callback,
+  but cannot copy the frame out and mutate the SHM storage after presentation.
+- `SoftwareFrameBufferID` is hashable and sendable, but opaque. It identifies the
+  reusable client-side software buffer, not the content revision stored in that
+  buffer and not any raw Wayland or shared-memory handle.
 - `SoftwareFrame.width` and `SoftwareFrame.height` are buffer-pixel dimensions.
   `SoftwareFrame.geometry.logicalSize` remains the surface-local logical size
   used for layout and input coordinate interpretation.

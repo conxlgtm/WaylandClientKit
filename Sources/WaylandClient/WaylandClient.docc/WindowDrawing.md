@@ -6,6 +6,12 @@ callback bookkeeping, shared-memory pool selection, and presentation-feedback
 requests.
 
 Application code draws into the frame payload and asks the window to present it.
+Each software frame reports an opaque ``SoftwareFrameBufferID`` for the borrowed
+SHM buffer, so renderers can track which reusable buffer they are updating
+without receiving raw Wayland or shared-memory handles. Use
+``SoftwareFrame/withBuffer(_:)`` when renderer code needs scoped
+``SoftwareFrameBuffer`` access to contiguous XRGB8888 bytes, stride, and
+geometry. The byte pointer is valid only while the borrow closure is running.
 GPU allocation experiments remain package-internal preview code.
 
 ``PopupSurface`` follows the same ownership rule as windows: it is a managed

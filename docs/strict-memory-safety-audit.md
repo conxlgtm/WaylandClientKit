@@ -15,7 +15,11 @@ Audit invariant:
 
 - A `RawSharedMemoryPool` owns its mmap for at least as long as any `RawBuffer` created from that mapping.
 - `RawBuffer.withUnsafeMutableBytes` is the only normal way for client code to borrow buffer memory.
-- `SoftwareFrame` validates dimensions, stride, and byte count before exposing row spans to redraw code.
+- `SoftwareFrame` validates dimensions, stride, and byte count before exposing row spans
+  or a scoped `SoftwareFrameBuffer` byte borrow to redraw code.
+- `SoftwareFrameBufferID` is derived from private `RawBuffer` object identity. Public
+  callers can compare buffer reuse without receiving raw pointers, file descriptors,
+  Wayland objects, or mmap ownership.
 - Borrowed cursor buffers are never written by WaylandClientKit. They are only attached to cursor surfaces.
 
 Tests:
