@@ -1,4 +1,4 @@
-// swiftlint:disable file_length type_body_length
+// swiftlint:disable file_length
 
 import WaylandRaw
 
@@ -101,6 +101,7 @@ private struct WindowSoftwareCommitContext {
     let presentationFeedback: WindowPresentationFeedbackCommitRequest?
 }
 
+// swiftlint:disable:next type_body_length
 struct WindowSoftwarePresenter {
     let surface: RawSurface
     let scaleInstallation: SurfaceScaleInstallation
