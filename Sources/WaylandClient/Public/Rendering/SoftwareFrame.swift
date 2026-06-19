@@ -1,5 +1,47 @@
 @safe
+public struct SoftwareFrameBufferID: Hashable, Sendable {
+    private let rawValue: ObjectIdentifier
+
+    init(rawValue bufferObjectIdentifier: ObjectIdentifier) {
+        rawValue = bufferObjectIdentifier
+    }
+}
+
+@safe
+public struct SoftwareFrameBuffer: ~Copyable {
+    public let id: SoftwareFrameBufferID
+    public let width: Int32
+    public let height: Int32
+    public let stride: Int32
+    public let geometry: SoftwareFrameGeometry
+    private let bytes: UnsafeMutableRawBufferPointer
+
+    init(
+        id frameBufferID: SoftwareFrameBufferID,
+        width frameWidth: Int32,
+        height frameHeight: Int32,
+        stride frameStride: Int32,
+        geometry frameGeometry: SoftwareFrameGeometry,
+        bytes frameBytes: UnsafeMutableRawBufferPointer
+    ) {
+        id = frameBufferID
+        width = frameWidth
+        height = frameHeight
+        stride = frameStride
+        geometry = frameGeometry
+        unsafe bytes = frameBytes
+    }
+
+    public borrowing func withUnsafeMutableBytes<Result>(
+        _ body: (UnsafeMutableRawBufferPointer) throws -> Result
+    ) rethrows -> Result {
+        try unsafe body(bytes)
+    }
+}
+
+@safe
 public struct SoftwareFrame: ~Copyable {
+    public let id: SoftwareFrameBufferID
     public let width: Int32
     public let height: Int32
     public let stride: Int32
@@ -11,6 +53,7 @@ public struct SoftwareFrame: ~Copyable {
     }
 
     init(
+        id frameBufferID: SoftwareFrameBufferID,
         width frameWidth: Int32,
         height frameHeight: Int32,
         stride frameStride: Int32,
@@ -66,11 +109,26 @@ public struct SoftwareFrame: ~Copyable {
             )
         }
 
+        id = frameBufferID
         width = frameWidth
         height = frameHeight
         stride = frameStride
         geometry = frameGeometry
         unsafe bytes = frameBytes
+    }
+
+    public borrowing func withBuffer<Result>(
+        _ body: (borrowing SoftwareFrameBuffer) throws -> Result
+    ) rethrows -> Result {
+        let frameBuffer = SoftwareFrameBuffer(
+            id: id,
+            width: width,
+            height: height,
+            stride: stride,
+            geometry: geometry,
+            bytes: bytes
+        )
+        return try body(frameBuffer)
     }
 
     public borrowing func withXRGB8888Rows(

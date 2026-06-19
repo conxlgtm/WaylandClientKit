@@ -199,6 +199,7 @@ struct WindowSoftwarePresenter {
         do {
             try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
                 let frame = try unsafe SoftwareFrame(
+                    id: SoftwareFrameBufferID(rawValue: drawingBuffer.objectIdentifier),
                     width: drawingBuffer.width,
                     height: drawingBuffer.height,
                     stride: drawingBuffer.stride,

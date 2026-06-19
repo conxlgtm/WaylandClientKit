@@ -256,6 +256,10 @@ package final class RawBuffer {
             buffer.stride
         }
 
+        package var objectIdentifier: ObjectIdentifier {
+            ObjectIdentifier(buffer)
+        }
+
         package var surfaceBuffer: RawSurfaceBuffer {
             lease.preconditionCanWrite()
             return buffer.surfaceBuffer

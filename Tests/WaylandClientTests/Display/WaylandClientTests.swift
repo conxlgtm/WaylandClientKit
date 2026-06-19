@@ -142,6 +142,7 @@ struct WaylandClientTests {
 
         try unsafe storage.withUnsafeMutableBufferPointer { buffer in
             let frame = try unsafe SoftwareFrame(
+                id: softwareFrameTestBufferID(),
                 width: 2,
                 height: 2,
                 stride: 3 * Int32(MemoryLayout<UInt32>.stride),
@@ -158,10 +159,25 @@ struct WaylandClientTests {
                 unsafe pixels[unchecked: 1] = UInt32(row * 10 + 2)
             }
 
+            try frame.withBuffer { buffer in
+                #expect(buffer.id == frame.id)
+                #expect(buffer.width == frame.width)
+                #expect(buffer.height == frame.height)
+                #expect(buffer.stride == frame.stride)
+                #expect(buffer.geometry == frame.geometry)
+                try buffer.withUnsafeMutableBytes { bytes in
+                    unsafe bytes.storeBytes(
+                        of: UInt32(99),
+                        toByteOffset: 2 * MemoryLayout<UInt32>.stride,
+                        as: UInt32.self
+                    )
+                }
+            }
+
             #expect(frame.geometry.bufferSize == (try PositivePixelSize(width: 2, height: 2)))
         }
 
-        #expect(storage == [1, 2, 0, 11, 12, 0])
+        #expect(storage == [1, 2, 99, 11, 12, 0])
     }
 
     @Test
@@ -181,6 +197,7 @@ struct WaylandClientTests {
                 )
             ) {
                 _ = try unsafe SoftwareFrame(
+                    id: softwareFrameTestBufferID(),
                     width: 2,
                     height: 2,
                     stride: 3 * Int32(MemoryLayout<UInt32>.stride),
@@ -204,4 +221,10 @@ private func softwareFrameTestGeometry(width: Int32, height: Int32) throws
             scale: .one
         )
     )
+}
+
+private final class SoftwareFrameTestBufferToken {}
+
+private func softwareFrameTestBufferID() -> SoftwareFrameBufferID {
+    SoftwareFrameBufferID(rawValue: ObjectIdentifier(SoftwareFrameTestBufferToken()))
 }
