@@ -2174,21 +2174,21 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L27: `    public let height: Int32`
 - L28: `    public let stride: Int32`
 - L29: `    public let geometry: SoftwareFrameGeometry`
-- L48: `    public borrowing func withUnsafeMutableBytes<Result>(`
-- L56: `public struct SoftwareFrameReservation: Equatable, Sendable {`
-- L57: `    public let id: SoftwareFrameBufferID`
-- L58: `    public let width: Int32`
-- L59: `    public let height: Int32`
-- L60: `    public let stride: Int32`
-- L61: `    public let geometry: SoftwareFrameGeometry`
-- L82: `public struct SoftwareFrame: ~Copyable {`
-- L83: `    public let id: SoftwareFrameBufferID`
-- L84: `    public let width: Int32`
-- L85: `    public let height: Int32`
-- L86: `    public let stride: Int32`
-- L87: `    public let geometry: SoftwareFrameGeometry`
-- L159: `    public borrowing func withBuffer<Result>(`
-- L173: `    public borrowing func withXRGB8888Rows(`
+- L48: `    public borrowing func withMutableBytes<Result>(`
+- L57: `public struct SoftwareFrameReservation: Equatable, Sendable {`
+- L58: `    public let id: SoftwareFrameBufferID`
+- L59: `    public let width: Int32`
+- L60: `    public let height: Int32`
+- L61: `    public let stride: Int32`
+- L62: `    public let geometry: SoftwareFrameGeometry`
+- L83: `public struct SoftwareFrame: ~Copyable {`
+- L84: `    public let id: SoftwareFrameBufferID`
+- L85: `    public let width: Int32`
+- L86: `    public let height: Int32`
+- L87: `    public let stride: Int32`
+- L88: `    public let geometry: SoftwareFrameGeometry`
+- L160: `    public borrowing func withBuffer<Result>(`
+- L174: `    public borrowing func withXRGB8888Rows(`
 
 ### `Sources/WaylandClient/Public/Rendering/SurfaceCoordinateMapping.swift`
 

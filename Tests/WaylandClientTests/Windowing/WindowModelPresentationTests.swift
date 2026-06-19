@@ -187,6 +187,25 @@ struct WindowModelPresentationTests {  // swiftlint:disable:this type_body_lengt
     }
 
     @Test
+    func transientResetAfterDeferredRedrawPublishesWhenFrameReady() throws {
+        var (model, request) = try activeModelWithStartedPresentation()
+
+        #expect(
+            try model.reduce(.configureReceived(configure(width: 1_024, height: 768, serial: 2)))
+                == [.ackConfigure(2)]
+        )
+        #expect(model.presentation == .drawing(request: request))
+
+        #expect(try model.reduce(.transientStateReset).isEmpty)
+        #expect(model.presentation == .idle)
+        #expect(model.redraw.isDirty)
+        #expect(
+            try model.reduce(.frameBecameReady(bufferAvailability: .available))
+                == [.publishRedrawRequested(windowID)]
+        )
+    }
+
+    @Test
     func presentationStartRequiresIssuedRequest() throws {
         var model = try activePublishedModel()
         let request = PresentationRequest(

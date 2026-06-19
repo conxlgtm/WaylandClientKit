@@ -45,10 +45,11 @@ public struct SoftwareFrameBuffer: ~Copyable {
         unsafe bytes = frameBytes
     }
 
-    public borrowing func withUnsafeMutableBytes<Result>(
-        _ body: (UnsafeMutableRawBufferPointer) throws -> Result
+    public borrowing func withMutableBytes<Result>(
+        _ body: (inout MutableRawSpan) throws -> Result
     ) rethrows -> Result {
-        try unsafe body(bytes)
+        var span = unsafe MutableRawSpan(_unsafeBytes: bytes)
+        return try body(&span)
     }
 }
 

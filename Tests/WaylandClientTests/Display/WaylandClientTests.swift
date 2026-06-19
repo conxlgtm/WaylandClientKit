@@ -166,8 +166,8 @@ struct WaylandClientTests {
                 #expect(buffer.height == frame.height)
                 #expect(buffer.stride == frame.stride)
                 #expect(buffer.geometry == frame.geometry)
-                unsafe buffer.withUnsafeMutableBytes { bytes in
-                    unsafe bytes.storeBytes(
+                buffer.withMutableBytes { bytes in
+                    bytes.storeBytes(
                         of: UInt32(99),
                         toByteOffset: 2 * MemoryLayout<UInt32>.stride,
                         as: UInt32.self

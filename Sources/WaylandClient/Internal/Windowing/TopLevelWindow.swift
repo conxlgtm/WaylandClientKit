@@ -721,6 +721,7 @@ package final class TopLevelWindow {
 
         pendingReservation.reservedFrame.drawingBuffer.discard()
         resetTransientState()
+        publishDeferredRedrawAfterReservationCancellation()
     }
 
     private func cancelAllSoftwareFrameReservations() {
@@ -807,6 +808,20 @@ package final class TopLevelWindow {
             reportCallbackFailure(operation: .transientStateReset, error: error)
         } catch {
             reportCallbackFailure(operation: .transientStateReset, error: error)
+        }
+    }
+
+    private func publishDeferredRedrawAfterReservationCancellation() {
+        guard !model.isClosed, model.redraw.isDirty else { return }
+
+        do {
+            try interpretWindowEffects(
+                model.reduce(.frameBecameReady(bufferAvailability: try redrawBufferAvailability()))
+            )
+        } catch let error as ClientError {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+        } catch {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         }
     }
 

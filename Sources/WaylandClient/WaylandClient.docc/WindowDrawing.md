@@ -11,7 +11,7 @@ SHM buffer, so renderers can track which reusable buffer they are updating
 without receiving raw Wayland or shared-memory handles. Use
 ``SoftwareFrame/withBuffer(_:)`` when renderer code needs scoped
 ``SoftwareFrameBuffer`` access to contiguous XRGB8888 bytes, stride, and
-geometry. The byte pointer is valid only while the borrow closure is running.
+geometry. The byte span is valid only while the borrow closure is running.
 Use ``Window/show(damage:timeoutMilliseconds:preparing:_:)`` and
 ``Window/redraw(damage:preparing:_:)`` when expensive scene preparation should
 begin after WaylandClientKit has selected the authoritative software frame
