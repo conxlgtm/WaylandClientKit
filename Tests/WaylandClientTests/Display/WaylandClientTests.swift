@@ -159,7 +159,7 @@ struct WaylandClientTests {
                 unsafe pixels[unchecked: 1] = UInt32(row * 10 + 2)
             }
 
-            try frame.withBuffer { buffer in
+            frame.withBuffer { buffer in
                 #expect(buffer.id == frame.id)
                 #expect(buffer.width == frame.width)
                 #expect(buffer.height == frame.height)
