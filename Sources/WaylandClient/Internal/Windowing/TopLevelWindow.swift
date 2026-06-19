@@ -666,6 +666,14 @@ package final class TopLevelWindow {
         }
 
         do {
+            _ = try consumeLatestConfigureIfAvailable()
+            guard try currentSurfaceGeometry() == pendingReservation.geometry else {
+                pendingReservation.reservedFrame.drawingBuffer.discard()
+                resetTransientState()
+                try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
+                return .skippedPendingFrame
+            }
+
             let result = try softwarePresenter().presentReserved(
                 pendingReservation.reservedFrame,
                 context: WindowSoftwarePresentationContext(
@@ -683,6 +691,7 @@ package final class TopLevelWindow {
             try interpretSoftwarePresentationFollowUp(result.followUp)
             return result.outcome
         } catch let failure as WindowSoftwarePresentationFailure {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
             failActivePresentation(
                 generation: pendingReservation.request.generation,
                 error: failure.presentationError
@@ -692,6 +701,7 @@ package final class TopLevelWindow {
             }
             throw failure.underlying
         } catch {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
             failPresentationIfStillActive(
                 generation: pendingReservation.request.generation,
                 error: .surfaceCommit(String(describing: error))
