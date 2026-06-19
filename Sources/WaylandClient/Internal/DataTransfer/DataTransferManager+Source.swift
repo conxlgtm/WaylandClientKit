@@ -22,6 +22,13 @@ extension DataTransferManager {
                 .unknownDragSourceIdentity(source)
             }
         }
+
+        var isSelection: Bool {
+            if case .selection = self {
+                return true
+            }
+            return false
+        }
     }
 
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
@@ -255,13 +262,11 @@ extension DataTransferManager {
             case .cancelled:
                 try apply(.sourceCancelled(sourceID))
             case .target(let rawMimeType):
-                let source = try sourceSnapshot(
-                    for: sourceID,
+                try handleDataSourceTarget(
+                    mimeType: rawMimeType,
+                    sourceID: sourceID,
                     callbackIdentity: callbackIdentity
                 )
-                try handleDragSourceOnlyEvent(.target, for: source) {
-                    try handleDataSourceTarget(mimeType: rawMimeType, sourceID: sourceID)
-                }
             case .dndDropPerformed:
                 let source = try sourceSnapshot(
                     for: sourceID,
@@ -374,6 +379,26 @@ extension DataTransferManager {
     }
 
     private func handleDataSourceTarget(
+        mimeType rawMimeType: String?,
+        sourceID: DataSourceID,
+        callbackIdentity: DataSourceCallbackIdentity
+    ) throws {
+        guard let source = store.sourceSnapshot(sourceID) else {
+            if callbackIdentity.isSelection {
+                return
+            }
+            throw callbackIdentity.unknownSourceError
+        }
+
+        switch source.role {
+        case .selection:
+            return
+        case .dragAndDrop:
+            try handleDragSourceTarget(mimeType: rawMimeType, sourceID: sourceID)
+        }
+    }
+
+    private func handleDragSourceTarget(
         mimeType rawMimeType: String?,
         sourceID: DataSourceID
     ) throws {

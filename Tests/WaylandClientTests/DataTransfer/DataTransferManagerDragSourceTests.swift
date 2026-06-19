@@ -683,11 +683,46 @@ struct DataTransferManagerDragSourceCallbackTests {  // swiftlint:disable:this t
     }
 
     @Test
-    func selectionSourceTargetCallbackRecordsInvalidSourceEvent() throws {
-        try expectSelectionSourceEventRejected(
-            .target(MIMEType.plainText.rawValue),
-            event: .target
+    func selectionSourceTargetCallbackIsIgnored() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seatID])
+        let source = try manager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: [.plainText],
+            serial: serial
         )
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.target(MIMEType.plainText.rawValue))
+
+        try manager.throwPendingCallbackErrorIfAny()
+        #expect(manager.drainDataTransferEvents().isEmpty)
+        #expect(binding.destroyCount == 0)
+    }
+
+    @Test
+    func lateSelectionSourceTargetCallbackIsIgnored() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seatID])
+        let source = try manager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: [.plainText],
+            serial: serial
+        )
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        _ = try manager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: [.uriList],
+            serial: InputSerial(rawValue: 78)
+        )
+        _ = manager.drainDataTransferEvents()
+        binding.emit(.target(MIMEType.plainText.rawValue))
+
+        try manager.throwPendingCallbackErrorIfAny()
+        #expect(manager.drainDataTransferEvents().isEmpty)
     }
 
     @Test
