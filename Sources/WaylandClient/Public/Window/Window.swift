@@ -3,7 +3,7 @@ import WaylandRaw
 // swiftlint:disable:next type_body_length
 public struct Window: Sendable, Hashable {
     public let id: WindowID
-    private let display: WaylandDisplay
+    package let display: WaylandDisplay
     private let ownership: DisplayOwnedIdentity<WindowID>
 
     package init(id windowID: WindowID, display owningDisplay: WaylandDisplay) {

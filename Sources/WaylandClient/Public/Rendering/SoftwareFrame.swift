@@ -1,5 +1,87 @@
 @safe
+package struct SoftwareFrameReservationToken: UInt64WaylandEntityID {
+    package let rawValue: UInt64
+
+    package init(rawValue reservationRawValue: UInt64) {
+        rawValue = reservationRawValue
+    }
+
+    package var description: String {
+        "software-frame-reservation-\(rawValue)"
+    }
+}
+
+@safe
+public struct SoftwareFrameBufferID: Hashable, Sendable {
+    private let rawValue: UInt64
+
+    init(rawValue bufferRawValue: UInt64) {
+        rawValue = bufferRawValue
+    }
+}
+
+@safe
+public struct SoftwareFrameBuffer: ~Copyable {
+    public let id: SoftwareFrameBufferID
+    public let width: Int32
+    public let height: Int32
+    public let stride: Int32
+    public let geometry: SoftwareFrameGeometry
+    private let bytes: UnsafeMutableRawBufferPointer
+
+    init(
+        id frameBufferID: SoftwareFrameBufferID,
+        width frameWidth: Int32,
+        height frameHeight: Int32,
+        stride frameStride: Int32,
+        geometry frameGeometry: SoftwareFrameGeometry,
+        bytes frameBytes: UnsafeMutableRawBufferPointer
+    ) {
+        id = frameBufferID
+        width = frameWidth
+        height = frameHeight
+        stride = frameStride
+        geometry = frameGeometry
+        unsafe bytes = frameBytes
+    }
+
+    public borrowing func withMutableBytes<Result>(
+        _ body: (inout MutableRawSpan) throws -> Result
+    ) rethrows -> Result {
+        var span = unsafe MutableRawSpan(_unsafeBytes: bytes)
+        return try body(&span)
+    }
+}
+
+@safe
+public struct SoftwareFrameReservation: Equatable, Sendable {
+    public let id: SoftwareFrameBufferID
+    public let width: Int32
+    public let height: Int32
+    public let stride: Int32
+    public let geometry: SoftwareFrameGeometry
+    package let reservationID: SoftwareFrameReservationToken
+
+    package init(
+        reservationID frameReservationID: SoftwareFrameReservationToken,
+        id frameBufferID: SoftwareFrameBufferID,
+        width frameWidth: Int32,
+        height frameHeight: Int32,
+        stride frameStride: Int32,
+        geometry frameGeometry: SoftwareFrameGeometry
+    ) {
+        reservationID = frameReservationID
+        id = frameBufferID
+        width = frameWidth
+        height = frameHeight
+        stride = frameStride
+        geometry = frameGeometry
+    }
+}
+
+@safe
 public struct SoftwareFrame: ~Copyable {
+    public let id: SoftwareFrameBufferID
     public let width: Int32
     public let height: Int32
     public let stride: Int32
@@ -11,6 +93,7 @@ public struct SoftwareFrame: ~Copyable {
     }
 
     init(
+        id frameBufferID: SoftwareFrameBufferID,
         width frameWidth: Int32,
         height frameHeight: Int32,
         stride frameStride: Int32,
@@ -66,11 +149,26 @@ public struct SoftwareFrame: ~Copyable {
             )
         }
 
+        id = frameBufferID
         width = frameWidth
         height = frameHeight
         stride = frameStride
         geometry = frameGeometry
         unsafe bytes = frameBytes
+    }
+
+    public borrowing func withBuffer<Result>(
+        _ body: (borrowing SoftwareFrameBuffer) throws -> Result
+    ) rethrows -> Result {
+        let frameBuffer = unsafe SoftwareFrameBuffer(
+            id: id,
+            width: width,
+            height: height,
+            stride: stride,
+            geometry: geometry,
+            bytes: bytes
+        )
+        return try body(frameBuffer)
     }
 
     public borrowing func withXRGB8888Rows(

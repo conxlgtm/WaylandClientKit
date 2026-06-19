@@ -29,6 +29,12 @@ private struct TopLevelWindowRoleResources {
     }
 }
 
+private struct PendingSoftwareFrameReservation {
+    let request: PresentationRequest
+    let geometry: SurfaceGeometry
+    let reservedFrame: WindowReservedSoftwareFrame
+}
+
 // swiftlint:disable:next type_body_length
 package final class TopLevelWindow {
     package static let defaultConfigureTimeoutMS: Int32 = 1_000
@@ -46,8 +52,11 @@ package final class TopLevelWindow {
     private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private var presentationFeedbackIDs = IDGenerator<SurfacePresentationIdentity>()
+    private var softwareFrameReservationIDs = IDGenerator<SoftwareFrameReservationToken>()
     private var pendingPresentationFeedbacks:
         [SurfacePresentationIdentity: RawPresentationFeedback] = [:]
+    private var pendingSoftwareFrameReservations:
+        [SoftwareFrameReservationToken: PendingSoftwareFrameReservation] = [:]
 
     #if DEBUG
         private var testingInteractionSeatsByID: [SeatID: RawSeat] = [:]
@@ -367,6 +376,7 @@ package final class TopLevelWindow {
     }
 
     private func retireSwapchain() {
+        cancelAllSoftwareFrameReservations()
         surfaceRuntime.retireSharedMemoryPools(reason: .windowClosed)
     }
 
@@ -404,6 +414,72 @@ package final class TopLevelWindow {
             presentationFeedback: presentationFeedback,
             draw
         )
+    }
+
+    private func consumeSoftwarePresentationRequest() throws -> PresentationRequest? {
+        let effects = try model.reduce(
+            .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
+        )
+        var presentationRequest: PresentationRequest?
+
+        for effect in effects {
+            switch effect {
+            case .performSoftwarePresent(let request):
+                presentationRequest = request
+            default:
+                try interpretWindowEffects([effect])
+            }
+        }
+
+        return presentationRequest
+    }
+
+    private func reserveSoftwareFrameForCurrentRedraw() throws -> SoftwareFrameReservation? {
+        guard !model.isClosed else { return nil }
+        guard let request = try consumeSoftwarePresentationRequest() else { return nil }
+
+        try interpretWindowEffects(
+            model.reduce(.presentationStarted(request))
+        )
+
+        do {
+            let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
+            let result = try softwarePresenter().reserve(
+                context: WindowSoftwarePresentationContext(
+                    request: request,
+                    geometry: geometry,
+                    submitConstraints: .default,
+                    metadata: .default,
+                    damage: nil,
+                    presentationFeedback: nil
+                ),
+                reservationID: softwareFrameReservationIDs.next(),
+                runtime: &surfaceRuntime,
+                hasPendingFrameRegistration: pendingFrameRegistration != nil
+            )
+            try interpretSoftwarePresentationFollowUp(result.followUp)
+            guard let reservedFrame = result.reservedFrame else { return nil }
+
+            pendingSoftwareFrameReservations[reservedFrame.reservation.reservationID] =
+                PendingSoftwareFrameReservation(
+                    request: request,
+                    geometry: geometry,
+                    reservedFrame: reservedFrame
+                )
+            return reservedFrame.reservation
+        } catch let failure as WindowSoftwarePresentationFailure {
+            failActivePresentation(
+                generation: request.generation,
+                error: failure.presentationError
+            )
+            throw failure.underlying
+        } catch {
+            failPresentationIfStillActive(
+                generation: request.generation,
+                error: .surfaceCommit(String(describing: error))
+            )
+            throw error
+        }
     }
 
     private func applySurfaceRegion(
@@ -509,27 +585,7 @@ package final class TopLevelWindow {
 
         do {
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
-            let result = try WindowSoftwarePresenter(
-                surface: surface,
-                scaleInstallation: scaleInstallation,
-                createSharedMemoryPool: { [self] bufferSize in
-                    guard let globals = connection.boundGlobals else {
-                        throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
-                    }
-
-                    return try globals.sharedMemory.createPool(
-                        width: bufferSize.width.rawValue,
-                        height: bufferSize.height.rawValue,
-                        bufferCount: configuration.bufferCount.rawValue
-                    ) { [weak self] in
-                        self?.handleBufferReleased()
-                    }
-                },
-                isWindowClosed: { [self] in model.isClosed },
-                onFrame: { [weak self] in
-                    self?.handleFrameDone()
-                }
-            ).present(
+            let result = try softwarePresenter().present(
                 context: WindowSoftwarePresentationContext(
                     request: request,
                     geometry: geometry,
@@ -560,6 +616,119 @@ package final class TopLevelWindow {
             )
             throw error
         }
+    }
+
+    private func softwarePresenter() -> WindowSoftwarePresenter {
+        WindowSoftwarePresenter(
+            surface: surface,
+            scaleInstallation: scaleInstallation,
+            createSharedMemoryPool: { [self] bufferSize in
+                guard let globals = connection.boundGlobals else {
+                    throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
+                }
+
+                return try globals.sharedMemory.createPool(
+                    width: bufferSize.width.rawValue,
+                    height: bufferSize.height.rawValue,
+                    bufferCount: configuration.bufferCount.rawValue
+                ) { [weak self] in
+                    self?.handleBufferReleased()
+                }
+            },
+            isWindowClosed: { [self] in model.isClosed },
+            onFrame: { [weak self] in
+                self?.handleFrameDone()
+            }
+        )
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    private func submitReservedSoftwareFrame(
+        _ reservation: SoftwareFrameReservation,
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata,
+        damage: SurfaceDamageRegion?,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest?,
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws -> RedrawOutcome {
+        guard !model.isClosed else {
+            cancelSoftwareFrameReservation(reservation)
+            return .skippedClosed
+        }
+        guard
+            let pendingReservation = pendingSoftwareFrameReservations.removeValue(
+                forKey: reservation.reservationID
+            )
+        else {
+            throw ClientError.invalidWindowState(
+                .message("software frame reservation is not active")
+            )
+        }
+
+        do {
+            _ = try consumeLatestConfigureIfAvailable()
+            guard try currentSurfaceGeometry() == pendingReservation.geometry else {
+                pendingReservation.reservedFrame.drawingBuffer.discard()
+                resetTransientState()
+                try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
+                return .skippedPendingFrame
+            }
+
+            let result = try softwarePresenter().presentReserved(
+                pendingReservation.reservedFrame,
+                context: WindowSoftwarePresentationContext(
+                    request: pendingReservation.request,
+                    geometry: pendingReservation.geometry,
+                    submitConstraints: submitConstraints,
+                    metadata: metadata,
+                    damage: damage,
+                    presentationFeedback: presentationFeedback
+                ),
+                draw: draw,
+                runtime: &surfaceRuntime,
+                pendingFrameRegistration: &pendingFrameRegistration
+            )
+            try interpretSoftwarePresentationFollowUp(result.followUp)
+            return result.outcome
+        } catch let failure as WindowSoftwarePresentationFailure {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            failActivePresentation(
+                generation: pendingReservation.request.generation,
+                error: failure.presentationError
+            )
+            if case .userDraw = failure.presentationError {
+                throw WindowSoftwareDrawFailure(underlying: failure.underlying)
+            }
+            throw failure.underlying
+        } catch {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            failPresentationIfStillActive(
+                generation: pendingReservation.request.generation,
+                error: .surfaceCommit(String(describing: error))
+            )
+            throw error
+        }
+    }
+
+    private func cancelSoftwareFrameReservation(_ reservation: SoftwareFrameReservation) {
+        guard
+            let pendingReservation = pendingSoftwareFrameReservations.removeValue(
+                forKey: reservation.reservationID
+            )
+        else {
+            return
+        }
+
+        pendingReservation.reservedFrame.drawingBuffer.discard()
+        resetTransientState()
+        publishDeferredRedrawAfterReservationCancellation()
+    }
+
+    private func cancelAllSoftwareFrameReservations() {
+        for pendingReservation in pendingSoftwareFrameReservations.values {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+        }
+        pendingSoftwareFrameReservations.removeAll()
     }
 
     private func interpretSoftwarePresentationFollowUp(
@@ -639,6 +808,20 @@ package final class TopLevelWindow {
             reportCallbackFailure(operation: .transientStateReset, error: error)
         } catch {
             reportCallbackFailure(operation: .transientStateReset, error: error)
+        }
+    }
+
+    private func publishDeferredRedrawAfterReservationCancellation() {
+        guard !model.isClosed, model.redraw.isDirty else { return }
+
+        do {
+            try interpretWindowEffects(
+                model.reduce(.frameBecameReady(bufferAvailability: try redrawBufferAvailability()))
+            )
+        } catch let error as ClientError {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+        } catch {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         }
     }
 
@@ -1069,6 +1252,7 @@ extension TopLevelWindow {
     }
 
     private func destroyRoleObjects() {
+        cancelAllSoftwareFrameReservations()
         onClose?()
         onClose = nil
         onCloseRequested = nil
@@ -1711,6 +1895,18 @@ extension TopLevelWindow {
         )
     }
 
+    package func reserveShowSoftwareFrameOnOwnerThread(
+        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS
+    ) throws -> SoftwareFrameReservation? {
+        connection.preconditionIsOwnerThread()
+
+        if model.currentConfiguration == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        }
+
+        return try reserveSoftwareFrameForCurrentRedraw()
+    }
+
     package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
         connection.preconditionIsOwnerThread()
         try applySurfaceRegion(region) { surface, rawRegion in
@@ -1753,6 +1949,42 @@ extension TopLevelWindow {
             presentationFeedback: presentationFeedback,
             draw
         )
+    }
+
+    package func reserveRedrawSoftwareFrameOnOwnerThread() throws -> SoftwareFrameReservation? {
+        connection.preconditionIsOwnerThread()
+
+        guard !model.isClosed else { return nil }
+
+        _ = try consumeLatestConfigureIfAvailable()
+        return try reserveSoftwareFrameForCurrentRedraw()
+    }
+
+    package func submitReservedSoftwareFrameOnOwnerThread(
+        _ reservation: SoftwareFrameReservation,
+        submitConstraints: SurfaceSubmitConstraints = .default,
+        metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        connection.preconditionIsOwnerThread()
+
+        _ = try submitReservedSoftwareFrame(
+            reservation,
+            submitConstraints: submitConstraints,
+            metadata: metadata,
+            damage: damage,
+            presentationFeedback: presentationFeedback,
+            draw
+        )
+    }
+
+    package func cancelSoftwareFrameReservationOnOwnerThread(
+        _ reservation: SoftwareFrameReservation
+    ) {
+        connection.preconditionIsOwnerThread()
+        cancelSoftwareFrameReservation(reservation)
     }
 
     package func closeOnOwnerThread() {

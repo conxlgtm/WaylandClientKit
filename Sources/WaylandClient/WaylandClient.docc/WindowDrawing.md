@@ -6,6 +6,19 @@ callback bookkeeping, shared-memory pool selection, and presentation-feedback
 requests.
 
 Application code draws into the frame payload and asks the window to present it.
+Each software frame reports an opaque ``SoftwareFrameBufferID`` for the borrowed
+SHM buffer, so renderers can track which reusable buffer they are updating
+without receiving raw Wayland or shared-memory handles. Use
+``SoftwareFrame/withBuffer(_:)`` when renderer code needs scoped
+``SoftwareFrameBuffer`` access to contiguous XRGB8888 bytes, stride, and
+geometry. The byte span is valid only while the borrow closure is running.
+Use ``Window/show(damage:timeoutMilliseconds:preparing:_:)`` and
+``Window/redraw(damage:preparing:_:)`` when expensive scene preparation should
+begin after WaylandClientKit has selected the authoritative software frame
+geometry and reusable buffer identity. The preparation closure receives a
+``SoftwareFrameReservation`` with buffer dimensions, stride, geometry, and
+opaque buffer identity. The final draw closure still receives the only scoped
+mutable byte access through ``SoftwareFrame``.
 GPU allocation experiments remain package-internal preview code.
 
 ``PopupSurface`` follows the same ownership rule as windows: it is a managed

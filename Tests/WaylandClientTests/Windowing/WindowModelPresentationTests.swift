@@ -4,7 +4,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct WindowModelPresentationTests {
+struct WindowModelPresentationTests {  // swiftlint:disable:this type_body_length
     private let windowID = WindowID(rawValue: 42)
 
     @Test
@@ -157,6 +157,52 @@ struct WindowModelPresentationTests {
         let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
 
         #expect(try presentationRequest(from: effects).generation == request.generation + 1)
+    }
+
+    @Test
+    func configureDuringPresentationDefersRedrawPublicationUntilFrameReady() throws {
+        var (model, request) = try activeModelWithStartedPresentation()
+
+        #expect(
+            try model.reduce(.configureReceived(configure(width: 1_024, height: 768, serial: 2)))
+                == [.ackConfigure(2)]
+        )
+        #expect(model.presentation == .drawing(request: request))
+        #expect(model.redraw.hasOutstandingRedrawRequest)
+
+        #expect(
+            try model.reduce(
+                .presentationSucceeded(
+                    generation: request.generation,
+                    bufferAvailability: .available
+                )
+            ).isEmpty
+        )
+        #expect(model.presentation == .idle)
+        #expect(model.redraw.isDirty)
+        #expect(
+            try model.reduce(.frameBecameReady(bufferAvailability: .available))
+                == [.publishRedrawRequested(windowID)]
+        )
+    }
+
+    @Test
+    func transientResetAfterDeferredRedrawPublishesWhenFrameReady() throws {
+        var (model, request) = try activeModelWithStartedPresentation()
+
+        #expect(
+            try model.reduce(.configureReceived(configure(width: 1_024, height: 768, serial: 2)))
+                == [.ackConfigure(2)]
+        )
+        #expect(model.presentation == .drawing(request: request))
+
+        #expect(try model.reduce(.transientStateReset).isEmpty)
+        #expect(model.presentation == .idle)
+        #expect(model.redraw.isDirty)
+        #expect(
+            try model.reduce(.frameBecameReady(bufferAvailability: .available))
+                == [.publishRedrawRequested(windowID)]
+        )
     }
 
     @Test

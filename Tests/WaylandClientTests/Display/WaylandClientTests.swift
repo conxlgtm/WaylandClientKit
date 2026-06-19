@@ -140,8 +140,10 @@ struct WaylandClientTests {
         var storage = [UInt32](repeating: 0, count: 6)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
+        // swiftlint:disable:next closure_body_length
         try unsafe storage.withUnsafeMutableBufferPointer { buffer in
             let frame = try unsafe SoftwareFrame(
+                id: softwareFrameTestBufferID(),
                 width: 2,
                 height: 2,
                 stride: 3 * Int32(MemoryLayout<UInt32>.stride),
@@ -158,10 +160,25 @@ struct WaylandClientTests {
                 unsafe pixels[unchecked: 1] = UInt32(row * 10 + 2)
             }
 
+            frame.withBuffer { buffer in
+                #expect(buffer.id == frame.id)
+                #expect(buffer.width == frame.width)
+                #expect(buffer.height == frame.height)
+                #expect(buffer.stride == frame.stride)
+                #expect(buffer.geometry == frame.geometry)
+                buffer.withMutableBytes { bytes in
+                    bytes.storeBytes(
+                        of: UInt32(99),
+                        toByteOffset: 2 * MemoryLayout<UInt32>.stride,
+                        as: UInt32.self
+                    )
+                }
+            }
+
             #expect(frame.geometry.bufferSize == (try PositivePixelSize(width: 2, height: 2)))
         }
 
-        #expect(storage == [1, 2, 0, 11, 12, 0])
+        #expect(storage == [1, 2, 99, 11, 12, 0])
     }
 
     @Test
@@ -181,6 +198,7 @@ struct WaylandClientTests {
                 )
             ) {
                 _ = try unsafe SoftwareFrame(
+                    id: softwareFrameTestBufferID(),
                     width: 2,
                     height: 2,
                     stride: 3 * Int32(MemoryLayout<UInt32>.stride),
@@ -204,4 +222,8 @@ private func softwareFrameTestGeometry(width: Int32, height: Int32) throws
             scale: .one
         )
     )
+}
+
+private func softwareFrameTestBufferID() -> SoftwareFrameBufferID {
+    SoftwareFrameBufferID(rawValue: 1)
 }

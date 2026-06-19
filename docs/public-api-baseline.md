@@ -2167,12 +2167,28 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift`
 
-- L2: `public struct SoftwareFrame: ~Copyable {`
-- L3: `    public let width: Int32`
-- L4: `    public let height: Int32`
-- L5: `    public let stride: Int32`
-- L6: `    public let geometry: SoftwareFrameGeometry`
-- L76: `    public borrowing func withXRGB8888Rows(`
+- L15: `public struct SoftwareFrameBufferID: Hashable, Sendable {`
+- L24: `public struct SoftwareFrameBuffer: ~Copyable {`
+- L25: `    public let id: SoftwareFrameBufferID`
+- L26: `    public let width: Int32`
+- L27: `    public let height: Int32`
+- L28: `    public let stride: Int32`
+- L29: `    public let geometry: SoftwareFrameGeometry`
+- L48: `    public borrowing func withMutableBytes<Result>(`
+- L57: `public struct SoftwareFrameReservation: Equatable, Sendable {`
+- L58: `    public let id: SoftwareFrameBufferID`
+- L59: `    public let width: Int32`
+- L60: `    public let height: Int32`
+- L61: `    public let stride: Int32`
+- L62: `    public let geometry: SoftwareFrameGeometry`
+- L83: `public struct SoftwareFrame: ~Copyable {`
+- L84: `    public let id: SoftwareFrameBufferID`
+- L85: `    public let width: Int32`
+- L86: `    public let height: Int32`
+- L87: `    public let stride: Int32`
+- L88: `    public let geometry: SoftwareFrameGeometry`
+- L160: `    public borrowing func withBuffer<Result>(`
+- L174: `    public borrowing func withXRGB8888Rows(`
 
 ### `Sources/WaylandClient/Public/Rendering/SurfaceCoordinateMapping.swift`
 
@@ -2434,6 +2450,13 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L61: `    public func hideInputPanel() async throws {`
 - L65: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
 - L69: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/Window/Window+SoftwareFramePreparation.swift`
+
+- L2: `    public func show<Prepared: Sendable>(`
+- L15: `    public func show<Prepared: Sendable>(`
+- L53: `    public func redraw<Prepared: Sendable>(`
+- L64: `    public func redraw<Prepared: Sendable>(`
 
 ### `Sources/WaylandClient/Public/Window/Window.swift`
 

@@ -1,6 +1,19 @@
+// swiftlint:disable file_length
+
 import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
+import Synchronization
+
+private let rawBufferIdentityGenerator = Mutex<UInt64>(1)
+
+private func nextRawBufferIdentity() -> UInt64 {
+    rawBufferIdentityGenerator.withLock { nextRawValue in
+        precondition(nextRawValue != UInt64.max, "RawBuffer identity domain exhausted")
+        defer { nextRawValue += 1 }
+        return nextRawValue
+    }
+}
 
 @safe
 package final class RawSharedMemory {
@@ -129,6 +142,7 @@ private final class SharedMemoryMapping {
 
 @safe
 package final class RawBuffer {
+    package let identity: UInt64
     package let width: Int32
     package let height: Int32
     package let stride: Int32
@@ -166,6 +180,7 @@ package final class RawBuffer {
         stride bufferStride: Int32,
         bytes bufferBytes: UnsafeMutableRawBufferPointer
     ) throws(RuntimeError) {
+        identity = nextRawBufferIdentity()
         width = bufferWidth
         height = bufferHeight
         stride = bufferStride
@@ -256,6 +271,10 @@ package final class RawBuffer {
             buffer.stride
         }
 
+        package var identity: UInt64 {
+            buffer.identity
+        }
+
         package var surfaceBuffer: RawSurfaceBuffer {
             lease.preconditionCanWrite()
             return buffer.surfaceBuffer
@@ -275,6 +294,76 @@ package final class RawBuffer {
         package mutating func markBusy(commitGeneration: UInt64) -> RawBuffer {
             lease.markBusy(commitGeneration: commitGeneration)
             return buffer
+        }
+    }
+
+    package final class ReservedDrawingBuffer {
+        private let buffer: RawBuffer
+        private var isCompleted = false
+
+        private init(buffer reservedBuffer: RawBuffer) {
+            buffer = reservedBuffer
+        }
+
+        package convenience init?(acquiring drawingBuffer: RawBuffer) {
+            guard drawingBuffer.acquireForDrawing() else {
+                return nil
+            }
+
+            self.init(buffer: drawingBuffer)
+        }
+
+        package var width: Int32 {
+            buffer.width
+        }
+
+        package var height: Int32 {
+            buffer.height
+        }
+
+        package var stride: Int32 {
+            buffer.stride
+        }
+
+        package var identity: UInt64 {
+            buffer.identity
+        }
+
+        package var surfaceBuffer: RawSurfaceBuffer {
+            preconditionCanWrite()
+            return buffer.surfaceBuffer
+        }
+
+        package func withUnsafeMutableBytes<R>(
+            _ body: (UnsafeMutableRawBufferPointer) throws -> R
+        ) rethrows -> R {
+            preconditionCanWrite()
+            return try unsafe buffer.withUnsafeMutableBytes(body)
+        }
+
+        package func discard() {
+            guard !isCompleted else { return }
+
+            isCompleted = true
+            buffer.markReleased()
+        }
+
+        package func markBusy(commitGeneration: UInt64) -> RawBuffer {
+            precondition(!isCompleted, "reserved drawing buffer cannot be committed more than once")
+            isCompleted = true
+            precondition(
+                buffer.markBusy(commitGeneration: commitGeneration),
+                "reserved drawing buffer must move to pending release"
+            )
+            return buffer
+        }
+
+        private func preconditionCanWrite() {
+            precondition(!isCompleted, "reserved drawing buffer cannot be written after completion")
+        }
+
+        deinit {
+            discard()
         }
     }
 }
@@ -356,6 +445,14 @@ package final class RawSharedMemoryPool {
         }
 
         return RawBuffer.DrawingBuffer(acquiring: buffer)
+    }
+
+    package func acquireReservedDrawingBuffer() -> RawBuffer.ReservedDrawingBuffer? {
+        guard let buffer = nextFreeBuffer() else {
+            return nil
+        }
+
+        return RawBuffer.ReservedDrawingBuffer(acquiring: buffer)
     }
 
     package var hasFreeBuffers: Bool { buffers.contains(where: \.isReusable) }
