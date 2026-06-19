@@ -642,6 +642,7 @@ package final class TopLevelWindow {
         )
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func submitReservedSoftwareFrame(
         _ reservation: SoftwareFrameReservation,
         submitConstraints: SurfaceSubmitConstraints,

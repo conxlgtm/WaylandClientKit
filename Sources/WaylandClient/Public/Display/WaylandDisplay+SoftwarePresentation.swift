@@ -84,6 +84,7 @@ extension WaylandDisplay {
         try requireCore().reserveSoftwareFrameForRedraw(windowID)
     }
 
+    // swiftlint:disable:next function_parameter_count
     package func submitReservedSoftwareFrame(
         _ windowID: WindowID,
         reservation: SoftwareFrameReservation,

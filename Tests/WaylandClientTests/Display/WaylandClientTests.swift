@@ -140,6 +140,7 @@ struct WaylandClientTests {
         var storage = [UInt32](repeating: 0, count: 6)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
+        // swiftlint:disable:next closure_body_length
         try unsafe storage.withUnsafeMutableBufferPointer { buffer in
             let frame = try unsafe SoftwareFrame(
                 id: softwareFrameTestBufferID(),
