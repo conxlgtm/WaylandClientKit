@@ -125,7 +125,7 @@ enum DataTransferSmoke {
                         state: state
                     )
                 } else if button.button == leftButton {
-                    await publishSelections(
+                    await publishClipboardSelection(
                         display: display,
                         seatID: event.seatID,
                         serial: button.serial,
@@ -148,13 +148,15 @@ enum DataTransferSmoke {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             await state.record(event)
-            log("data-transfer event \(dataTransferDescription(event))")
+            if shouldLogDataTransferEvent(event) {
+                log("data-transfer event \(dataTransferDescription(event))")
+            }
 
             switch event {
             case .clipboardSelectionChanged(let selection):
                 await readClipboardSelection(selection, display: display, state: state)
-            case .primarySelectionChanged(let selection):
-                await readPrimarySelection(selection, display: display, state: state)
+            case .primarySelectionChanged:
+                break
             case .dragEntered(let enter):
                 await acceptDragOffer(enter.seatID, display: display)
             case .dragOfferChanged(let change):
@@ -183,6 +185,21 @@ enum DataTransferSmoke {
         }
     }
 
+    nonisolated private static func shouldLogDataTransferEvent(
+        _ event: DataTransferEvent
+    ) -> Bool {
+        switch event {
+        case .primarySelectionChanged:
+            false
+        case .clipboardSelectionChanged, .sourceSendRequested, .sourceWriteSucceeded,
+            .clipboardSourceCancelled, .primarySelectionSourceCancelled,
+            .dragSourceCancelled, .dragSourceTargetChanged, .dragSourceActionChanged,
+            .dragSourceDropPerformed, .dragSourceFinished, .dragEntered, .dragMotion,
+            .dragLeft, .dragDropped, .dragOfferChanged:
+            true
+        }
+    }
+
     nonisolated private static func consumeDiagnostics(
         _ diagnostics: DisplayDiagnostics
     ) async throws {
@@ -192,7 +209,7 @@ enum DataTransferSmoke {
         }
     }
 
-    nonisolated private static func publishSelections(
+    nonisolated private static func publishClipboardSelection(
         display: WaylandDisplay,
         seatID: SeatID,
         serial: InputSerial,
@@ -205,27 +222,12 @@ enum DataTransferSmoke {
                 seatID: seatID,
                 serial: serial
             )
-            await state.recordSource("clipboard \(clipboard.identity)")
+            await state.recordClipboardSource(clipboard)
             log("operation: request-clipboard-source pass")
             log("clipboard source requested seat=\(seatID) serial=\(serial)")
         } catch {
             log("operation: request-clipboard-source failed")
             log("clipboard source request failed seat=\(seatID) serial=\(serial) error=\(error)")
-        }
-
-        do {
-            let payloads = transferPayloads(label: "primary", serial: serial)
-            let primary = try await display.requestPrimarySelection(
-                PrimarySelectionSourceConfiguration(payloads: payloads),
-                seatID: seatID,
-                serial: serial
-            )
-            await state.recordSource("primary \(primary.identity)")
-            log("operation: request-primary-source pass")
-            log("primary source requested seat=\(seatID) serial=\(serial)")
-        } catch {
-            log("operation: request-primary-source failed")
-            log("primary source request failed seat=\(seatID) serial=\(serial) error=\(error)")
         }
     }
 
@@ -518,15 +520,37 @@ enum DataTransferSmoke {
 
 private actor DataTransferSmokeState {
     private var current = DataTransferSmokeSnapshot()
+    private var activeClipboardSource: ClipboardSource?
+    private var activePrimarySelectionSource: PrimarySelectionSource?
 
     func record(_ event: DataTransferEvent) {
         current.eventCount += 1
         switch event {
-        case .clipboardSourceCancelled, .primarySelectionSourceCancelled, .dragSourceCancelled:
+        case .clipboardSourceCancelled(let source):
+            if activeClipboardSource?.identity == source {
+                activeClipboardSource = nil
+            }
+            current.sourceCount = max(0, current.sourceCount - 1)
+        case .primarySelectionSourceCancelled(let source):
+            if activePrimarySelectionSource?.identity == source {
+                activePrimarySelectionSource = nil
+            }
+            current.sourceCount = max(0, current.sourceCount - 1)
+        case .dragSourceCancelled:
             current.sourceCount = max(0, current.sourceCount - 1)
         default:
             break
         }
+    }
+
+    func recordClipboardSource(_ source: ClipboardSource) {
+        activeClipboardSource = source
+        recordSource("clipboard \(source.identity)")
+    }
+
+    func recordPrimarySelectionSource(_ source: PrimarySelectionSource) {
+        activePrimarySelectionSource = source
+        recordSource("primary \(source.identity)")
     }
 
     func recordSource(_ label: String) {
