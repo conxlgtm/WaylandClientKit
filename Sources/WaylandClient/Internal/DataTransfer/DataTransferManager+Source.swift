@@ -413,16 +413,25 @@ extension DataTransferManager {
                 throw DataTransferError.sourceDataUnavailable(mimeType)
             }
 
+            let requestSource = try writeSource(
+                for: sourceID,
+                callbackIdentity: callbackIdentity
+            )
             store.appendSourceSendRequest(
                 try DataTransferSourceSendRequest(
-                    source: try writeSource(
-                        for: sourceID,
-                        callbackIdentity: callbackIdentity
-                    ),
+                    source: requestSource,
                     mimeType: mimeType,
                     descriptor: descriptor,
                     data: data,
                     descriptorIO: backend.sourceDescriptorIO
+                )
+            )
+            eventQueue.append(
+                .sourceSendRequested(
+                    DataTransferSourceTransferEvent(
+                        source: requestSource.diagnosticSource,
+                        mimeType: mimeType
+                    )
                 )
             )
         } catch {

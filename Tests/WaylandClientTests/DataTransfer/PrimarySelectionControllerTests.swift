@@ -195,6 +195,17 @@ struct PrimarySelectionControllerTests {  // swiftlint:disable:this type_body_le
         #expect(request.source == .primarySelection(snapshot.id))
         #expect(request.mimeType == .plainText)
         #expect(request.data == Data("primary".utf8))
+        #expect(
+            controller.drainDataTransferEvents()
+                == [
+                    .sourceSendRequested(
+                        DataTransferSourceTransferEvent(
+                            source: PrimarySelectionSourceIdentity(snapshot.id),
+                            mimeType: .plainText
+                        )
+                    )
+                ]
+        )
     }
 
     @Test

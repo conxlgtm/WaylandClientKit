@@ -163,7 +163,8 @@ enum DataTransferSmoke {
                 await readDroppedDragOffer(drop.seatID, display: display, state: state)
             case .dragLeft(let leave):
                 await cancelDragOffer(leave.seatID, display: display)
-            case .clipboardSourceCancelled, .primarySelectionSourceCancelled,
+            case .sourceSendRequested, .sourceWriteSucceeded, .clipboardSourceCancelled,
+                .primarySelectionSourceCancelled,
                 .dragSourceCancelled, .dragSourceTargetChanged, .dragSourceActionChanged,
                 .dragSourceDropPerformed, .dragSourceFinished, .dragMotion:
                 break
@@ -474,6 +475,10 @@ enum DataTransferSmoke {
             "clipboard source cancelled \(source)"
         case .primarySelectionSourceCancelled(let source):
             "primary source cancelled \(source)"
+        case .sourceSendRequested(let event):
+            "source send requested source=\(event.source) mime=\(event.mimeType)"
+        case .sourceWriteSucceeded(let event):
+            "source write succeeded source=\(event.source) mime=\(event.mimeType)"
         case .dragSourceCancelled(let source):
             "drag source cancelled \(source)"
         case .dragSourceTargetChanged(let target):

@@ -6,6 +6,47 @@ import Testing
 @Suite
 struct SourceWriterDisplayDrainPublicationTests {
     @Test
+    func displayDrainIncludesSuccessfulSourceWriteEvents() {
+        let writer = ThreadedDataTransferSourceWriter()
+        var pendingDiagnostics: [DataTransferDiagnostic] = []
+        defer { writer.shutdown() }
+
+        writer.submit([
+            queuedWriteJob(
+                source: .clipboard(DataSourceID(rawValue: 37)),
+                descriptor: 517,
+                closeRecorder: SourceCancellationCloseRecorder()
+            )
+        ])
+
+        var drained = DataTransferDrain(events: [], diagnostics: [])
+        for _ in 0..<1_000 {
+            drained = DisplaySession.drainDataTransferEventsAndDiagnostics(
+                [],
+                using: writer,
+                pendingDiagnostics: &pendingDiagnostics
+            )
+            if !drained.events.isEmpty {
+                break
+            }
+            usleep(1_000)
+        }
+
+        #expect(
+            drained.events
+                == [
+                    .sourceWriteSucceeded(
+                        DataTransferSourceTransferEvent(
+                            source: ClipboardSourceIdentity(DataSourceID(rawValue: 37)),
+                            mimeType: .plainText
+                        )
+                    )
+                ]
+        )
+        #expect(drained.diagnostics.isEmpty)
+    }
+
+    @Test
     func displayCorePublishesDrainedDiagnosticsBeforeDataTransferEvents() async {
         let inFlightProbe = SourceCancellationBackpressureProbe()
         let closeRecorder = SourceCancellationCloseRecorder(closeResult: EIO)

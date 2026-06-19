@@ -51,7 +51,17 @@ struct DataTransferIdentityTests {
             offerID: nil
         )
         let event = DataTransferEvent.clipboardSelectionChanged(selectionEvent)
+        let transferEvent = DataTransferSourceTransferEvent(
+            source: ClipboardSourceIdentity(DataSourceID(rawValue: 5)),
+            mimeType: .plainText
+        )
 
         #expect(event.cancelledWriteSource == nil)
+        #expect(
+            DataTransferEvent.sourceSendRequested(transferEvent).cancelledWriteSource == nil
+        )
+        #expect(
+            DataTransferEvent.sourceWriteSucceeded(transferEvent).cancelledWriteSource == nil
+        )
     }
 }

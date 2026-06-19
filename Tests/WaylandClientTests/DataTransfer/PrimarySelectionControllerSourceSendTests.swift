@@ -30,6 +30,17 @@ struct PrimarySelectionControllerSourceSendTests {
         #expect(jobs.count == 1)
         #expect(controller.drainSourceSendRequests().isEmpty)
         #expect(
+            controller.drainDataTransferEvents()
+                == [
+                    .sourceSendRequested(
+                        DataTransferSourceTransferEvent(
+                            source: PrimarySelectionSourceIdentity(snapshot.id),
+                            mimeType: .plainText
+                        )
+                    )
+                ]
+        )
+        #expect(
             job.write()
                 == .succeeded(source: .primarySelection(snapshot.id), mimeType: .plainText)
         )

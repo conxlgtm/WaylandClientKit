@@ -211,7 +211,15 @@ struct DataTransferManagerDragSourceTests {
 
         #expect(
             manager.drainDataTransferEvents()
-                == [.dragSourceCancelled(DragSourceIdentity(source.id))]
+                == [
+                    .sourceSendRequested(
+                        DataTransferSourceTransferEvent(
+                            source: DragSourceIdentity(source.id),
+                            mimeType: .plainText
+                        )
+                    ),
+                    .dragSourceCancelled(DragSourceIdentity(source.id)),
+                ]
         )
         #expect(binding.destroyCount == 1)
         #expect(backend.closedDescriptors == [221])

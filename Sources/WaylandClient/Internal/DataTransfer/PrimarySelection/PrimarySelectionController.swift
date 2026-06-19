@@ -410,13 +410,22 @@ extension PrimarySelectionController {
                 throw DataTransferError.sourceDataUnavailable(mimeType)
             }
 
+            let requestSource = DataTransferSourceWriteSource.primarySelection(sourceID)
             pendingSourceSendRequests.append(
                 try DataTransferSourceSendRequest(
-                    source: .primarySelection(sourceID),
+                    source: requestSource,
                     mimeType: mimeType,
                     descriptor: descriptor,
                     data: data,
                     descriptorIO: backend.sourceDescriptorIO
+                )
+            )
+            eventQueue.append(
+                .sourceSendRequested(
+                    DataTransferSourceTransferEvent(
+                        source: requestSource.diagnosticSource,
+                        mimeType: mimeType
+                    )
                 )
             )
         } catch {
