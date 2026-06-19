@@ -268,7 +268,7 @@ extension DataTransferState {
         }
 
         var effects: [DataTransferEffect] = []
-        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
+        appendSelectionOfferCleanup(seat.selection.offerID, seatID: seatID, to: &effects)
         try seat.setSelection(nextSelection)
         seats[seatID] = seat
         effects.append(.publishSelectionChanged(seatID: seatID, offerID: offerID))
@@ -343,12 +343,11 @@ extension DataTransferState {
             return []
         }
 
-        if case .selection = source.role,
-            var seat = seats[source.seatID],
-            seat.selection == .ownedSource(sourceID)
-        {
-            try seat.setSelection(.none)
-            seats[source.seatID] = seat
+        if case .selection = source.role {
+            if var seat = seats[source.seatID], seat.selection == .ownedSource(sourceID) {
+                try seat.setSelection(.none)
+                seats[source.seatID] = seat
+            }
             return [.cancelSource(sourceID), .publishSourceCancelled(sourceID)]
         }
 

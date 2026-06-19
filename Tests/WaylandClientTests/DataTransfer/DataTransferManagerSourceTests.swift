@@ -1,4 +1,5 @@
 import Testing
+import WaylandRaw
 
 @testable import WaylandClient
 
@@ -114,6 +115,41 @@ struct DataTransferManagerSourceTests {
                         sourceID: nil,
                         serial: InputSerial(rawValue: 61)
                     ),
+                ]
+        )
+    }
+
+    @Test
+    func remoteSelectionOfferDoesNotDestroyOwnedSource() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+        let offerHandle = RawDataOfferHandle(uncheckedRawValue: 0xDA7A_6001)
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 62)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+        _ = manager.drainDataTransferEvents()
+
+        device.emit(.dataOffer(offerHandle))
+        let offerBinding = try #require(backend.offerBinding(for: offerHandle))
+        offerBinding.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle))
+
+        #expect(sourceBinding.destroyCount == 0)
+        #expect(manager.sourceSnapshots.map(\.id) == [source.id])
+        #expect(manager.seatSnapshots.first?.selectionSourceID == nil)
+        #expect(manager.seatSnapshots.first?.selectionOfferID == offerBinding.id)
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .clipboardSelectionChanged(
+                        ClipboardSelectionEvent(seatID: seat1, offerID: offerBinding.id)
+                    )
                 ]
         )
     }
