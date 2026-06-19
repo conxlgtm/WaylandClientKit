@@ -369,43 +369,52 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L264: `public enum DataTransferEvent: Equatable, Sendable {`
 - L265: `    case clipboardSelectionChanged(ClipboardSelectionEvent)`
 - L266: `    case primarySelectionChanged(PrimarySelectionEvent)`
-- L267: `    case clipboardSourceCancelled(ClipboardSourceIdentity)`
-- L268: `    case primarySelectionSourceCancelled(PrimarySelectionSourceIdentity)`
-- L269: `    case dragSourceCancelled(DragSourceIdentity)`
-- L270: `    case dragSourceTargetChanged(DragSourceTargetEvent)`
-- L271: `    case dragSourceActionChanged(DragSourceActionEvent)`
-- L272: `    case dragSourceDropPerformed(DragSourceIdentity)`
-- L273: `    case dragSourceFinished(DragSourceFinishedEvent)`
-- L274: `    case dragEntered(DragEnterEvent)`
-- L275: `    case dragMotion(DragMotionEvent)`
-- L276: `    case dragLeft(DragLeaveEvent)`
-- L277: `    case dragDropped(DragDropEvent)`
-- L278: `    case dragOfferChanged(DragOfferChangedEvent)`
-- L281: `public enum DataTransferDiagnosticOperation: Equatable, Sendable {`
-- L282: `    case sourceWriteFailed`
-- L285: `public enum DataTransferDiagnosticSource: Equatable, Sendable, CustomStringConvertible {`
-- L286: `    case clipboard(ClipboardSourceIdentity)`
-- L287: `    case primarySelection(PrimarySelectionSourceIdentity)`
-- L288: `    case dragAndDrop(DragSourceIdentity)`
-- L290: `    public var description: String {`
-- L302: `public struct DataTransferDiagnostic: Equatable, Sendable {`
-- L303: `    public let source: DataTransferDiagnosticSource`
-- L304: `    public let mimeType: MIMEType`
-- L305: `    public let operation: DataTransferDiagnosticOperation`
-- L306: `    public let error: DataTransferError`
-- L308: `    public var message: String {`
-- L312: `    public init(`
-- L324: `    public init(`
-- L338: `    public init(`
-- L352: `    public init(`
-- L367: `public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,`
-- L370: `    public let rawValue: String`
-- L372: `    public static let plainText = MIMEType(unchecked: "text/plain")`
-- L373: `    public static let plainTextUTF8 = MIMEType(unchecked: "text/plain;charset=utf-8")`
-- L374: `    public static let uriList = MIMEType(unchecked: "text/uri-list")`
-- L376: `    public init(_ value: String) throws {`
-- L384: `    public init?(rawValue value: String) {`
-- L397: `    public var description: String {`
+- L267: `    case sourceSendRequested(DataTransferSourceTransferEvent)`
+- L268: `    case sourceWriteSucceeded(DataTransferSourceTransferEvent)`
+- L269: `    case clipboardSourceCancelled(ClipboardSourceIdentity)`
+- L270: `    case primarySelectionSourceCancelled(PrimarySelectionSourceIdentity)`
+- L271: `    case dragSourceCancelled(DragSourceIdentity)`
+- L272: `    case dragSourceTargetChanged(DragSourceTargetEvent)`
+- L273: `    case dragSourceActionChanged(DragSourceActionEvent)`
+- L274: `    case dragSourceDropPerformed(DragSourceIdentity)`
+- L275: `    case dragSourceFinished(DragSourceFinishedEvent)`
+- L276: `    case dragEntered(DragEnterEvent)`
+- L277: `    case dragMotion(DragMotionEvent)`
+- L278: `    case dragLeft(DragLeaveEvent)`
+- L279: `    case dragDropped(DragDropEvent)`
+- L280: `    case dragOfferChanged(DragOfferChangedEvent)`
+- L283: `public enum DataTransferDiagnosticOperation: Equatable, Sendable {`
+- L284: `    case sourceWriteFailed`
+- L287: `public enum DataTransferDiagnosticSource: Equatable, Sendable, CustomStringConvertible {`
+- L288: `    case clipboard(ClipboardSourceIdentity)`
+- L289: `    case primarySelection(PrimarySelectionSourceIdentity)`
+- L290: `    case dragAndDrop(DragSourceIdentity)`
+- L292: `    public var description: String {`
+- L304: `public struct DataTransferSourceTransferEvent: Equatable, Sendable {`
+- L305: `    public let source: DataTransferDiagnosticSource`
+- L306: `    public let mimeType: MIMEType`
+- L308: `    public init(`
+- L316: `    public init(`
+- L323: `    public init(`
+- L330: `    public init(`
+- L338: `public struct DataTransferDiagnostic: Equatable, Sendable {`
+- L339: `    public let source: DataTransferDiagnosticSource`
+- L340: `    public let mimeType: MIMEType`
+- L341: `    public let operation: DataTransferDiagnosticOperation`
+- L342: `    public let error: DataTransferError`
+- L344: `    public var message: String {`
+- L348: `    public init(`
+- L360: `    public init(`
+- L374: `    public init(`
+- L388: `    public init(`
+- L403: `public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,`
+- L406: `    public let rawValue: String`
+- L408: `    public static let plainText = MIMEType(unchecked: "text/plain")`
+- L409: `    public static let plainTextUTF8 = MIMEType(unchecked: "text/plain;charset=utf-8")`
+- L410: `    public static let uriList = MIMEType(unchecked: "text/uri-list")`
+- L412: `    public init(_ value: String) throws {`
+- L420: `    public init?(rawValue value: String) {`
+- L433: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/DataTransfer/DataTransferSourcePayload.swift`
 

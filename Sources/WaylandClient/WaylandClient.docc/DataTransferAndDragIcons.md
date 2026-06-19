@@ -17,6 +17,14 @@ and receive or read. WaylandClientKit reports stale or unknown offers as typed
 failures or diagnostics so clients can log the compositor behavior, ignore
 unsupported private MIME types, and keep cleanup paths crash-free.
 
+Source-side transfers are observable through ``DataTransferEvent`` values. When
+another client requests bytes from a published clipboard, primary selection, or
+drag source, WaylandClientKit emits a source-send request event with the source
+identity and MIME type. A later source-write success event means the payload was
+written to the compositor-provided descriptor. If writing fails, WaylandClientKit
+publishes a ``DataTransferDiagnosticOperation/sourceWriteFailed`` diagnostic
+instead.
+
 ## Capability Gates
 
 Regular clipboard and drag-and-drop use `wl_data_device_manager`. Primary
@@ -33,7 +41,10 @@ selection state, not a second regular clipboard.
 - ``DragSource``
 - ``DragIcon``
 - ``DragIconImage``
+- ``DataTransferEvent``
 - ``DataTransferEvents``
+- ``DataTransferSourceTransferEvent``
+- ``DataTransferDiagnostic``
 
 ## Errors And Policy
 
