@@ -1,4 +1,17 @@
 @safe
+package struct SoftwareFrameReservationToken: UInt64WaylandEntityID {
+    package let rawValue: UInt64
+
+    package init(rawValue reservationRawValue: UInt64) {
+        rawValue = reservationRawValue
+    }
+
+    package var description: String {
+        "software-frame-reservation-\(rawValue)"
+    }
+}
+
+@safe
 public struct SoftwareFrameBufferID: Hashable, Sendable {
     private let rawValue: ObjectIdentifier
 
@@ -36,6 +49,32 @@ public struct SoftwareFrameBuffer: ~Copyable {
         _ body: (UnsafeMutableRawBufferPointer) throws -> Result
     ) rethrows -> Result {
         try unsafe body(bytes)
+    }
+}
+
+@safe
+public struct SoftwareFrameReservation: Equatable, Sendable {
+    public let id: SoftwareFrameBufferID
+    public let width: Int32
+    public let height: Int32
+    public let stride: Int32
+    public let geometry: SoftwareFrameGeometry
+    package let reservationID: SoftwareFrameReservationToken
+
+    package init(
+        reservationID frameReservationID: SoftwareFrameReservationToken,
+        id frameBufferID: SoftwareFrameBufferID,
+        width frameWidth: Int32,
+        height frameHeight: Int32,
+        stride frameStride: Int32,
+        geometry frameGeometry: SoftwareFrameGeometry
+    ) {
+        reservationID = frameReservationID
+        id = frameBufferID
+        width = frameWidth
+        height = frameHeight
+        stride = frameStride
+        geometry = frameGeometry
     }
 }
 

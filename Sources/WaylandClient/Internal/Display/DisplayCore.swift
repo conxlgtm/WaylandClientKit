@@ -121,6 +121,17 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    func reserveSoftwareFrameForShow(
+        _ windowID: WindowID,
+        timeoutMilliseconds: Int32
+    ) throws -> SoftwareFrameReservation? {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).reserveShowSoftwareFrameOnOwnerThread(
+                timeoutMilliseconds: timeoutMilliseconds
+            )
+        }
+    }
+
     // swiftlint:disable:next function_parameter_count
     func redraw(
         _ windowID: WindowID,
@@ -147,6 +158,55 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             guard !isClosed else {
                 throw ClientError.display(.closed)
             }
+        }
+    }
+
+    func reserveSoftwareFrameForRedraw(
+        _ windowID: WindowID
+    ) throws -> SoftwareFrameReservation? {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).reserveRedrawSoftwareFrameOnOwnerThread()
+        }
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    func submitReservedSoftwareFrame(
+        _ windowID: WindowID,
+        reservation: SoftwareFrameReservation,
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        try withFatalFailureFinalization {
+            let window = try requireOpenWindow(windowID)
+            let presentationFeedback = try presentationFeedbackCommitRequest(
+                for: window,
+                windowID: windowID,
+                isRequested: requestPresentationFeedback
+            )
+            try window.submitReservedSoftwareFrameOnOwnerThread(
+                reservation,
+                submitConstraints: submitConstraints,
+                metadata: metadata,
+                damage: damage,
+                presentationFeedback: presentationFeedback,
+                draw
+            )
+            guard !isClosed, let activeSession else { return }
+            publishSessionEvents(activeSession)
+        }
+    }
+
+    func cancelSoftwareFrameReservation(
+        _ windowID: WindowID,
+        reservation: SoftwareFrameReservation
+    ) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).cancelSoftwareFrameReservationOnOwnerThread(
+                reservation
+            )
         }
     }
 

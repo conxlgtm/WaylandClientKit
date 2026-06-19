@@ -281,6 +281,76 @@ package final class RawBuffer {
             return buffer
         }
     }
+
+    package final class ReservedDrawingBuffer {
+        private let buffer: RawBuffer
+        private var isCompleted = false
+
+        private init(buffer reservedBuffer: RawBuffer) {
+            buffer = reservedBuffer
+        }
+
+        package convenience init?(acquiring drawingBuffer: RawBuffer) {
+            guard drawingBuffer.acquireForDrawing() else {
+                return nil
+            }
+
+            self.init(buffer: drawingBuffer)
+        }
+
+        package var width: Int32 {
+            buffer.width
+        }
+
+        package var height: Int32 {
+            buffer.height
+        }
+
+        package var stride: Int32 {
+            buffer.stride
+        }
+
+        package var objectIdentifier: ObjectIdentifier {
+            ObjectIdentifier(buffer)
+        }
+
+        package var surfaceBuffer: RawSurfaceBuffer {
+            preconditionCanWrite()
+            return buffer.surfaceBuffer
+        }
+
+        package func withUnsafeMutableBytes<R>(
+            _ body: (UnsafeMutableRawBufferPointer) throws -> R
+        ) rethrows -> R {
+            preconditionCanWrite()
+            return try unsafe buffer.withUnsafeMutableBytes(body)
+        }
+
+        package func discard() {
+            guard !isCompleted else { return }
+
+            isCompleted = true
+            buffer.markReleased()
+        }
+
+        package func markBusy(commitGeneration: UInt64) -> RawBuffer {
+            precondition(!isCompleted, "reserved drawing buffer cannot be committed more than once")
+            isCompleted = true
+            precondition(
+                buffer.markBusy(commitGeneration: commitGeneration),
+                "reserved drawing buffer must move to pending release"
+            )
+            return buffer
+        }
+
+        private func preconditionCanWrite() {
+            precondition(!isCompleted, "reserved drawing buffer cannot be written after completion")
+        }
+
+        deinit {
+            discard()
+        }
+    }
 }
 
 @safe
@@ -360,6 +430,14 @@ package final class RawSharedMemoryPool {
         }
 
         return RawBuffer.DrawingBuffer(acquiring: buffer)
+    }
+
+    package func acquireReservedDrawingBuffer() -> RawBuffer.ReservedDrawingBuffer? {
+        guard let buffer = nextFreeBuffer() else {
+            return nil
+        }
+
+        return RawBuffer.ReservedDrawingBuffer(acquiring: buffer)
     }
 
     package var hasFreeBuffers: Bool { buffers.contains(where: \.isReusable) }
