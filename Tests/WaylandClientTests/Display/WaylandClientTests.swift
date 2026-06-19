@@ -224,8 +224,6 @@ private func softwareFrameTestGeometry(width: Int32, height: Int32) throws
     )
 }
 
-private final class SoftwareFrameTestBufferToken {}
-
 private func softwareFrameTestBufferID() -> SoftwareFrameBufferID {
-    SoftwareFrameBufferID(rawValue: ObjectIdentifier(SoftwareFrameTestBufferToken()))
+    SoftwareFrameBufferID(rawValue: 1)
 }

@@ -119,11 +119,31 @@
     @Suite(.serialized)
     struct WindowSoftwarePresenterTests {
         private struct RoleToken {}
+        private struct FrameIDCaptureComplete: Error {}
 
         @Test
         func drawFailureWrapsOriginalCauseBeforePresentationRequests() async throws {
             try await withSoftwarePresentationRecording {
                 try exerciseDrawFailureBeforePresentationRequests()
+            }
+        }
+
+        @Test
+        func bufferIDsAreUniqueAcrossPoolAllocations() async throws {
+            try await withSoftwarePresentationRecording {
+                let surface = try testSurface(pointer: 0x6A11)
+                let sharedMemory = try testSharedMemory(pointer: 0x6A12)
+
+                let firstID = try renderSoftwareFrameID(
+                    surface: surface,
+                    pool: try sharedMemory.createPool(width: 64, height: 48, bufferCount: 1)
+                )
+                let secondID = try renderSoftwareFrameID(
+                    surface: surface,
+                    pool: try sharedMemory.createPool(width: 64, height: 48, bufferCount: 1)
+                )
+
+                #expect(firstID != secondID)
             }
         }
 
@@ -157,6 +177,37 @@
 
             #expect(unsafe swl_test_presentation_request_record().call_count == 0)
             #expect(unsafe swl_test_core_request_record().commit_sequence == 0)
+        }
+
+        private func renderSoftwareFrameID(
+            surface: RawSurface,
+            pool: RawSharedMemoryPool
+        ) throws -> SoftwareFrameBufferID {
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+            var pendingFrameRegistration: FrameCallbackRegistration?
+            let presenter = softwarePresenter(surface: surface, pool: pool)
+            var capturedID: SoftwareFrameBufferID?
+
+            do {
+                _ = try presenter.present(
+                    context: try softwarePresentationContext(),
+                    draw: { frame in
+                        capturedID = frame.id
+                        throw FrameIDCaptureComplete()
+                    },
+                    runtime: &runtime,
+                    pendingFrameRegistration: &pendingFrameRegistration
+                )
+                Issue.record("expected frame ID capture to stop drawing")
+            } catch let failure as WindowSoftwarePresentationFailure
+                where failure.underlying is FrameIDCaptureComplete
+            {
+                // Capturing the ID during draw is enough for this identity regression.
+            } catch {
+                throw error
+            }
+
+            return try #require(capturedID)
         }
 
         private func withSoftwarePresentationRecording(

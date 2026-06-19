@@ -3,6 +3,17 @@
 import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
+import Synchronization
+
+private let rawBufferIdentityGenerator = Mutex<UInt64>(1)
+
+private func nextRawBufferIdentity() -> UInt64 {
+    rawBufferIdentityGenerator.withLock { nextRawValue in
+        precondition(nextRawValue != UInt64.max, "RawBuffer identity domain exhausted")
+        defer { nextRawValue += 1 }
+        return nextRawValue
+    }
+}
 
 @safe
 package final class RawSharedMemory {
@@ -131,6 +142,7 @@ private final class SharedMemoryMapping {
 
 @safe
 package final class RawBuffer {
+    package let identity: UInt64
     package let width: Int32
     package let height: Int32
     package let stride: Int32
@@ -168,6 +180,7 @@ package final class RawBuffer {
         stride bufferStride: Int32,
         bytes bufferBytes: UnsafeMutableRawBufferPointer
     ) throws(RuntimeError) {
+        identity = nextRawBufferIdentity()
         width = bufferWidth
         height = bufferHeight
         stride = bufferStride
@@ -258,8 +271,8 @@ package final class RawBuffer {
             buffer.stride
         }
 
-        package var objectIdentifier: ObjectIdentifier {
-            ObjectIdentifier(buffer)
+        package var identity: UInt64 {
+            buffer.identity
         }
 
         package var surfaceBuffer: RawSurfaceBuffer {
@@ -312,8 +325,8 @@ package final class RawBuffer {
             buffer.stride
         }
 
-        package var objectIdentifier: ObjectIdentifier {
-            ObjectIdentifier(buffer)
+        package var identity: UInt64 {
+            buffer.identity
         }
 
         package var surfaceBuffer: RawSurfaceBuffer {

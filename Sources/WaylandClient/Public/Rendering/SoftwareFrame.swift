@@ -13,10 +13,10 @@ package struct SoftwareFrameReservationToken: UInt64WaylandEntityID {
 
 @safe
 public struct SoftwareFrameBufferID: Hashable, Sendable {
-    private let rawValue: ObjectIdentifier
+    private let rawValue: UInt64
 
-    init(rawValue bufferObjectIdentifier: ObjectIdentifier) {
-        rawValue = bufferObjectIdentifier
+    init(rawValue bufferRawValue: UInt64) {
+        rawValue = bufferRawValue
     }
 }
 

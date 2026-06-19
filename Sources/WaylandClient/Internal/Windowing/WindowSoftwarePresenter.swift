@@ -199,7 +199,7 @@ struct WindowSoftwarePresenter {
 
         let reservation = SoftwareFrameReservation(
             reservationID: reservationID,
-            id: SoftwareFrameBufferID(rawValue: drawingBuffer.objectIdentifier),
+            id: SoftwareFrameBufferID(rawValue: drawingBuffer.identity),
             width: drawingBuffer.width,
             height: drawingBuffer.height,
             stride: drawingBuffer.stride,
@@ -310,7 +310,7 @@ struct WindowSoftwarePresenter {
         do {
             try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
                 let frame = try unsafe SoftwareFrame(
-                    id: SoftwareFrameBufferID(rawValue: drawingBuffer.objectIdentifier),
+                    id: SoftwareFrameBufferID(rawValue: drawingBuffer.identity),
                     width: drawingBuffer.width,
                     height: drawingBuffer.height,
                     stride: drawingBuffer.stride,
