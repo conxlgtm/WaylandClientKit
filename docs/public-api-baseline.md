@@ -2451,61 +2451,64 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L65: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
 - L69: `    public func hash(into hasher: inout Hasher) {`
 
+### `Sources/WaylandClient/Public/Window/Window+SoftwareFramePreparation.swift`
+
+- L2: `    public func show<Prepared: Sendable>(`
+- L15: `    public func show<Prepared: Sendable>(`
+- L48: `    public func redraw<Prepared: Sendable>(`
+- L59: `    public func redraw<Prepared: Sendable>(`
+
 ### `Sources/WaylandClient/Public/Window/Window.swift`
 
 - L4: `public struct Window: Sendable, Hashable {`
 - L5: `    public let id: WindowID`
 - L19: `    public func show(`
 - L26: `    public func show(`
-- L42: `    public func show<Prepared: Sendable>(`
-- L55: `    public func show<Prepared: Sendable>(`
-- L105: `    public func redraw(`
-- L111: `    public func redraw(`
-- L125: `    public func redraw<Prepared: Sendable>(`
-- L136: `    public func redraw<Prepared: Sendable>(`
-- L223: `    public func close() async {`
-- L227: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L233: `    public func createSubsurface(`
-- L242: `    public func requestRedraw() async throws {`
-- L246: `    public var presentationEvents: WindowPresentationEvents {`
-- L250: `    public func requestPresentationFeedback() async throws {`
-- L254: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
-- L258: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
-- L262: `    public func setIcon(_ icon: WindowIcon) async throws {`
-- L266: `    public func inhibitIdle() async throws -> IdleInhibitor {`
-- L270: `    public func createDialog(`
-- L277: `    public func inhibitKeyboardShortcuts(`
-- L283: `    public func ringSystemBell() async throws {`
-- L287: `    public func requestActivationToken(`
-- L302: `    public func activate(using token: ActivationToken) async throws {`
-- L306: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L310: `    public func lockPointer(`
-- L325: `    public func confinePointer(`
-- L338: `    public func requestPointerWarp(`
-- L351: `    public func setTitle(_ title: WaylandString) async throws {`
-- L355: `    public func setTitle(_ title: String) async throws {`
-- L359: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L363: `    public func setAppID(_ appID: String) async throws {`
-- L367: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L371: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L375: `    public func requestMaximize() async throws {`
-- L379: `    public func requestUnmaximize() async throws {`
-- L383: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L387: `    public func requestExitFullscreen() async throws {`
-- L391: `    public func requestMinimize() async throws {`
-- L395: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L399: `    public func requestInteractiveResize(`
-- L412: `    public func requestWindowMenu(`
-- L425: `    public func startDrag(`
-- L440: `    public func startToplevelDrag(`
-- L459: `    public var isClosed: Bool {`
-- L465: `    public var needsRedraw: Bool {`
-- L471: `    public var decorationMode: WindowDecorationMode {`
-- L477: `    public var geometry: SurfaceGeometry {`
-- L483: `    public var stateSnapshot: WindowStateSnapshot {`
-- L489: `    public var restorationSnapshot: WindowRestorationSnapshot {`
-- L495: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L499: `    public func hash(into hasher: inout Hasher) {`
+- L61: `    public func redraw(`
+- L67: `    public func redraw(`
+- L141: `    public func close() async {`
+- L145: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L151: `    public func createSubsurface(`
+- L160: `    public func requestRedraw() async throws {`
+- L164: `    public var presentationEvents: WindowPresentationEvents {`
+- L168: `    public func requestPresentationFeedback() async throws {`
+- L172: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L176: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
+- L180: `    public func setIcon(_ icon: WindowIcon) async throws {`
+- L184: `    public func inhibitIdle() async throws -> IdleInhibitor {`
+- L188: `    public func createDialog(`
+- L195: `    public func inhibitKeyboardShortcuts(`
+- L201: `    public func ringSystemBell() async throws {`
+- L205: `    public func requestActivationToken(`
+- L220: `    public func activate(using token: ActivationToken) async throws {`
+- L224: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L228: `    public func lockPointer(`
+- L243: `    public func confinePointer(`
+- L256: `    public func requestPointerWarp(`
+- L269: `    public func setTitle(_ title: WaylandString) async throws {`
+- L273: `    public func setTitle(_ title: String) async throws {`
+- L277: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L281: `    public func setAppID(_ appID: String) async throws {`
+- L285: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L289: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L293: `    public func requestMaximize() async throws {`
+- L297: `    public func requestUnmaximize() async throws {`
+- L301: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L305: `    public func requestExitFullscreen() async throws {`
+- L309: `    public func requestMinimize() async throws {`
+- L313: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L317: `    public func requestInteractiveResize(`
+- L330: `    public func requestWindowMenu(`
+- L343: `    public func startDrag(`
+- L358: `    public func startToplevelDrag(`
+- L377: `    public var isClosed: Bool {`
+- L383: `    public var needsRedraw: Bool {`
+- L389: `    public var decorationMode: WindowDecorationMode {`
+- L395: `    public var geometry: SurfaceGeometry {`
+- L401: `    public var stateSnapshot: WindowStateSnapshot {`
+- L407: `    public var restorationSnapshot: WindowRestorationSnapshot {`
+- L413: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L417: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 
