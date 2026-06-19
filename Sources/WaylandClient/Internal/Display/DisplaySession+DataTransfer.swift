@@ -112,9 +112,12 @@ extension DisplaySession {
         pendingDiagnostics: inout [DataTransferDiagnostic]
     ) -> DataTransferDrain {
         cancelSourceWrites(for: events, using: writer)
-        collectDataTransferSourceWriteResults(from: writer, into: &pendingDiagnostics)
+        let sourceWriteEvents = collectDataTransferSourceWriteResults(
+            from: writer,
+            into: &pendingDiagnostics
+        )
         return DataTransferDrain(
-            events: events,
+            events: events + sourceWriteEvents,
             diagnostics: pendingDiagnostics.drain()
         )
     }
@@ -421,22 +424,39 @@ extension DisplaySession {
     }
 
     private func collectDataTransferSourceWriteResults() {
-        Self.collectDataTransferSourceWriteResults(
+        let events = Self.collectDataTransferSourceWriteResults(
             from: dataTransferSourceWriter,
             into: &pendingDataTransferDiagnostics
         )
+        for event in events {
+            dataTransferEventQueue.append(event)
+        }
     }
 
     private static func collectDataTransferSourceWriteResults(
         from writer: ThreadedDataTransferSourceWriter,
         into pendingDiagnostics: inout [DataTransferDiagnostic]
-    ) {
+    ) -> [DataTransferEvent] {
+        var events: [DataTransferEvent] = []
         for result in writer.drainResults() {
-            guard let diagnostic = Self.dataTransferDiagnostic(from: result) else {
-                continue
-            }
+            switch result {
+            case .succeeded(let source, let mimeType):
+                events.append(
+                    .sourceWriteSucceeded(
+                        DataTransferSourceTransferEvent(
+                            source: source.diagnosticSource,
+                            mimeType: mimeType
+                        )
+                    )
+                )
+            case .failed(_, _, _):
+                guard let diagnostic = Self.dataTransferDiagnostic(from: result) else {
+                    continue
+                }
 
-            pendingDiagnostics.append(diagnostic)
+                pendingDiagnostics.append(diagnostic)
+            }
         }
+        return events
     }
 }

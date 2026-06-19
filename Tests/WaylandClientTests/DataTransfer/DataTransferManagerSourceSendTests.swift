@@ -35,6 +35,17 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
         #expect(request.sourceID == source.id)
         #expect(request.mimeType == .plainText)
         #expect(request.data == Data("clipboard".utf8))
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .sourceSendRequested(
+                        DataTransferSourceTransferEvent(
+                            source: ClipboardSourceIdentity(source.id),
+                            mimeType: .plainText
+                        )
+                    )
+                ]
+        )
 
         try request.close()
         #expect(backend.closedDescriptors == [210])
@@ -307,7 +318,15 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
         #expect(manager.drainSourceSendRequests().isEmpty)
         #expect(
             manager.drainDataTransferEvents()
-                == [.clipboardSourceCancelled(ClipboardSourceIdentity(source.id))]
+                == [
+                    .sourceSendRequested(
+                        DataTransferSourceTransferEvent(
+                            source: ClipboardSourceIdentity(source.id),
+                            mimeType: .plainText
+                        )
+                    ),
+                    .clipboardSourceCancelled(ClipboardSourceIdentity(source.id)),
+                ]
         )
     }
 

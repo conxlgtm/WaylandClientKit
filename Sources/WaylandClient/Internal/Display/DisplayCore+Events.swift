@@ -75,6 +75,8 @@ extension DisplayCore {
             closeToplevelDrags(for: finished.source)
         case .clipboardSelectionChanged,
             .primarySelectionChanged,
+            .sourceSendRequested,
+            .sourceWriteSucceeded,
             .clipboardSourceCancelled,
             .primarySelectionSourceCancelled,
             .dragSourceTargetChanged,

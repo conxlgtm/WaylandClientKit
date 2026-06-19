@@ -264,6 +264,8 @@ public struct PrimarySelectionEvent: Equatable, Sendable {
 public enum DataTransferEvent: Equatable, Sendable {
     case clipboardSelectionChanged(ClipboardSelectionEvent)
     case primarySelectionChanged(PrimarySelectionEvent)
+    case sourceSendRequested(DataTransferSourceTransferEvent)
+    case sourceWriteSucceeded(DataTransferSourceTransferEvent)
     case clipboardSourceCancelled(ClipboardSourceIdentity)
     case primarySelectionSourceCancelled(PrimarySelectionSourceIdentity)
     case dragSourceCancelled(DragSourceIdentity)
@@ -296,6 +298,40 @@ public enum DataTransferDiagnosticSource: Equatable, Sendable, CustomStringConve
         case .dragAndDrop(let source):
             source.description
         }
+    }
+}
+
+public struct DataTransferSourceTransferEvent: Equatable, Sendable {
+    public let source: DataTransferDiagnosticSource
+    public let mimeType: MIMEType
+
+    public init(
+        source eventSource: DataTransferDiagnosticSource,
+        mimeType eventMIMEType: MIMEType
+    ) {
+        source = eventSource
+        mimeType = eventMIMEType
+    }
+
+    public init(
+        source eventSource: ClipboardSourceIdentity,
+        mimeType eventMIMEType: MIMEType
+    ) {
+        self.init(source: .clipboard(eventSource), mimeType: eventMIMEType)
+    }
+
+    public init(
+        source eventSource: PrimarySelectionSourceIdentity,
+        mimeType eventMIMEType: MIMEType
+    ) {
+        self.init(source: .primarySelection(eventSource), mimeType: eventMIMEType)
+    }
+
+    public init(
+        source eventSource: DragSourceIdentity,
+        mimeType eventMIMEType: MIMEType
+    ) {
+        self.init(source: .dragAndDrop(eventSource), mimeType: eventMIMEType)
     }
 }
 

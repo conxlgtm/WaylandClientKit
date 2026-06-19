@@ -59,7 +59,8 @@ extension DataTransferEvent {
             .primarySelection(DataSourceID(source))
         case .dragSourceCancelled(let source):
             .dragAndDrop(DataSourceID(source))
-        case .clipboardSelectionChanged, .primarySelectionChanged,
+        case .clipboardSelectionChanged, .primarySelectionChanged, .sourceSendRequested,
+            .sourceWriteSucceeded,
             .dragSourceTargetChanged, .dragSourceActionChanged, .dragSourceDropPerformed,
             .dragSourceFinished, .dragEntered, .dragMotion, .dragLeft, .dragDropped,
             .dragOfferChanged:

@@ -299,6 +299,10 @@ struct WaylandDataTransferAPISurfaceTests {
                 event.offer?.description ?? "clipboard cleared"
             case .primarySelectionChanged(let event):
                 event.offer?.description ?? "primary selection cleared"
+            case .sourceSendRequested(let event):
+                "\(event.source.description):\(event.mimeType.description)"
+            case .sourceWriteSucceeded(let event):
+                "\(event.source.description):\(event.mimeType.description)"
             case .clipboardSourceCancelled(let identity):
                 identity.description
             case .primarySelectionSourceCancelled(let identity):
