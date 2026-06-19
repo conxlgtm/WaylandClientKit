@@ -133,10 +133,28 @@ enum DataTransferSmoke {
                     )
                 }
                 try await window.requestRedraw()
+            case .keyboard(.interpreted(.key(let key)))
+            where key.state == .pressed && isClipboardPublishKey(key):
+                await publishClipboardSelection(
+                    display: display,
+                    seatID: event.seatID,
+                    serial: key.serial,
+                    state: state
+                )
+                try await window.requestRedraw()
             default:
                 break
             }
         }
+    }
+
+    nonisolated private static func isClipboardPublishKey(
+        _ key: InterpretedKeyboardKeyEvent
+    ) -> Bool {
+        if key.utf8?.lowercased() == "c" {
+            return true
+        }
+        return key.keysymName?.lowercased() == "c"
     }
 
     nonisolated private static func consumeDataTransferEvents(
