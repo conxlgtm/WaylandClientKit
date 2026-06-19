@@ -12,6 +12,13 @@ without receiving raw Wayland or shared-memory handles. Use
 ``SoftwareFrame/withBuffer(_:)`` when renderer code needs scoped
 ``SoftwareFrameBuffer`` access to contiguous XRGB8888 bytes, stride, and
 geometry. The byte pointer is valid only while the borrow closure is running.
+Use ``Window/show(damage:timeoutMilliseconds:preparing:_:)`` and
+``Window/redraw(damage:preparing:_:)`` when expensive scene preparation should
+begin after WaylandClientKit has selected the authoritative software frame
+geometry and reusable buffer identity. The preparation closure receives a
+``SoftwareFrameReservation`` with buffer dimensions, stride, geometry, and
+opaque buffer identity. The final draw closure still receives the only scoped
+mutable byte access through ``SoftwareFrame``.
 GPU allocation experiments remain package-internal preview code.
 
 ``PopupSurface`` follows the same ownership rule as windows: it is a managed

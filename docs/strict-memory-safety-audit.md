@@ -20,6 +20,10 @@ Audit invariant:
 - `SoftwareFrameBufferID` is derived from private `RawBuffer` object identity. Public
   callers can compare buffer reuse without receiving raw pointers, file descriptors,
   Wayland objects, or mmap ownership.
+- `SoftwareFrameReservation` carries sendable geometry and buffer-identity facts
+  while the actual reserved SHM lease stays inside the managed window. Failed or
+  canceled preparation discards the internal reservation before returning control
+  to user code.
 - Borrowed cursor buffers are never written by WaylandClientKit. They are only attached to cursor surfaces.
 
 Tests:

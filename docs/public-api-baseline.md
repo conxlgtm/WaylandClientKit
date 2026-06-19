@@ -2167,22 +2167,28 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift`
 
-- L2: `public struct SoftwareFrameBufferID: Hashable, Sendable {`
-- L11: `public struct SoftwareFrameBuffer: ~Copyable {`
-- L12: `    public let id: SoftwareFrameBufferID`
-- L13: `    public let width: Int32`
-- L14: `    public let height: Int32`
-- L15: `    public let stride: Int32`
-- L16: `    public let geometry: SoftwareFrameGeometry`
-- L35: `    public borrowing func withUnsafeMutableBytes<Result>(`
-- L43: `public struct SoftwareFrame: ~Copyable {`
-- L44: `    public let id: SoftwareFrameBufferID`
-- L45: `    public let width: Int32`
-- L46: `    public let height: Int32`
-- L47: `    public let stride: Int32`
-- L48: `    public let geometry: SoftwareFrameGeometry`
-- L120: `    public borrowing func withBuffer<Result>(`
-- L134: `    public borrowing func withXRGB8888Rows(`
+- L15: `public struct SoftwareFrameBufferID: Hashable, Sendable {`
+- L24: `public struct SoftwareFrameBuffer: ~Copyable {`
+- L25: `    public let id: SoftwareFrameBufferID`
+- L26: `    public let width: Int32`
+- L27: `    public let height: Int32`
+- L28: `    public let stride: Int32`
+- L29: `    public let geometry: SoftwareFrameGeometry`
+- L48: `    public borrowing func withUnsafeMutableBytes<Result>(`
+- L56: `public struct SoftwareFrameReservation: Equatable, Sendable {`
+- L57: `    public let id: SoftwareFrameBufferID`
+- L58: `    public let width: Int32`
+- L59: `    public let height: Int32`
+- L60: `    public let stride: Int32`
+- L61: `    public let geometry: SoftwareFrameGeometry`
+- L82: `public struct SoftwareFrame: ~Copyable {`
+- L83: `    public let id: SoftwareFrameBufferID`
+- L84: `    public let width: Int32`
+- L85: `    public let height: Int32`
+- L86: `    public let stride: Int32`
+- L87: `    public let geometry: SoftwareFrameGeometry`
+- L159: `    public borrowing func withBuffer<Result>(`
+- L173: `    public borrowing func withXRGB8888Rows(`
 
 ### `Sources/WaylandClient/Public/Rendering/SurfaceCoordinateMapping.swift`
 
@@ -2451,15 +2457,19 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L5: `    public let id: WindowID`
 - L19: `    public func show(`
 - L26: `    public func show(`
-- L61: `    public func redraw(`
-- L67: `    public func redraw(`
-- L141: `    public func close() async {`
-- L145: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L151: `    public func createSubsurface(`
-- L160: `    public func requestRedraw() async throws {`
-- L164: `    public var presentationEvents: WindowPresentationEvents {`
-- L168: `    public func requestPresentationFeedback() async throws {`
-- L172: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L43: `    public func show<Prepared: Sendable>(`
+- L56: `    public func show<Prepared: Sendable>(`
+- L104: `    public func redraw(`
+- L110: `    public func redraw(`
+- L125: `    public func redraw<Prepared: Sendable>(`
+- L137: `    public func redraw<Prepared: Sendable>(`
+- L221: `    public func close() async {`
+- L225: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L231: `    public func createSubsurface(`
+- L240: `    public func requestRedraw() async throws {`
+- L244: `    public var presentationEvents: WindowPresentationEvents {`
+- L248: `    public func requestPresentationFeedback() async throws {`
+- L252: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
 - L176: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
 - L180: `    public func setIcon(_ icon: WindowIcon) async throws {`
 - L184: `    public func inhibitIdle() async throws -> IdleInhibitor {`
