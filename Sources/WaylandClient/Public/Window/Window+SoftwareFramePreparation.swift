@@ -40,8 +40,13 @@ extension Window {
                 try draw(prepared, frame)
             }
         } catch {
-            try? await display.cancelSoftwareFrameReservation(id, reservation: reservation)
-            throw error
+            let submitError = error
+            do {
+                try await display.cancelSoftwareFrameReservation(id, reservation: reservation)
+            } catch {
+                throw submitError
+            }
+            throw submitError
         }
     }
 
@@ -78,8 +83,13 @@ extension Window {
                 try draw(prepared, frame)
             }
         } catch {
-            try? await display.cancelSoftwareFrameReservation(id, reservation: reservation)
-            throw error
+            let submitError = error
+            do {
+                try await display.cancelSoftwareFrameReservation(id, reservation: reservation)
+            } catch {
+                throw submitError
+            }
+            throw submitError
         }
     }
 }

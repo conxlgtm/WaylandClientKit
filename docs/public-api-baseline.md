@@ -2455,8 +2455,8 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 - L2: `    public func show<Prepared: Sendable>(`
 - L15: `    public func show<Prepared: Sendable>(`
-- L48: `    public func redraw<Prepared: Sendable>(`
-- L59: `    public func redraw<Prepared: Sendable>(`
+- L53: `    public func redraw<Prepared: Sendable>(`
+- L64: `    public func redraw<Prepared: Sendable>(`
 
 ### `Sources/WaylandClient/Public/Window/Window.swift`
 
