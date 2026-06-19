@@ -159,7 +159,7 @@ public struct SoftwareFrame: ~Copyable {
     public borrowing func withBuffer<Result>(
         _ body: (borrowing SoftwareFrameBuffer) throws -> Result
     ) rethrows -> Result {
-        let frameBuffer = SoftwareFrameBuffer(
+        let frameBuffer = unsafe SoftwareFrameBuffer(
             id: id,
             width: width,
             height: height,

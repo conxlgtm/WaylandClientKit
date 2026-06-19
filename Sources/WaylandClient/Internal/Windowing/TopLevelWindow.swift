@@ -455,7 +455,7 @@ package final class TopLevelWindow {
                 ),
                 reservationID: softwareFrameReservationIDs.next(),
                 runtime: &surfaceRuntime,
-                pendingFrameRegistration: pendingFrameRegistration
+                hasPendingFrameRegistration: pendingFrameRegistration != nil
             )
             try interpretSoftwarePresentationFollowUp(result.followUp)
             guard let reservedFrame = result.reservedFrame else { return nil }

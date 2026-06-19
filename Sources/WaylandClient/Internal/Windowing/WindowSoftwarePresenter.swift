@@ -168,9 +168,9 @@ struct WindowSoftwarePresenter {
         context: WindowSoftwarePresentationContext,
         reservationID: SoftwareFrameReservationToken,
         runtime: inout SurfaceRuntime<RoleResources>,
-        pendingFrameRegistration: FrameCallbackRegistration?
+        hasPendingFrameRegistration: Bool
     ) throws -> WindowSoftwareFrameReservationResult {
-        guard pendingFrameRegistration == nil else {
+        guard !hasPendingFrameRegistration else {
             return .init(
                 reservedFrame: nil,
                 followUp: .fail(
