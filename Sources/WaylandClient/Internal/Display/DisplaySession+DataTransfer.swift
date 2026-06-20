@@ -449,7 +449,7 @@ extension DisplaySession {
                         )
                     )
                 )
-            case .failed(_, _, _):
+            case .failed:
                 guard let diagnostic = Self.dataTransferDiagnostic(from: result) else {
                     continue
                 }

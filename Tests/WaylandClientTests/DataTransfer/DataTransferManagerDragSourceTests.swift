@@ -7,7 +7,7 @@ import Testing
 @testable import WaylandRaw
 
 @Suite
-struct DataTransferManagerDragSourceTests {
+struct DataTransferManagerDragSourceTests {  // swiftlint:disable:this type_body_length
     private let seatID = SeatID(rawValue: 1)
     private let origin = RecordingDataTransferDragOriginBinding(id: 0x57)
     private let serial = InputSerial(rawValue: 44)

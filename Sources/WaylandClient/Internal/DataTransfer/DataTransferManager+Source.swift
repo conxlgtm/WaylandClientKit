@@ -1,36 +1,6 @@
 import WaylandRaw
 
 extension DataTransferManager {
-    private enum DataSourceCallbackIdentity {
-        case selection(ClipboardSourceIdentity)
-        case dragAndDrop(DragSourceIdentity)
-
-        var context: DataTransferCallbackContext {
-            switch self {
-            case .selection(let source):
-                .dataSource(source)
-            case .dragAndDrop(let source):
-                .dragSource(source)
-            }
-        }
-
-        var unknownSourceError: DataTransferError {
-            switch self {
-            case .selection(let source):
-                .unknownSourceIdentity(source)
-            case .dragAndDrop(let source):
-                .unknownDragSourceIdentity(source)
-            }
-        }
-
-        var isSelection: Bool {
-            if case .selection = self {
-                return true
-            }
-            return false
-        }
-    }
-
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
         backend.preconditionIsOwnerThread()
         return store.drainSourceSendRequests()

@@ -4,7 +4,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct DataTransferManagerSourceTests {
+struct DataTransferManagerSourceTests {  // swiftlint:disable:this type_body_length
     private let seat1 = SeatID(rawValue: 1)
     private let seat2 = SeatID(rawValue: 2)
 
