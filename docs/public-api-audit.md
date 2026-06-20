@@ -260,9 +260,10 @@ Current user-facing contract:
   `outputTopology()` returns the same output snapshot array sorted by identity.
   WaylandClientKit reports output facts, it does not apply monitor settings or
   own display-configuration policy.
-- GPU and GBM/EGL/dmabuf work remains package-internal and is surfaced only
-  through the separate preview product. There is no public renderer, swapchain,
-  drawable, or GPU buffer API in `WaylandClient`.
+- GPU and GBM/EGL work remains package-internal and is surfaced only through the
+  separate preview product. There is no public renderer, swapchain, drawable, or
+  GPU buffer API in `WaylandClient`. Renderer-owned dmabuf submission is exposed
+  only by source-breaking `WaylandGraphicsPreview` move-only descriptor values.
 - `WaylandGraphicsRuntimePath` exposes renderer-neutral stage facts for
   surface feedback, render-node selection, dmabuf import, and buffer lifecycle.
   These are status values only and do not expose GBM/EGL/DRM/dmabuf handles.
@@ -302,9 +303,28 @@ Intentionally public:
 - `WaylandGraphicsColorAlphaMode`
 - `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsXRGBColor`
+- `WaylandGraphicsSurfaceGeneration`
+- `WaylandGraphicsExternalConfigurationID`
+- `WaylandGraphicsExternalBufferID`
+- `WaylandGraphicsExternalSubmissionID`
+- `WaylandGraphicsExternalSyncTimelineID`
+- `WaylandGraphicsExternalSynchronizationAvailability`
+- `WaylandGraphicsBufferTransform`
+- `WaylandGraphicsExternalAlphaMode`
+- `WaylandGraphicsColorContract`
+- `WaylandGraphicsDamageCoordinateSpace`
+- `WaylandGraphicsExternalBufferConfiguration`
+- `WaylandGraphicsFrameContract`
+- `WaylandGraphicsDRMFormat`
+- `WaylandGraphicsDRMFormatModifier`
+- `WaylandGraphicsDRMModifier`
+- `WaylandGraphicsExternalBufferPlane`
+- `WaylandGraphicsExternalBufferDescriptor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
 - `WaylandGraphicsFrameResult`
+- `WaylandGraphicsExternalReleaseResult`
+- `WaylandGraphicsExternalBufferSubmissionReceipt`
 - `WaylandGraphicsError`
 - `WaylandGraphicsWindowBacking`
 - `WaylandGraphicsFrameLease`
@@ -323,11 +343,17 @@ Current preview contract:
 - The managed preview submission path can create a window backing, lease a
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
-  result, and cancel or close resources without exposing raw graphics handles.
-- The external-buffer import path is package-internal preview plumbing. It can
-  import a renderer-produced dmabuf descriptor, commit it, track compositor
-  release, and clean up late releases without exposing public DRM, dmabuf, or
-  file descriptor handles.
+  result, and cancel or close resources without exposing raw protocol or renderer
+  objects.
+- The external-buffer import path is public preview API for renderer-owned
+  one-plane dmabuf images. Public descriptor values are move-only and consume
+  `OwnedFileDescriptor` so each plane descriptor is transferred or closed
+  exactly once. Submission returns a receipt with a stable submission identity
+  and an idempotent release wait. The receipt resolves from authoritative
+  implicit `wl_buffer.release` observation or backing teardown.
+- `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
+  synchronization availability, runtime-path snapshot, and initial normalized
+  XRGB8888/ARGB8888 linear external-buffer candidates needed before rendering.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure, display-level dmabuf advertisement alone is
@@ -346,11 +372,11 @@ Current preview contract:
   currently proves explicit sync and FIFO active. Commit timing remains an
   implementation path with typed fallback/failure evidence, not active live
   proof.
-- It does not expose raw Wayland proxies, EGL/GBM/DRM objects, dmabuf
-  descriptors, syncobj handles, SHM pools, scene rendering, swapchains,
-  drawables, file descriptors, or raw color-management/image-description
-  protocol objects. `OwnedFileDescriptor` remains part of the stable
-  data-transfer APIs, but is not part of public graphics preview API.
+- It does not expose raw Wayland proxies, EGL/GBM/DRM objects, syncobj handles,
+  SHM pools, scene rendering, swapchains, drawables, or raw
+  color-management/image-description protocol objects. The preview graphics API
+  intentionally accepts `OwnedFileDescriptor` only through move-only external
+  buffer plane descriptors; callers do not get reusable raw descriptor access.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is

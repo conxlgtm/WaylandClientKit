@@ -82,7 +82,7 @@ This matrix describes the current experimental baseline. Status labels:
 
 | Protocol or Area | Status | Notes |
 | --- | --- | --- |
-| `zwp_linux_dmabuf_v1`, `zwp_linux_dmabuf_feedback_v1`, `zwp_linux_buffer_params_v1` | Preview | Capability discovery and preview submission plumbing. |
+| `zwp_linux_dmabuf_v1`, `zwp_linux_dmabuf_feedback_v1`, `zwp_linux_buffer_params_v1` | Preview | Capability discovery and source-breaking external-buffer submission. |
 | `wp_linux_drm_syncobj_manager_v1`, `wp_linux_drm_syncobj_surface_v1`, `wp_linux_drm_syncobj_timeline_v1` | Internal preview | Explicit sync preview work. |
 | GBM/EGL/GLES/DRM shims | Internal preview | Package-internal managed GPU backing. |
 | `WaylandGraphicsPreview` | Preview | Source-breaking public preview product. |
@@ -105,4 +105,4 @@ This matrix describes the current experimental baseline. Status labels:
 | --- | --- | --- |
 | General output-management mutation APIs | Unsupported | Only current/no-op preview configuration paths exist. |
 | Stable public GPU rendering APIs in `WaylandClient` | Unsupported | Use `WaylandGraphicsPreview` for source-breaking experiments. |
-| Public raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, file descriptor, or unsafe handles | Unsupported | Kept internal by policy. |
+| Public raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, file descriptor, or unsafe handles | Unsupported | Raw handles stay internal. `WaylandGraphicsPreview` may expose narrow move-only descriptor values that consume `OwnedFileDescriptor`. |

@@ -13,7 +13,7 @@ review expectations.
 | Tier | Promise | Breaking change process | Required checks |
 | --- | --- | --- | --- |
 | `WaylandClient` public API | Main public app-substrate product. Source changes are allowed before foundation, but must be intentional. | Update public API baseline, public API audit, DocC/user docs, tests, and release notes when user-visible. | `swift run wck api verify`, `swift run wck docc verify`, public integration client. |
-| `WaylandGraphicsPreview` public API | Source-breaking preview product. Preview drift is allowed, but not invisible. | Update baseline/audit/docs/tests. Say why preview source breakage is acceptable. Keep raw handles internal. | `swift run wck api verify`, graphics preview integration client, examples build. |
+| `WaylandGraphicsPreview` public API | Source-breaking preview product. Preview drift is allowed, but not invisible. | Update baseline/audit/docs/tests. Say why preview source breakage is acceptable. Keep raw Wayland/GBM/EGL objects internal. Narrow move-only graphics interop values may consume file descriptors when ownership is documented and audited. | `swift run wck api verify`, graphics preview integration client, examples build. |
 | Executable products and examples | Examples may change, but should remain runnable, useful, and matrix-friendly. | Update docs and example checklist when adding, renaming, or changing expected output. | `swift run wck examples build`, relevant smoke command. |
 | Package-internal targets | May change without source compatibility promises. Resource, unsafe, and owner-thread invariants must stay tested. | Update strict memory-safety audit when unsafe or unchecked sendability changes. Add tests for lifetime/resource rules. | unsafe allowlist, focused unit tests, strict concurrency build. |
 | Generated/raw protocol wrappers | Not user-facing product API. Generated shape follows vendored protocol XML and shim contracts. | Regenerate with `wck`, update manifests/checksums, and verify shims. | protocol generation verification, shim verification. |
@@ -27,7 +27,12 @@ review expectations.
   a product is preview.
 - Public `WaylandClient` must not expose raw Wayland, GBM, EGL, DRM, dmabuf,
   syncobj, file descriptor, or unsafe implementation handles.
-- `WaylandGraphicsPreview` must remain renderer-neutral and raw-handle-free.
+- `WaylandGraphicsPreview` must remain renderer-neutral. It may expose narrow,
+  move-only, consuming graphics interop values backed by dma-buf or DRM syncobj
+  file descriptors. These values must not expose raw Wayland objects, pointers,
+  GBM/EGL objects, DRM object handles, or reusable borrowed descriptor access.
+  Ownership transfer, close behavior, and asynchronous lifetime must be
+  documented and audited.
 - Public docs must explain new public behavior before release notes claim it.
 - Restoration and session-readiness APIs are platform facts. They must not
   promise scene, document, or compositor session-management policy.
