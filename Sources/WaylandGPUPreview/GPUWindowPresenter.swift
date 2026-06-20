@@ -350,6 +350,7 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
 @safe
 package final class GPUWindowPresenter {
     private let lock = NSLock()
+    private let onImplicitRelease: (@Sendable (GBMBufferPoolSlotID) -> Void)?
     private var state = GPUWindowPresenterState()
     private var buffers: [GBMBufferPoolSlotID: any GPUWindowPresenterBuffer] = [:]
     private var releaseFailures: [GPUWindowPresenterStateError] = []
@@ -357,7 +358,10 @@ package final class GPUWindowPresenter {
     private var runtimePath = GPURuntimePathSnapshot.empty
     private var backingState = GPUWindowBackingState.unconfigured
 
-    package init() {
+    package init(
+        onImplicitRelease releaseObserver: (@Sendable (GBMBufferPoolSlotID) -> Void)? = nil
+    ) {
+        onImplicitRelease = releaseObserver
         // Buffers are installed after dmabuf import completes.
     }
 
@@ -883,16 +887,24 @@ extension GPUWindowPresenter {
     }
 
     private func recordRelease(_ slotID: GBMBufferPoolSlotID) {
-        withLock {
+        let didRelease = withLock {
             do {
-                if try state.markReleased(slotID) {
-                    presentationCorrelation.remove(slotID: slotID)
+                guard try state.markReleased(slotID) else {
+                    return false
                 }
+
+                presentationCorrelation.remove(slotID: slotID)
+                return true
             } catch let error as GPUWindowPresenterStateError {
                 releaseFailures.append(error)
+                return false
             } catch {
                 preconditionFailure("Unexpected GPU presenter release error: \(error)")
             }
+        }
+
+        if didRelease {
+            onImplicitRelease?(slotID)
         }
     }
 }

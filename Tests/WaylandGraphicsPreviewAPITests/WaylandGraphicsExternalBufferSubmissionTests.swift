@@ -240,6 +240,9 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let firstResult = try await firstLease.submitExternalBuffer(
             try testExternalDescriptor()
         )
+        let firstRelease = Task {
+            await firstResult.waitForRelease()
+        }
 
         #expect(firstResult.runtimePath.backing == .active)
         #expect(firstResult.runtimePath.dmabufImport == .active)
@@ -256,6 +259,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         await window.emitImportedBufferRelease(at: 0)
 
+        #expect(await firstRelease.value == .released)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [1])
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting() == [0])
 
@@ -306,13 +310,17 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(window: window)
         let lease = try await storage.nextFrame()
 
-        _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+        let receipt = try await lease.submitExternalBuffer(try testExternalDescriptor())
+        let release = Task {
+            await receipt.waitForRelease()
+        }
 
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
         try await storage.closeForTesting()
         await window.emitImportedBufferRelease(at: 0)
 
+        #expect(await release.value == .backingClosed)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
     }
