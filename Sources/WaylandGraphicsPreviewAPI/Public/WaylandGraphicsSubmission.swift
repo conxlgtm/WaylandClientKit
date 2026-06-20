@@ -1190,6 +1190,11 @@ public struct WaylandGraphicsWindowBacking: Sendable {
         try await storage.nextFrame()
     }
 
+    /// Registers a renderer-owned external buffer for repeated presentation.
+    ///
+    /// Registration consumes the descriptor and imports it once for this
+    /// backing. The returned buffer handle is scoped to this backing and frame
+    /// contract generation.
     public func registerExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
         contract frameContract: WaylandGraphicsFrameContract,
@@ -1202,6 +1207,10 @@ public struct WaylandGraphicsWindowBacking: Sendable {
         )
     }
 
+    /// Retires a registered external buffer that is no longer in the renderer pool.
+    ///
+    /// The buffer must not be reserved or awaiting compositor release. Await the
+    /// submission receipt before unregistering a submitted buffer.
     public func unregisterExternalBuffer(
         _ buffer: WaylandGraphicsExternalBuffer
     ) async throws {

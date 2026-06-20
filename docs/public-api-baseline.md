@@ -3029,16 +3029,17 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L1179: `    public var runtimePath: WaylandGraphicsRuntimePath {`
 - L1185: `    public var id: WindowID {`
 - L1189: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
-- L1193: `    public func registerExternalBuffer(`
-- L1211: `    public func close() async throws {`
-- L1218: `public struct WaylandGraphicsFrameLease: Sendable {`
-- L1219: `    public let size: PositivePixelSize`
-- L1220: `    public let contract: WaylandGraphicsFrameContract`
-- L1221: `    public let runtimePath: WaylandGraphicsRuntimePath`
-- L1241: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
-- L1248: `    public func submit(`
-- L1260: `    public func submitExternalBuffer(`
-- L1274: `    public func submitSoftware(`
-- L1286: `    public func submitSoftware(`
-- L1325: `    public func cancel() async {`
-- L1329: `    public func reserveExternalBuffer(`
+- L1198: `    public func registerExternalBuffer(`
+- L1214: `    public func unregisterExternalBuffer(`
+- L1226: `    public func close() async throws {`
+- L1233: `public struct WaylandGraphicsFrameLease: Sendable {`
+- L1234: `    public let size: PositivePixelSize`
+- L1235: `    public let contract: WaylandGraphicsFrameContract`
+- L1236: `    public let runtimePath: WaylandGraphicsRuntimePath`
+- L1256: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
+- L1263: `    public func submit(`
+- L1275: `    public func submitExternalBuffer(`
+- L1289: `    public func submitSoftware(`
+- L1301: `    public func submitSoftware(`
+- L1340: `    public func cancel() async {`
+- L1344: `    public func reserveExternalBuffer(`

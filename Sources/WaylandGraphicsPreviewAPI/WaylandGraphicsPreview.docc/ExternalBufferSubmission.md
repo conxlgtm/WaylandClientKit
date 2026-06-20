@@ -28,6 +28,9 @@ observation, and backing shutdown cleanup.
 10. Keep the renderer allocation alive and unavailable to the renderer pool until
     the returned ``WaylandGraphicsExternalBufferSubmissionReceipt`` reaches a
     terminal release result.
+11. When the renderer pool retires an image, call
+    ``WaylandGraphicsWindowBacking/unregisterExternalBuffer(_:)`` after the
+    image is available and no submitted use is awaiting compositor release.
 
 Registration imports a descriptor once. Repeated frame submissions reuse the
 registered WCK-side buffer and do not re-import the same renderer image.
@@ -52,6 +55,7 @@ ownership signal for the submitted image.
 A successful commit, frame callback, presentation feedback event, timeout, or
 later frame submission is not release evidence. A registered buffer cannot be
 reserved again until WCK observes release for its previous submitted use.
+After release, the registered buffer may be reserved again or unregistered.
 
 ## Synchronization Scope
 

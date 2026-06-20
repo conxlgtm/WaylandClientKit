@@ -42,6 +42,8 @@ Keep the renderer-owned image alive until
 ``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()`` returns a
 terminal result. Reusing an external image before that release result violates
 the presentation ownership contract.
+Use ``WaylandGraphicsWindowBacking/unregisterExternalBuffer(_:)`` to retire a
+registered image only after it is available again.
 
 Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
 describe optional metadata and logical damage. WaylandClientKit validates metadata

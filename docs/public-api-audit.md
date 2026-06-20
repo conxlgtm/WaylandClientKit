@@ -355,7 +355,9 @@ Current preview contract:
   render leases submit them after the renderer has drawn into the image.
   Submission returns a receipt with a stable submission identity and an
   idempotent release wait. The receipt resolves from authoritative implicit
-  `wl_buffer.release` observation or backing teardown.
+  `wl_buffer.release` observation or backing teardown. Registered buffers can be
+  unregistered only after no reservation or submitted use is awaiting release,
+  and unregistering retires WCK's imported buffer wrapper.
 - `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
   synchronization availability, runtime-path snapshot, and initial normalized
   XRGB8888/ARGB8888 linear external-buffer candidates needed before rendering.

@@ -403,6 +403,9 @@ Audit invariant:
 - Registered external buffers are imported once, reserved before rendering, and
   rejected for a second reservation until the presenter reports compositor
   release for the previous submitted use.
+- Registered external buffers can be unregistered only when no reservation or
+  submitted use is in flight. Unregistration retires WCK's imported buffer
+  wrapper before the renderer pool releases its image.
 - The display-owned linux-dmabuf manager is accessed only through package-only
   `Window`/`WaylandDisplay` helpers that execute on the display owner thread.
 - Imported dmabuf buffers are destroyed by the GPU presenter buffer wrapper and
@@ -423,8 +426,8 @@ Tests:
 - `WaylandGraphicsExternalBufferSubmissionTests` covers descriptor validation,
   ownership transfer into an import plan, unavailable/fallback preflight before
   Wayland import, registered-buffer import-once behavior, release-gated
-  reservation, public release receipt completion, and backing-close waiter
-  resolution.
+  reservation and unregistration, public release receipt completion, and
+  backing-close waiter resolution.
 
 ## Surface Submit Constraint Boundary
 
