@@ -102,14 +102,24 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
 
         do {
-            let result = try await lease.submitExternalBuffer(try renderer.makeDescriptor())
+            let configurationID = try requireExternalConfigurationID(
+                lease.contract
+            )
+            let buffer = try await backing.registerExternalBuffer(
+                try renderer.makeDescriptor(),
+                contract: lease.contract,
+                configurationID: configurationID
+            )
+            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            let result = try await renderLease.submit()
+            let release = await releaseStatus(result)
             log("renderer: active")
             log("format: \(renderer.formatDescription)")
             log("modifier: \(renderer.modifierDescription)")
             log("planes: \(renderer.planeCount)")
             log("import: pass")
             log("submit: pass")
-            log("release: \(releaseStatus(result.runtimePath.bufferLifecycle))")
+            log("release: \(release)")
             log("release/reuse: tracked-by-wayland-client-kit")
             log(
                 "fallback reason: \(result.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
@@ -178,16 +188,15 @@ enum GraphicsPreviewExternalBufferSmoke {
     ) throws -> WaylandGraphicsExternalBufferDescriptor {
         let stride = UInt32(size.width.rawValue) * 4
         let plane = try WaylandGraphicsExternalBufferPlane(
-            fd: try pipeReadDescriptor(),
+            fileDescriptor: try pipeReadDescriptor(),
             offset: 0,
-            stride: stride,
-            planeIndex: 0
+            stride: stride
         )
         return try WaylandGraphicsExternalBufferDescriptor(
             size: size,
             format: WaylandGraphicsDRMFormat(rawValue: drmFormatXRGB8888),
             modifier: WaylandGraphicsDRMFormatModifier(rawValue: 0),
-            planes: .one(plane)
+            plane: plane
         )
     }
 
@@ -223,16 +232,38 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
     }
 
-    nonisolated private static func releaseStatus(
-        _ status: WaylandGraphicsRuntimeStatus
-    ) -> String {
-        switch status {
-        case .active:
-            "not-observed"
-        case .failed:
-            "retired"
-        default:
-            "not-observed"
+    private static func requireExternalConfigurationID(
+        _ contract: WaylandGraphicsFrameContract
+    ) throws -> WaylandGraphicsExternalConfigurationID {
+        guard let configurationID = contract.recommendedExternalConfigurationID else {
+            throw WaylandGraphicsError.unavailable(.noCompatibleFormat)
+        }
+
+        return configurationID
+    }
+
+    private static func releaseStatus(
+        _ receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+    ) async -> String {
+        await withTaskGroup(of: String.self) { group in
+            group.addTask {
+                switch await receipt.waitForRelease() {
+                case .released:
+                    return "released"
+                case .backingClosed:
+                    return "backing-closed"
+                case .failed(let reason):
+                    return "failed(\(reason))"
+                }
+            }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(1))
+                return "not-observed"
+            }
+
+            let result = await group.next() ?? "not-observed"
+            group.cancelAll()
+            return result
         }
     }
 
@@ -302,11 +333,12 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
         )
         let format = try WaylandGraphicsDRMFormat(rawValue: export.format)
         let modifier = WaylandGraphicsDRMFormatModifier(rawValue: export.modifier)
+        let plane = try Self.plane(at: 0, from: export)
         return try WaylandGraphicsExternalBufferDescriptor(
             size: size,
             format: format,
             modifier: modifier,
-            planes: try Self.planes(from: export)
+            plane: plane
         )
     }
 
@@ -370,16 +402,18 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
         at index: Int,
         from export: GBMDmabufExport
     ) throws -> WaylandGraphicsExternalBufferPlane {
+        guard export.planeCount == 1 else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
         let layout = try export.planeLayout(at: index)
         var planeDescriptor = try export.takePlaneFileDescriptor(at: index)
         let ownedDescriptor = try OwnedFileDescriptor(
             adopting: planeDescriptor.releaseForWaylandRequest()
         )
         return try WaylandGraphicsExternalBufferPlane(
-            fd: ownedDescriptor,
+            fileDescriptor: ownedDescriptor,
             offset: layout.offset,
-            stride: layout.stride,
-            planeIndex: layout.index
+            stride: layout.stride
         )
     }
 }
