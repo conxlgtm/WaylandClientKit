@@ -81,9 +81,8 @@ enum GraphicsPreviewExternalBufferSmoke {
         backing: WaylandGraphicsWindowBacking
     ) async throws -> Bool {
         log("mode: renderer-dmabuf")
-        let primedSize = try await primeSurfaceGeometry(backing: backing)
-        log("primed frame size: \(primedSize.width.rawValue)x\(primedSize.height.rawValue)")
         let lease = try await backing.nextFrame()
+        log("frame size: \(lease.size.width.rawValue)x\(lease.size.height.rawValue)")
         let renderer: ExternalDmabufRenderer
         do {
             renderer = try ExternalDmabufRenderer(size: lease.size)
@@ -141,24 +140,6 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
     }
 
-    private static func primeSurfaceGeometry(
-        backing: WaylandGraphicsWindowBacking
-    ) async throws -> PositivePixelSize {
-        let lease = try await backing.nextFrame()
-        let result = try await lease.submitSoftware { frame in
-            drawPrimeFrame(frame)
-        }
-        return result.size
-    }
-
-    private static func drawPrimeFrame(_ frame: borrowing SoftwareFrame) {
-        frame.withXRGB8888Rows { _, pixels in
-            for index in 0..<pixels.count {
-                unsafe pixels[unchecked: index] = 0x0010_1820
-            }
-        }
-    }
-
     private static func submitNegativeTestBuffer(
         backing: WaylandGraphicsWindowBacking
     ) async throws {
@@ -166,9 +147,16 @@ enum GraphicsPreviewExternalBufferSmoke {
         log("test buffer: pipe-fd-not-dmabuf")
         let lease = try await backing.nextFrame()
         do {
-            _ = try await lease.submitExternalBuffer(
-                try pipeBackedExternalDescriptor(size: lease.size)
+            let configurationID = try requireExternalConfigurationID(
+                lease.contract
             )
+            let buffer = try await backing.registerExternalBuffer(
+                try pipeBackedExternalDescriptor(size: lease.size),
+                contract: lease.contract,
+                configurationID: configurationID
+            )
+            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            _ = try await renderLease.submit()
             log("import: pass(unexpected)")
             log("submit: pass(unexpected)")
             log("release: observed(unexpected)")
@@ -180,6 +168,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("release: not observed")
             log("fallback reason: none")
             log("failure: expected-negative-test(\(error))")
+            await lease.cancel()
         }
     }
 

@@ -10,10 +10,11 @@ Call ``WaylandGraphicsWindowBacking/nextFrame()`` to obtain a lease. Inspect
 surface generation, authoritative geometry, external-buffer candidate facts, and
 synchronization availability for the frame.
 
-Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)``,
-``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``, or
-``WaylandGraphicsFrameLease/submitExternalBuffer(_:metadata:schedule:)``. Cancel
-it with ``WaylandGraphicsFrameLease/cancel()`` when no frame will be produced.
+Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)`` or
+``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``. For external GPU
+frames, reserve a registered buffer and submit the resulting render lease.
+Cancel the frame lease with ``WaylandGraphicsFrameLease/cancel()`` when no frame
+will be produced.
 
 A backing allows only one active lease. A submitted or cancelled lease cannot be
 submitted again. Closing the backing makes future lease operations fail with a
@@ -32,10 +33,9 @@ Then call ``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)`` to create a
 ``WaylandGraphicsExternalBufferRenderLease``. Submit that render lease after the
 renderer has finished drawing into the reserved image.
 
-``WaylandGraphicsFrameLease/submitExternalBuffer(_:metadata:schedule:)`` remains
-available as a direct descriptor submission path. Registered buffers are the
-preferred ownership model for renderer pools because WCK can prevent reuse while
-the previous submission is still awaiting compositor release.
+External descriptors must be registered before presentation. That registered
+ownership model lets WCK prevent reuse while the previous submission is still
+awaiting compositor release.
 
 External submission returns a ``WaylandGraphicsExternalBufferSubmissionReceipt``.
 Keep the renderer-owned image alive until

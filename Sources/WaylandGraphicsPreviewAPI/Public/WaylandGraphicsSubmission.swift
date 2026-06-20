@@ -1272,20 +1272,6 @@ public struct WaylandGraphicsFrameLease: Sendable {
     }
 
     @discardableResult
-    public func submitExternalBuffer(
-        _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
-        schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
-    ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
-        try await storage.submitExternalBuffer(
-            leaseID: id,
-            descriptor: descriptor,
-            metadata: frameMetadata,
-            schedule: frameSchedule
-        )
-    }
-
-    @discardableResult
     public func submitSoftware(
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void

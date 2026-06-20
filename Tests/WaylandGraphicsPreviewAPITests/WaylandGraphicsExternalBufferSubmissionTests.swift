@@ -131,7 +131,11 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         let lease = try await storage.nextFrame()
 
         do {
-            _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+            _ = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: try testExternalDescriptor()
+            )
             Issue.record("expected explicit synchronization failure")
         } catch WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable) {
             #expect(await window.importRequests == 0)
@@ -153,7 +157,11 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         let lease = try await storage.nextFrame()
 
         do {
-            _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+            _ = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: try testExternalDescriptor()
+            )
             Issue.record("expected managed GPU unavailable failure")
         } catch WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable) {
             #expect(await window.importRequests == 0)
@@ -163,13 +171,13 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 
     @Test
-    func modifierAndOffsetEdgesFailAtImportAndCloseDescriptor() async throws {
+    func offsetEdgeFailsAtImportAndCloseDescriptor() async throws {
         let window = try ExternalBufferFakeManagedWindow()
         let storage = externalBufferStorage(window: window)
         let lease = try await storage.nextFrame()
         let closedDescriptors = Mutex<[Int32]>([])
         let descriptor = try testExternalDescriptor(
-            modifier: UInt64.max,
+            modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
             offset: UInt32.max,
             fd: OwnedFileDescriptor(adopting: 777) { descriptor in
                 closedDescriptors.withLock { $0.append(descriptor) }
@@ -178,7 +186,11 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         )
 
         do {
-            _ = try await lease.submitExternalBuffer(descriptor)
+            _ = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: descriptor
+            )
             Issue.record("expected import failure for unsupported descriptor facts")
         } catch WaylandGraphicsError.unavailable(.externalBufferImportFailed) {
             #expect(await window.importRequests == 1)
@@ -223,7 +235,11 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(window: window)
         let lease = try await storage.nextFrame()
 
-        _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+        _ = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
 
         #expect(await window.preparePresentationRequests == 1)
         #expect(await window.importRequests == 1)
@@ -237,21 +253,27 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(window: window)
 
         let firstLease = try await storage.nextFrame()
-        let firstResult = try await firstLease.submitExternalBuffer(
-            try testExternalDescriptor()
+        let first = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
         )
         let firstRelease = Task {
-            await firstResult.waitForRelease()
+            await first.receipt.waitForRelease()
         }
 
-        #expect(firstResult.runtimePath.backing == .active)
-        #expect(firstResult.runtimePath.dmabufImport == .active)
+        #expect(first.receipt.runtimePath.backing == .active)
+        #expect(first.receipt.runtimePath.dmabufImport == .active)
         #expect(await window.importRequests == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
         let secondLease = try await storage.nextFrame()
-        _ = try await secondLease.submitExternalBuffer(try testExternalDescriptor())
+        _ = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: secondLease,
+            descriptor: try testExternalDescriptor()
+        )
 
         #expect(await window.importRequests == 2)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0, 1])
@@ -264,9 +286,10 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting() == [0])
 
         let thirdLease = try await storage.nextFrame()
-        _ = try await thirdLease.submitExternalBuffer(try testExternalDescriptor())
+        let thirdRenderLease = try await thirdLease.reserveExternalBuffer(first.buffer)
+        _ = try await thirdRenderLease.submit()
 
-        #expect(await window.importRequests == 3)
+        #expect(await window.importRequests == 2)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0, 1])
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
@@ -282,8 +305,14 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(window: window)
 
         let failingLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: failingLease,
+            descriptor: try testExternalDescriptor()
+        )
         do {
-            _ = try await failingLease.submitExternalBuffer(try testExternalDescriptor())
+            let renderLease = try await failingLease.reserveExternalBuffer(buffer)
+            _ = try await renderLease.submit()
             Issue.record("expected external buffer commit failure")
         } catch WaylandGraphicsError.unavailable(.commitFailed) {
             #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
@@ -293,12 +322,11 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         }
 
         let recoveryLease = try await storage.nextFrame()
-        let result = try await recoveryLease.submitExternalBuffer(
-            try testExternalDescriptor()
-        )
+        let recoveryRenderLease = try await recoveryLease.reserveExternalBuffer(buffer)
+        let result = try await recoveryRenderLease.submit()
 
         #expect(result.runtimePath.backing == .active)
-        #expect(await window.importRequests == 2)
+        #expect(await window.importRequests == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
         try await storage.closeForTesting()
@@ -310,9 +338,13 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(window: window)
         let lease = try await storage.nextFrame()
 
-        let receipt = try await lease.submitExternalBuffer(try testExternalDescriptor())
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
         let release = Task {
-            await receipt.waitForRelease()
+            await submitted.receipt.waitForRelease()
         }
 
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
@@ -326,18 +358,23 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
-    func submitAfterLeaseCancelDoesNotImportExternalBuffer() async throws {
+    func reserveAfterLeaseCancelDoesNotSubmitExternalBuffer() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
         let lease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
 
         await lease.cancel()
 
         do {
-            _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+            _ = try await lease.reserveExternalBuffer(buffer)
             Issue.record("expected consumed lease failure")
         } catch WaylandGraphicsError.frameLeaseConsumed {
-            #expect(await window.importRequests == 0)
+            #expect(await window.importRequests == 1)
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -352,7 +389,11 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         try await storage.closeForTesting()
 
         do {
-            _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+            _ = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: try testExternalDescriptor()
+            )
             Issue.record("expected backing closed failure")
         } catch WaylandGraphicsError.backingClosed {
             #expect(await window.importRequests == 0)
@@ -384,11 +425,14 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             presentationFeedback: .requestWhenAvailable
         )
 
-        let result = try await lease.submitExternalBuffer(
-            try testExternalDescriptor(),
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor(),
             metadata: metadata,
             schedule: schedule
         )
+        let result = submitted.receipt
 
         #expect(result.metadata == metadata)
         #expect(result.schedule == schedule)
@@ -696,6 +740,43 @@ private func externalBufferStorage(
         window: window,
         runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
         configuration: configuration
+    )
+}
+
+private func registerAndSubmitTestExternalBuffer(
+    storage: WaylandGraphicsWindowBackingStorage,
+    lease: WaylandGraphicsFrameLease,
+    descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
+    metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+    schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
+) async throws -> (
+    buffer: WaylandGraphicsExternalBuffer,
+    receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+) {
+    let buffer = try await registerTestExternalBuffer(
+        storage: storage,
+        lease: lease,
+        descriptor: descriptor
+    )
+    let renderLease = try await lease.reserveExternalBuffer(buffer)
+    let receipt = try await renderLease.submit(
+        metadata: frameMetadata,
+        schedule: frameSchedule
+    )
+    return (buffer, receipt)
+}
+
+private func registerTestExternalBuffer(
+    storage: WaylandGraphicsWindowBackingStorage,
+    lease: WaylandGraphicsFrameLease,
+    descriptor: consuming WaylandGraphicsExternalBufferDescriptor
+) async throws -> WaylandGraphicsExternalBuffer {
+    let configurationID = try #require(
+        lease.contract.recommendedExternalConfigurationID)
+    return try await storage.registerExternalBuffer(
+        descriptor,
+        contract: lease.contract,
+        configurationID: configurationID
     )
 }
 

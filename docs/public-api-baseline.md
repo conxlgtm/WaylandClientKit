@@ -3038,8 +3038,7 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L1236: `    public let runtimePath: WaylandGraphicsRuntimePath`
 - L1256: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
 - L1263: `    public func submit(`
-- L1275: `    public func submitExternalBuffer(`
-- L1289: `    public func submitSoftware(`
-- L1301: `    public func submitSoftware(`
-- L1340: `    public func cancel() async {`
-- L1344: `    public func reserveExternalBuffer(`
+- L1275: `    public func submitSoftware(`
+- L1287: `    public func submitSoftware(`
+- L1326: `    public func cancel() async {`
+- L1330: `    public func reserveExternalBuffer(`
