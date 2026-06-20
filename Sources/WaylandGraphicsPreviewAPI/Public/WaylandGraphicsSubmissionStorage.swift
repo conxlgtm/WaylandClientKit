@@ -15,8 +15,8 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
     private let lock = NSLock()
     private var statesBySubmissionID:
         [WaylandGraphicsExternalSubmissionID: WaylandGraphicsExternalReleaseState] = [:]
-    private var submissionIDsBySlotID:
-        [GBMBufferPoolSlotID: WaylandGraphicsExternalSubmissionID] = [:]
+    private var submissionIDsBySlotID: [GBMBufferPoolSlotID: WaylandGraphicsExternalSubmissionID] =
+        [:]
 
     func begin(
         submissionID: WaylandGraphicsExternalSubmissionID,

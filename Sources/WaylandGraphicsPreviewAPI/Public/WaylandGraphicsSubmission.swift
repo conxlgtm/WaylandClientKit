@@ -300,10 +300,8 @@ public struct WaylandGraphicsFrameContract: Equatable, Sendable {
     public let bufferTransform: WaylandGraphicsBufferTransform
     public let color: WaylandGraphicsColorContract
     public let damageCoordinateSpace: WaylandGraphicsDamageCoordinateSpace
-    public let externalBufferConfigurations:
-        [WaylandGraphicsExternalBufferConfiguration]
-    public let recommendedExternalConfigurationID:
-        WaylandGraphicsExternalConfigurationID?
+    public let externalBufferConfigurations: [WaylandGraphicsExternalBufferConfiguration]
+    public let recommendedExternalConfigurationID: WaylandGraphicsExternalConfigurationID?
     public let synchronization: WaylandGraphicsExternalSynchronizationAvailability
     public let runtimePath: WaylandGraphicsRuntimePath
 
@@ -957,8 +955,7 @@ public enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {
 
 package actor WaylandGraphicsExternalReleaseState {
     private var result: WaylandGraphicsExternalReleaseResult?
-    private var waiters:
-        [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>] = []
+    private var waiters: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>] = []
 
     package init() {}
 
