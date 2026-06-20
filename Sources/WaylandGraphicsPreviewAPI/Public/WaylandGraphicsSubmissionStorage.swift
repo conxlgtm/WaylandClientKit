@@ -357,6 +357,25 @@ package actor WaylandGraphicsWindowBackingStorage {
         )
     }
 
+    package func unregisterExternalBuffer(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) async throws {
+        try leaseState.requireNotClosed()
+        try requireLocalRegisteredExternalBuffer(buffer)
+        guard !reservedExternalBufferIDs.contains(buffer.id) else {
+            throw WaylandGraphicsError.externalBufferUnavailable
+        }
+
+        let slotID = try externalBufferSlotID(for: buffer)
+        do {
+            try externalBufferPresenter.retireAvailableBuffer(slotID)
+        } catch {
+            throw WaylandGraphicsError.externalBufferUnavailable
+        }
+
+        registeredExternalBuffers.removeValue(forKey: buffer.id)
+    }
+
     private func requireLocalRegisteredExternalBuffer(
         _ buffer: WaylandGraphicsExternalBuffer
     ) throws {

@@ -328,6 +328,15 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         return poolState.removeAvailableSlots()
     }
 
+    package mutating func retireAvailableSlot(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterStateError) {
+        try ensureLive()
+        try mapPoolError {
+            try poolState.removeAvailableSlot(slotID)
+        }
+    }
+
     private func ensureLive() throws(GPUWindowPresenterStateError) {
         if let retireReason {
             throw .retired(retireReason)
@@ -513,6 +522,27 @@ extension GPUWindowPresenter {
             buffer.destroy()
         }
         return retired.slotIDs
+    }
+
+    package func retireAvailableBuffer(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterError) {
+        let retiredBuffer: (any GPUWindowPresenterBuffer)? =
+            try withPresenterLock { () throws(GPUWindowPresenterError) in
+                do {
+                    try state.retireAvailableSlot(slotID)
+                } catch let error as GPUWindowPresenterStateError {
+                    throw GPUWindowPresenterError.state(error)
+                } catch {
+                    preconditionFailure("Unexpected GPU presenter state error: \(error)")
+                }
+
+                presentationCorrelation.remove(slotID: slotID)
+                backingState.bufferPool = state.bufferPoolReadiness
+                return buffers.removeValue(forKey: slotID)
+            }
+
+        retiredBuffer?.destroy()
     }
 
     package func presentNext(

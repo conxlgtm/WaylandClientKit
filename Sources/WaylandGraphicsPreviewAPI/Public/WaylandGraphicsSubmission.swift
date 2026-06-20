@@ -1202,6 +1202,12 @@ public struct WaylandGraphicsWindowBacking: Sendable {
         )
     }
 
+    public func unregisterExternalBuffer(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) async throws {
+        try await storage.unregisterExternalBuffer(buffer)
+    }
+
     package func nextFrameForTesting(
         afterWindowCheck: @Sendable @escaping () async -> Void
     ) async throws -> WaylandGraphicsFrameLease {

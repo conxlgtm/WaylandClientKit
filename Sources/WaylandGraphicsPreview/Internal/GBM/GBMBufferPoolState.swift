@@ -124,6 +124,17 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         return removedSlotIDs
     }
 
+    package mutating func removeAvailableSlot(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GBMBufferPoolStateError) {
+        let lifecycle = try lifecycle(for: slotID)
+        guard lifecycle.isAvailable else {
+            throw GBMBufferPoolStateError.slotNotAvailable(slotID, actual: lifecycle)
+        }
+
+        slots[slotID] = nil
+    }
+
     package mutating func leaseNextAvailableSlot()
         throws(GBMBufferPoolStateError) -> GBMBufferPoolSlotID
     {
