@@ -294,6 +294,41 @@ public struct WaylandGraphicsExternalBufferConfiguration:
     }
 }
 
+public struct WaylandGraphicsExternalBuffer: Sendable, Identifiable {
+    public let id: WaylandGraphicsExternalBufferID
+    public let generation: WaylandGraphicsSurfaceGeneration
+    public let configurationID: WaylandGraphicsExternalConfigurationID
+    public let size: PositivePixelSize
+    public let format: WaylandGraphicsDRMFormat
+    public let modifier: WaylandGraphicsDRMFormatModifier
+
+    package let windowID: WindowID
+    package let slotRawValue: Int
+    package let storage: WaylandGraphicsWindowBackingStorage
+
+    package init(
+        id bufferID: WaylandGraphicsExternalBufferID,
+        generation surfaceGeneration: WaylandGraphicsSurfaceGeneration,
+        configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID,
+        size bufferSize: PositivePixelSize,
+        format bufferFormat: WaylandGraphicsDRMFormat,
+        modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        windowID backingWindowID: WindowID,
+        slotRawValue presenterSlotRawValue: Int,
+        storage backingStorage: WaylandGraphicsWindowBackingStorage
+    ) {
+        id = bufferID
+        generation = surfaceGeneration
+        configurationID = externalConfigurationID
+        size = bufferSize
+        format = bufferFormat
+        modifier = bufferModifier
+        windowID = backingWindowID
+        slotRawValue = presenterSlotRawValue
+        storage = backingStorage
+    }
+}
+
 public struct WaylandGraphicsFrameContract: Equatable, Sendable {
     public let generation: WaylandGraphicsSurfaceGeneration
     public let geometry: SurfaceGeometry
@@ -1038,6 +1073,43 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     }
 }
 
+public struct WaylandGraphicsExternalBufferRenderLease: Sendable {
+    public let buffer: WaylandGraphicsExternalBuffer
+    public let contract: WaylandGraphicsFrameContract
+
+    private let frameLeaseID: WaylandGraphicsFrameLeaseID
+    private let storage: WaylandGraphicsWindowBackingStorage
+
+    package init(
+        buffer externalBuffer: WaylandGraphicsExternalBuffer,
+        contract frameContract: WaylandGraphicsFrameContract,
+        frameLeaseID leaseID: WaylandGraphicsFrameLeaseID,
+        storage backingStorage: WaylandGraphicsWindowBackingStorage
+    ) {
+        buffer = externalBuffer
+        contract = frameContract
+        frameLeaseID = leaseID
+        storage = backingStorage
+    }
+
+    @discardableResult
+    public func submit(
+        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
+    ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
+        try await storage.submitRegisteredExternalBuffer(
+            leaseID: frameLeaseID,
+            buffer: buffer,
+            metadata: frameMetadata,
+            schedule: frameSchedule
+        )
+    }
+
+    public func cancel() async {
+        await storage.cancelExternalBufferReservation(buffer)
+    }
+}
+
 public enum WaylandGraphicsSubmissionStage: Equatable, Sendable {
     case windowStateCheck
     case frameGeometry
@@ -1086,6 +1158,9 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
     case unsupportedMetadata
     case invalidDamageRegion
     case unsupportedPacing
+    case staleFrameContract
+    case externalBufferUnavailable
+    case foreignExternalBuffer
     case submissionFailed(WaylandGraphicsSubmissionFailure)
 }
 
@@ -1113,6 +1188,18 @@ public struct WaylandGraphicsWindowBacking: Sendable {
 
     public func nextFrame() async throws -> WaylandGraphicsFrameLease {
         try await storage.nextFrame()
+    }
+
+    public func registerExternalBuffer(
+        _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
+        contract frameContract: WaylandGraphicsFrameContract,
+        configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
+    ) async throws -> WaylandGraphicsExternalBuffer {
+        try await storage.registerExternalBuffer(
+            descriptor,
+            contract: frameContract,
+            configurationID: externalConfigurationID
+        )
     }
 
     package func nextFrameForTesting(
@@ -1237,6 +1324,16 @@ public struct WaylandGraphicsFrameLease: Sendable {
 
     public func cancel() async {
         await storage.cancel(leaseID: id)
+    }
+
+    public func reserveExternalBuffer(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) async throws -> WaylandGraphicsExternalBufferRenderLease {
+        try await storage.reserveExternalBuffer(
+            buffer,
+            leaseID: id,
+            contract: contract
+        )
     }
 }
 

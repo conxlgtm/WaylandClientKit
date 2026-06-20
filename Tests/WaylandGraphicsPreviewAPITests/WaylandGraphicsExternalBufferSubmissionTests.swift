@@ -408,6 +408,77 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         try await storage.closeForTesting()
     }
+
+    @Test
+    func registeredExternalBufferImportsOnceAndSubmitsAfterReservation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let configurationID = try #require(
+            lease.contract.recommendedExternalConfigurationID)
+        let descriptor = try testExternalDescriptor(
+            modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+            offset: 0,
+            fd: testOwnedFileDescriptor()
+        )
+
+        let buffer = try await storage.registerExternalBuffer(
+            descriptor,
+            contract: lease.contract,
+            configurationID: configurationID
+        )
+        let renderLease = try await lease.reserveExternalBuffer(buffer)
+        let receipt = try await renderLease.submit()
+
+        #expect(await window.importRequests == 1)
+        #expect(receipt.runtimePath.backing == .active)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func registeredExternalBufferCannotReserveAgainUntilRelease() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let configurationID = try #require(
+            firstLease.contract.recommendedExternalConfigurationID)
+        let descriptor = try testExternalDescriptor(
+            modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+            offset: 0,
+            fd: testOwnedFileDescriptor()
+        )
+        let buffer = try await storage.registerExternalBuffer(
+            descriptor,
+            contract: firstLease.contract,
+            configurationID: configurationID
+        )
+
+        let firstRenderLease = try await firstLease.reserveExternalBuffer(buffer)
+        let firstReceipt = try await firstRenderLease.submit()
+        let blockedLease = try await storage.nextFrame()
+        do {
+            _ = try await blockedLease.reserveExternalBuffer(buffer)
+            Issue.record("expected registered external buffer to remain busy")
+        } catch WaylandGraphicsError.externalBufferUnavailable {
+            await blockedLease.cancel()
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await firstReceipt.waitForRelease() == .released)
+
+        let secondLease = try await storage.nextFrame()
+        let secondRenderLease = try await secondLease.reserveExternalBuffer(buffer)
+        _ = try await secondRenderLease.submit()
+
+        #expect(await window.importRequests == 1)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        try await storage.closeForTesting()
+    }
 }
 
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
