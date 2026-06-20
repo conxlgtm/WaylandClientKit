@@ -1,3 +1,4 @@
+import Glibc
 import Testing
 import WaylandClient
 import WaylandGraphicsPreview
@@ -165,6 +166,59 @@ struct WaylandGraphicsPreviewClientTests {
 
         _ = submitSoftwareFrame
     }
+
+    @Test
+    func externalBufferRegistrationTypesCompileForExternalClients() async throws {
+        func registerExternalBuffer(
+            backing: WaylandGraphicsWindowBacking,
+            lease: WaylandGraphicsFrameLease
+        ) async throws {
+            let configurationID = try #require(
+                lease.contract.recommendedExternalConfigurationID)
+            let descriptor = try externalClientDescriptor(size: lease.size)
+            let buffer = try await backing.registerExternalBuffer(
+                descriptor,
+                contract: lease.contract,
+                configurationID: configurationID
+            )
+            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            let receipt = try await renderLease.submit()
+            _ = receipt.id
+            _ = await receipt.waitForRelease()
+        }
+
+        _ = registerExternalBuffer
+    }
+}
+
+private func externalClientDescriptor(
+    size: PositivePixelSize
+) throws -> WaylandGraphicsExternalBufferDescriptor {
+    let stride = UInt32(size.width.rawValue) * 4
+    let plane = try WaylandGraphicsExternalBufferPlane(
+        fileDescriptor: try externalClientPipeDescriptor(),
+        offset: 0,
+        stride: stride
+    )
+    return try WaylandGraphicsExternalBufferDescriptor(
+        size: size,
+        format: .xrgb8888,
+        modifier: .linear,
+        plane: plane
+    )
+}
+
+private func externalClientPipeDescriptor() throws -> OwnedFileDescriptor {
+    var descriptors = [Int32](repeating: -1, count: 2)
+    let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        unsafe Glibc.pipe(buffer.baseAddress)
+    }
+    guard result == 0 else {
+        throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+    }
+
+    Glibc.close(descriptors[1])
+    return try OwnedFileDescriptor(adopting: descriptors[0])
 }
 
 private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {
