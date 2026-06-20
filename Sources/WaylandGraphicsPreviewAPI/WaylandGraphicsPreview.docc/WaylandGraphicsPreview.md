@@ -51,7 +51,9 @@ states through public value types.
 - ``WaylandGraphicsClearFrame``
 - ``WaylandGraphicsFrameResult``
 - ``WaylandGraphicsExternalBufferSubmissionReceipt``
+- ``WaylandGraphicsExternalBufferRenderLease``
 - ``WaylandGraphicsExternalReleaseResult``
+- ``WaylandGraphicsExternalBuffer``
 - ``WaylandGraphicsExternalBufferDescriptor``
 - ``WaylandGraphicsExternalBufferPlane``
 - ``WaylandGraphicsExternalBufferConfiguration``

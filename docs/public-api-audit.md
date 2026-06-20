@@ -315,6 +315,7 @@ Intentionally public:
 - `WaylandGraphicsDamageCoordinateSpace`
 - `WaylandGraphicsExternalBufferConfiguration`
 - `WaylandGraphicsFrameContract`
+- `WaylandGraphicsExternalBuffer`
 - `WaylandGraphicsDRMFormat`
 - `WaylandGraphicsDRMFormatModifier`
 - `WaylandGraphicsDRMModifier`
@@ -324,6 +325,7 @@ Intentionally public:
 - `WaylandGraphicsSubmittedFrame`
 - `WaylandGraphicsFrameResult`
 - `WaylandGraphicsExternalReleaseResult`
+- `WaylandGraphicsExternalBufferRenderLease`
 - `WaylandGraphicsExternalBufferSubmissionReceipt`
 - `WaylandGraphicsError`
 - `WaylandGraphicsWindowBacking`
@@ -348,12 +350,19 @@ Current preview contract:
 - The external-buffer import path is public preview API for renderer-owned
   one-plane dmabuf images. Public descriptor values are move-only and consume
   `OwnedFileDescriptor` so each plane descriptor is transferred or closed
-  exactly once. Submission returns a receipt with a stable submission identity
-  and an idempotent release wait. The receipt resolves from authoritative
-  implicit `wl_buffer.release` observation or backing teardown.
+  exactly once. Registration imports a descriptor once and returns a stable
+  public buffer handle. Frame leases reserve available registered buffers, and
+  render leases submit them after the renderer has drawn into the image.
+  Submission returns a receipt with a stable submission identity and an
+  idempotent release wait. The receipt resolves from authoritative implicit
+  `wl_buffer.release` observation or backing teardown.
 - `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
   synchronization availability, runtime-path snapshot, and initial normalized
   XRGB8888/ARGB8888 linear external-buffer candidates needed before rendering.
+- `WaylandGraphicsError.staleFrameContract`,
+  `WaylandGraphicsError.externalBufferUnavailable`, and
+  `WaylandGraphicsError.foreignExternalBuffer` are public ownership/lifecycle
+  failures for registered external buffers.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure, display-level dmabuf advertisement alone is

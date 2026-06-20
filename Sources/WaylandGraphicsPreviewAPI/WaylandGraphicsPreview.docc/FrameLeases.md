@@ -26,12 +26,22 @@ frame. On active managed GPU backing, the clear is rendered through internal GPU
 preview code. On software backing or fallback, WaylandClientKit fills a
 `SoftwareFrame`.
 
-``WaylandGraphicsFrameLease/submitExternalBuffer(_:metadata:schedule:)`` consumes
-a move-only ``WaylandGraphicsExternalBufferDescriptor`` and returns a
-``WaylandGraphicsExternalBufferSubmissionReceipt``. Keep the renderer-owned image
-alive until ``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()``
-returns a terminal result. Reusing an external image before that release result
-violates the presentation ownership contract.
+For reusable renderer-owned images, first register each descriptor with
+``WaylandGraphicsWindowBacking/registerExternalBuffer(_:contract:configurationID:)``.
+Then call ``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)`` to create a
+``WaylandGraphicsExternalBufferRenderLease``. Submit that render lease after the
+renderer has finished drawing into the reserved image.
+
+``WaylandGraphicsFrameLease/submitExternalBuffer(_:metadata:schedule:)`` remains
+available as a direct descriptor submission path. Registered buffers are the
+preferred ownership model for renderer pools because WCK can prevent reuse while
+the previous submission is still awaiting compositor release.
+
+External submission returns a ``WaylandGraphicsExternalBufferSubmissionReceipt``.
+Keep the renderer-owned image alive until
+``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()`` returns a
+terminal result. Reusing an external image before that release result violates
+the presentation ownership contract.
 
 Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
 describe optional metadata and logical damage. WaylandClientKit validates metadata

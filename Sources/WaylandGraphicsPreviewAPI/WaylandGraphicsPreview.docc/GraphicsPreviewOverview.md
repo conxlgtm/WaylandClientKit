@@ -12,10 +12,11 @@ The preview API wraps a public ``WaylandGraphicsWindowBacking`` around a
 frames, software drawing work, or one-plane external buffers, and receive typed
 runtime-path facts.
 
-External-buffer submission is intentionally narrow. WCK imports and commits a
-move-only descriptor, tracks compositor release, and returns a
-``WaylandGraphicsExternalBufferSubmissionReceipt``. The renderer keeps its own GPU
-allocation alive until the receipt reaches a terminal release result.
+External-buffer submission is intentionally narrow. WCK registers move-only
+descriptors, commits reserved buffers, tracks compositor release, and returns a
+``WaylandGraphicsExternalBufferSubmissionReceipt`` for each submitted use. The
+renderer keeps each GPU allocation alive until the corresponding receipt reaches
+a terminal release result.
 
 ## Choosing Backing
 
@@ -32,6 +33,7 @@ back to software or must throw a typed ``WaylandGraphicsError``.
 
 - One-plane XRGB8888 or ARGB8888 images.
 - Public move-only descriptors that consume `OwnedFileDescriptor`.
+- Persistent registration and release-gated reservation.
 - Implicit synchronization only for external-buffer submission.
 - Release-gated reuse through ``WaylandGraphicsExternalBufferSubmissionReceipt``.
 

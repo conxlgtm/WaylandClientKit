@@ -367,6 +367,9 @@ Remaining unsafe constructs:
   to the same terminal release result. The release registry is package-private,
   protected by `NSLock`, and maps presenter slots to submission identities only
   while a submitted buffer awaits release.
+- `WaylandGraphicsExternalBuffer` is a public opaque registration handle. It
+  stores diagnostic/public format facts plus package-private backing and slot
+  tokens. Raw presenter slot types are not exposed from public declarations.
 - `RawSurfaceBuffer` is `@unchecked Sendable` because the managed GPU preview
   presenter passes an imported `wl_buffer` wrapper through the async
   owner-thread commit bridge without exposing the proxy to public API.
@@ -397,6 +400,9 @@ Audit invariant:
   release, backing close, or a terminal submission failure. A successful commit,
   presentation feedback event, timeout, or later submission does not make a
   renderer-owned image reusable.
+- Registered external buffers are imported once, reserved before rendering, and
+  rejected for a second reservation until the presenter reports compositor
+  release for the previous submitted use.
 - The display-owned linux-dmabuf manager is accessed only through package-only
   `Window`/`WaylandDisplay` helpers that execute on the display owner thread.
 - Imported dmabuf buffers are destroyed by the GPU presenter buffer wrapper and
@@ -416,7 +422,8 @@ Tests:
   flags, modifier splitting, and feedback request targets.
 - `WaylandGraphicsExternalBufferSubmissionTests` covers descriptor validation,
   ownership transfer into an import plan, unavailable/fallback preflight before
-  Wayland import, public release receipt completion, and backing-close waiter
+  Wayland import, registered-buffer import-once behavior, release-gated
+  reservation, public release receipt completion, and backing-close waiter
   resolution.
 
 ## Surface Submit Constraint Boundary
