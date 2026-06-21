@@ -322,7 +322,6 @@ Intentionally public:
 - `WaylandGraphicsExternalBuffer`
 - `WaylandGraphicsDRMFormat`
 - `WaylandGraphicsDRMFormatModifier`
-- `WaylandGraphicsDRMModifier`
 - `WaylandGraphicsExternalBufferPlane`
 - `WaylandGraphicsExternalBufferDescriptor`
 - `WaylandGraphicsClearFrame`

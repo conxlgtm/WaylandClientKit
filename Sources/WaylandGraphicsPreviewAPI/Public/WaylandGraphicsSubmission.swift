@@ -331,7 +331,6 @@ public struct WaylandGraphicsExternalSyncPoint: Equatable, Sendable {
 }
 
 public enum WaylandGraphicsExternalAcquireSynchronization: Equatable, Sendable {
-    case implicit
     case drmSyncobj(WaylandGraphicsExternalSyncPoint)
 }
 
@@ -645,8 +644,6 @@ public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
         rawValue = modifierRawValue
     }
 }
-
-public typealias WaylandGraphicsDRMModifier = WaylandGraphicsDRMFormatModifier
 
 public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     package var fileDescriptor: OwnedFileDescriptor

@@ -6,16 +6,6 @@ import WaylandGraphicsCore
 import WaylandRaw
 
 // swiftlint:disable file_length
-private struct ExternalSubmissionSynchronization: Sendable {
-    let presentation: GPUBufferSubmissionSynchronization
-    let explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
-}
-
-private struct SubmittedExternalBufferFrame: Sendable {
-    let submissionID: WaylandGraphicsExternalSubmissionID
-    let releaseState: WaylandGraphicsExternalReleaseState
-}
-
 private struct RegisteredExternalBuffer: Sendable {
     let handle: WaylandGraphicsExternalBuffer
     let explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
@@ -905,7 +895,10 @@ package actor WaylandGraphicsWindowBackingStorage {
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         geometry: SurfaceGeometry,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
-    ) async throws -> SubmittedExternalBufferFrame {
+    ) async throws -> (
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        releaseState: WaylandGraphicsExternalReleaseState
+    ) {
         let resolvedMetadata = try frameMetadata.resolveManagedPreviewMetadata(
             configuration: effectiveConfiguration,
             capabilities: backingRuntimePath.capabilities,
@@ -1360,11 +1353,17 @@ extension WaylandGraphicsWindowBackingStorage {
 
     private func presentRegisteredExternalBuffer(
         _ externalBuffer: WaylandGraphicsExternalBuffer,
-        synchronization externalSynchronization: ExternalSubmissionSynchronization,
+        synchronization externalSynchronization: (
+            presentation: GPUBufferSubmissionSynchronization,
+            explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+        ),
         pacing: SurfacePacingConstraint,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool
-    ) async throws -> SubmittedExternalBufferFrame {
+    ) async throws -> (
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        releaseState: WaylandGraphicsExternalReleaseState
+    ) {
         let submissionID = nextExternalSubmissionID()
         let slotID = try externalBufferSlotID(for: externalBuffer)
         let releaseState = externalReleaseRegistry.begin(
@@ -1396,7 +1395,7 @@ extension WaylandGraphicsWindowBackingStorage {
                     releaseTimeline: explicitReleaseTimeline
                 )
             }
-            return SubmittedExternalBufferFrame(
+            return (
                 submissionID: submissionID,
                 releaseState: releaseState
             )
@@ -1413,10 +1412,13 @@ extension WaylandGraphicsWindowBackingStorage {
         for externalBuffer: WaylandGraphicsExternalBuffer,
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
-    ) throws -> ExternalSubmissionSynchronization {
+    ) throws -> (
+        presentation: GPUBufferSubmissionSynchronization,
+        explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+    ) {
         switch effectiveConfiguration.synchronizationPolicy {
         case .implicitOnly:
-            return ExternalSubmissionSynchronization(
+            return (
                 presentation: .implicit,
                 explicitReleaseTimeline: nil
             )
@@ -1430,7 +1432,7 @@ extension WaylandGraphicsWindowBackingStorage {
                 if effectiveConfiguration.synchronizationPolicy == .requireExplicit {
                     throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
                 }
-                return ExternalSubmissionSynchronization(
+                return (
                     presentation: .implicit,
                     explicitReleaseTimeline: nil
                 )
@@ -1442,7 +1444,10 @@ extension WaylandGraphicsWindowBackingStorage {
     private func explicitExternalSubmissionSynchronization(
         for externalBuffer: WaylandGraphicsExternalBuffer,
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?
-    ) throws -> ExternalSubmissionSynchronization? {
+    ) throws -> (
+        presentation: GPUBufferSubmissionSynchronization,
+        explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+    )? {
         guard backingRuntimePath.capabilities.explicitSync.isAvailable else {
             return nil
         }
@@ -1476,7 +1481,7 @@ extension WaylandGraphicsWindowBackingStorage {
                 point: RawSyncobjTimelinePoint(releasePointValue)
             )
         )
-        return ExternalSubmissionSynchronization(
+        return (
             presentation: .explicit(syncState),
             explicitReleaseTimeline: releaseTimeline
         )

@@ -64,7 +64,6 @@ states through public value types.
 - ``WaylandGraphicsExternalSyncTimelineID``
 - ``WaylandGraphicsDRMFormat``
 - ``WaylandGraphicsDRMFormatModifier``
-- ``WaylandGraphicsDRMModifier``
 - ``WaylandGraphicsExternalSynchronizationAvailability``
 - ``WaylandGraphicsBufferTransform``
 - ``WaylandGraphicsExternalAlphaMode``

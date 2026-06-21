@@ -177,13 +177,10 @@ enum GraphicsPreviewExternalBufferSmoke {
         log("test buffer: pipe-fd-not-dmabuf")
         let lease = try await backing.nextFrame()
         do {
-            let configurationID = try requireExternalConfigurationID(
-                lease.contract
-            )
             let buffer = try await backing.registerExternalBuffer(
                 try pipeBackedExternalDescriptor(size: lease.size),
                 contract: lease.contract,
-                configurationID: configurationID
+                configurationID: try requireExternalConfiguration(lease.contract).id
             )
             let renderLease = try await lease.reserveExternalBuffer(buffer)
             _ = try await renderLease.submit()
@@ -249,12 +246,6 @@ enum GraphicsPreviewExternalBufferSmoke {
         case .failed(let reason):
             "failed(\(reason))"
         }
-    }
-
-    private static func requireExternalConfigurationID(
-        _ contract: WaylandGraphicsFrameContract
-    ) throws -> WaylandGraphicsExternalConfigurationID {
-        try requireExternalConfiguration(contract).id
     }
 
     private static func requireExternalConfiguration(
@@ -446,35 +437,6 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
         }
 
         return nil
-    }
-
-    private static func planes(
-        from export: GBMDmabufExport
-    ) throws -> WaylandGraphicsExternalBufferPlanes {
-        switch export.planeCount {
-        case 1:
-            return .one(try plane(at: 0, from: export))
-        case 2:
-            return .two(
-                try plane(at: 0, from: export),
-                try plane(at: 1, from: export)
-            )
-        case 3:
-            return .three(
-                try plane(at: 0, from: export),
-                try plane(at: 1, from: export),
-                try plane(at: 2, from: export)
-            )
-        case 4:
-            return .four(
-                try plane(at: 0, from: export),
-                try plane(at: 1, from: export),
-                try plane(at: 2, from: export),
-                try plane(at: 3, from: export)
-            )
-        default:
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-        }
     }
 
     private static func plane(
