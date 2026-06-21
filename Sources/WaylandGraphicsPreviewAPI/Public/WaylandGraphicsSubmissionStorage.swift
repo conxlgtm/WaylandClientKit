@@ -1636,9 +1636,6 @@ extension WaylandGraphicsWindowBackingStorage {
                 if effectiveConfiguration.synchronizationPolicy == .requireExplicit {
                     throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
                 }
-                if registeredExternalBuffers[externalBuffer.id]?.explicitReleaseTimeline != nil {
-                    throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
-                }
                 return (
                     presentation: .implicit,
                     explicitReleaseTimeline: nil
