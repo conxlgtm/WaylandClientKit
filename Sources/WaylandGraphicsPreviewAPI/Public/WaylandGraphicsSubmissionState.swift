@@ -323,15 +323,16 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         )
     }
 
-    package mutating func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
+    package mutating func cancel(leaseID: WaylandGraphicsFrameLeaseID) -> Bool {
         guard case .open(var openState) = state,
             openState.activeLeaseID == leaseID
         else {
-            return
+            return false
         }
 
         openState.activeLeaseID = nil
         state = .open(openState)
+        return true
     }
 
     package mutating func close() {

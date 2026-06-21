@@ -183,7 +183,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 
     @Test
-    func externalGPUFallbackPolicyRejectsSoftwareSubmitWhenSurfaceFeedbackFails() async throws {
+    func externalGPUFallbackPolicyFailsLeaseWhenSurfaceFeedbackFails() async throws {
         let window = try ExternalBufferFakeManagedWindow(
             surfaceFeedbackSynchronization: nil
         )
@@ -196,18 +196,10 @@ struct WaylandGraphicsExternalBufferPreflightTests {
             )
         )
 
-        let lease = try await storage.nextFrame()
-
-        #expect(lease.contract.externalBufferConfigurations.isEmpty)
-        #expect(lease.runtimePath.backing == .fallback(.surfaceFeedbackUnavailable))
-        #expect(lease.runtimePath.surfaceFeedback == .fallback(.surfaceFeedbackUnavailable))
-
         await #expect(
-            throws: WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+            throws: WaylandGraphicsError.unavailable(.surfaceFeedbackUnavailable)
         ) {
-            try await lease.submitSoftware { _ in
-                _ = ()
-            }
+            _ = try await storage.nextFrame()
         }
 
         try await storage.closeForTesting()
@@ -665,6 +657,31 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         #expect(await window.importRequests == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func frameLeaseCancelReleasesReservedExternalBuffer() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor(
+                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+                offset: 0,
+                fd: testOwnedFileDescriptor()
+            )
+        )
+
+        _ = try await firstLease.reserveExternalBuffer(buffer)
+        await firstLease.cancel()
+
+        let secondLease = try await storage.nextFrame()
+        _ = try await secondLease.reserveExternalBuffer(buffer)
+        await secondLease.cancel()
 
         try await storage.closeForTesting()
     }

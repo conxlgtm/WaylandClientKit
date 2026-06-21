@@ -219,8 +219,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     private let configuration: WaylandGraphicsConfiguration
     private let managedGPUBacking: (any WaylandGraphicsManagedGPUBacking)?
     private let externalReleaseRegistry: WaylandGraphicsExternalReleaseRegistry
-    private let externalReleaseRetirementNotifier:
-        WaylandGraphicsExternalReleaseRetirementNotifier
+    private let externalReleaseRetirementNotifier: WaylandGraphicsExternalReleaseRetirementNotifier
     private let externalBufferPresenter: GPUWindowPresenter
     private var backingRuntimePath: WaylandGraphicsRuntimePath
     private var leaseState = WaylandGraphicsFrameLeaseState()
@@ -1010,9 +1009,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     private func frameLeaseGeometry() async throws -> SurfaceGeometry {
-        if shouldAttemptExternalBufferPresentation,
-            !leaseState.hasSubmittedFrame
-        {
+        if shouldAttemptExternalBufferPresentation {
             let geometry = try await window.prepareGraphicsPreviewPresentation(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
             )
@@ -1110,7 +1107,9 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
-        leaseState.cancel(leaseID: leaseID)
+        if leaseState.cancel(leaseID: leaseID) {
+            reservedExternalBufferIDs.removeAll()
+        }
     }
 
     func close() async throws {
@@ -1587,29 +1586,12 @@ extension WaylandGraphicsWindowBackingStorage {
         _ error: GraphicsPreviewSurfaceFeedbackError
     ) throws {
         _ = error
-        let fallbackReason = WaylandGraphicsFallbackReason.surfaceFeedbackUnavailable
         let unavailableReason = WaylandGraphicsUnavailableReason.surfaceFeedbackUnavailable
-        switch configuration.fallbackPolicy {
-        case .preferGPUFallbackToSoftware:
-            backingRuntimePath = Self.runtimePath(
-                WaylandGraphicsRuntimePath.softwareFallback(
-                    capabilities: backingRuntimePath.capabilities,
-                    reason: fallbackReason
-                ),
-                surfaceFeedback: .fallback(fallbackReason)
-            )
-        case .requireGPU:
-            backingRuntimePath = Self.runtimePath(
-                backingRuntimePath,
-                surfaceFeedback: .failed(unavailableReason)
-            )
-            throw WaylandGraphicsError.unavailable(unavailableReason)
-        case .forceSoftware:
-            backingRuntimePath = WaylandGraphicsRuntimePath.softwareFallback(
-                capabilities: backingRuntimePath.capabilities,
-                reason: .forcedSoftware
-            )
-        }
+        backingRuntimePath = Self.runtimePath(
+            Self.runtimePath(backingRuntimePath, backingUnavailable: unavailableReason),
+            surfaceFeedback: .failed(unavailableReason)
+        )
+        throw WaylandGraphicsError.unavailable(unavailableReason)
     }
 
     private func nextExternalBufferSlotID() throws -> GBMBufferPoolSlotID {

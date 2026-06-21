@@ -32,6 +32,19 @@ struct WaylandGraphicsPreviewBackingPreferenceTests {
     }
 
     @Test
+    func externalGPUPresentationModeRejectsUnavailableDmabuf() {
+        #expect(throws: WaylandGraphicsError.unavailable(.dmabufUnavailable)) {
+            _ = try WaylandDisplay.managedPreviewRuntimePath(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                configuration: WaylandGraphicsConfiguration(
+                    presentationMode: .externalGPU,
+                    fallbackPolicy: .preferGPUFallbackToSoftware
+                )
+            )
+        }
+    }
+
+    @Test
     func softwareBackingPreferenceForcesSoftwarePath() throws {
         let path = try WaylandDisplay.managedPreviewRuntimePath(
             capabilities: gpuCapableSurfaceCapabilities(),

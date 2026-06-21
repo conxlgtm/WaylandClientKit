@@ -43,7 +43,7 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
             ?? WaylandGraphicsPresentationMode(
                 backingPreference: preferredBacking,
                 fallbackPolicy: backingFallbackPolicy
-        )
+            )
         fallbackPolicy = backingFallbackPolicy
         synchronizationPolicy = frameSynchronizationPolicy
         pacingPolicy = framePacingPolicy

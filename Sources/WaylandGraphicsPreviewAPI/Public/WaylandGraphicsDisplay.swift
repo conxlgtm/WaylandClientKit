@@ -57,8 +57,17 @@ extension WaylandDisplay {
         switch configuration.presentationMode {
         case .software:
             return .softwareFallback(capabilities: capabilities, reason: .forcedSoftware)
-        case .managedGPU, .externalGPU:
+        case .managedGPU:
             break
+        case .externalGPU:
+            guard configuration.fallbackPolicy != .forceSoftware else {
+                throw WaylandGraphicsError.unavailable(
+                    .managedGPUSubmissionUnavailable
+                )
+            }
+            guard capabilities.dmabuf.isAvailable else {
+                throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
+            }
         }
 
         switch configuration.fallbackPolicy {
