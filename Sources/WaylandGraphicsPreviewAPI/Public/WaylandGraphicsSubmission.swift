@@ -356,21 +356,9 @@ public enum WaylandGraphicsExternalSynchronizationAvailability:
     case explicitRequiredUnavailable
 }
 
-public enum WaylandGraphicsBufferTransform: Equatable, Sendable {
-    case normal
-}
-
 public enum WaylandGraphicsExternalAlphaMode: Equatable, Hashable, Sendable {
     case opaque
     case premultiplied
-}
-
-public enum WaylandGraphicsColorContract: Equatable, Sendable {
-    case compositorDefaultSDR
-}
-
-public enum WaylandGraphicsDamageCoordinateSpace: Equatable, Sendable {
-    case logicalSurface
 }
 
 public struct WaylandGraphicsExternalBufferConfiguration:
@@ -446,9 +434,6 @@ public struct WaylandGraphicsExternalBuffer: Sendable, Identifiable {
 public struct WaylandGraphicsFrameContract: Equatable, Sendable {
     public let generation: WaylandGraphicsSurfaceGeneration
     public let geometry: SurfaceGeometry
-    public let bufferTransform: WaylandGraphicsBufferTransform
-    public let color: WaylandGraphicsColorContract
-    public let damageCoordinateSpace: WaylandGraphicsDamageCoordinateSpace
     public let externalBufferConfigurations: [WaylandGraphicsExternalBufferConfiguration]
     public let recommendedExternalConfigurationID: WaylandGraphicsExternalConfigurationID?
     public let synchronization: WaylandGraphicsExternalSynchronizationAvailability
@@ -467,9 +452,6 @@ public struct WaylandGraphicsFrameContract: Equatable, Sendable {
     ) {
         generation = surfaceGeneration
         geometry = surfaceGeometry
-        bufferTransform = .normal
-        color = .compositorDefaultSDR
-        damageCoordinateSpace = .logicalSurface
         externalBufferConfigurations = configurations
         recommendedExternalConfigurationID = recommendedConfiguration
         synchronization = synchronizationAvailability
@@ -1204,42 +1186,6 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
         id = submissionID
         frameResult = submittedFrameResult
         releaseState = submissionReleaseState
-    }
-
-    public var runtimePath: WaylandGraphicsRuntimePath {
-        frameResult.runtimePath
-    }
-
-    public var operation: WaylandGraphicsSubmissionOperation {
-        frameResult.operation
-    }
-
-    public var size: PositivePixelSize {
-        frameResult.size
-    }
-
-    public var metadata: WaylandGraphicsFrameMetadata {
-        frameResult.metadata
-    }
-
-    public var schedule: WaylandGraphicsFrameSchedule {
-        frameResult.schedule
-    }
-
-    public var presentationFeedbackRequested: Bool {
-        frameResult.presentationFeedbackRequested
-    }
-
-    public var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy {
-        frameResult.synchronizationPolicy
-    }
-
-    public var pacingPolicy: WaylandGraphicsPacingPolicy {
-        frameResult.pacingPolicy
-    }
-
-    public var backing: WaylandGraphicsRuntimeStatus {
-        frameResult.backing
     }
 
     public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {

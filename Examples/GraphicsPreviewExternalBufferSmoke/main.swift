@@ -129,7 +129,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("release: \(release)")
             log("release/reuse: tracked-by-wayland-client-kit")
             log(
-                "fallback reason: \(result.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
+                "fallback reason: \(result.frameResult.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
             )
             log("failure: none")
             try await backing.close()

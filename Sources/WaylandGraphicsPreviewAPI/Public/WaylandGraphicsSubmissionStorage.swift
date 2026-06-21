@@ -272,10 +272,19 @@ package actor WaylandGraphicsWindowBackingStorage {
             retireStaleAvailableExternalBuffers()
         }
 
-        let configurations = externalBufferConfigurations(
-            facts: configurationFacts,
-            generation: currentSurfaceGeneration
-        )
+        let configurations = configurationFacts.enumerated().map { index, fact in
+            WaylandGraphicsExternalBufferConfiguration(
+                id: WaylandGraphicsExternalConfigurationID(
+                    rawValue: UInt64(index + 1)
+                ),
+                format: fact.format,
+                modifier: fact.modifier,
+                renderNode: fact.renderNode,
+                alphaMode: fact.alphaMode,
+                scanoutPreferred: fact.scanoutPreferred,
+                generation: currentSurfaceGeneration
+            )
+        }
         return WaylandGraphicsFrameContract(
             generation: currentSurfaceGeneration,
             geometry: geometry,
@@ -333,25 +342,6 @@ package actor WaylandGraphicsWindowBackingStorage {
             }
         }
         return facts
-    }
-
-    private func externalBufferConfigurations(
-        facts: [ExternalBufferConfigurationFact],
-        generation: WaylandGraphicsSurfaceGeneration
-    ) -> [WaylandGraphicsExternalBufferConfiguration] {
-        facts.enumerated().map { index, fact in
-            WaylandGraphicsExternalBufferConfiguration(
-                id: WaylandGraphicsExternalConfigurationID(
-                    rawValue: UInt64(index + 1)
-                ),
-                format: fact.format,
-                modifier: fact.modifier,
-                renderNode: fact.renderNode,
-                alphaMode: fact.alphaMode,
-                scanoutPreferred: fact.scanoutPreferred,
-                generation: generation
-            )
-        }
     }
 
     private func retireStaleAvailableExternalBuffers() {

@@ -283,8 +283,8 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             await first.receipt.waitForRelease()
         }
 
-        #expect(first.receipt.runtimePath.backing == .active)
-        #expect(first.receipt.runtimePath.dmabufImport == .active)
+        #expect(first.receipt.frameResult.runtimePath.backing == .active)
+        #expect(first.receipt.frameResult.runtimePath.dmabufImport == .active)
         #expect(await window.importRequests == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
@@ -346,7 +346,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let recoveryRenderLease = try await recoveryLease.reserveExternalBuffer(buffer)
         let result = try await recoveryRenderLease.submit()
 
-        #expect(result.runtimePath.backing == .active)
+        #expect(result.frameResult.runtimePath.backing == .active)
         #expect(await window.importRequests == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
@@ -455,9 +455,9 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         )
         let result = submitted.receipt
 
-        #expect(result.metadata == metadata)
-        #expect(result.schedule == schedule)
-        #expect(result.presentationFeedbackRequested)
+        #expect(result.frameResult.metadata == metadata)
+        #expect(result.frameResult.schedule == schedule)
+        #expect(result.frameResult.presentationFeedbackRequested)
         #expect(await window.submitConstraintsSnapshot().map(\.pacing) == [.fifo(.setBarrier)])
         #expect(await window.presentationFeedbackRequestSnapshot() == [true])
         #expect(await window.metadataSnapshot().compactMap(\.contentType) == [.game])
@@ -496,7 +496,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let receipt = try await renderLease.submit()
 
         #expect(await window.importRequests == 1)
-        #expect(receipt.runtimePath.backing == .active)
+        #expect(receipt.frameResult.runtimePath.backing == .active)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
         try await storage.closeForTesting()
