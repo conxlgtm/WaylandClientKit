@@ -419,7 +419,7 @@ private struct ExternalBufferSmokeOptions: Equatable, Sendable {
     let mode: Mode
 
     static func parse(_ arguments: ArraySlice<String>) throws -> Self {
-        var mode = Mode.probe
+        var mode = Mode.internalTestBuffer
         let optionArguments =
             arguments.first == "--" ? arguments.dropFirst() : arguments
 
