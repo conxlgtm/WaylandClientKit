@@ -40,8 +40,8 @@ enum GraphicsPreviewExternalBufferSmoke {
                     bufferCount: 2
                 ),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .requireGPU,
-                    backingPreference: .managedGPU
+                    presentationMode: .externalGPU,
+                    fallbackPolicy: .requireGPU
                 )
             )
             let runtimePath = try await backing.runtimePath

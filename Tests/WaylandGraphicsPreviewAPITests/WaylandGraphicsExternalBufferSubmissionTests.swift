@@ -125,6 +125,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
             window: window,
             runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
             configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
                 synchronizationPolicy: .requireExplicit
             )
         )
@@ -428,8 +429,8 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
                 fallbackPolicy: .requireGPU,
-                backingPreference: .managedGPU,
                 metadataPolicy: .preferAvailable
             )
         )
@@ -796,8 +797,8 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 private func externalBufferStorage(
     window: ExternalBufferFakeManagedWindow,
     configuration: WaylandGraphicsConfiguration = WaylandGraphicsConfiguration(
-        fallbackPolicy: .requireGPU,
-        backingPreference: .managedGPU
+        presentationMode: .externalGPU,
+        fallbackPolicy: .requireGPU
     )
 ) -> WaylandGraphicsWindowBackingStorage {
     WaylandGraphicsWindowBackingStorage(

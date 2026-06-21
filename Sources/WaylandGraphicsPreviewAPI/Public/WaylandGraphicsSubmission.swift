@@ -6,6 +6,7 @@ import WaylandRaw
 // swiftlint:disable file_length
 
 public struct WaylandGraphicsConfiguration: Equatable, Sendable {
+    public var presentationMode: WaylandGraphicsPresentationMode
     public var fallbackPolicy: WaylandGraphicsFallbackPolicy
     public var backingPreference: WaylandGraphicsBackingKind
     public var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
@@ -24,14 +25,43 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
         pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none,
         metadataPolicy frameMetadataPolicy: WaylandGraphicsMetadataPolicy = .none,
         presentationFeedbackPolicy framePresentationFeedbackPolicy:
-            WaylandGraphicsPresentationFeedbackPolicy = .none
+            WaylandGraphicsPresentationFeedbackPolicy = .none,
+        presentationMode requestedPresentationMode: WaylandGraphicsPresentationMode? = nil
     ) {
+        presentationMode =
+            requestedPresentationMode
+            ?? WaylandGraphicsPresentationMode(
+                backingPreference: preferredBacking,
+                fallbackPolicy: backingFallbackPolicy
+            )
         fallbackPolicy = backingFallbackPolicy
         backingPreference = preferredBacking
         synchronizationPolicy = frameSynchronizationPolicy
         pacingPolicy = framePacingPolicy
         metadataPolicy = frameMetadataPolicy
         presentationFeedbackPolicy = framePresentationFeedbackPolicy
+    }
+
+    public init(
+        presentationMode requestedPresentationMode: WaylandGraphicsPresentationMode,
+        fallbackPolicy backingFallbackPolicy: WaylandGraphicsFallbackPolicy =
+            .preferGPUFallbackToSoftware,
+        synchronizationPolicy frameSynchronizationPolicy:
+            WaylandGraphicsSynchronizationPolicy = .implicitOnly,
+        pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none,
+        metadataPolicy frameMetadataPolicy: WaylandGraphicsMetadataPolicy = .none,
+        presentationFeedbackPolicy framePresentationFeedbackPolicy:
+            WaylandGraphicsPresentationFeedbackPolicy = .none
+    ) {
+        self.init(
+            fallbackPolicy: backingFallbackPolicy,
+            backingPreference: requestedPresentationMode.backingPreference,
+            synchronizationPolicy: frameSynchronizationPolicy,
+            pacingPolicy: framePacingPolicy,
+            metadataPolicy: frameMetadataPolicy,
+            presentationFeedbackPolicy: framePresentationFeedbackPolicy,
+            presentationMode: requestedPresentationMode
+        )
     }
 }
 
@@ -48,7 +78,7 @@ extension WaylandGraphicsConfiguration {
                     .explicitSyncRequiredButUnavailable
                 )
             }
-            guard backingPreference == .managedGPU,
+            guard presentationMode != .software,
                 fallbackPolicy != .forceSoftware
             else {
                 throw WaylandGraphicsError.unavailable(
@@ -103,6 +133,34 @@ extension WaylandGraphicsConfiguration {
 public enum WaylandGraphicsBackingKind: Equatable, Sendable {
     case software
     case managedGPU
+}
+
+public enum WaylandGraphicsPresentationMode: Equatable, Sendable {
+    case software
+    case managedGPU
+    case externalGPU
+}
+
+extension WaylandGraphicsPresentationMode {
+    fileprivate init(
+        backingPreference: WaylandGraphicsBackingKind,
+        fallbackPolicy: WaylandGraphicsFallbackPolicy
+    ) {
+        if fallbackPolicy == .forceSoftware || backingPreference == .software {
+            self = .software
+        } else {
+            self = .managedGPU
+        }
+    }
+
+    fileprivate var backingPreference: WaylandGraphicsBackingKind {
+        switch self {
+        case .software:
+            .software
+        case .managedGPU, .externalGPU:
+            .managedGPU
+        }
+    }
 }
 
 public enum WaylandGraphicsSynchronizationPolicy: Equatable, Sendable {

@@ -54,10 +54,10 @@ extension WaylandDisplay {
     ) throws -> WaylandGraphicsRuntimePath {
         try configuration.validateManagedPreviewSupport(capabilities: capabilities)
 
-        switch configuration.backingPreference {
+        switch configuration.presentationMode {
         case .software:
             return .softwareFallback(capabilities: capabilities, reason: .forcedSoftware)
-        case .managedGPU:
+        case .managedGPU, .externalGPU:
             break
         }
 
@@ -79,7 +79,7 @@ extension WaylandDisplay {
         runtimePath: WaylandGraphicsRuntimePath,
         configuration: WaylandGraphicsConfiguration
     ) -> Bool {
-        guard configuration.backingPreference == .managedGPU,
+        guard configuration.presentationMode == .managedGPU,
             configuration.fallbackPolicy != .forceSoftware
         else {
             return false

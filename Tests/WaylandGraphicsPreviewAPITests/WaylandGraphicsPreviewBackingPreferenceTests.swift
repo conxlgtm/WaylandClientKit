@@ -6,11 +6,29 @@ import WaylandGraphicsPreview
 struct WaylandGraphicsPreviewBackingPreferenceTests {
     @Test
     func defaultConfigurationRequestsManagedGPUWithSoftwareFallback() {
+        #expect(WaylandGraphicsConfiguration.default.presentationMode == .managedGPU)
         #expect(WaylandGraphicsConfiguration.default.backingPreference == .managedGPU)
         #expect(
             WaylandGraphicsConfiguration.default.fallbackPolicy
                 == .preferGPUFallbackToSoftware
         )
+    }
+
+    @Test
+    func externalGPUPresentationModeProjectsAdvertisedPath() throws {
+        let configuration = WaylandGraphicsConfiguration(
+            presentationMode: .externalGPU,
+            fallbackPolicy: .requireGPU
+        )
+        let path = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(configuration.presentationMode == .externalGPU)
+        #expect(configuration.backingPreference == .managedGPU)
+        #expect(path.backing == .advertised)
+        #expect(path.dmabuf == .advertised)
     }
 
     @Test

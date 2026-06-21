@@ -124,6 +124,7 @@ struct WaylandGraphicsPreviewClientTests {
             pacingPolicy: .preferFIFO
         )
 
+        #expect(configuration.presentationMode == .managedGPU)
         #expect(configuration.backingPreference == .managedGPU)
         #expect(configuration.synchronizationPolicy == .preferExplicit)
         #expect(configuration.presentationFeedbackPolicy == .requestWhenAvailable)
@@ -188,6 +189,22 @@ struct WaylandGraphicsPreviewClientTests {
         }
 
         _ = registerExternalBuffer
+    }
+
+    @Test
+    func externalGPUPresentationConfigurationCompilesForExternalClients() {
+        let configuration = WaylandGraphicsConfiguration(
+            presentationMode: .externalGPU,
+            fallbackPolicy: .requireGPU,
+            synchronizationPolicy: .preferExplicit,
+            pacingPolicy: .preferFIFO,
+            metadataPolicy: .preferAvailable,
+            presentationFeedbackPolicy: .requestWhenAvailable
+        )
+
+        #expect(configuration.presentationMode == .externalGPU)
+        #expect(configuration.backingPreference == .managedGPU)
+        #expect(configuration.fallbackPolicy == .requireGPU)
     }
 }
 

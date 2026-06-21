@@ -404,7 +404,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
     ) throws -> WaylandGraphicsExternalBufferConfiguration {
         try rejectExternalBufferExplicitSyncIfRequired(configuration: configuration)
-        guard configuration.backingPreference == .managedGPU,
+        guard configuration.presentationMode == .externalGPU,
             configuration.fallbackPolicy != .forceSoftware
         else {
             throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
@@ -1057,7 +1057,7 @@ extension WaylandGraphicsWindowBackingStorage {
         guard managedGPUBacking != nil else {
             return false
         }
-        guard configuration.backingPreference == .managedGPU,
+        guard configuration.presentationMode == .managedGPU,
             configuration.fallbackPolicy != .forceSoftware
         else {
             return false
@@ -1070,7 +1070,7 @@ extension WaylandGraphicsWindowBackingStorage {
     }
 
     private var shouldAttemptExternalBufferPresentation: Bool {
-        configuration.backingPreference == .managedGPU
+        configuration.presentationMode == .externalGPU
             && configuration.fallbackPolicy != .forceSoftware
     }
 
@@ -1158,7 +1158,7 @@ extension WaylandGraphicsWindowBackingStorage {
         guard backingRuntimePath.capabilities.dmabuf.isAvailable else {
             throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
         }
-        guard effectiveConfiguration.backingPreference == .managedGPU,
+        guard effectiveConfiguration.presentationMode == .externalGPU,
             effectiveConfiguration.fallbackPolicy != .forceSoftware
         else {
             throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
