@@ -118,7 +118,10 @@ enum GraphicsPreviewExternalBufferSmoke {
             )
             let renderLease = try await firstLease.reserveExternalBuffer(buffer)
             let result = try await renderLease.submit()
-            try await submitReplacementBuffer(backing: backing)
+            let replacementRenderer = try await submitReplacementBuffer(backing: backing)
+            defer {
+                replacementRenderer.close()
+            }
             let release = await releaseStatus(result)
             log("renderer: active")
             log("format: \(renderer.formatDescription)")
@@ -150,16 +153,13 @@ enum GraphicsPreviewExternalBufferSmoke {
 
     private static func submitReplacementBuffer(
         backing: WaylandGraphicsWindowBacking
-    ) async throws {
+    ) async throws -> ExternalDmabufRenderer {
         let lease = try await backing.nextFrame()
         let configuration = try requireExternalConfiguration(lease.contract)
         let renderer = try ExternalDmabufRenderer(
             size: lease.size,
             configuration: configuration
         )
-        defer {
-            renderer.close()
-        }
 
         let buffer = try await backing.registerExternalBuffer(
             try renderer.makeDescriptor(),
@@ -167,8 +167,8 @@ enum GraphicsPreviewExternalBufferSmoke {
             configurationID: configuration.id
         )
         let renderLease = try await lease.reserveExternalBuffer(buffer)
-        let receipt = try await renderLease.submit()
-        _ = await receipt.waitForRelease()
+        _ = try await renderLease.submit()
+        return renderer
     }
 
     private static func submitNegativeTestBuffer(
