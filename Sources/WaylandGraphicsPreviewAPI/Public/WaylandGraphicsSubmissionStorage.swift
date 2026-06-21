@@ -831,7 +831,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         let effectiveConfiguration = configuration.applying(schedule: frameSchedule)
         try leaseState.requireNotClosed()
         try await ensureWindowOpen()
-        try rejectSoftwareSubmissionWhenExplicitRequired(configuration: effectiveConfiguration)
+        try rejectSoftwareSubmissionWhenUnavailable(configuration: effectiveConfiguration)
 
         let geometry = try await submissionGeometry(for: leaseID)
         try effectiveConfiguration.validateManagedPreviewSupport(
@@ -1181,7 +1181,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             }
         }
 
-        try rejectSoftwareSubmissionWhenExplicitRequired(configuration: effectiveConfiguration)
+        try rejectSoftwareSubmissionWhenUnavailable(configuration: effectiveConfiguration)
         let pacingSelection = try Self.softwarePacingSelection(
             policy: effectiveConfiguration.gpuPacingPolicy,
             capabilities: backingRuntimePath.capabilities,
@@ -1706,17 +1706,30 @@ extension WaylandGraphicsWindowBackingStorage {
         do { try leaseState.finishSubmission() } catch { leaseState.failSubmission() }
     }
 
-    private func rejectSoftwareSubmissionWhenExplicitRequired(
+    private func rejectSoftwareSubmissionWhenUnavailable(
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) throws {
         let shouldReject =
-            switch effectiveConfiguration.synchronizationPolicy {
-            case .implicitOnly: false
-            case .preferExplicit:
-                Self.explicitSyncBlocksSoftwareFallback(
-                    backingRuntimePath.explicitSync
-                )
-            case .requireExplicit: true
+            switch effectiveConfiguration.presentationMode {
+            case .software:
+                false
+            case .externalGPU:
+                true
+            case .managedGPU:
+                if effectiveConfiguration.fallbackPolicy == .requireGPU {
+                    true
+                } else {
+                    switch effectiveConfiguration.synchronizationPolicy {
+                    case .implicitOnly:
+                        false
+                    case .preferExplicit:
+                        Self.explicitSyncBlocksSoftwareFallback(
+                            backingRuntimePath.explicitSync
+                        )
+                    case .requireExplicit:
+                        true
+                    }
+                }
             }
 
         guard !shouldReject else {

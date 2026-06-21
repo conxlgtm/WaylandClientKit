@@ -262,8 +262,9 @@ Current user-facing contract:
   own display-configuration policy.
 - GPU and GBM/EGL work remains package-internal and is surfaced only through the
   separate preview product. There is no public renderer, swapchain, drawable, or
-  GPU buffer API in `WaylandClient`. Renderer-owned dmabuf submission is exposed
-  only by source-breaking `WaylandGraphicsPreview` move-only descriptor values.
+  GPU buffer API in `WaylandClient`. Renderer-owned dmabuf descriptor
+  construction, registration, submission, and release tracking are package-
+  scoped preview helpers.
 - `WaylandGraphicsRuntimePath` exposes renderer-neutral stage facts for
   surface feedback, render-node selection, dmabuf import, and buffer lifecycle.
   These are status values only and do not expose GBM/EGL/DRM/dmabuf handles.
@@ -349,8 +350,8 @@ Current preview contract:
   XRGB8888/ARGB8888 linear external-buffer candidates needed before rendering.
 - `WaylandGraphicsError.staleFrameContract`,
   `WaylandGraphicsError.externalBufferUnavailable`, and
-  `WaylandGraphicsError.foreignExternalBuffer` are public ownership/lifecycle
-  failures for registered external buffers.
+  `WaylandGraphicsError.foreignExternalBuffer` remain public typed failures for
+  stale frame contracts and package-scoped external-buffer ownership checks.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure, display-level dmabuf advertisement alone is

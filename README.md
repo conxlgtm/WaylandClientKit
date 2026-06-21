@@ -61,8 +61,9 @@ engine, styling system, accessibility model, scene model, retained renderer, or
 public raw Wayland binding layer.
 
 Raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, and reusable graphics file
-descriptor handles are not public API. `WaylandGraphicsPreview` exposes only
-narrow move-only interop values that consume `OwnedFileDescriptor`.
+descriptor handles are not public API. `WaylandGraphicsPreview` exposes
+renderer-neutral capability, configuration, scheduling, and runtime-path values;
+external-buffer descriptor and sync plumbing stays package-scoped.
 
 ## Quick Start
 
