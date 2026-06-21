@@ -249,30 +249,43 @@ enum GraphicsPreviewExternalBufferSmoke {
     private static func releaseStatus(
         _ receipt: WaylandGraphicsExternalBufferSubmissionReceipt
     ) async -> String {
-        await withTaskGroup(of: String.self) { group in
-            group.addTask {
+        let probe = ReleaseStatusProbe()
+        let task = Task {
+            let status =
                 switch await receipt.waitForRelease() {
                 case .released:
-                    return "released"
+                    "released"
                 case .backingClosed:
-                    return "backing-closed"
+                    "backing-closed"
                 case .failed(let reason):
-                    return "failed(\(reason))"
+                    "failed(\(reason))"
                 }
-            }
-            group.addTask {
-                try? await Task.sleep(for: .seconds(1))
-                return "not-observed"
-            }
-
-            let result = await group.next() ?? "not-observed"
-            group.cancelAll()
-            return result
+            await probe.record(status)
         }
+        defer { task.cancel() }
+
+        for _ in 0..<20 {
+            if let status = await probe.status {
+                return status
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+
+        return await probe.status ?? "not-observed"
     }
 
     nonisolated private static func log(_ message: String) {
         print(message)
+    }
+}
+
+private actor ReleaseStatusProbe {
+    private(set) var status: String?
+
+    func record(_ releaseStatus: String) {
+        guard status == nil else { return }
+
+        status = releaseStatus
     }
 }
 
