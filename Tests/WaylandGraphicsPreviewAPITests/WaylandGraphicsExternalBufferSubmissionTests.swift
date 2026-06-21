@@ -211,6 +211,39 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 
     @Test
+    func registerExternalBufferRejectsForeignFrameContract() async throws {
+        let firstWindow = try ExternalBufferFakeManagedWindow(
+            windowID: WindowID(rawValue: 910)
+        )
+        let secondWindow = try ExternalBufferFakeManagedWindow(
+            windowID: WindowID(rawValue: 911),
+            importBehavior: .succeed
+        )
+        let firstStorage = externalBufferStorage(window: firstWindow)
+        let secondStorage = externalBufferStorage(window: secondWindow)
+        let foreignLease = try await firstStorage.nextFrame()
+        let configurationID = try #require(
+            foreignLease.contract.recommendedExternalConfigurationID)
+
+        do {
+            _ = try await secondStorage.registerExternalBuffer(
+                try testExternalDescriptor(),
+                contract: foreignLease.contract,
+                configurationID: configurationID
+            )
+            Issue.record("expected foreign frame contract rejection")
+        } catch WaylandGraphicsError.staleFrameContract {
+            #expect(await secondWindow.importRequests == 0)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        await foreignLease.cancel()
+        try await firstStorage.closeForTesting()
+        try await secondStorage.closeForTesting()
+    }
+
+    @Test
     func forceSoftwareExternalBufferFailsBeforeImport() async throws {
         let window = try ExternalBufferFakeManagedWindow()
         let storage = WaylandGraphicsWindowBackingStorage(
@@ -744,7 +777,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         case succeed
     }
 
-    nonisolated let id = WindowID(rawValue: 910)
+    nonisolated let id: WindowID
     private var geometryValue: SurfaceGeometry
     private let importBehavior: ImportBehavior
     private var presentationFailuresBeforeSuccess: Int
@@ -760,6 +793,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private let includeDistinctDuplicateSurfaceFeedback: Bool
 
     init(
+        windowID backingWindowID: WindowID = WindowID(rawValue: 910),
         importBehavior requestedImportBehavior: ImportBehavior = .fail,
         presentationFailuresBeforeSuccess requestedPresentationFailures: Int = 0,
         surfaceFeedbackSynchronization requestedSurfaceFeedbackSynchronization:
@@ -767,6 +801,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         includeDistinctDuplicateSurfaceFeedback shouldIncludeDistinctDuplicateSurfaceFeedback:
             Bool = false
     ) throws {
+        id = backingWindowID
         geometryValue = try testGraphicsSurfaceGeometry()
         importBehavior = requestedImportBehavior
         presentationFailuresBeforeSuccess = requestedPresentationFailures

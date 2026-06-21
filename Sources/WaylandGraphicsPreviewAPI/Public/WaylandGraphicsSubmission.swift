@@ -438,9 +438,11 @@ public struct WaylandGraphicsFrameContract: Equatable, Sendable {
     public let recommendedExternalConfigurationID: WaylandGraphicsExternalConfigurationID?
     public let synchronization: WaylandGraphicsExternalSynchronizationAvailability
     public let runtimePath: WaylandGraphicsRuntimePath
+    package let windowID: WindowID
 
     package init(
         generation surfaceGeneration: WaylandGraphicsSurfaceGeneration,
+        windowID backingWindowID: WindowID,
         geometry surfaceGeometry: SurfaceGeometry,
         externalBufferConfigurations configurations:
             [WaylandGraphicsExternalBufferConfiguration],
@@ -451,6 +453,7 @@ public struct WaylandGraphicsFrameContract: Equatable, Sendable {
         runtimePath frameRuntimePath: WaylandGraphicsRuntimePath
     ) {
         generation = surfaceGeneration
+        windowID = backingWindowID
         geometry = surfaceGeometry
         externalBufferConfigurations = configurations
         recommendedExternalConfigurationID = recommendedConfiguration

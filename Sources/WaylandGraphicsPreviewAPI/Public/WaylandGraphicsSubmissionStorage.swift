@@ -325,6 +325,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
         return WaylandGraphicsFrameContract(
             generation: currentSurfaceGeneration,
+            windowID: window.id,
             geometry: geometry,
             externalBufferConfigurations: configurations,
             recommendedExternalConfigurationID: configurations.first?.id,
@@ -507,6 +508,9 @@ package actor WaylandGraphicsWindowBackingStorage {
             configuration.fallbackPolicy != .forceSoftware
         else {
             throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+        }
+        guard frameContract.windowID == window.id else {
+            throw WaylandGraphicsError.staleFrameContract
         }
         guard frameContract.generation == currentSurfaceGeneration else {
             throw WaylandGraphicsError.staleFrameContract

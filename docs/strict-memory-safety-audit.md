@@ -398,7 +398,7 @@ Audit invariant:
   planes remain locally owned and are closed by their wrapper.
 - External buffer descriptors validate positive size, nonzero DRM format,
   positive stride, consecutive plane indices, and single ownership before any
-  import request. Public one-plane descriptors use plane index 0. Import-plan
+  import request. Public descriptor planes use consecutive indices from 0. Import-plan
   deinitialization closes any plane descriptor that was not transferred to
   Wayland.
 - External submission receipts are completed only by implicit compositor buffer
