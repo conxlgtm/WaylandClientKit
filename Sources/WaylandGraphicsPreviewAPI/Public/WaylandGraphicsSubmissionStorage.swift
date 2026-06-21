@@ -13,6 +13,8 @@ private struct RegisteredExternalBuffer: Sendable {
 }
 
 private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable {
+    static let pollSleepNanoseconds: UInt64 = 10_000_000
+
     let identity: GPUSyncTimeline
     private let deviceFileDescriptor: Int32
     private let timeline: DRMSyncobjTimeline
@@ -51,13 +53,16 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
         }
     }
 
-    func waitForRelease(_ point: RawSyncobjTimelinePoint) throws {
+    func releasePointIsSignaled(_ point: RawSyncobjTimelinePoint) throws -> Bool {
         do {
             try timeline.wait(
                 point,
-                timeoutNanoseconds: Int64.max,
+                timeoutNanoseconds: 0,
                 waitForSubmit: true
             )
+            return true
+        } catch let error as GBMAllocationError where error.isSyncobjTimelineWaitTimeout {
+            return false
         } catch {
             throw WaylandGraphicsError.unavailable(.explicitSyncReleaseFailed)
         }
@@ -93,6 +98,8 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         [WaylandGraphicsExternalSubmissionID: WaylandGraphicsExternalReleaseState] = [:]
     private var submissionIDsBySlotID: [GBMBufferPoolSlotID: WaylandGraphicsExternalSubmissionID] =
         [:]
+    private var monitorTasksBySubmissionID:
+        [WaylandGraphicsExternalSubmissionID: Task<Void, Never>] = [:]
 
     func begin(
         submissionID: WaylandGraphicsExternalSubmissionID,
@@ -111,14 +118,18 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         result: WaylandGraphicsExternalReleaseResult
     ) {
         let state: WaylandGraphicsExternalReleaseState?
+        let monitorTask: Task<Void, Never>?
         lock.lock()
         if let submissionID = submissionIDsBySlotID.removeValue(forKey: slotID) {
             state = statesBySubmissionID.removeValue(forKey: submissionID)
+            monitorTask = monitorTasksBySubmissionID.removeValue(forKey: submissionID)
         } else {
             state = nil
+            monitorTask = nil
         }
         lock.unlock()
 
+        monitorTask?.cancel()
         guard let state else { return }
         Task {
             await state.finish(result)
@@ -130,25 +141,52 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         result: WaylandGraphicsExternalReleaseResult
     ) {
         let state: WaylandGraphicsExternalReleaseState?
+        let monitorTask: Task<Void, Never>?
         lock.lock()
         state = statesBySubmissionID.removeValue(forKey: submissionID)
+        monitorTask = monitorTasksBySubmissionID.removeValue(forKey: submissionID)
         submissionIDsBySlotID = submissionIDsBySlotID.filter { $0.value != submissionID }
         lock.unlock()
 
+        monitorTask?.cancel()
         guard let state else { return }
         Task {
             await state.finish(result)
         }
     }
 
-    func finishAll(result: WaylandGraphicsExternalReleaseResult) {
-        let states: [WaylandGraphicsExternalReleaseState]
+    func trackMonitorTask(
+        _ task: Task<Void, Never>,
+        submissionID: WaylandGraphicsExternalSubmissionID
+    ) {
+        var shouldCancel = false
         lock.lock()
-        states = Array(statesBySubmissionID.values)
-        statesBySubmissionID.removeAll()
-        submissionIDsBySlotID.removeAll()
+        if statesBySubmissionID[submissionID] == nil {
+            shouldCancel = true
+        } else {
+            monitorTasksBySubmissionID[submissionID] = task
+        }
         lock.unlock()
 
+        if shouldCancel {
+            task.cancel()
+        }
+    }
+
+    func finishAll(result: WaylandGraphicsExternalReleaseResult) {
+        let states: [WaylandGraphicsExternalReleaseState]
+        let monitorTasks: [Task<Void, Never>]
+        lock.lock()
+        states = Array(statesBySubmissionID.values)
+        monitorTasks = Array(monitorTasksBySubmissionID.values)
+        statesBySubmissionID.removeAll()
+        submissionIDsBySlotID.removeAll()
+        monitorTasksBySubmissionID.removeAll()
+        lock.unlock()
+
+        for task in monitorTasks {
+            task.cancel()
+        }
         for state in states {
             Task {
                 await state.finish(result)
@@ -465,7 +503,6 @@ package actor WaylandGraphicsWindowBackingStorage {
         contract frameContract: WaylandGraphicsFrameContract,
         configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
     ) throws -> WaylandGraphicsExternalBufferConfiguration {
-        try rejectExternalBufferExplicitSyncIfRequired(configuration: configuration)
         guard configuration.presentationMode == .externalGPU,
             configuration.fallbackPolicy != .forceSoftware
         else {
@@ -578,8 +615,12 @@ package actor WaylandGraphicsWindowBackingStorage {
                     identity: SurfaceSyncTimelineIdentity(timelineID.rawValue)
                 )
             } catch {
-                timelineFileDescriptor.close()
-                throw error
+                do {
+                    try timelineFileDescriptor.close()
+                } catch {
+                    _ = error
+                }
+                throw graphicsError(for: error, stage: .submissionPreparation)
             }
         } catch let error as RuntimeError {
             _ = error
@@ -588,6 +629,10 @@ package actor WaylandGraphicsWindowBackingStorage {
                 for: WaylandGraphicsError.unavailable(.explicitSyncSetupFailed),
                 stage: .submissionPreparation
             )
+        } catch let error as WaylandGraphicsError {
+            throw error
+        } catch {
+            throw graphicsError(for: error, stage: .submissionPreparation)
         }
 
         importedExternalSyncTimelineIDs.insert(timelineID)
@@ -943,17 +988,21 @@ package actor WaylandGraphicsWindowBackingStorage {
             let geometry = try await window.prepareGraphicsPreviewPresentation(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
             )
-            let capabilities = try await window.requestGraphicsPreviewSurfaceFeedback(
-                timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
-            )
-            backingRuntimePath = WaylandGraphicsRuntimePath.projected(
-                capabilities: WaylandGraphicsSurfaceCapabilities(
-                    snapshot: GraphicsPreviewSurfaceCapabilitySnapshot(
-                        snapshot: capabilities
-                    )
-                ),
-                policy: configuration.fallbackPolicy
-            )
+            do {
+                let capabilities = try await window.requestGraphicsPreviewSurfaceFeedback(
+                    timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
+                )
+                backingRuntimePath = WaylandGraphicsRuntimePath.projected(
+                    capabilities: WaylandGraphicsSurfaceCapabilities(
+                        snapshot: GraphicsPreviewSurfaceCapabilitySnapshot(
+                            snapshot: capabilities
+                        )
+                    ),
+                    policy: configuration.fallbackPolicy
+                )
+            } catch let error as GraphicsPreviewSurfaceFeedbackError {
+                try handleExternalSurfaceFeedbackFailure(error)
+            }
             return geometry
         }
 
@@ -1282,21 +1331,6 @@ extension WaylandGraphicsWindowBackingStorage {
         backingRuntimePath = Self.runtimePath(backingRuntimePath, backing: status)
     }
 
-    private func rejectExternalBufferExplicitSyncIfRequired(
-        configuration effectiveConfiguration: WaylandGraphicsConfiguration
-    ) throws {
-        guard effectiveConfiguration.synchronizationPolicy == .requireExplicit else {
-            return
-        }
-
-        let reason = WaylandGraphicsUnavailableReason.externalSynchronizationUnavailable
-        backingRuntimePath = Self.runtimePath(
-            backingRuntimePath,
-            externalBufferFailure: reason
-        )
-        throw WaylandGraphicsError.unavailable(reason)
-    }
-
     private func prepareRegisteredExternalBufferSubmission(
         _ externalBuffer: WaylandGraphicsExternalBuffer,
         leaseID: WaylandGraphicsFrameLeaseID,
@@ -1485,13 +1519,29 @@ extension WaylandGraphicsWindowBackingStorage {
     ) {
         let presenter = externalBufferPresenter
         let releaseRegistry = externalReleaseRegistry
-        Task {
+        let monitorTask = Task {
             do {
-                try releaseTimeline.waitForRelease(syncState.releasePoint.point)
-                try presenter.recordExplicitReleaseSignal(slotID: slotID)
+                while !Task.isCancelled {
+                    if try releaseTimeline.releasePointIsSignaled(syncState.releasePoint.point) {
+                        try presenter.recordExplicitReleaseSignal(slotID: slotID)
+                        releaseRegistry.finish(
+                            submissionID: submissionID,
+                            result: .released
+                        )
+                        return
+                    }
+                    try await Task.sleep(
+                        nanoseconds: WaylandGraphicsExternalReleaseTimeline.pollSleepNanoseconds
+                    )
+                }
                 releaseRegistry.finish(
                     submissionID: submissionID,
-                    result: .released
+                    result: .backingClosed
+                )
+            } catch is CancellationError {
+                releaseRegistry.finish(
+                    submissionID: submissionID,
+                    result: .backingClosed
                 )
             } catch {
                 releaseRegistry.finish(
@@ -1499,6 +1549,36 @@ extension WaylandGraphicsWindowBackingStorage {
                     result: .failed(.explicitSyncReleaseFailed)
                 )
             }
+        }
+        releaseRegistry.trackMonitorTask(monitorTask, submissionID: submissionID)
+    }
+
+    private func handleExternalSurfaceFeedbackFailure(
+        _ error: GraphicsPreviewSurfaceFeedbackError
+    ) throws {
+        _ = error
+        let fallbackReason = WaylandGraphicsFallbackReason.surfaceFeedbackUnavailable
+        let unavailableReason = WaylandGraphicsUnavailableReason.surfaceFeedbackUnavailable
+        switch configuration.fallbackPolicy {
+        case .preferGPUFallbackToSoftware:
+            backingRuntimePath = Self.runtimePath(
+                WaylandGraphicsRuntimePath.softwareFallback(
+                    capabilities: backingRuntimePath.capabilities,
+                    reason: fallbackReason
+                ),
+                surfaceFeedback: .fallback(fallbackReason)
+            )
+        case .requireGPU:
+            backingRuntimePath = Self.runtimePath(
+                backingRuntimePath,
+                surfaceFeedback: .failed(unavailableReason)
+            )
+            throw WaylandGraphicsError.unavailable(unavailableReason)
+        case .forceSoftware:
+            backingRuntimePath = WaylandGraphicsRuntimePath.softwareFallback(
+                capabilities: backingRuntimePath.capabilities,
+                reason: .forcedSoftware
+            )
         }
     }
 

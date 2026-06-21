@@ -90,6 +90,6 @@ import consumes `OwnedFileDescriptor`.
 
 ## Current Limitations
 
-- The first public descriptor initializer is one-plane only.
+- Public descriptor initializers cover one to four planes.
 - Explicit sync-file fences are not supported.
 - WCK does not provide a Vello, wgpu, Vulkan, EGL, or GLES public object.

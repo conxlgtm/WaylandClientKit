@@ -146,6 +146,66 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 
     @Test
+    func requireExplicitExternalBufferReachesImportWhenExplicitSyncAvailable() async throws {
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+        )
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
+            configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
+                synchronizationPolicy: .requireExplicit
+            )
+        )
+        let lease = try await storage.nextFrame()
+
+        #expect(lease.contract.synchronization == .explicitAvailable)
+        do {
+            _ = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: try testExternalDescriptor()
+            )
+        } catch {
+            _ = error
+        }
+
+        #expect(await window.importRequests == 1)
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func externalGPUFallbackPolicyAllowsSoftwareLeaseWhenSurfaceFeedbackFails() async throws {
+        let window = try ExternalBufferFakeManagedWindow(
+            surfaceFeedbackSynchronization: nil
+        )
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
+            configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
+                fallbackPolicy: .preferGPUFallbackToSoftware
+            )
+        )
+
+        let lease = try await storage.nextFrame()
+
+        #expect(lease.contract.externalBufferConfigurations.isEmpty)
+        #expect(lease.runtimePath.backing == .fallback(.surfaceFeedbackUnavailable))
+        #expect(lease.runtimePath.surfaceFeedback == .fallback(.surfaceFeedbackUnavailable))
+
+        let result = try await lease.submitSoftware { _ in
+            _ = ()
+        }
+        #expect(result.runtimePath.backing == .fallback(.surfaceFeedbackUnavailable))
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
     func forceSoftwareExternalBufferFailsBeforeImport() async throws {
         let window = try ExternalBufferFakeManagedWindow()
         let storage = WaylandGraphicsWindowBackingStorage(
@@ -668,14 +728,18 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private var submittedMetadata: [SurfaceCommitMetadata] = []
     private var presentationFeedbackRequests: [Bool] = []
     private(set) var preparePresentationRequests = 0
+    private let surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
 
     init(
         importBehavior requestedImportBehavior: ImportBehavior = .fail,
-        presentationFailuresBeforeSuccess requestedPresentationFailures: Int = 0
+        presentationFailuresBeforeSuccess requestedPresentationFailures: Int = 0,
+        surfaceFeedbackSynchronization requestedSurfaceFeedbackSynchronization:
+            SurfaceSynchronizationCapability? = .implicitOnly
     ) throws {
         geometryValue = try testGraphicsSurfaceGeometry()
         importBehavior = requestedImportBehavior
         presentationFailuresBeforeSuccess = requestedPresentationFailures
+        surfaceFeedbackSynchronization = requestedSurfaceFeedbackSynchronization
     }
 
     var geometry: SurfaceGeometry {
@@ -700,7 +764,13 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     func requestGraphicsPreviewSurfaceFeedback(
         timeoutMilliseconds _: Int32
     ) async throws -> SurfaceCapabilitySnapshot {
-        try testSurfaceCapabilitySnapshotWithDmabufFeedback()
+        guard let surfaceFeedbackSynchronization else {
+            throw GraphicsPreviewSurfaceFeedbackError.surfaceFeedbackUnavailable
+        }
+
+        return try testSurfaceCapabilitySnapshotWithDmabufFeedback(
+            synchronization: surfaceFeedbackSynchronization
+        )
     }
 
     func importGraphicsPreviewExternalBuffer(
@@ -891,7 +961,9 @@ private func testPreviewBufferPresentationResult(
     )
 }
 
-private func testSurfaceCapabilitySnapshotWithDmabufFeedback()
+private func testSurfaceCapabilitySnapshotWithDmabufFeedback(
+    synchronization: SurfaceSynchronizationCapability = .implicitOnly
+)
     throws -> SurfaceCapabilitySnapshot
 {
     let surfaceID = RawObjectID(42)
@@ -908,7 +980,7 @@ private func testSurfaceCapabilitySnapshotWithDmabufFeedback()
             version: 4,
             feedback: feedback
         ),
-        synchronization: .implicitOnly,
+        synchronization: synchronization,
         pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1),
         contentType: .available,
         alphaModifier: .available,
