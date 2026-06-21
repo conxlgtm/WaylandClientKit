@@ -367,6 +367,11 @@ Remaining unsafe constructs:
   to the same terminal release result. The release registry is package-private,
   protected by `NSLock`, and maps presenter slots to submission identities only
   while a submitted buffer awaits release.
+- `WaylandGraphicsExternalSyncTimeline` and
+  `WaylandGraphicsExternalSyncPoint` are public opaque sync identity values. The
+  timeline import API consumes `OwnedFileDescriptor`; WCK transfers that
+  descriptor to the compositor or closes it on failure without exposing the raw
+  integer descriptor.
 - `WaylandGraphicsExternalBuffer` is a public opaque registration handle. It
   stores diagnostic/public format facts plus package-private backing and slot
   tokens. Raw presenter slot types are not exposed from public declarations.
@@ -397,9 +402,10 @@ Audit invariant:
   deinitialization closes any plane descriptor that was not transferred to
   Wayland.
 - External submission receipts are completed only by implicit compositor buffer
-  release, backing close, or a terminal submission failure. A successful commit,
-  presentation feedback event, timeout, or later submission does not make a
-  renderer-owned image reusable.
+  release, explicit DRM syncobj release timeline signaling, backing close, or a
+  terminal submission failure. A successful commit, presentation feedback event,
+  timeout, `wl_buffer.release` for an explicit submission, or later submission
+  does not make a renderer-owned image reusable.
 - Registered external buffers are imported once, reserved before rendering, and
   rejected for a second reservation until the presenter reports compositor
   release for the previous submitted use.

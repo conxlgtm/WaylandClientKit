@@ -22,9 +22,11 @@ a terminal release result.
 
 Use ``WaylandGraphicsConfiguration`` to request:
 
-- `WaylandGraphicsBackingKind.software` for software-only backing.
-- `WaylandGraphicsBackingKind.managedGPU` for managed GPU clear-frame attempts
-  and external-buffer presentation.
+- `WaylandGraphicsPresentationMode.software` for software-only backing.
+- `WaylandGraphicsPresentationMode.managedGPU` for managed GPU clear-frame
+  attempts.
+- `WaylandGraphicsPresentationMode.externalGPU` for renderer-owned external
+  buffers.
 
 Use ``WaylandGraphicsFallbackPolicy`` to choose whether GPU failures may fall
 back to software or must throw a typed ``WaylandGraphicsError``.
@@ -34,7 +36,7 @@ back to software or must throw a typed ``WaylandGraphicsError``.
 - One-plane XRGB8888 or ARGB8888 images.
 - Public move-only descriptors that consume `OwnedFileDescriptor`.
 - Persistent registration and release-gated reservation.
-- Implicit synchronization only for external-buffer submission.
+- Implicit synchronization and DRM syncobj explicit synchronization.
 - Release-gated reuse through ``WaylandGraphicsExternalBufferSubmissionReceipt``.
 
 ## Example

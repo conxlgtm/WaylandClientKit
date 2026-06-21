@@ -46,12 +46,14 @@ enum GraphicsPreviewExternalBufferSmoke {
             )
             let runtimePath = try await backing.runtimePath
             log("feature: external-gpu-buffer")
-            log("scope: maintainer-internal")
+            log("scope: public-wck-api-with-package-renderer-helper")
             log("requested backing: external-dmabuf")
             log("dmabuf: \(status(runtimePath.dmabufImport))")
             log("format: XRGB8888")
             log("modifier: 0")
             log("planes: 1")
+            log("wck-cpu-readback: not-performed")
+            log("wck-software-staging: not-performed")
 
             var backingWasClosed = false
             switch options.mode {

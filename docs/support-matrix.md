@@ -83,7 +83,7 @@ This matrix describes the current experimental baseline. Status labels:
 | Protocol or Area | Status | Notes |
 | --- | --- | --- |
 | `zwp_linux_dmabuf_v1`, `zwp_linux_dmabuf_feedback_v1`, `zwp_linux_buffer_params_v1` | Preview | Capability discovery and source-breaking external-buffer submission. |
-| `wp_linux_drm_syncobj_manager_v1`, `wp_linux_drm_syncobj_surface_v1`, `wp_linux_drm_syncobj_timeline_v1` | Internal preview | Explicit sync preview work. |
+| `wp_linux_drm_syncobj_manager_v1`, `wp_linux_drm_syncobj_surface_v1`, `wp_linux_drm_syncobj_timeline_v1` | Preview | Managed GPU and external-buffer explicit synchronization. Public API exposes only opaque timeline identities and consuming `OwnedFileDescriptor` import. |
 | GBM/EGL/GLES/DRM shims | Internal preview | Package-internal managed GPU backing. |
 | `WaylandGraphicsPreview` | Preview | Source-breaking public preview product. |
 

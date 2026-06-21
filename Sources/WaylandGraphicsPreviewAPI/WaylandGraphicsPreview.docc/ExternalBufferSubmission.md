@@ -25,6 +25,10 @@ observation, and backing shutdown cleanup.
    ``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)``.
 8. Render into the reserved image.
 9. Submit with ``WaylandGraphicsExternalBufferRenderLease/submit(metadata:schedule:)``.
+   For DRM syncobj explicit synchronization, first import the renderer's acquire
+   timeline with ``WaylandGraphicsWindowBacking/importExternalSyncTimeline(_:)``
+   and submit an acquire point with
+   ``WaylandGraphicsExternalBufferRenderLease/submit(acquireSynchronization:metadata:schedule:)``.
 10. Keep the renderer allocation alive and unavailable to the renderer pool until
     the returned ``WaylandGraphicsExternalBufferSubmissionReceipt`` reaches a
     terminal release result.
@@ -45,36 +49,47 @@ before returning the error.
 ownership signal for the submitted image.
 
 - `WaylandGraphicsExternalReleaseResult.released` means WCK observed the
-  authoritative implicit compositor buffer release for that submission.
+  authoritative release mechanism for that submission. In implicit mode this is
+  `wl_buffer.release`; in DRM syncobj explicit mode this is the compositor
+  signaling WCK's per-buffer release timeline point.
 - `WaylandGraphicsExternalReleaseResult.backingClosed` means the backing closed
   before normal release, so the caller should retire the image instead of reuse
   it for a later frame.
 - `WaylandGraphicsExternalReleaseResult.failed` means WCK reached a terminal
   tracking failure for the submission.
 
-A successful commit, frame callback, presentation feedback event, timeout, or
-later frame submission is not release evidence. A registered buffer cannot be
-reserved again until WCK observes release for its previous submitted use.
-After release, the registered buffer may be reserved again or unregistered.
+A successful commit, frame callback, presentation feedback event, timeout,
+`wl_buffer.release` while explicit synchronization is active, or later frame
+submission is not release evidence. A registered buffer cannot be reserved again
+until WCK observes release for its previous submitted use. After release, the
+registered buffer may be reserved again or unregistered.
 
 ## Synchronization Scope
 
-The public external-buffer path currently uses implicit synchronization. A
-configuration that requires explicit synchronization fails before import with a
-typed unavailable reason. The frame contract reports whether explicit sync is
-advertised, but public external syncobj timeline import and release monitoring
-are separate follow-up work.
+The public external-buffer path supports implicit synchronization and DRM
+syncobj explicit synchronization.
+
+- `implicitOnly` submits without syncobj constraints and uses `wl_buffer.release`
+  as release authority.
+- `preferExplicit` uses DRM syncobj when the compositor, render node, imported
+  acquire timeline, and per-buffer release timeline are available. Otherwise it
+  falls back to implicit synchronization before rendering and reports a runtime
+  fallback reason.
+- `requireExplicit` fails before renderer work can be submitted when WCK cannot
+  configure the acquire/release timeline contract.
+
+Sync-file fences are not supported.
 
 ## What Stays Private
 
 Public external-buffer API does not expose raw Wayland objects, GBM/EGL objects,
 DRM object handles, protocol proxies, raw pointers, or reusable borrowed file
-descriptor access. The only public descriptor boundary is a move-only consuming
-value backed by `OwnedFileDescriptor`.
+descriptor access. The public descriptor boundary is narrow and move-only:
+external buffer planes consume `OwnedFileDescriptor`, and external sync timeline
+import consumes `OwnedFileDescriptor`.
 
 ## Current Limitations
 
 - The first public descriptor initializer is one-plane only.
 - Explicit sync-file fences are not supported.
-- DRM syncobj external-buffer submission is not public yet.
 - WCK does not provide a Vello, wgpu, Vulkan, EGL, or GLES public object.

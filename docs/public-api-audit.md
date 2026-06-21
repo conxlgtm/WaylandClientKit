@@ -289,6 +289,7 @@ Intentionally public:
 - `WaylandGraphicsRuntimePath`
 - `WaylandGraphicsConfiguration`
 - `WaylandGraphicsBackingKind`
+- `WaylandGraphicsPresentationMode`
 - `WaylandGraphicsSynchronizationPolicy`
 - `WaylandGraphicsPacingPolicy`
 - `WaylandGraphicsFrameSchedule`
@@ -308,6 +309,9 @@ Intentionally public:
 - `WaylandGraphicsExternalBufferID`
 - `WaylandGraphicsExternalSubmissionID`
 - `WaylandGraphicsExternalSyncTimelineID`
+- `WaylandGraphicsExternalSyncTimeline`
+- `WaylandGraphicsExternalSyncPoint`
+- `WaylandGraphicsExternalAcquireSynchronization`
 - `WaylandGraphicsExternalSynchronizationAvailability`
 - `WaylandGraphicsBufferTransform`
 - `WaylandGraphicsExternalAlphaMode`
@@ -355,9 +359,10 @@ Current preview contract:
   render leases submit them after the renderer has drawn into the image.
   Submission returns a receipt with a stable submission identity and an
   idempotent release wait. The receipt resolves from authoritative implicit
-  `wl_buffer.release` observation or backing teardown. Registered buffers can be
-  unregistered only after no reservation or submitted use is awaiting release,
-  and unregistering retires WCK's imported buffer wrapper.
+  `wl_buffer.release`, authoritative DRM syncobj release timeline signaling, or
+  backing teardown. Registered buffers can be unregistered only after no
+  reservation or submitted use is awaiting release, and unregistering retires
+  WCK's imported buffer wrapper.
 - `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
   synchronization availability, runtime-path snapshot, and initial normalized
   XRGB8888/ARGB8888 linear external-buffer candidates needed before rendering.
@@ -387,7 +392,8 @@ Current preview contract:
   SHM pools, scene rendering, swapchains, drawables, or raw
   color-management/image-description protocol objects. The preview graphics API
   intentionally accepts `OwnedFileDescriptor` only through move-only external
-  buffer plane descriptors; callers do not get reusable raw descriptor access.
+  buffer plane descriptors and syncobj timeline import; callers do not get
+  reusable raw descriptor access.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is

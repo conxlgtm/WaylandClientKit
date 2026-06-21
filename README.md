@@ -60,8 +60,9 @@ WaylandClientKit does not provide a widget set, declarative view tree, layout
 engine, styling system, accessibility model, scene model, retained renderer, or
 public raw Wayland binding layer.
 
-Raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, and graphics file descriptor handles
-are not public API.
+Raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, and reusable graphics file
+descriptor handles are not public API. `WaylandGraphicsPreview` exposes only
+narrow move-only interop values that consume `OwnedFileDescriptor`.
 
 ## Quick Start
 
