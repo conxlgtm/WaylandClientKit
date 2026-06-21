@@ -805,9 +805,14 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
         guard
             let registration = registeredExternalBuffers[buffer.id],
-            registration.handle.slotRawValue == buffer.slotRawValue,
-            let slotID = try? GBMBufferPoolSlotID(buffer.slotRawValue)
+            registration.handle.slotRawValue == buffer.slotRawValue
         else {
+            return .unregistered
+        }
+        let slotID: GBMBufferPoolSlotID
+        do {
+            slotID = try GBMBufferPoolSlotID(buffer.slotRawValue)
+        } catch {
             return .unregistered
         }
         if externalBufferPresenter.availableSlotIDs.contains(slotID) {

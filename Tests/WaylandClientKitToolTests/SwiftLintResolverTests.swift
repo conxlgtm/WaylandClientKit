@@ -5,136 +5,98 @@ import WaylandClientKitToolSupport
 @Suite
 struct SwiftLintResolverTests {
     @Test
-    func fallsBackToNixDevelopWhenPathBinaryCannotRun() throws {
+    func rejectsSwiftLintWithoutCustomRules() throws {
         let root = try temporaryRepository()
-        try "".write(
-            to: root.appendingPathComponent("flake.nix"),
-            atomically: true,
-            encoding: .utf8
-        )
         let bin = root.appendingPathComponent("bin")
         try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-        try writeExecutable(
-            """
-            #!/bin/sh
-            if [ "$1" = "version" ]; then
-              exit 127
-            fi
-            exit 44
-            """,
-            to: bin.appendingPathComponent("swiftlint")
-        )
-        let nixInvocation = root.appendingPathComponent("nix-invocation.txt")
-        try writeExecutable(
-            """
-            #!/bin/sh
-            printf '%s\\n' "$@" > \(nixInvocation.path)
-            exit 0
-            """,
-            to: bin.appendingPathComponent("nix")
-        )
-        let runner = ProcessRunner(
-            environment: ["PATH": bin.path, "WCK_NIX_BIN": bin.appendingPathComponent("nix").path])
-        let context = ToolContext(repository: Repository(root: root), runner: runner)
-
-        try SwiftCommandResolver(context: context).runSwiftLint()
-
-        let arguments = try String(contentsOf: nixInvocation, encoding: .utf8)
-        #expect(arguments.contains("--option\nwarn-dirty\nfalse\ndevelop\n"))
-        #expect(arguments.contains("\n--command\nswiftlint\n"))
-        #expect(
-            arguments.contains(
-                "lint\n--strict\n--no-cache\n--quiet\n--force-exclude\n--config\n"
-                    + ".swiftlint.yml"))
-    }
-
-    @Test
-    func prefersNixDevelopOverPathBinaryWhenFlakeSwiftLintIsAvailable() throws {
-        let root = try temporaryRepository()
-        try "".write(
-            to: root.appendingPathComponent("flake.nix"),
-            atomically: true,
-            encoding: .utf8
-        )
-        let bin = root.appendingPathComponent("bin")
-        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-        let swiftLintInvocation = root.appendingPathComponent("swiftlint-invocation.txt")
         try writeExecutable(
             """
             #!/bin/sh
             if [ "$1" = "version" ]; then
               exit 0
             fi
-            printf '%s\\n' "$@" > \(swiftLintInvocation.path)
-            exit 44
+            echo "warning: Skipping enabled rule 'custom_rules'" >&2
+            exit 0
             """,
             to: bin.appendingPathComponent("swiftlint")
         )
-        let nixInvocation = root.appendingPathComponent("nix-invocation.txt")
-        try writeExecutable(
-            """
-            #!/bin/sh
-            printf '%s\\n' "$@" > \(nixInvocation.path)
-            exit 0
-            """,
-            to: bin.appendingPathComponent("nix")
-        )
-        let runner = ProcessRunner(
-            environment: ["PATH": bin.path, "WCK_NIX_BIN": bin.appendingPathComponent("nix").path])
+        let runner = ProcessRunner(environment: ["PATH": bin.path])
         let context = ToolContext(repository: Repository(root: root), runner: runner)
 
-        try SwiftCommandResolver(context: context).runSwiftLint()
-
-        let arguments = try String(contentsOf: nixInvocation, encoding: .utf8)
-        #expect(arguments.contains("--option\nwarn-dirty\nfalse\ndevelop\n"))
-        #expect(arguments.contains("\n--command\nswiftlint\n"))
-        #expect(
-            arguments.contains(
-                "lint\n--strict\n--no-cache\n--quiet\n--force-exclude\n--config\n"
-                    + ".swiftlint.yml"))
-        #expect(!FileManager.default.fileExists(atPath: swiftLintInvocation.path))
+        do {
+            try SwiftCommandResolver(context: context).runSwiftLint()
+            Issue.record("expected non-strict SwiftLint to fail")
+        } catch let error as ToolError {
+            #expect(error.message.contains("SourceKit custom_rules"))
+            #expect(error.message.contains("install-swiftlint"))
+        }
     }
 
     @Test
-    func usesPathBinaryWhenVersionProbePasses() throws {
+    func prefersPinnedSwiftLint() throws {
         let root = try temporaryRepository()
-        try "".write(
-            to: root.appendingPathComponent("flake.nix"),
-            atomically: true,
-            encoding: .utf8
-        )
+        let pinned = root.appendingPathComponent(".build/tools")
         let bin = root.appendingPathComponent("bin")
+        try FileManager.default.createDirectory(at: pinned, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-        let swiftLintInvocation = root.appendingPathComponent("swiftlint-invocation.txt")
+        let pinnedInvocation = root.appendingPathComponent("pinned-swiftlint-invocation.txt")
+        let pathInvocation = root.appendingPathComponent("path-swiftlint-invocation.txt")
         try writeExecutable(
-            """
-            #!/bin/sh
-            if [ "$1" = "version" ]; then
-              exit 0
-            fi
-            printf '%s\\n' "$@" > \(swiftLintInvocation.path)
-            exit 0
-            """,
+            strictSwiftLintScript(invocation: pinnedInvocation),
+            to: pinned.appendingPathComponent("swiftlint")
+        )
+        try writeExecutable(
+            strictSwiftLintScript(invocation: pathInvocation),
             to: bin.appendingPathComponent("swiftlint")
         )
-        try writeExecutable(
-            """
-            #!/bin/sh
-            exit 45
-            """,
-            to: bin.appendingPathComponent("nix")
-        )
-        let runner = ProcessRunner(
-            environment: ["PATH": bin.path, "WCK_NIX_BIN": bin.appendingPathComponent("nix").path])
+        let runner = ProcessRunner(environment: ["PATH": bin.path])
         let context = ToolContext(repository: Repository(root: root), runner: runner)
 
         try SwiftCommandResolver(context: context).runSwiftLint()
 
-        let arguments = try String(contentsOf: swiftLintInvocation, encoding: .utf8)
+        #expect(FileManager.default.fileExists(atPath: pinnedInvocation.path))
+        #expect(!FileManager.default.fileExists(atPath: pathInvocation.path))
+    }
+
+    @Test
+    func usesPathSwiftLintWhenStrict() throws {
+        let root = try temporaryRepository()
+        let bin = root.appendingPathComponent("bin")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        let invocation = root.appendingPathComponent("swiftlint-invocation.txt")
+        try writeExecutable(
+            strictSwiftLintScript(invocation: invocation),
+            to: bin.appendingPathComponent("swiftlint")
+        )
+        let runner = ProcessRunner(environment: ["PATH": bin.path])
+        let context = ToolContext(repository: Repository(root: root), runner: runner)
+
+        try SwiftCommandResolver(context: context).runSwiftLint()
+
+        let arguments = try String(contentsOf: invocation, encoding: .utf8)
         #expect(
             arguments.contains(
                 "lint\n--strict\n--no-cache\n--quiet\n--force-exclude\n--config\n"
                     + ".swiftlint.yml"))
+    }
+
+    private func strictSwiftLintScript(invocation: URL) -> String {
+        """
+        #!/bin/sh
+        if [ "$1" = "version" ]; then
+          exit 0
+        fi
+        for arg in "$@"; do
+          case "$arg" in
+            *swiftlint-custom-rules-probe*)
+              echo "error: No Silent optional try Violation (no_silent_try_optional)" >&2
+              exit 1
+              ;;
+          esac
+        done
+        printf '%s\\n' "$@" > \(invocation.path)
+        exit 0
+        """
     }
 
     private func temporaryRepository() throws -> URL {
