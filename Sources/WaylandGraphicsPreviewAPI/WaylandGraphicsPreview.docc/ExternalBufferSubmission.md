@@ -1,73 +1,77 @@
 # External Buffer Submission
 
-External buffer submission is currently package-scoped preview plumbing for
-renderers that own GPU images and need WCK to import and present those images
-through a window surface without staging normal frames through shared-memory
-software buffers.
+Use external buffer submission when a renderer owns GPU images and wants WCK to
+import and present those images through a window surface without staging normal
+frames through shared-memory software buffers.
 
-The shape is intentionally narrow: package-scoped descriptors accept
-renderer-owned dma-buf images with one to four planes, XRGB8888 or ARGB8888
-format facts, and a DRM modifier value. WCK owns Wayland import, `wl_buffer`
-lifetime, surface commit, release observation, and backing shutdown cleanup.
-The public API exposes renderer-neutral capability, configuration, and runtime
-facts only; it does not expose descriptor construction, file descriptor transfer,
-registration, external render leases, release receipts, or sync timeline import.
+This is source-breaking preview API. The public boundary is intentionally narrow:
+move-only descriptor values consume `OwnedFileDescriptor` ownership for
+renderer-owned dma-buf images and DRM syncobj timelines. WCK owns Wayland import,
+`wl_buffer` lifetime, surface commit, release observation, release waiters, and
+backing shutdown cleanup. The public API does not expose raw Wayland proxies,
+GBM/EGL objects, borrowed descriptor integers, raw pointers, or reusable file
+descriptor access.
 
-## Registered Package Flow
+## Registered Public Flow
 
-1. Create a ``WaylandGraphicsWindowBacking`` with a GPU-capable configuration.
+1. Create a ``WaylandGraphicsWindowBacking`` with
+   `WaylandGraphicsPresentationMode.externalGPU`.
 2. Await ``WaylandGraphicsWindowBacking/nextFrame()``.
 3. Read ``WaylandGraphicsFrameLease/contract`` before allocating or rendering.
 4. Pick one exact ``WaylandGraphicsExternalBufferConfiguration`` from the
-   contract.
-5. Export each renderer-owned image as a package-scoped external buffer
-   descriptor with one to four planes.
-6. Register each descriptor with the package-scoped backing registration helper.
-7. Reserve an available registered buffer with the package-scoped frame lease
-   reservation helper.
+   contract. The configuration includes the selected DRM format, modifier,
+   alpha interpretation, scanout preference, synchronization availability, and
+   ``WaylandGraphicsRenderNode/deviceIDBytes`` for renderer-side device
+   selection.
+5. Export each renderer-owned image as a
+   ``WaylandGraphicsExternalBufferDescriptor`` with one to four
+   ``WaylandGraphicsExternalBufferPlane`` values.
+6. Register each descriptor with
+   ``WaylandGraphicsWindowBacking/registerExternalBuffer(_:contract:configurationID:)``.
+7. Reserve an available registered buffer with
+   ``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)``.
 8. Render into the reserved image.
-9. Submit with the package-scoped external render lease.
-   For DRM syncobj explicit synchronization, submit an acquire point with
-   the package-scoped explicit synchronization submit helper.
+9. Submit the ``WaylandGraphicsExternalBufferRenderLease``. For DRM syncobj
+   explicit synchronization, import an acquire timeline with
+   ``WaylandGraphicsWindowBacking/importExternalSyncTimeline(_:)`` and submit a
+   `WaylandGraphicsExternalAcquireSynchronization.drmSyncobj(_:)` point.
 10. Keep the renderer allocation alive and unavailable to the renderer pool until
-    the returned package-scoped submission receipt reaches a terminal release
-    result.
-11. When the renderer pool retires an image, unregister it with the
-    package-scoped backing helper after the image is available and no submitted
-    use is awaiting compositor release.
+    ``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()`` reaches
+    a terminal result.
+11. Reuse the image only after release, or retire it with
+    ``WaylandGraphicsWindowBacking/unregisterExternalBuffer(_:)`` when the pool
+    drops the allocation.
 
 Registration imports a descriptor once. Repeated frame submissions reuse the
 registered WCK-side buffer and do not re-import the same renderer image.
 
-The descriptor is move-only. Passing it to WCK consumes the plane descriptor. If
-validation or preflight fails before import, WCK closes descriptors it still owns
-before returning the error.
-
 ## Release Authority
 
-The package-scoped submission receipt is the ownership signal for the submitted
-image.
+``WaylandGraphicsExternalBufferSubmissionReceipt`` is the ownership signal for a
+submitted image. The receipt exposes the submission identity, buffer identity,
+contract generation, frame result, runtime report, release mechanism, and an
+exactly-once terminal release result.
 
 - `WaylandGraphicsExternalReleaseResult.released` means WCK observed the
   authoritative release mechanism for that submission. In implicit mode this is
-  `wl_buffer.release`; in DRM syncobj explicit mode this is the compositor
-  signaling WCK's per-buffer release timeline point.
-- `WaylandGraphicsExternalReleaseResult.backingClosed` means the backing closed
-  before normal release, so the caller should retire the image instead of reuse
-  it for a later frame.
-- `WaylandGraphicsExternalReleaseResult.failed` means WCK reached a terminal
-  tracking failure for the submission.
+  the matching `wl_buffer.release`; in DRM syncobj explicit mode this is the
+  compositor signaling WCK's per-buffer release timeline point.
+- `WaylandGraphicsExternalReleaseResult.retired(_:)` means the backing,
+  window, or display ended ownership tracking before normal release. The caller
+  should retire the image instead of reuse it for a later frame.
+- `WaylandGraphicsExternalReleaseResult.failed(_:)` means WCK reached a
+  terminal tracking failure for the submission.
 
 A successful commit, frame callback, presentation feedback event, timeout,
 `wl_buffer.release` while explicit synchronization is active, or later frame
 submission is not release evidence. A registered buffer cannot be reserved again
-until WCK observes release for its previous submitted use. After release, the
+while it is rendering, submitted, or awaiting release. After release, the
 registered buffer may be reserved again or unregistered.
 
 ## Synchronization Scope
 
-The package-scoped external-buffer path supports implicit synchronization and
-DRM syncobj explicit synchronization.
+The public external-buffer path supports implicit synchronization and DRM syncobj
+explicit synchronization.
 
 - `implicitOnly` submits without syncobj constraints and uses `wl_buffer.release`
   as release authority.
@@ -80,16 +84,11 @@ DRM syncobj explicit synchronization.
 
 Sync-file fences are not supported.
 
-## What Stays Private
-
-The public graphics API does not expose raw Wayland objects, GBM/EGL objects,
-DRM object handles, protocol proxies, raw pointers, file-descriptor handles,
-syncobj handles, or reusable borrowed file descriptor access. External-buffer
-descriptor construction and submission stay package-scoped until WCK has a
-compliant public handle boundary.
-
 ## Current Limitations
 
-- External-buffer descriptor construction and submission are package-scoped.
-- Explicit sync-file fences are not supported.
 - WCK does not provide a Vello, wgpu, Vulkan, EGL, or GLES public object.
+- Public interop consumes ownership of dma-buf and syncobj file descriptors; it
+  does not expose borrowed descriptor integers or protocol objects.
+- Public render-node information is device identity only. Applications that need
+  a native renderer object must use platform graphics APIs to map
+  ``WaylandGraphicsRenderNode/deviceIDBytes`` to their own device or render node.

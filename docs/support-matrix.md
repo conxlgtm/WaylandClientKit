@@ -82,8 +82,8 @@ This matrix describes the current experimental baseline. Status labels:
 
 | Protocol or Area | Status | Notes |
 | --- | --- | --- |
-| `zwp_linux_dmabuf_v1`, `zwp_linux_dmabuf_feedback_v1`, `zwp_linux_buffer_params_v1` | Preview | Capability discovery and package-scoped external-buffer submission. |
-| `wp_linux_drm_syncobj_manager_v1`, `wp_linux_drm_syncobj_surface_v1`, `wp_linux_drm_syncobj_timeline_v1` | Preview | Managed GPU and package-scoped external-buffer explicit synchronization. Public API exposes only renderer-neutral availability and runtime facts. |
+| `zwp_linux_dmabuf_v1`, `zwp_linux_dmabuf_feedback_v1`, `zwp_linux_buffer_params_v1` | Preview | Capability discovery, public format/modifier/device-identity facts, and public move-only external-buffer submission. |
+| `wp_linux_drm_syncobj_manager_v1`, `wp_linux_drm_syncobj_surface_v1`, `wp_linux_drm_syncobj_timeline_v1` | Preview | Managed GPU and public move-only external-buffer explicit synchronization. Public API consumes descriptor ownership without exposing borrowed descriptor integers. |
 | GBM/EGL/GLES/DRM shims | Internal preview | Package-internal managed GPU backing. |
 | `WaylandGraphicsPreview` | Preview | Source-breaking public preview product. |
 
@@ -105,4 +105,4 @@ This matrix describes the current experimental baseline. Status labels:
 | --- | --- | --- |
 | General output-management mutation APIs | Unsupported | Only current/no-op preview configuration paths exist. |
 | Stable public GPU rendering APIs in `WaylandClient` | Unsupported | Use `WaylandGraphicsPreview` for source-breaking experiments. |
-| Public raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, file descriptor, or unsafe handles | Unsupported | Raw handles stay internal. `WaylandGraphicsPreview` exposes renderer-neutral preview values; external-buffer descriptor and submission helpers are package-scoped. |
+| Public raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, borrowed file descriptor, or unsafe handles | Unsupported | Raw handles stay internal. `WaylandGraphicsPreview` exposes renderer-neutral preview values, render-node device identity bytes, and move-only external-buffer descriptors that consume owned file descriptors. |

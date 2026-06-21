@@ -1,10 +1,8 @@
 # WaylandGraphicsPreview
 
-Use renderer-neutral preview APIs to request software or managed GPU
-presentation for a Wayland window and inspect typed runtime-path facts.
-Package-scoped external-buffer helpers provide preview evidence for
-renderer-owned dmabuf presentation without exposing raw graphics handles as
-public API.
+Use renderer-neutral preview APIs to request software, managed GPU, or
+renderer-owned external-buffer presentation for a Wayland window and inspect
+typed runtime-path facts.
 
 `WaylandGraphicsPreview` is source-breaking preview API. Public drift is still
 baseline and audit tracked, but framework authors should expect source changes
@@ -50,7 +48,23 @@ value types.
 - ``WaylandGraphicsSubmittedFrame``
 - ``WaylandGraphicsClearFrame``
 - ``WaylandGraphicsFrameResult``
+- ``WaylandGraphicsExternalBuffer``
+- ``WaylandGraphicsExternalBufferID``
+- ``WaylandGraphicsExternalBufferPlane``
+- ``WaylandGraphicsExternalBufferPlanes``
+- ``WaylandGraphicsExternalBufferDescriptor``
 - ``WaylandGraphicsExternalBufferConfiguration``
+- ``WaylandGraphicsExternalBufferRenderLease``
+- ``WaylandGraphicsExternalBufferSubmissionReceipt``
+- ``WaylandGraphicsExternalReleaseResult``
+- ``WaylandGraphicsExternalReleaseMechanism``
+- ``WaylandGraphicsExternalRetirementReason``
+- ``WaylandGraphicsExternalBufferLifecycle``
+- ``WaylandGraphicsExternalSubmissionID``
+- ``WaylandGraphicsExternalSyncTimeline``
+- ``WaylandGraphicsExternalSyncTimelineID``
+- ``WaylandGraphicsExternalSyncPoint``
+- ``WaylandGraphicsExternalAcquireSynchronization``
 - ``WaylandGraphicsSurfaceGeneration``
 - ``WaylandGraphicsExternalConfigurationID``
 - ``WaylandGraphicsDRMFormat``

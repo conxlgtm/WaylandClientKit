@@ -356,22 +356,22 @@ Remaining unsafe constructs:
 - `RawLinuxDmabufPlaneFileDescriptor` owns a plane descriptor before it is
   transferred to `zwp_linux_buffer_params_v1.add`.
 - `WaylandGraphicsExternalBufferDescriptor` and
-  `WaylandGraphicsExternalBufferPlane` are package-scoped preview move-only
-  values. Their manufacturing path stores descriptor facts for transfer into the
-  dmabuf import path without exposing reusable file-descriptor access, raw
-  Wayland proxies, GBM/EGL/DRM objects, syncobj handles, or pointers from public
-  API.
-- `WaylandGraphicsExternalBufferSubmissionReceipt` is package-scoped and retains
-  a private actor release state. The receipt may be awaited repeatedly, and all
+  `WaylandGraphicsExternalBufferPlane` are public preview move-only values that
+  consume `OwnedFileDescriptor` ownership for transfer into the dmabuf import
+  path. They do not expose reusable file-descriptor access, borrowed descriptor
+  integers, raw Wayland proxies, GBM/EGL/DRM objects, syncobj handles, or
+  pointers from public API.
+- `WaylandGraphicsExternalBufferSubmissionReceipt` is public and retains a
+  private actor release state. The receipt may be awaited repeatedly, and all
   waiters resolve to the same terminal release result. The release registry is
   package-private, protected by `NSLock`, and maps presenter slots to submission
   identities only while a submitted buffer awaits release.
 - `WaylandGraphicsExternalSyncTimeline` and
-  `WaylandGraphicsExternalSyncPoint` are package-scoped opaque sync identity
-  values. The timeline import plumbing stays package-scoped so public graphics
-  API does not expose raw syncobj or file-descriptor handles.
-- `WaylandGraphicsExternalBuffer` is a package-scoped registration handle. It
-  stores diagnostic format facts plus package-private backing and slot tokens.
+  `WaylandGraphicsExternalSyncPoint` are public opaque sync identity values.
+  Timeline import consumes `OwnedFileDescriptor` ownership and does not expose
+  raw syncobj or borrowed file-descriptor handles.
+- `WaylandGraphicsExternalBuffer` is a public registration handle. It stores
+  public diagnostic format facts plus package-private backing and slot tokens.
   Raw presenter slot types are not exposed from public declarations.
 - `RawSurfaceBuffer` is `@unchecked Sendable` because the managed GPU preview
   presenter passes an imported `wl_buffer` wrapper through the async
@@ -619,8 +619,9 @@ Audit invariant:
 - Submitted GPU buffer-pool slots return to availability only after the matching
   Wayland buffer release.
 - Raw GPU preview plumbing remains package-internal. The public graphics preview
-  contract exposes renderer-neutral capabilities plus move-only external-buffer
-  descriptor and release-receipt values.
+  contract exposes renderer-neutral capabilities, selected format/modifier and
+  render-node device identity facts, plus move-only external-buffer descriptor,
+  registration, render-lease, synchronization, and release-receipt values.
 - `GPUWindowBackingState` is the internal state snapshot for lifecycle,
   runtime-path facts, buffer-pool readiness, last submitted frame, diagnostics,
   fallback, and failure.

@@ -307,16 +307,32 @@ Intentionally public:
 - `WaylandGraphicsXRGBColor`
 - `WaylandGraphicsSurfaceGeneration`
 - `WaylandGraphicsExternalConfigurationID`
+- `WaylandGraphicsExternalBufferID`
+- `WaylandGraphicsExternalSubmissionID`
+- `WaylandGraphicsExternalSyncTimelineID`
+- `WaylandGraphicsExternalSyncTimeline`
+- `WaylandGraphicsExternalSyncPoint`
+- `WaylandGraphicsExternalAcquireSynchronization`
 - `WaylandGraphicsRenderNode`
 - `WaylandGraphicsExternalSynchronizationAvailability`
 - `WaylandGraphicsExternalAlphaMode`
 - `WaylandGraphicsExternalBufferConfiguration`
 - `WaylandGraphicsFrameContract`
+- `WaylandGraphicsExternalBuffer`
 - `WaylandGraphicsDRMFormat`
 - `WaylandGraphicsDRMFormatModifier`
+- `WaylandGraphicsExternalBufferPlane`
+- `WaylandGraphicsExternalBufferPlanes`
+- `WaylandGraphicsExternalBufferDescriptor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
 - `WaylandGraphicsFrameResult`
+- `WaylandGraphicsExternalRetirementReason`
+- `WaylandGraphicsExternalReleaseMechanism`
+- `WaylandGraphicsExternalBufferLifecycle`
+- `WaylandGraphicsExternalReleaseResult`
+- `WaylandGraphicsExternalBufferSubmissionReceipt`
+- `WaylandGraphicsExternalBufferRenderLease`
 - `WaylandGraphicsError`
 - `WaylandGraphicsWindowBacking`
 - `WaylandGraphicsFrameLease`
@@ -337,21 +353,24 @@ Current preview contract:
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw protocol or renderer
   objects.
-- The external-buffer import path is package-scoped preview plumbing for
-  renderer-owned one-to-four-plane dmabuf images. Public API exposes only
-  renderer-neutral configuration and runtime facts: external configuration IDs,
-  DRM format/modifier values, alpha mode, synchronization availability, scanout
-  preference, and opaque render-node identity. Descriptor construction, file
-  descriptor transfer, buffer registration, render leases, release receipts, and
-  sync timeline import stay package-scoped until WCK has a compliant public
-  handle boundary.
+- The external-buffer import path is public source-breaking preview API for
+  renderer-owned one-to-four-plane dmabuf images. Public descriptor and sync
+  timeline values are move-only and consume `OwnedFileDescriptor` ownership;
+  public API does not expose raw Wayland proxies, GBM/EGL objects, borrowed
+  descriptor integers, or pointers. External configurations expose selected
+  format/modifier facts and render-node device identity bytes, leaving native
+  device opening/allocation to the renderer. Registration imports a descriptor
+  once, frame leases reserve registered buffers, render leases submit implicit
+  or explicit synchronization, and receipts report submission identity, buffer
+  identity, contract generation, runtime facts, release mechanism, and terminal
+  compositor-release result.
 - `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
   synchronization availability, runtime-path snapshot, and initial normalized
-  XRGB8888/ARGB8888 linear external-buffer candidates needed before rendering.
-- `WaylandGraphicsError.staleFrameContract`,
-  `WaylandGraphicsError.externalBufferUnavailable`, and
-  `WaylandGraphicsError.foreignExternalBuffer` remain public typed failures for
-  stale frame contracts and package-scoped external-buffer ownership checks.
+  XRGB8888/ARGB8888 external-buffer candidates needed before rendering.
+- `WaylandGraphicsError.staleFrameContract` and
+  `WaylandGraphicsError.externalBufferUnavailable` remain public typed failures
+  for stale frame contracts and external-buffer ownership checks. Stale and
+  unavailable external-buffer failures include generation or lifecycle details.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure, display-level dmabuf advertisement alone is

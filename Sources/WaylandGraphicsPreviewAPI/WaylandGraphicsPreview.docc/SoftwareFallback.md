@@ -24,7 +24,7 @@ and set the next barrier.
   falling back.
 - `WaylandGraphicsFallbackPolicy.forceSoftware` never attempts managed GPU.
 
-`WaylandGraphicsPresentationMode.externalGPU` is reserved for package-scoped
+`WaylandGraphicsPresentationMode.externalGPU` is reserved for renderer-owned
 external-buffer presentation. Normal clear/software submissions in that mode do
 not silently become software submissions.
 

@@ -8,29 +8,32 @@ through a ``WaylandGraphicsWindowBacking``.
 Call ``WaylandGraphicsWindowBacking/nextFrame()`` to obtain a lease. Inspect
 ``WaylandGraphicsFrameLease/contract`` before rendering; it contains the current
 surface generation, authoritative geometry, external-buffer candidate facts, and
-synchronization availability for the frame.
+synchronization availability for the frame. External-buffer candidate facts
+include selected format, modifier, alpha interpretation, scanout preference, and
+render-node device identity bytes for renderer-side allocation.
 
-Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)`` or
-``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``. Cancel the frame
-lease with ``WaylandGraphicsFrameLease/cancel()`` when no frame will be
-produced.
+Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)``,
+``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``, or by reserving a
+registered external buffer with
+``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)`` and submitting the
+returned render lease. Cancel the frame lease with
+``WaylandGraphicsFrameLease/cancel()`` when no frame will be produced.
 
 A backing allows only one active lease. A submitted or cancelled lease cannot be
 submitted again. Closing the backing makes future lease operations fail with a
 typed error.
 
-## Software And Clear Frames
+## Software, Clear, And External Frames
 
 ``WaylandGraphicsSubmittedFrame/clearColor(_:)`` submits a renderer-neutral clear
 frame. On active managed GPU backing, the clear is rendered through internal GPU
 preview code. On software backing or fallback, WaylandClientKit fills a
 `SoftwareFrame`.
 
-Package-scoped external-buffer helpers register renderer-owned descriptors,
-reserve registered buffers, submit render leases, and await release receipts.
-That path exists to prove renderer-owned dmabuf presentation without normal
-CPU readback, but descriptor construction, registration, reservation, explicit
-sync timeline import, and release receipts are not public API.
+External-buffer submission registers renderer-owned descriptors, reserves
+registered buffers, submits render leases, and awaits release receipts. The
+renderer owns allocation and rendering; WCK owns import, commit, release
+tracking, and reuse gating.
 
 Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
 describe optional metadata and logical damage. WaylandClientKit validates metadata

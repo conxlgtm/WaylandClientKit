@@ -62,8 +62,9 @@ public raw Wayland binding layer.
 
 Raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, and reusable graphics file
 descriptor handles are not public API. `WaylandGraphicsPreview` exposes
-renderer-neutral capability, configuration, scheduling, and runtime-path values;
-external-buffer descriptor and sync plumbing stays package-scoped.
+renderer-neutral capability, configuration, scheduling, runtime-path values, and
+narrow move-only external-buffer interop values that consume descriptor
+ownership without exposing borrowed descriptor integers or protocol objects.
 
 ## Quick Start
 
