@@ -432,7 +432,9 @@ Notes:
   Input-specific diagnostics also remain available on `inputEvents`.
 - `Window` is the ergonomic async handle. Windows are still addressable by `WindowID`,
   and teardown is routed through `WaylandDisplay.closeWindow(_:)` or
-  `WaylandDisplay.close()`.
+  awaited `WaylandDisplay.close()`. Display-level close drains registered
+  window-close observers before destroying surfaces so graphics release waiters
+  terminate with a closed-backing result.
 - `PopupSurface` is the public popup handle. Popup lifecycle display events carry
   the popup identity and parent window identity.
 - `WindowPresentationEvents` is a public async sequence for presentation

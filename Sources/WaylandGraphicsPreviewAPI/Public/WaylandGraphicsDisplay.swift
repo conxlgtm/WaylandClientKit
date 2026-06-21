@@ -45,6 +45,9 @@ extension WaylandDisplay {
                 configuration: graphicsConfiguration
             ) ? ManagedGPUPreviewBacking(window: window) : nil
         )
+        registerWindowCloseObserver(for: window.id) { [weak storage] in
+            await storage?.closeBecauseWindowClosed()
+        }
         return WaylandGraphicsWindowBacking(window: window, storage: storage)
     }
 

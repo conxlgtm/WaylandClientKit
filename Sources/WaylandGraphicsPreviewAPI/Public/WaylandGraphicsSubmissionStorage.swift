@@ -1262,6 +1262,14 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func close() async throws {
+        await close(shouldCloseWindow: true)
+    }
+
+    package func closeBecauseWindowClosed() async {
+        await close(shouldCloseWindow: false)
+    }
+
+    private func close(shouldCloseWindow: Bool) async {
         guard !leaseState.isClosed else {
             return
         }
@@ -1272,7 +1280,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         registeredExternalBuffers.removeAll()
         managedGPUBacking?.close()
         externalBufferPresenter.retireAll(reason: .windowClosed)
-        await window.close()
+        if shouldCloseWindow {
+            await window.close()
+        }
     }
 
     private func submitFrame(
@@ -1633,7 +1643,9 @@ extension WaylandGraphicsWindowBackingStorage {
                     acquireSynchronization: acquireSynchronization
                 )
             else {
-                if effectiveConfiguration.synchronizationPolicy == .requireExplicit {
+                if effectiveConfiguration.synchronizationPolicy == .requireExplicit
+                    || acquireSynchronization != nil
+                {
                     throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
                 }
                 return (

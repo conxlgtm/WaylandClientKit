@@ -364,6 +364,46 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 }
 
+@Suite
+struct ExternalBufferSyncTests {
+    @Test
+    func preferExplicitAcquireSubmitFailsWhenExplicitFallsBack() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
+                fallbackPolicy: .requireGPU,
+                synchronizationPolicy: .preferExplicit
+            )
+        )
+        let lease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
+        let renderLease = try await lease.reserveExternalBuffer(buffer)
+        let timeline = WaylandGraphicsExternalSyncTimeline(
+            id: WaylandGraphicsExternalSyncTimelineID(rawValue: 99),
+            windowID: window.id
+        )
+        let acquirePoint = try timeline.point(1)
+        let acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization =
+            .drmSyncobj(acquirePoint)
+
+        await #expect(
+            throws: WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+        ) {
+            _ = try await renderLease.submit(
+                acquireSynchronization: acquireSynchronization
+            )
+        }
+
+        try await storage.closeForTesting()
+    }
+}
+
 // swiftlint:disable type_body_length
 @Suite
 struct WaylandGraphicsExternalBufferLifecycleTests {

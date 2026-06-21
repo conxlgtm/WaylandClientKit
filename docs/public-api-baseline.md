@@ -1098,24 +1098,24 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay.swift`
 
-- L4: `public actor WaylandDisplay {`
-- L5: `    public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000`
-- L6: `    public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000`
-- L12: `    nonisolated public var unownedExecutor: UnownedSerialExecutor {`
-- L16: `    nonisolated public var events: DisplayEvents {`
-- L20: `    nonisolated public var inputEvents: InputEvents {`
-- L24: `    nonisolated public var dataTransferEvents: DataTransferEvents {`
-- L28: `    nonisolated public var diagnostics: DisplayDiagnostics {`
-- L56: `    public static func withConnection<ResultValue: Sendable>(`
-- L78: `    public static func withConnection<ResultValue: Sendable>(`
-- L92: `    public func currentPointerCursor() throws -> PointerCursor {`
-- L100: `    public func capabilities() throws -> WaylandCapabilities {`
-- L105: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
-- L112: `    public func createTopLevelWindow(`
-- L236: `    public func close() {`
-- L299: `    public func outputs() throws -> [OutputSnapshot] {`
-- L303: `    public func outputTopology() throws -> [OutputSnapshot] {`
-- L311: `    public var isClosed: Bool {`
+- L5: `public actor WaylandDisplay {`
+- L6: `    public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000`
+- L7: `    public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000`
+- L17: `    nonisolated public var unownedExecutor: UnownedSerialExecutor {`
+- L21: `    nonisolated public var events: DisplayEvents {`
+- L25: `    nonisolated public var inputEvents: InputEvents {`
+- L29: `    nonisolated public var dataTransferEvents: DataTransferEvents {`
+- L33: `    nonisolated public var diagnostics: DisplayDiagnostics {`
+- L61: `    public static func withConnection<ResultValue: Sendable>(`
+- L83: `    public static func withConnection<ResultValue: Sendable>(`
+- L97: `    public func currentPointerCursor() throws -> PointerCursor {`
+- L105: `    public func capabilities() throws -> WaylandCapabilities {`
+- L110: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
+- L117: `    public func createTopLevelWindow(`
+- L243: `    public func close() async {`
+- L307: `    public func outputs() throws -> [OutputSnapshot] {`
+- L311: `    public func outputTopology() throws -> [OutputSnapshot] {`
+- L356: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 
