@@ -83,15 +83,17 @@ enum GraphicsPreviewExternalBufferSmoke {
         backing: WaylandGraphicsWindowBacking
     ) async throws -> Bool {
         log("mode: renderer-dmabuf")
-        let lease = try await backing.nextFrame()
-        log("frame size: \(lease.size.width.rawValue)x\(lease.size.height.rawValue)")
+        let firstLease = try await backing.nextFrame()
+        log(
+            "frame size: \(firstLease.size.width.rawValue)x\(firstLease.size.height.rawValue)"
+        )
         let configuration = try requireExternalConfiguration(
-            lease.contract
+            firstLease.contract
         )
         let renderer: ExternalDmabufRenderer
         do {
             renderer = try ExternalDmabufRenderer(
-                size: lease.size,
+                size: firstLease.size,
                 configuration: configuration
             )
         } catch {
@@ -111,11 +113,12 @@ enum GraphicsPreviewExternalBufferSmoke {
         do {
             let buffer = try await backing.registerExternalBuffer(
                 try renderer.makeDescriptor(),
-                contract: lease.contract,
+                contract: firstLease.contract,
                 configurationID: configuration.id
             )
-            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            let renderLease = try await firstLease.reserveExternalBuffer(buffer)
             let result = try await renderLease.submit()
+            try await submitReplacementBuffer(backing: backing)
             let release = await releaseStatus(result)
             log("renderer: active")
             log("format: \(renderer.formatDescription)")
@@ -143,6 +146,28 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("failure: \(error)")
             return false
         }
+    }
+
+    private static func submitReplacementBuffer(
+        backing: WaylandGraphicsWindowBacking
+    ) async throws {
+        let lease = try await backing.nextFrame()
+        let configuration = try requireExternalConfiguration(lease.contract)
+        let renderer = try ExternalDmabufRenderer(
+            size: lease.size,
+            configuration: configuration
+        )
+        defer {
+            renderer.close()
+        }
+
+        let buffer = try await backing.registerExternalBuffer(
+            try renderer.makeDescriptor(),
+            contract: lease.contract,
+            configurationID: configuration.id
+        )
+        let renderLease = try await lease.reserveExternalBuffer(buffer)
+        _ = try await renderLease.submit()
     }
 
     private static func submitNegativeTestBuffer(
