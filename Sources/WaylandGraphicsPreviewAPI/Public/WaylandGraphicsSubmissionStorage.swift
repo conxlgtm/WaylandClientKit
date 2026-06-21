@@ -187,6 +187,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     ) -> WaylandGraphicsFrameContract {
         let configurationFacts = externalBufferConfigurationFacts()
         let synchronization = externalSynchronizationAvailability()
+        var generationChanged = false
         if let lastContractGeometry,
             lastContractGeometry != geometry
                 || lastContractConfigurationFacts != configurationFacts
@@ -195,10 +196,14 @@ package actor WaylandGraphicsWindowBackingStorage {
             currentSurfaceGeneration = WaylandGraphicsSurfaceGeneration(
                 rawValue: currentSurfaceGeneration.rawValue + 1
             )
+            generationChanged = true
         }
         lastContractGeometry = geometry
         lastContractConfigurationFacts = configurationFacts
         lastContractSynchronization = synchronization
+        if generationChanged {
+            retireStaleAvailableExternalBuffers()
+        }
 
         let configurations = externalBufferConfigurations(
             facts: configurationFacts,
@@ -270,6 +275,34 @@ package actor WaylandGraphicsWindowBackingStorage {
                 scanoutPreferred: fact.scanoutPreferred,
                 generation: generation
             )
+        }
+    }
+
+    private func retireStaleAvailableExternalBuffers() {
+        let availableSlots = Set(externalBufferPresenter.availableSlotIDs)
+        var retiredBufferIDs: [WaylandGraphicsExternalBufferID] = []
+        for (bufferID, registration) in registeredExternalBuffers {
+            let buffer = registration.handle
+            guard buffer.generation != currentSurfaceGeneration else {
+                continue
+            }
+
+            do {
+                let slotID = try externalBufferSlotID(for: buffer)
+                guard availableSlots.contains(slotID) else {
+                    continue
+                }
+
+                try externalBufferPresenter.retireAvailableBuffer(slotID)
+                retiredBufferIDs.append(bufferID)
+            } catch {
+                _ = error
+            }
+        }
+
+        for bufferID in retiredBufferIDs {
+            registeredExternalBuffers.removeValue(forKey: bufferID)
+            reservedExternalBufferIDs.remove(bufferID)
         }
     }
 

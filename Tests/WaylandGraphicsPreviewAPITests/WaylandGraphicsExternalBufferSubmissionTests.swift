@@ -609,6 +609,40 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         try await storage.closeForTesting()
     }
+
+    @Test
+    func availableRegisteredBufferRetiresWhenContractGenerationChanges() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor(
+                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+                offset: 0,
+                fd: testOwnedFileDescriptor()
+            )
+        )
+        await firstLease.cancel()
+
+        await window.setGeometry(try testGraphicsSurfaceGeometry(width: 128, height: 96))
+        let secondLease = try await storage.nextFrame()
+
+        #expect(secondLease.contract.generation != firstLease.contract.generation)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+
+        do {
+            _ = try await secondLease.reserveExternalBuffer(buffer)
+            Issue.record("expected old-generation external buffer to be retired")
+        } catch WaylandGraphicsError.externalBufferUnavailable {
+            await secondLease.cancel()
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        try await storage.closeForTesting()
+    }
 }
 
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
@@ -618,7 +652,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     }
 
     nonisolated let id = WindowID(rawValue: 910)
-    private let geometryValue: SurfaceGeometry
+    private var geometryValue: SurfaceGeometry
     private let importBehavior: ImportBehavior
     private var presentationFailuresBeforeSuccess: Int
     private var nextGeneration: UInt64 = 1
@@ -641,6 +675,10 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 
     var geometry: SurfaceGeometry {
         get async throws { geometryValue }
+    }
+
+    func setGeometry(_ geometry: SurfaceGeometry) {
+        geometryValue = geometry
     }
 
     var isClosed: Bool {
@@ -762,6 +800,13 @@ private func externalBufferStorage(
         window: window,
         runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
         configuration: configuration
+    )
+}
+
+private func testGraphicsSurfaceGeometry(width: Int, height: Int) throws -> SurfaceGeometry {
+    try SurfaceGeometry(
+        logicalSize: PositiveLogicalSize(width: Int32(width), height: Int32(height)),
+        scale: .one
     )
 }
 
