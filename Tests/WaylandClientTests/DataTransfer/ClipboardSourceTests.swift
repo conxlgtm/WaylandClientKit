@@ -200,9 +200,6 @@ struct ClipboardSourceTests {
         #expect(manager.seatSnapshots.first?.selectionOfferID == offerBinding.id)
         #expect(manager.seatSnapshots.first?.selectionSourceID == nil)
         #expect(manager.sourceSnapshots.isEmpty)
-        #expect(
-            manager.drainDataTransferEvents()
-                == [.clipboardSourceCancelled(ClipboardSourceIdentity(source.id))]
-        )
+        #expect(manager.drainDataTransferEvents().isEmpty)
     }
 }

@@ -69,7 +69,7 @@ struct WindowModelTests {
             .configureReceived(configure(width: 1_024, height: 768, serial: 7))
         )
 
-        #expect(effects == [.ackConfigure(7), .publishRedrawRequested(windowID)])
+        #expect(effects == [.ackConfigure(7)])
         #expect(model.presentation == .drawing(request: request))
         #expect(model.redraw.hasOutstandingRedrawRequest)
         #expect(

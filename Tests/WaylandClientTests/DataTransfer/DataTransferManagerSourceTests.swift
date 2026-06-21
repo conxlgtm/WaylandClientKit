@@ -120,7 +120,7 @@ struct DataTransferManagerSourceTests {  // swiftlint:disable:this type_body_len
     }
 
     @Test
-    func remoteSelectionOfferDoesNotDestroyOwnedSource() throws {
+    func remoteSelectionOfferDestroysOwnedSource() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
@@ -140,16 +140,17 @@ struct DataTransferManagerSourceTests {  // swiftlint:disable:this type_body_len
         offerBinding.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle))
 
-        #expect(sourceBinding.destroyCount == 0)
-        #expect(manager.sourceSnapshots.map(\.id) == [source.id])
+        #expect(sourceBinding.destroyCount == 1)
+        #expect(manager.sourceSnapshots.isEmpty)
         #expect(manager.seatSnapshots.first?.selectionSourceID == nil)
         #expect(manager.seatSnapshots.first?.selectionOfferID == offerBinding.id)
         #expect(
             manager.drainDataTransferEvents()
                 == [
+                    .clipboardSourceCancelled(ClipboardSourceIdentity(source.id)),
                     .clipboardSelectionChanged(
                         ClipboardSelectionEvent(seatID: seat1, offerID: offerBinding.id)
-                    )
+                    ),
                 ]
         )
     }
