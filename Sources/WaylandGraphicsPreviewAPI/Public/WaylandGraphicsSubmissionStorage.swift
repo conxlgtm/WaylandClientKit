@@ -322,7 +322,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             throw graphicsError(for: error, stage: .frameGeometry)
         }
         let leaseID = try leaseState.issueLease()
-        let contract = frameContract(for: geometry)
+        let contract = await frameContract(for: geometry)
         return WaylandGraphicsFrameLease(
             id: leaseID,
             size: geometry.bufferSize,
@@ -347,7 +347,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
     private func frameContract(
         for geometry: SurfaceGeometry
-    ) -> WaylandGraphicsFrameContract {
+    ) async -> WaylandGraphicsFrameContract {
         let configurationFacts = externalBufferConfigurationFacts()
         let synchronization = externalSynchronizationAvailability()
         var generationChanged = false
@@ -365,7 +365,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         lastContractConfigurationFacts = configurationFacts
         lastContractSynchronization = synchronization
         if generationChanged {
-            retireStaleAvailableExternalBuffers()
+            await retireStaleAvailableExternalBuffers()
         }
 
         let configurations = configurationFacts.enumerated().map { index, fact in
@@ -440,7 +440,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         return facts
     }
 
-    private func retireStaleAvailableExternalBuffers() {
+    private func retireStaleAvailableExternalBuffers() async {
         let availableSlots = Set(externalBufferPresenter.availableSlotIDs)
         var retiredBufferIDs: [WaylandGraphicsExternalBufferID] = []
         for (bufferID, registration) in registeredExternalBuffers {
@@ -463,8 +463,20 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
 
         for bufferID in retiredBufferIDs {
-            registeredExternalBuffers.removeValue(forKey: bufferID)
             reservedExternalBufferLeaseIDs.removeValue(forKey: bufferID)
+            guard let registration = registeredExternalBuffers.removeValue(forKey: bufferID) else {
+                continue
+            }
+            if let timeline = registration.explicitReleaseTimeline {
+                do {
+                    try await window.removeGraphicsPreviewSynchronizationTimeline(
+                        identity: SurfaceSyncTimelineIdentity(timeline.identity.rawValue)
+                    )
+                } catch {
+                    _ = error
+                }
+                timeline.destroy()
+            }
         }
     }
 
@@ -1622,6 +1634,9 @@ extension WaylandGraphicsWindowBackingStorage {
                 )
             else {
                 if effectiveConfiguration.synchronizationPolicy == .requireExplicit {
+                    throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+                }
+                if registeredExternalBuffers[externalBuffer.id]?.explicitReleaseTimeline != nil {
                     throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
                 }
                 return (
