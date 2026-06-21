@@ -233,7 +233,8 @@ package actor WaylandGraphicsWindowBackingStorage {
     private var lastContractSynchronization: WaylandGraphicsExternalSynchronizationAvailability?
     private var registeredExternalBuffers:
         [WaylandGraphicsExternalBufferID: RegisteredExternalBuffer] = [:]
-    private var reservedExternalBufferIDs: Set<WaylandGraphicsExternalBufferID> = []
+    private var reservedExternalBufferLeaseIDs:
+        [WaylandGraphicsExternalBufferID: WaylandGraphicsFrameLeaseID] = [:]
     private var importedExternalSyncTimelineIDs: Set<WaylandGraphicsExternalSyncTimelineID> = []
 
     package init(
@@ -433,7 +434,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
         for bufferID in retiredBufferIDs {
             registeredExternalBuffers.removeValue(forKey: bufferID)
-            reservedExternalBufferIDs.remove(bufferID)
+            reservedExternalBufferLeaseIDs.removeValue(forKey: bufferID)
         }
     }
 
@@ -682,13 +683,13 @@ package actor WaylandGraphicsWindowBackingStorage {
             throw WaylandGraphicsError.staleFrameContract
         }
         let slotID = try externalBufferSlotID(for: buffer)
-        guard !reservedExternalBufferIDs.contains(buffer.id),
+        guard reservedExternalBufferLeaseIDs[buffer.id] == nil,
             externalBufferPresenter.availableSlotIDs.contains(slotID)
         else {
             throw WaylandGraphicsError.externalBufferUnavailable
         }
 
-        reservedExternalBufferIDs.insert(buffer.id)
+        reservedExternalBufferLeaseIDs[buffer.id] = leaseID
         return WaylandGraphicsExternalBufferRenderLease(
             buffer: buffer,
             contract: frameContract,
@@ -702,7 +703,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     ) async throws {
         try leaseState.requireNotClosed()
         try requireLocalRegisteredExternalBuffer(buffer)
-        guard !reservedExternalBufferIDs.contains(buffer.id) else {
+        guard reservedExternalBufferLeaseIDs[buffer.id] == nil else {
             throw WaylandGraphicsError.externalBufferUnavailable
         }
 
@@ -883,7 +884,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             try leaseState.requireNotClosed()
             try await ensureWindowOpen()
             try requireLocalRegisteredExternalBuffer(externalBuffer)
-            guard reservedExternalBufferIDs.contains(externalBuffer.id) else {
+            guard reservedExternalBufferLeaseIDs[externalBuffer.id] == leaseID else {
                 throw WaylandGraphicsError.externalBufferUnavailable
             }
             geometry = try await submissionGeometry(for: leaseID)
@@ -895,7 +896,10 @@ package actor WaylandGraphicsWindowBackingStorage {
                 configuration: effectiveConfiguration
             )
         } catch {
-            reservedExternalBufferIDs.remove(externalBuffer.id)
+            releaseExternalBufferReservation(
+                bufferID: externalBuffer.id,
+                leaseID: leaseID
+            )
             throw error
         }
 
@@ -910,7 +914,10 @@ package actor WaylandGraphicsWindowBackingStorage {
                 configuration: effectiveConfiguration
             )
             stage = .submissionCompletion
-            reservedExternalBufferIDs.remove(externalBuffer.id)
+            releaseExternalBufferReservation(
+                bufferID: externalBuffer.id,
+                leaseID: leaseID
+            )
             try leaseState.finishSubmission()
             let result = frameResult(
                 operation: operation,
@@ -924,7 +931,10 @@ package actor WaylandGraphicsWindowBackingStorage {
                 releaseState: submittedExternalFrame.releaseState
             )
         } catch {
-            reservedExternalBufferIDs.remove(externalBuffer.id)
+            releaseExternalBufferReservation(
+                bufferID: externalBuffer.id,
+                leaseID: leaseID
+            )
             if Self.isCommittedExternalBufferFrameFailure(error) {
                 finishCommittedSubmissionFailure()
             } else {
@@ -936,9 +946,26 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     package func cancelExternalBufferReservation(
-        _ buffer: WaylandGraphicsExternalBuffer
+        _ buffer: WaylandGraphicsExternalBuffer,
+        leaseID: WaylandGraphicsFrameLeaseID
     ) {
-        reservedExternalBufferIDs.remove(buffer.id)
+        releaseExternalBufferReservation(bufferID: buffer.id, leaseID: leaseID)
+    }
+
+    private func releaseExternalBufferReservation(
+        bufferID: WaylandGraphicsExternalBufferID,
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) {
+        guard reservedExternalBufferLeaseIDs[bufferID] == leaseID else { return }
+        reservedExternalBufferLeaseIDs.removeValue(forKey: bufferID)
+    }
+
+    private func releaseExternalBufferReservations(
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) {
+        reservedExternalBufferLeaseIDs = reservedExternalBufferLeaseIDs.filter {
+            $0.value != leaseID
+        }
     }
 
     private func closeExternalDescriptor(
@@ -1108,7 +1135,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
     func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
         if leaseState.cancel(leaseID: leaseID) {
-            reservedExternalBufferIDs.removeAll()
+            releaseExternalBufferReservations(leaseID: leaseID)
         }
     }
 
@@ -1119,7 +1146,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
         leaseState.close()
         externalReleaseRegistry.finishAll(result: .backingClosed)
-        reservedExternalBufferIDs.removeAll()
+        reservedExternalBufferLeaseIDs.removeAll()
         registeredExternalBuffers.removeAll()
         managedGPUBacking?.close()
         externalBufferPresenter.retireAll(reason: .windowClosed)

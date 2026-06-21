@@ -1253,7 +1253,7 @@ package struct WaylandGraphicsExternalBufferRenderLease: Sendable {
     }
 
     package func cancel() async {
-        await storage.cancelExternalBufferReservation(buffer)
+        await storage.cancelExternalBufferReservation(buffer, leaseID: frameLeaseID)
     }
 }
 

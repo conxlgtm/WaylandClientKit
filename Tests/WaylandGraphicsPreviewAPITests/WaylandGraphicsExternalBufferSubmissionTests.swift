@@ -687,6 +687,34 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func staleRenderLeaseCancelDoesNotClearNewReservation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor(
+                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+                offset: 0,
+                fd: testOwnedFileDescriptor()
+            )
+        )
+
+        let firstRenderLease = try await firstLease.reserveExternalBuffer(buffer)
+        let firstReceipt = try await firstRenderLease.submit()
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await firstReceipt.waitForRelease() == .released)
+
+        let secondLease = try await storage.nextFrame()
+        let secondRenderLease = try await secondLease.reserveExternalBuffer(buffer)
+        await firstRenderLease.cancel()
+        _ = try await secondRenderLease.submit()
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
     func registeredExternalBufferCanUnregisterWhenAvailable() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
