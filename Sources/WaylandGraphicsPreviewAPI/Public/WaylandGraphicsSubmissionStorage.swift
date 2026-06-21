@@ -1632,6 +1632,9 @@ extension WaylandGraphicsWindowBackingStorage {
     ) {
         switch effectiveConfiguration.synchronizationPolicy {
         case .implicitOnly:
+            if acquireSynchronization != nil {
+                throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+            }
             return (
                 presentation: .implicit,
                 explicitReleaseTimeline: nil
