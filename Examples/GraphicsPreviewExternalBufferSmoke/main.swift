@@ -85,9 +85,15 @@ enum GraphicsPreviewExternalBufferSmoke {
         log("mode: renderer-dmabuf")
         let lease = try await backing.nextFrame()
         log("frame size: \(lease.size.width.rawValue)x\(lease.size.height.rawValue)")
+        let configuration = try requireExternalConfiguration(
+            lease.contract
+        )
         let renderer: ExternalDmabufRenderer
         do {
-            renderer = try ExternalDmabufRenderer(size: lease.size)
+            renderer = try ExternalDmabufRenderer(
+                size: lease.size,
+                configuration: configuration
+            )
         } catch {
             log("renderer: unavailable(\(error))")
             log("import: skipped(renderer-setup-failed)")
@@ -103,13 +109,10 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
 
         do {
-            let configurationID = try requireExternalConfigurationID(
-                lease.contract
-            )
             let buffer = try await backing.registerExternalBuffer(
                 try renderer.makeDescriptor(),
                 contract: lease.contract,
-                configurationID: configurationID
+                configurationID: configuration.id
             )
             let renderLease = try await lease.reserveExternalBuffer(buffer)
             let result = try await renderLease.submit()
@@ -226,11 +229,21 @@ enum GraphicsPreviewExternalBufferSmoke {
     private static func requireExternalConfigurationID(
         _ contract: WaylandGraphicsFrameContract
     ) throws -> WaylandGraphicsExternalConfigurationID {
-        guard let configurationID = contract.recommendedExternalConfigurationID else {
+        try requireExternalConfiguration(contract).id
+    }
+
+    private static func requireExternalConfiguration(
+        _ contract: WaylandGraphicsFrameContract
+    ) throws -> WaylandGraphicsExternalBufferConfiguration {
+        guard let configurationID = contract.recommendedExternalConfigurationID,
+            let configuration = contract.externalBufferConfigurations.first(
+                where: { $0.id == configurationID }
+            )
+        else {
             throw WaylandGraphicsError.unavailable(.noCompatibleFormat)
         }
 
-        return configurationID
+        return configuration
     }
 
     private static func releaseStatus(
@@ -272,8 +285,14 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
     private(set) var modifierDescription = "unknown"
     private(set) var planeCount = 0
 
-    init(size: PositivePixelSize) throws {
-        guard let renderNodePath = Self.firstRenderNodePath() else {
+    init(
+        size: PositivePixelSize,
+        configuration: WaylandGraphicsExternalBufferConfiguration
+    ) throws {
+        guard
+            let renderNodePath = configuration.renderNode.path
+                ?? Self.firstRenderNodePath()
+        else {
             throw WaylandGraphicsError.unavailable(.noRenderNode)
         }
 
@@ -295,8 +314,8 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
             surfaceDescriptor: GBMSurfaceDescriptor(
                 size: bufferSize,
                 formatModifier: RawLinuxDmabufFormatModifier(
-                    format: GBMDRMFormat.xrgb8888,
-                    modifier: GBMDRMModifier.invalid
+                    format: configuration.format.rawValue,
+                    modifier: configuration.modifier.rawValue
                 ),
                 flags: .rendering
             )
