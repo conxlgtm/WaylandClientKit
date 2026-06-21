@@ -17,6 +17,7 @@ private struct RegisteredExternalBuffer: Sendable {
 private struct ExternalBufferConfigurationFact: Equatable, Sendable {
     let format: WaylandGraphicsDRMFormat
     let modifier: WaylandGraphicsDRMFormatModifier
+    let renderNode: WaylandGraphicsRenderNode
     let alphaMode: WaylandGraphicsExternalAlphaMode
     let scanoutPreferred: Bool
 }
@@ -245,11 +246,24 @@ package actor WaylandGraphicsWindowBackingStorage {
                     formatModifier.format == WaylandGraphicsDRMFormat.argb8888.rawValue
                     ? .argb8888
                     : .xrgb8888
+                let renderNodePath: String?
+                do {
+                    renderNodePath = try DRMRenderNodeSelector.renderNodePath(
+                        for: tranche.targetDevice
+                    )
+                } catch {
+                    _ = error
+                    renderNodePath = nil
+                }
                 facts.append(
                     ExternalBufferConfigurationFact(
                         format: format,
                         modifier: WaylandGraphicsDRMFormatModifier(
                             rawValue: formatModifier.modifier
+                        ),
+                        renderNode: WaylandGraphicsRenderNode(
+                            path: renderNodePath,
+                            targetDevice: tranche.targetDevice
                         ),
                         alphaMode: format == .argb8888 ? .premultiplied : .opaque,
                         scanoutPreferred: tranche.flags.contains(.scanout)
@@ -271,6 +285,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 ),
                 format: fact.format,
                 modifier: fact.modifier,
+                renderNode: fact.renderNode,
                 alphaMode: fact.alphaMode,
                 scanoutPreferred: fact.scanoutPreferred,
                 generation: generation
@@ -326,10 +341,11 @@ package actor WaylandGraphicsWindowBackingStorage {
         configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
     ) async throws -> WaylandGraphicsExternalBuffer {
         var descriptor = externalDescriptor
+        let selectedConfiguration: WaylandGraphicsExternalBufferConfiguration
         do {
             try leaseState.requireNotClosed()
             try await ensureWindowOpen()
-            try validateExternalBufferRegistration(
+            selectedConfiguration = try validateExternalBufferRegistration(
                 descriptor,
                 contract: frameContract,
                 configurationID: externalConfigurationID
@@ -370,6 +386,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             size: bufferSize,
             format: bufferFormat,
             modifier: bufferModifier,
+            renderNode: selectedConfiguration.renderNode,
             windowID: window.id,
             slotRawValue: slotID.rawValue,
             storage: self
@@ -385,7 +402,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         _ descriptor: borrowing WaylandGraphicsExternalBufferDescriptor,
         contract frameContract: WaylandGraphicsFrameContract,
         configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
-    ) throws {
+    ) throws -> WaylandGraphicsExternalBufferConfiguration {
         try rejectExternalBufferExplicitSyncIfRequired(configuration: configuration)
         guard configuration.backingPreference == .managedGPU,
             configuration.fallbackPolicy != .forceSoftware
@@ -414,6 +431,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         else {
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
+        return configuration
     }
 
     package func reserveExternalBuffer(

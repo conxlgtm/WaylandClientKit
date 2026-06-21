@@ -5,7 +5,7 @@ package enum RawLinuxDmabufFeedbackScope: Equatable, Sendable {
     case surface(surfaceID: RawObjectID)
 }
 
-package struct RawLinuxDmabufDevice: Equatable, Sendable {
+package struct RawLinuxDmabufDevice: Equatable, Hashable, Sendable {
     package let bytes: [UInt8]
 
     package init(bytes deviceBytes: [UInt8]) {

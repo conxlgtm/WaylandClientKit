@@ -180,6 +180,10 @@ struct WaylandGraphicsExternalBufferPreflightTests {
                 true, true,
             ])
         #expect(
+            lease.contract.externalBufferConfigurations.map(\.renderNode.path) == [
+                nil, nil,
+            ])
+        #expect(
             lease.contract.recommendedExternalConfigurationID
                 == lease.contract.externalBufferConfigurations.first?.id
         )

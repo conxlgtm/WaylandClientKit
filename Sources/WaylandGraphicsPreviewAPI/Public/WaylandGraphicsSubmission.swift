@@ -239,6 +239,19 @@ public struct WaylandGraphicsExternalSyncTimelineID:
     }
 }
 
+public struct WaylandGraphicsRenderNode: Equatable, Hashable, Sendable {
+    public let path: String?
+    package let targetDevice: RawLinuxDmabufDevice
+
+    package init(
+        path renderNodePath: String?,
+        targetDevice renderNodeTargetDevice: RawLinuxDmabufDevice
+    ) {
+        path = renderNodePath
+        targetDevice = renderNodeTargetDevice
+    }
+}
+
 public enum WaylandGraphicsExternalSynchronizationAvailability:
     Equatable,
     Sendable
@@ -273,6 +286,7 @@ public struct WaylandGraphicsExternalBufferConfiguration:
     public let id: WaylandGraphicsExternalConfigurationID
     public let format: WaylandGraphicsDRMFormat
     public let modifier: WaylandGraphicsDRMFormatModifier
+    public let renderNode: WaylandGraphicsRenderNode
     public let alphaMode: WaylandGraphicsExternalAlphaMode
     public let scanoutPreferred: Bool
     package let generation: WaylandGraphicsSurfaceGeneration
@@ -281,6 +295,7 @@ public struct WaylandGraphicsExternalBufferConfiguration:
         id configurationID: WaylandGraphicsExternalConfigurationID,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        renderNode bufferRenderNode: WaylandGraphicsRenderNode,
         alphaMode bufferAlphaMode: WaylandGraphicsExternalAlphaMode,
         scanoutPreferred scanoutIsPreferred: Bool,
         generation surfaceGeneration: WaylandGraphicsSurfaceGeneration
@@ -288,6 +303,7 @@ public struct WaylandGraphicsExternalBufferConfiguration:
         id = configurationID
         format = bufferFormat
         modifier = bufferModifier
+        renderNode = bufferRenderNode
         alphaMode = bufferAlphaMode
         scanoutPreferred = scanoutIsPreferred
         generation = surfaceGeneration
@@ -301,6 +317,7 @@ public struct WaylandGraphicsExternalBuffer: Sendable, Identifiable {
     public let size: PositivePixelSize
     public let format: WaylandGraphicsDRMFormat
     public let modifier: WaylandGraphicsDRMFormatModifier
+    public let renderNode: WaylandGraphicsRenderNode
 
     package let windowID: WindowID
     package let slotRawValue: Int
@@ -313,6 +330,7 @@ public struct WaylandGraphicsExternalBuffer: Sendable, Identifiable {
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        renderNode bufferRenderNode: WaylandGraphicsRenderNode,
         windowID backingWindowID: WindowID,
         slotRawValue presenterSlotRawValue: Int,
         storage backingStorage: WaylandGraphicsWindowBackingStorage
@@ -323,6 +341,7 @@ public struct WaylandGraphicsExternalBuffer: Sendable, Identifiable {
         size = bufferSize
         format = bufferFormat
         modifier = bufferModifier
+        renderNode = bufferRenderNode
         windowID = backingWindowID
         slotRawValue = presenterSlotRawValue
         storage = backingStorage
