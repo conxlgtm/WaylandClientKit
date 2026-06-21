@@ -168,11 +168,16 @@ struct WaylandGraphicsExternalBufferPreflightTests {
                 lease: lease,
                 descriptor: try testExternalDescriptor()
             )
+            Issue.record("expected no render node failure")
+        } catch WaylandGraphicsError.unavailable(.noRenderNode) {
+            _ = ()
         } catch {
-            _ = error
+            Issue.record("unexpected error: \(error)")
         }
 
         #expect(await window.importRequests == 1)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
         try await storage.closeForTesting()
     }
@@ -248,6 +253,29 @@ struct WaylandGraphicsExternalBufferPreflightTests {
             lease.contract.recommendedExternalConfigurationID
                 == lease.contract.externalBufferConfigurations.first?.id
         )
+        #expect(await window.importRequests == 0)
+    }
+
+    @Test
+    func externalContractKeepsDistinctTrancheCandidates() async throws {
+        let window = try ExternalBufferFakeManagedWindow(
+            includeDistinctDuplicateSurfaceFeedback: true
+        )
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        #expect(
+            lease.contract.externalBufferConfigurations.map(\.format) == [
+                .xrgb8888, .argb8888, .xrgb8888,
+            ])
+        #expect(
+            lease.contract.externalBufferConfigurations.map(\.modifier) == [
+                .linear, .linear, .linear,
+            ])
+        #expect(
+            lease.contract.externalBufferConfigurations.map(\.scanoutPreferred) == [
+                true, true, false,
+            ])
         #expect(await window.importRequests == 0)
     }
 
@@ -729,17 +757,21 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private var presentationFeedbackRequests: [Bool] = []
     private(set) var preparePresentationRequests = 0
     private let surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
+    private let includeDistinctDuplicateSurfaceFeedback: Bool
 
     init(
         importBehavior requestedImportBehavior: ImportBehavior = .fail,
         presentationFailuresBeforeSuccess requestedPresentationFailures: Int = 0,
         surfaceFeedbackSynchronization requestedSurfaceFeedbackSynchronization:
-            SurfaceSynchronizationCapability? = .implicitOnly
+            SurfaceSynchronizationCapability? = .implicitOnly,
+        includeDistinctDuplicateSurfaceFeedback shouldIncludeDistinctDuplicateSurfaceFeedback:
+            Bool = false
     ) throws {
         geometryValue = try testGraphicsSurfaceGeometry()
         importBehavior = requestedImportBehavior
         presentationFailuresBeforeSuccess = requestedPresentationFailures
         surfaceFeedbackSynchronization = requestedSurfaceFeedbackSynchronization
+        includeDistinctDuplicateSurfaceFeedback = shouldIncludeDistinctDuplicateSurfaceFeedback
     }
 
     var geometry: SurfaceGeometry {
@@ -769,7 +801,8 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         }
 
         return try testSurfaceCapabilitySnapshotWithDmabufFeedback(
-            synchronization: surfaceFeedbackSynchronization
+            synchronization: surfaceFeedbackSynchronization,
+            includeDistinctDuplicateTranche: includeDistinctDuplicateSurfaceFeedback
         )
     }
 
@@ -962,13 +995,17 @@ private func testPreviewBufferPresentationResult(
 }
 
 private func testSurfaceCapabilitySnapshotWithDmabufFeedback(
-    synchronization: SurfaceSynchronizationCapability = .implicitOnly
+    synchronization: SurfaceSynchronizationCapability = .implicitOnly,
+    includeDistinctDuplicateTranche: Bool = false
 )
     throws -> SurfaceCapabilitySnapshot
 {
     let surfaceID = RawObjectID(42)
     let feedback = try SurfaceDmabufFeedback(
-        snapshot: testSurfaceDmabufFeedbackSnapshot(surfaceID: surfaceID),
+        snapshot: testSurfaceDmabufFeedbackSnapshot(
+            surfaceID: surfaceID,
+            includeDistinctDuplicateTranche: includeDistinctDuplicateTranche
+        ),
         surfaceID: surfaceID
     )
     return SurfaceCapabilitySnapshot(
@@ -994,7 +1031,8 @@ private func testSurfaceCapabilitySnapshotWithDmabufFeedback(
 }
 
 private func testSurfaceDmabufFeedbackSnapshot(
-    surfaceID: RawObjectID
+    surfaceID: RawObjectID,
+    includeDistinctDuplicateTranche: Bool = false
 ) throws -> RawLinuxDmabufFeedbackSnapshot {
     let formats = [
         RawLinuxDmabufFormatModifier(
@@ -1019,6 +1057,15 @@ private func testSurfaceDmabufFeedbackSnapshot(
     )
     try state.appendCurrentTrancheFormats(indices: [0, 1], scope: .surface(surfaceID: surfaceID))
     try state.finishCurrentTranche(scope: .surface(surfaceID: surfaceID))
+    if includeDistinctDuplicateTranche {
+        try state.setCurrentTrancheTargetDevice(
+            bytes: [8, 7, 6, 5, 4, 3, 2, 1],
+            scope: .surface(surfaceID: surfaceID)
+        )
+        try state.setCurrentTrancheFlags(0, scope: .surface(surfaceID: surfaceID))
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .surface(surfaceID: surfaceID))
+        try state.finishCurrentTranche(scope: .surface(surfaceID: surfaceID))
+    }
     return try state.finish(scope: .surface(surfaceID: surfaceID))
 }
 

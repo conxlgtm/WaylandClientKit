@@ -359,7 +359,7 @@ Remaining unsafe constructs:
   `WaylandGraphicsExternalBufferPlane` are public preview move-only values.
   Their manufacturing path consumes an `OwnedFileDescriptor`, offset, and
   stride, then stores the descriptor package-internally for transfer into the
-  dmabuf import path. Callers can describe one-plane renderer-owned images
+  dmabuf import path. Callers can describe one-to-four-plane renderer-owned images
   without receiving reusable file-descriptor access, raw Wayland proxies,
   GBM/EGL/DRM objects, syncobj handles, or pointers.
 - `WaylandGraphicsExternalBufferSubmissionReceipt` retains a private actor

@@ -348,8 +348,8 @@ Current preview contract:
   result, and cancel or close resources without exposing raw protocol or renderer
   objects.
 - The external-buffer import path is public preview API for renderer-owned
-  one-plane dmabuf images. Public descriptor values are move-only and consume
-  `OwnedFileDescriptor` so each plane descriptor is transferred or closed
+  one-to-four-plane dmabuf images. Public descriptor values are move-only and
+  consume `OwnedFileDescriptor` so each plane descriptor is transferred or closed
   exactly once. Registration imports a descriptor once and returns a stable
   public buffer handle. Frame leases reserve available registered buffers, and
   render leases submit them after the renderer has drawn into the image.

@@ -61,7 +61,7 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
                 waitForSubmit: true
             )
             return true
-        } catch let error as GBMAllocationError where error.isSyncobjTimelineWaitTimeout {
+        } catch let error where error.isSyncobjTimelineWaitTimeout {
             return false
         } catch {
             throw WaylandGraphicsError.unavailable(.explicitSyncReleaseFailed)
@@ -340,7 +340,6 @@ package actor WaylandGraphicsWindowBackingStorage {
             return []
         }
 
-        var seen: Set<RawLinuxDmabufFormatModifier> = []
         var facts: [ExternalBufferConfigurationFact] = []
         for tranche in feedback.snapshot.tranches {
             for formatModifier in tranche.formats
@@ -348,7 +347,6 @@ package actor WaylandGraphicsWindowBackingStorage {
                 (formatModifier.format == WaylandGraphicsDRMFormat.xrgb8888.rawValue
                 || formatModifier.format
                     == WaylandGraphicsDRMFormat.argb8888.rawValue)
-                && seen.insert(formatModifier).inserted
             {
                 let format: WaylandGraphicsDRMFormat =
                     formatModifier.format == WaylandGraphicsDRMFormat.argb8888.rawValue
@@ -363,20 +361,21 @@ package actor WaylandGraphicsWindowBackingStorage {
                     _ = error
                     renderNodePath = nil
                 }
-                facts.append(
-                    ExternalBufferConfigurationFact(
-                        format: format,
-                        modifier: WaylandGraphicsDRMFormatModifier(
-                            rawValue: formatModifier.modifier
-                        ),
-                        renderNode: WaylandGraphicsRenderNode(
-                            path: renderNodePath,
-                            targetDevice: tranche.targetDevice
-                        ),
-                        alphaMode: format == .argb8888 ? .premultiplied : .opaque,
-                        scanoutPreferred: tranche.flags.contains(.scanout)
-                    )
+                let fact = ExternalBufferConfigurationFact(
+                    format: format,
+                    modifier: WaylandGraphicsDRMFormatModifier(
+                        rawValue: formatModifier.modifier
+                    ),
+                    renderNode: WaylandGraphicsRenderNode(
+                        path: renderNodePath,
+                        targetDevice: tranche.targetDevice
+                    ),
+                    alphaMode: format == .argb8888 ? .premultiplied : .opaque,
+                    scanoutPreferred: tranche.flags.contains(.scanout)
                 )
+                if !facts.contains(fact) {
+                    facts.append(fact)
+                }
             }
         }
         return facts
@@ -456,6 +455,16 @@ package actor WaylandGraphicsWindowBackingStorage {
             throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
         }
 
+        let explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+        do {
+            explicitReleaseTimeline = try await prepareExternalReleaseTimelineIfNeeded(
+                selectedConfiguration: selectedConfiguration
+            )
+        } catch {
+            importedBuffer.destroy()
+            throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
+        }
+
         let slotID = try nextExternalBufferSlotID()
         do {
             try externalBufferPresenter.installBuffer(
@@ -464,16 +473,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             )
         } catch {
             importedBuffer.destroy()
-            throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
-        }
-
-        let explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
-        do {
-            explicitReleaseTimeline = try await prepareExternalReleaseTimelineIfNeeded(
-                selectedConfiguration: selectedConfiguration
-            )
-        } catch {
-            importedBuffer.destroy()
+            explicitReleaseTimeline?.destroy()
             throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
         }
 
@@ -615,11 +615,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                     identity: SurfaceSyncTimelineIdentity(timelineID.rawValue)
                 )
             } catch {
-                do {
-                    try timelineFileDescriptor.close()
-                } catch {
-                    _ = error
-                }
+                timelineFileDescriptor.close()
                 throw graphicsError(for: error, stage: .submissionPreparation)
             }
         } catch let error as RuntimeError {

@@ -9,8 +9,8 @@ presentation, then inspect typed runtime-path facts.
 
 The preview API wraps a public ``WaylandGraphicsWindowBacking`` around a
 `Window`. Applications lease a frame, inspect the frame contract, submit clear
-frames, software drawing work, or one-plane external buffers, and receive typed
-runtime-path facts.
+frames, software drawing work, or one-to-four-plane external buffers, and receive
+typed runtime-path facts.
 
 External-buffer submission is intentionally narrow. WCK registers move-only
 descriptors, commits reserved buffers, tracks compositor release, and returns a
