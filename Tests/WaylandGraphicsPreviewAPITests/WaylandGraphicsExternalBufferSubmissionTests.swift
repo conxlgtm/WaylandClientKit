@@ -183,7 +183,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 
     @Test
-    func externalGPUFallbackPolicyAllowsSoftwareLeaseWhenSurfaceFeedbackFails() async throws {
+    func externalGPUFallbackPolicyRejectsSoftwareSubmitWhenSurfaceFeedbackFails() async throws {
         let window = try ExternalBufferFakeManagedWindow(
             surfaceFeedbackSynchronization: nil
         )
@@ -202,10 +202,13 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         #expect(lease.runtimePath.backing == .fallback(.surfaceFeedbackUnavailable))
         #expect(lease.runtimePath.surfaceFeedback == .fallback(.surfaceFeedbackUnavailable))
 
-        let result = try await lease.submitSoftware { _ in
-            _ = ()
+        await #expect(
+            throws: WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+        ) {
+            try await lease.submitSoftware { _ in
+                _ = ()
+            }
         }
-        #expect(result.runtimePath.backing == .fallback(.surfaceFeedbackUnavailable))
 
         try await storage.closeForTesting()
     }
