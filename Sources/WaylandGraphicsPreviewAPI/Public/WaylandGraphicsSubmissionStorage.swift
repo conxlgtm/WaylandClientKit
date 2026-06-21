@@ -306,18 +306,13 @@ package actor WaylandGraphicsWindowBackingStorage {
         var seen: Set<RawLinuxDmabufFormatModifier> = []
         var facts: [ExternalBufferConfigurationFact] = []
         for tranche in feedback.snapshot.tranches {
-            for formatModifier in tranche.formats {
-                guard
-                    formatModifier.format == WaylandGraphicsDRMFormat.xrgb8888.rawValue
-                        || formatModifier.format
-                            == WaylandGraphicsDRMFormat.argb8888.rawValue
-                else {
-                    continue
-                }
-                guard seen.insert(formatModifier).inserted else {
-                    continue
-                }
-
+            for formatModifier in tranche.formats
+            where
+                (formatModifier.format == WaylandGraphicsDRMFormat.xrgb8888.rawValue
+                || formatModifier.format
+                    == WaylandGraphicsDRMFormat.argb8888.rawValue)
+                && seen.insert(formatModifier).inserted
+            {
                 let format: WaylandGraphicsDRMFormat =
                     formatModifier.format == WaylandGraphicsDRMFormat.argb8888.rawValue
                     ? .argb8888
