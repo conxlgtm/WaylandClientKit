@@ -14,6 +14,13 @@ private struct RegisteredExternalBuffer: Sendable {
     let handle: WaylandGraphicsExternalBuffer
 }
 
+private struct ExternalBufferConfigurationFact: Equatable, Sendable {
+    let format: WaylandGraphicsDRMFormat
+    let modifier: WaylandGraphicsDRMFormatModifier
+    let alphaMode: WaylandGraphicsExternalAlphaMode
+    let scanoutPreferred: Bool
+}
+
 @safe
 private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable {
     private let lock = NSLock()
@@ -99,6 +106,8 @@ package actor WaylandGraphicsWindowBackingStorage {
     private var nextExternalSubmissionRawValue: UInt64 = 1
     private var currentSurfaceGeneration = WaylandGraphicsSurfaceGeneration(rawValue: 1)
     private var lastContractGeometry: SurfaceGeometry?
+    private var lastContractConfigurationFacts: [ExternalBufferConfigurationFact]?
+    private var lastContractSynchronization: WaylandGraphicsExternalSynchronizationAvailability?
     private var registeredExternalBuffers:
         [WaylandGraphicsExternalBufferID: RegisteredExternalBuffer] = [:]
     private var reservedExternalBufferIDs: Set<WaylandGraphicsExternalBufferID> = []
@@ -176,16 +185,23 @@ package actor WaylandGraphicsWindowBackingStorage {
     private func frameContract(
         for geometry: SurfaceGeometry
     ) -> WaylandGraphicsFrameContract {
+        let configurationFacts = externalBufferConfigurationFacts()
+        let synchronization = externalSynchronizationAvailability()
         if let lastContractGeometry,
             lastContractGeometry != geometry
+                || lastContractConfigurationFacts != configurationFacts
+                || lastContractSynchronization != synchronization
         {
             currentSurfaceGeneration = WaylandGraphicsSurfaceGeneration(
                 rawValue: currentSurfaceGeneration.rawValue + 1
             )
         }
         lastContractGeometry = geometry
+        lastContractConfigurationFacts = configurationFacts
+        lastContractSynchronization = synchronization
 
         let configurations = externalBufferConfigurations(
+            facts: configurationFacts,
             generation: currentSurfaceGeneration
         )
         return WaylandGraphicsFrameContract(
@@ -193,36 +209,68 @@ package actor WaylandGraphicsWindowBackingStorage {
             geometry: geometry,
             externalBufferConfigurations: configurations,
             recommendedExternalConfigurationID: configurations.first?.id,
-            synchronization: externalSynchronizationAvailability(),
+            synchronization: synchronization,
             runtimePath: backingRuntimePath
         )
     }
 
-    private func externalBufferConfigurations(
-        generation: WaylandGraphicsSurfaceGeneration
-    ) -> [WaylandGraphicsExternalBufferConfiguration] {
-        guard backingRuntimePath.capabilities.dmabuf.isAvailable else {
+    private func externalBufferConfigurationFacts()
+        -> [ExternalBufferConfigurationFact]
+    {
+        guard let feedback = backingRuntimePath.capabilities.dmabufFeedback else {
             return []
         }
 
-        return [
+        var seen: Set<RawLinuxDmabufFormatModifier> = []
+        var facts: [ExternalBufferConfigurationFact] = []
+        for tranche in feedback.snapshot.tranches {
+            for formatModifier in tranche.formats {
+                guard
+                    formatModifier.format == WaylandGraphicsDRMFormat.xrgb8888.rawValue
+                        || formatModifier.format
+                            == WaylandGraphicsDRMFormat.argb8888.rawValue
+                else {
+                    continue
+                }
+                guard seen.insert(formatModifier).inserted else {
+                    continue
+                }
+
+                let format: WaylandGraphicsDRMFormat =
+                    formatModifier.format == WaylandGraphicsDRMFormat.argb8888.rawValue
+                    ? .argb8888
+                    : .xrgb8888
+                facts.append(
+                    ExternalBufferConfigurationFact(
+                        format: format,
+                        modifier: WaylandGraphicsDRMFormatModifier(
+                            rawValue: formatModifier.modifier
+                        ),
+                        alphaMode: format == .argb8888 ? .premultiplied : .opaque,
+                        scanoutPreferred: tranche.flags.contains(.scanout)
+                    )
+                )
+            }
+        }
+        return facts
+    }
+
+    private func externalBufferConfigurations(
+        facts: [ExternalBufferConfigurationFact],
+        generation: WaylandGraphicsSurfaceGeneration
+    ) -> [WaylandGraphicsExternalBufferConfiguration] {
+        facts.enumerated().map { index, fact in
             WaylandGraphicsExternalBufferConfiguration(
-                id: WaylandGraphicsExternalConfigurationID(rawValue: 1),
-                format: .xrgb8888,
-                modifier: .linear,
-                alphaMode: .opaque,
-                scanoutPreferred: false,
+                id: WaylandGraphicsExternalConfigurationID(
+                    rawValue: UInt64(index + 1)
+                ),
+                format: fact.format,
+                modifier: fact.modifier,
+                alphaMode: fact.alphaMode,
+                scanoutPreferred: fact.scanoutPreferred,
                 generation: generation
-            ),
-            WaylandGraphicsExternalBufferConfiguration(
-                id: WaylandGraphicsExternalConfigurationID(rawValue: 2),
-                format: .argb8888,
-                modifier: .linear,
-                alphaMode: .premultiplied,
-                scanoutPreferred: false,
-                generation: generation
-            ),
-        ]
+            )
+        }
     }
 
     private func externalSynchronizationAvailability()
@@ -671,9 +719,21 @@ package actor WaylandGraphicsWindowBackingStorage {
         if shouldAttemptExternalBufferPresentation,
             !leaseState.hasSubmittedFrame
         {
-            return try await window.prepareGraphicsPreviewPresentation(
+            let geometry = try await window.prepareGraphicsPreviewPresentation(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
             )
+            let capabilities = try await window.requestGraphicsPreviewSurfaceFeedback(
+                timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
+            )
+            backingRuntimePath = WaylandGraphicsRuntimePath.projected(
+                capabilities: WaylandGraphicsSurfaceCapabilities(
+                    snapshot: GraphicsPreviewSurfaceCapabilitySnapshot(
+                        snapshot: capabilities
+                    )
+                ),
+                policy: configuration.fallbackPolicy
+            )
+            return geometry
         }
 
         guard shouldAttemptManagedGPU, leaseState.hasSubmittedFrame else {

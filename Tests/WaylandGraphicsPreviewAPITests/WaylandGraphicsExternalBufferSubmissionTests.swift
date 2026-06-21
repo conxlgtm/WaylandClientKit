@@ -156,18 +156,34 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         )
         let lease = try await storage.nextFrame()
 
-        do {
-            _ = try await registerTestExternalBuffer(
-                storage: storage,
-                lease: lease,
-                descriptor: try testExternalDescriptor()
-            )
-            Issue.record("expected managed GPU unavailable failure")
-        } catch WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable) {
-            #expect(await window.importRequests == 0)
-        } catch {
-            Issue.record("unexpected error: \(error)")
-        }
+        #expect(lease.contract.externalBufferConfigurations.isEmpty)
+        #expect(lease.contract.recommendedExternalConfigurationID == nil)
+        #expect(await window.importRequests == 0)
+    }
+
+    @Test
+    func externalContractUsesSurfaceFeedbackCandidates() async throws {
+        let window = try ExternalBufferFakeManagedWindow()
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        #expect(
+            lease.contract.externalBufferConfigurations.map(\.format) == [
+                .xrgb8888, .argb8888,
+            ])
+        #expect(
+            lease.contract.externalBufferConfigurations.map(\.modifier) == [
+                .linear, .linear,
+            ])
+        #expect(
+            lease.contract.externalBufferConfigurations.map(\.scanoutPreferred) == [
+                true, true,
+            ])
+        #expect(
+            lease.contract.recommendedExternalConfigurationID
+                == lease.contract.externalBufferConfigurations.first?.id
+        )
+        #expect(await window.importRequests == 0)
     }
 
     @Test
@@ -638,6 +654,12 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         return geometryValue
     }
 
+    func requestGraphicsPreviewSurfaceFeedback(
+        timeoutMilliseconds _: Int32
+    ) async throws -> SurfaceCapabilitySnapshot {
+        try testSurfaceCapabilitySnapshotWithDmabufFeedback()
+    }
+
     func importGraphicsPreviewExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
     ) async throws -> RawLinuxDmabufBuffer {
@@ -817,6 +839,65 @@ private func testPreviewBufferPresentationResult(
             color: .available(version: 1)
         )
     )
+}
+
+private func testSurfaceCapabilitySnapshotWithDmabufFeedback()
+    throws -> SurfaceCapabilitySnapshot
+{
+    let surfaceID = RawObjectID(42)
+    let feedback = try SurfaceDmabufFeedback(
+        snapshot: testSurfaceDmabufFeedbackSnapshot(surfaceID: surfaceID),
+        surfaceID: surfaceID
+    )
+    return SurfaceCapabilitySnapshot(
+        role: .toplevelWindow,
+        outputIDs: [],
+        fractionalScale: .integerOnly,
+        presentationFeedback: .available,
+        dmabuf: .surfaceFeedback(
+            version: 4,
+            feedback: feedback
+        ),
+        synchronization: .implicitOnly,
+        pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1),
+        contentType: .available,
+        alphaModifier: .available,
+        tearingControl: .available,
+        colorRepresentation: .available(
+            version: 1,
+            support: SurfaceColorRepresentationSupport(alphaModes: [.straight])
+        ),
+        color: .available(version: 1)
+    )
+}
+
+private func testSurfaceDmabufFeedbackSnapshot(
+    surfaceID: RawObjectID
+) throws -> RawLinuxDmabufFeedbackSnapshot {
+    let formats = [
+        RawLinuxDmabufFormatModifier(
+            format: WaylandGraphicsDRMFormat.xrgb8888.rawValue,
+            modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue
+        ),
+        RawLinuxDmabufFormatModifier(
+            format: WaylandGraphicsDRMFormat.argb8888.rawValue,
+            modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue
+        ),
+    ]
+    var state = RawLinuxDmabufFeedbackState()
+    state.replaceFormatTable(formats)
+    try state.setMainDevice(bytes: [1, 2, 3, 4, 5, 6, 7, 8], scope: .surface(surfaceID: surfaceID))
+    try state.setCurrentTrancheTargetDevice(
+        bytes: [1, 2, 3, 4, 5, 6, 7, 8],
+        scope: .surface(surfaceID: surfaceID)
+    )
+    try state.setCurrentTrancheFlags(
+        RawLinuxDmabufTrancheFlags.scanout.rawValue,
+        scope: .surface(surfaceID: surfaceID)
+    )
+    try state.appendCurrentTrancheFormats(indices: [0, 1], scope: .surface(surfaceID: surfaceID))
+    try state.finishCurrentTranche(scope: .surface(surfaceID: surfaceID))
+    return try state.finish(scope: .surface(surfaceID: surfaceID))
 }
 
 private func testExternalDescriptor() throws -> WaylandGraphicsExternalBufferDescriptor {

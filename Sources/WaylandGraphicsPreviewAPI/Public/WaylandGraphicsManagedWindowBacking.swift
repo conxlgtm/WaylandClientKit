@@ -11,6 +11,10 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         timeoutMilliseconds: Int32
     ) async throws -> SurfaceGeometry
 
+    func requestGraphicsPreviewSurfaceFeedback(
+        timeoutMilliseconds: Int32
+    ) async throws -> SurfaceCapabilitySnapshot
+
     // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds: Int32,
@@ -53,6 +57,12 @@ extension WaylandGraphicsManagedWindow {
         timeoutMilliseconds _: Int32
     ) async throws -> SurfaceGeometry {
         try await geometry
+    }
+
+    package func requestGraphicsPreviewSurfaceFeedback(
+        timeoutMilliseconds _: Int32
+    ) async throws -> SurfaceCapabilitySnapshot {
+        throw GraphicsPreviewSurfaceFeedbackError.surfaceFeedbackUnavailable
     }
 
     package func importGraphicsPreviewSynchronizationTimeline(
