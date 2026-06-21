@@ -306,28 +306,16 @@ Intentionally public:
 - `WaylandGraphicsXRGBColor`
 - `WaylandGraphicsSurfaceGeneration`
 - `WaylandGraphicsExternalConfigurationID`
-- `WaylandGraphicsExternalBufferID`
-- `WaylandGraphicsExternalSubmissionID`
-- `WaylandGraphicsExternalSyncTimelineID`
-- `WaylandGraphicsExternalSyncTimeline`
-- `WaylandGraphicsExternalSyncPoint`
-- `WaylandGraphicsExternalAcquireSynchronization`
 - `WaylandGraphicsRenderNode`
 - `WaylandGraphicsExternalSynchronizationAvailability`
 - `WaylandGraphicsExternalAlphaMode`
 - `WaylandGraphicsExternalBufferConfiguration`
 - `WaylandGraphicsFrameContract`
-- `WaylandGraphicsExternalBuffer`
 - `WaylandGraphicsDRMFormat`
 - `WaylandGraphicsDRMFormatModifier`
-- `WaylandGraphicsExternalBufferPlane`
-- `WaylandGraphicsExternalBufferDescriptor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
 - `WaylandGraphicsFrameResult`
-- `WaylandGraphicsExternalReleaseResult`
-- `WaylandGraphicsExternalBufferRenderLease`
-- `WaylandGraphicsExternalBufferSubmissionReceipt`
 - `WaylandGraphicsError`
 - `WaylandGraphicsWindowBacking`
 - `WaylandGraphicsFrameLease`
@@ -348,18 +336,14 @@ Current preview contract:
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw protocol or renderer
   objects.
-- The external-buffer import path is public preview API for renderer-owned
-  one-to-four-plane dmabuf images. Public descriptor values are move-only and
-  keep file-descriptor transfer plumbing out of public graphics API. Registration
-  imports a descriptor once and returns a stable public buffer handle. Frame
-  leases reserve available registered buffers, and
-  render leases submit them after the renderer has drawn into the image.
-  Submission returns a receipt with a stable submission identity and an
-  idempotent release wait. The receipt resolves from authoritative implicit
-  `wl_buffer.release`, authoritative DRM syncobj release timeline signaling, or
-  backing teardown. Registered buffers can be unregistered only after no
-  reservation or submitted use is awaiting release, and unregistering retires
-  WCK's imported buffer wrapper.
+- The external-buffer import path is package-scoped preview plumbing for
+  renderer-owned one-to-four-plane dmabuf images. Public API exposes only
+  renderer-neutral configuration and runtime facts: external configuration IDs,
+  DRM format/modifier values, alpha mode, synchronization availability, scanout
+  preference, and opaque render-node identity. Descriptor construction, file
+  descriptor transfer, buffer registration, render leases, release receipts, and
+  sync timeline import stay package-scoped until WCK has a compliant public
+  handle boundary.
 - `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
   synchronization availability, runtime-path snapshot, and initial normalized
   XRGB8888/ARGB8888 linear external-buffer candidates needed before rendering.

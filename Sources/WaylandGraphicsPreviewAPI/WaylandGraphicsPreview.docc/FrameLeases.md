@@ -11,44 +11,26 @@ surface generation, authoritative geometry, external-buffer candidate facts, and
 synchronization availability for the frame.
 
 Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)`` or
-``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``. For external GPU
-frames, reserve a registered buffer and submit the resulting render lease.
-Cancel the frame lease with ``WaylandGraphicsFrameLease/cancel()`` when no frame
-will be produced.
+``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``. Cancel the frame
+lease with ``WaylandGraphicsFrameLease/cancel()`` when no frame will be
+produced.
 
 A backing allows only one active lease. A submitted or cancelled lease cannot be
 submitted again. Closing the backing makes future lease operations fail with a
 typed error.
 
-## Software, Clear, And External Frames
+## Software And Clear Frames
 
 ``WaylandGraphicsSubmittedFrame/clearColor(_:)`` submits a renderer-neutral clear
 frame. On active managed GPU backing, the clear is rendered through internal GPU
 preview code. On software backing or fallback, WaylandClientKit fills a
 `SoftwareFrame`.
 
-For reusable renderer-owned images, first register each descriptor with
-``WaylandGraphicsWindowBacking/registerExternalBuffer(_:contract:configurationID:)``.
-Then call ``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)`` to create a
-``WaylandGraphicsExternalBufferRenderLease``. Submit that render lease after the
-renderer has finished drawing into the reserved image.
-
-For explicit synchronization, submit a
-`WaylandGraphicsExternalAcquireSynchronization.drmSyncobj` acquire point. WCK
-creates and tracks the per-buffer release timeline used to decide when the image
-can be reused.
-
-External descriptors must be registered before presentation. That registered
-ownership model lets WCK prevent reuse while the previous submission is still
-awaiting compositor release.
-
-External submission returns a ``WaylandGraphicsExternalBufferSubmissionReceipt``.
-Keep the renderer-owned image alive until
-``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()`` returns a
-terminal result. Reusing an external image before that release result violates
-the presentation ownership contract.
-Use ``WaylandGraphicsWindowBacking/unregisterExternalBuffer(_:)`` to retire a
-registered image only after it is available again.
+Package-scoped external-buffer helpers register renderer-owned descriptors,
+reserve registered buffers, submit render leases, and await release receipts.
+That path exists to prove renderer-owned dmabuf presentation without normal
+CPU readback, but descriptor construction, registration, reservation, explicit
+sync timeline import, and release receipts are not public API.
 
 Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
 describe optional metadata and logical damage. WaylandClientKit validates metadata

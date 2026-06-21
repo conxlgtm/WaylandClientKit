@@ -356,23 +356,23 @@ Remaining unsafe constructs:
 - `RawLinuxDmabufPlaneFileDescriptor` owns a plane descriptor before it is
   transferred to `zwp_linux_buffer_params_v1.add`.
 - `WaylandGraphicsExternalBufferDescriptor` and
-  `WaylandGraphicsExternalBufferPlane` are public preview move-only values.
-  Their package manufacturing path stores descriptor facts for transfer into the
-  dmabuf import path. Public API can carry one-to-four-plane renderer-owned image
-  descriptors without receiving reusable file-descriptor access, raw Wayland
-  proxies, GBM/EGL/DRM objects, syncobj handles, or pointers.
-- `WaylandGraphicsExternalBufferSubmissionReceipt` retains a private actor
-  release state. The receipt may be awaited repeatedly, and all waiters resolve
-  to the same terminal release result. The release registry is package-private,
-  protected by `NSLock`, and maps presenter slots to submission identities only
-  while a submitted buffer awaits release.
+  `WaylandGraphicsExternalBufferPlane` are package-scoped preview move-only
+  values. Their manufacturing path stores descriptor facts for transfer into the
+  dmabuf import path without exposing reusable file-descriptor access, raw
+  Wayland proxies, GBM/EGL/DRM objects, syncobj handles, or pointers from public
+  API.
+- `WaylandGraphicsExternalBufferSubmissionReceipt` is package-scoped and retains
+  a private actor release state. The receipt may be awaited repeatedly, and all
+  waiters resolve to the same terminal release result. The release registry is
+  package-private, protected by `NSLock`, and maps presenter slots to submission
+  identities only while a submitted buffer awaits release.
 - `WaylandGraphicsExternalSyncTimeline` and
-  `WaylandGraphicsExternalSyncPoint` are public opaque sync identity values. The
-  timeline import plumbing is package-scoped so public graphics API does not
-  expose raw syncobj or file-descriptor handles.
-- `WaylandGraphicsExternalBuffer` is a public opaque registration handle. It
-  stores diagnostic/public format facts plus package-private backing and slot
-  tokens. Raw presenter slot types are not exposed from public declarations.
+  `WaylandGraphicsExternalSyncPoint` are package-scoped opaque sync identity
+  values. The timeline import plumbing stays package-scoped so public graphics
+  API does not expose raw syncobj or file-descriptor handles.
+- `WaylandGraphicsExternalBuffer` is a package-scoped registration handle. It
+  stores diagnostic format facts plus package-private backing and slot tokens.
+  Raw presenter slot types are not exposed from public declarations.
 - `RawSurfaceBuffer` is `@unchecked Sendable` because the managed GPU preview
   presenter passes an imported `wl_buffer` wrapper through the async
   owner-thread commit bridge without exposing the proxy to public API.
@@ -396,9 +396,9 @@ Audit invariant:
   planes remain locally owned and are closed by their wrapper.
 - External buffer descriptors validate positive size, nonzero DRM format,
   positive stride, consecutive plane indices, and single ownership before any
-  import request. Public descriptor planes use consecutive indices from 0. Import-plan
-  deinitialization closes any plane descriptor that was not transferred to
-  Wayland.
+  import request. Package descriptor planes use consecutive indices from 0.
+  Import-plan deinitialization closes any plane descriptor that was not
+  transferred to Wayland.
 - External submission receipts are completed only by implicit compositor buffer
   release, explicit DRM syncobj release timeline signaling, backing close, or a
   terminal submission failure. A successful commit, presentation feedback event,

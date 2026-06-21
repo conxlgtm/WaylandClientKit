@@ -2,21 +2,22 @@
 
 `WaylandGraphicsPreview` is a renderer-neutral, source-breaking preview product
 for graphics-backed Wayland windows. It lets public users request software
-backing, managed GPU clear-frame presentation, or renderer-owned external-buffer
-presentation, then inspect typed runtime-path facts.
+backing or managed GPU clear-frame presentation, then inspect typed runtime-path
+facts. Package-scoped external-buffer submission remains preview evidence for
+renderer-owned dmabuf presentation without exposing raw graphics handles as
+public API.
 
 ## What It Is
 
 The preview API wraps a public ``WaylandGraphicsWindowBacking`` around a
 `Window`. Applications lease a frame, inspect the frame contract, submit clear
-frames, software drawing work, or one-to-four-plane external buffers, and receive
-typed runtime-path facts.
+frames or software drawing work, and receive typed runtime-path facts.
 
-External-buffer submission is intentionally narrow. WCK registers move-only
-descriptors, commits reserved buffers, tracks compositor release, and returns a
-``WaylandGraphicsExternalBufferSubmissionReceipt`` for each submitted use. The
-renderer keeps each GPU allocation alive until the corresponding receipt reaches
-a terminal release result.
+Package-scoped external-buffer helpers are intentionally narrow. They register
+move-only descriptors, commit reserved buffers, track compositor release, and
+return a package-scoped receipt for each submitted use. The renderer helper keeps
+each GPU allocation alive until the corresponding receipt reaches a terminal
+release result.
 
 ## Choosing Backing
 
@@ -34,11 +35,12 @@ back to software or must throw a typed ``WaylandGraphicsError``.
 ## Current External Buffer Scope
 
 - One-to-four-plane XRGB8888 or ARGB8888 images.
-- Move-only descriptors whose file-descriptor transfer plumbing stays out of
-  public graphics API.
+- Package-scoped move-only descriptors whose file-descriptor transfer plumbing
+  stays out of public graphics API.
 - Persistent registration and release-gated reservation.
-- Implicit synchronization and DRM syncobj explicit synchronization.
-- Release-gated reuse through ``WaylandGraphicsExternalBufferSubmissionReceipt``.
+- Package-scoped implicit synchronization and DRM syncobj explicit
+  synchronization.
+- Release-gated reuse through package-scoped submission receipts.
 
 ## Example
 

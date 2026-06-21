@@ -168,40 +168,6 @@ struct WaylandGraphicsPreviewClientTests {
     }
 
     @Test
-    func externalBufferRegistrationTypesCompileForExternalClients() async throws {
-        func registerExternalBuffer(
-            backing: WaylandGraphicsWindowBacking,
-            lease: WaylandGraphicsFrameLease,
-            descriptor: consuming WaylandGraphicsExternalBufferDescriptor
-        ) async throws {
-            let configurationID = try #require(
-                lease.contract.recommendedExternalConfigurationID)
-            let buffer = try await backing.registerExternalBuffer(
-                descriptor,
-                contract: lease.contract,
-                configurationID: configurationID
-            )
-            let renderLease = try await lease.reserveExternalBuffer(buffer)
-            let receipt = try await renderLease.submit()
-            _ = receipt.id
-            _ = await receipt.waitForRelease()
-        }
-
-        func submitExternalBufferWithExplicitSync(
-            renderLease: WaylandGraphicsExternalBufferRenderLease,
-            timeline: WaylandGraphicsExternalSyncTimeline
-        ) async throws {
-            let point = WaylandGraphicsExternalSyncPoint(timeline: timeline, value: 1)
-            _ = try await renderLease.submit(
-                acquireSynchronization: .drmSyncobj(point)
-            )
-        }
-
-        _ = registerExternalBuffer
-        _ = submitExternalBufferWithExplicitSync
-    }
-
-    @Test
     func externalGPUPresentationConfigurationCompilesForExternalClients() {
         let configuration = WaylandGraphicsConfiguration(
             presentationMode: .externalGPU,
