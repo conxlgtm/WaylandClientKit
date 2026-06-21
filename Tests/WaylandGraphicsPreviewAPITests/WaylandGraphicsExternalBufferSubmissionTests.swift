@@ -364,6 +364,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 }
 
+// swiftlint:disable type_body_length
 @Suite
 struct WaylandGraphicsExternalBufferLifecycleTests {
     @Test
@@ -385,6 +386,28 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func nextExternalFramePreservesObservedRuntimeStatus() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+
+        _ = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
+        )
+        let secondLease = try await storage.nextFrame()
+
+        #expect(secondLease.runtimePath.backing == .active)
+        #expect(secondLease.runtimePath.dmabuf == .active)
+        #expect(secondLease.runtimePath.dmabufImport == .active)
+        #expect(secondLease.runtimePath.bufferLifecycle == .active)
+        await secondLease.cancel()
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
     func successfulExternalBufferWaitsForReleaseBeforeReusingSlot() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
@@ -395,6 +418,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             lease: firstLease,
             descriptor: try testExternalDescriptor()
         )
+        // swiftlint:disable:next no_unstructured_task
         let firstRelease = Task {
             await first.receipt.waitForRelease()
         }
@@ -480,6 +504,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             lease: lease,
             descriptor: try testExternalDescriptor()
         )
+        // swiftlint:disable:next no_unstructured_task
         let release = Task {
             await submitted.receipt.waitForRelease()
         }
@@ -489,7 +514,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         try await storage.closeForTesting()
         await window.emitImportedBufferRelease(at: 0)
 
-        #expect(await release.value == .backingClosed)
+        #expect(await release.value == .retired(.backingClosed))
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
     }
@@ -687,6 +712,58 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func frameLeaseCannotReserveMultipleExternalBuffers() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let firstBuffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
+        let secondBuffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
+
+        _ = try await lease.reserveExternalBuffer(firstBuffer)
+        await #expect(throws: (any Error).self) {
+            _ = try await lease.reserveExternalBuffer(secondBuffer)
+        }
+        await lease.cancel()
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func failedSoftwareSubmitReleasesExternalBufferReservation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
+        )
+
+        _ = try await firstLease.reserveExternalBuffer(buffer)
+        await #expect(
+            throws: WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+        ) {
+            try await firstLease.submitSoftware { _ in
+                Issue.record("unexpected software draw")
+            }
+        }
+
+        let secondLease = try await storage.nextFrame()
+        _ = try await secondLease.reserveExternalBuffer(buffer)
+        await secondLease.cancel()
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
     func staleRenderLeaseCancelDoesNotClearNewReservation() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
@@ -865,6 +942,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         try await storage.closeForTesting()
     }
 }
+// swiftlint:enable type_body_length
 
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     enum ImportBehavior: Sendable {
@@ -893,7 +971,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         presentationFailuresBeforeSuccess requestedPresentationFailures: Int = 0,
         surfaceFeedbackSynchronization requestedSurfaceFeedbackSynchronization:
             SurfaceSynchronizationCapability? = .implicitOnly,
-        includeDistinctDuplicateSurfaceFeedback shouldIncludeDistinctDuplicateSurfaceFeedback:
+        includeDistinctDuplicateSurfaceFeedback includeDistinctFeedbackDuplicates:
             Bool = false
     ) throws {
         id = backingWindowID
@@ -901,7 +979,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         importBehavior = requestedImportBehavior
         presentationFailuresBeforeSuccess = requestedPresentationFailures
         surfaceFeedbackSynchronization = requestedSurfaceFeedbackSynchronization
-        includeDistinctDuplicateSurfaceFeedback = shouldIncludeDistinctDuplicateSurfaceFeedback
+        includeDistinctDuplicateSurfaceFeedback = includeDistinctFeedbackDuplicates
     }
 
     var geometry: SurfaceGeometry {

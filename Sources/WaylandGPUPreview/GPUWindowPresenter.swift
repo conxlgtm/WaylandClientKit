@@ -356,6 +356,8 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
     }
 }
 
+// SAFETY: Presenter state, imported buffers, release failures, and runtime
+// snapshots are protected by lock; callbacks receive only stable slot IDs.
 @safe
 package final class GPUWindowPresenter: @unchecked Sendable {
     private let lock = NSLock()

@@ -1,3 +1,4 @@
+import Foundation
 import Glibc
 import WaylandClient
 import WaylandGPUPreview
@@ -151,7 +152,7 @@ public enum WaylandGraphicsPresentationMode: Equatable, Sendable {
 }
 
 extension WaylandGraphicsPresentationMode {
-    fileprivate init(
+    init(
         backingPreference: WaylandGraphicsBackingKind,
         fallbackPolicy _: WaylandGraphicsFallbackPolicy
     ) {
@@ -162,7 +163,7 @@ extension WaylandGraphicsPresentationMode {
         }
     }
 
-    fileprivate var backingPreference: WaylandGraphicsBackingKind {
+    var backingPreference: WaylandGraphicsBackingKind {
         switch self {
         case .software:
             .software
@@ -227,7 +228,7 @@ public struct WaylandGraphicsSurfaceGeneration:
     Sendable,
     CustomStringConvertible
 {
-    package let rawValue: UInt64
+    public let rawValue: UInt64
 
     package init(rawValue generationRawValue: UInt64) {
         rawValue = generationRawValue
@@ -255,13 +256,13 @@ public struct WaylandGraphicsExternalConfigurationID:
     }
 }
 
-package struct WaylandGraphicsExternalBufferID:
+public struct WaylandGraphicsExternalBufferID:
     Equatable,
     Hashable,
     Sendable,
     CustomStringConvertible
 {
-    package let rawValue: UInt64
+    public let rawValue: UInt64
 
     package init(rawValue bufferRawValue: UInt64) {
         rawValue = bufferRawValue
@@ -272,13 +273,13 @@ package struct WaylandGraphicsExternalBufferID:
     }
 }
 
-package struct WaylandGraphicsExternalSubmissionID:
+public struct WaylandGraphicsExternalSubmissionID:
     Equatable,
     Hashable,
     Sendable,
     CustomStringConvertible
 {
-    package let rawValue: UInt64
+    public let rawValue: UInt64
 
     package init(rawValue submissionRawValue: UInt64) {
         rawValue = submissionRawValue
@@ -289,30 +290,30 @@ package struct WaylandGraphicsExternalSubmissionID:
     }
 }
 
-package struct WaylandGraphicsExternalSyncTimelineID:
+public struct WaylandGraphicsExternalSyncTimelineID:
     Equatable,
     Hashable,
     Sendable,
     CustomStringConvertible
 {
-    package let rawValue: UInt64
+    public let rawValue: UInt64
 
     package init(rawValue timelineRawValue: UInt64) {
         rawValue = timelineRawValue
     }
 
-    package var description: String {
+    public var description: String {
         "external-sync-timeline-\(rawValue)"
     }
 }
 
-package struct WaylandGraphicsExternalSyncTimeline:
+public struct WaylandGraphicsExternalSyncTimeline:
     Equatable,
     Hashable,
     Sendable,
     Identifiable
 {
-    package let id: WaylandGraphicsExternalSyncTimelineID
+    public let id: WaylandGraphicsExternalSyncTimelineID
     package let windowID: WindowID
 
     package init(
@@ -322,11 +323,19 @@ package struct WaylandGraphicsExternalSyncTimeline:
         id = timelineID
         windowID = backingWindowID
     }
+
+    public func point(_ value: UInt64) throws -> WaylandGraphicsExternalSyncPoint {
+        guard value > 0 else {
+            throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+        }
+
+        return WaylandGraphicsExternalSyncPoint(timeline: self, value: value)
+    }
 }
 
-package struct WaylandGraphicsExternalSyncPoint: Equatable, Sendable {
-    package let timelineID: WaylandGraphicsExternalSyncTimelineID
-    package let value: UInt64
+public struct WaylandGraphicsExternalSyncPoint: Equatable, Sendable {
+    public let timelineID: WaylandGraphicsExternalSyncTimelineID
+    public let value: UInt64
     package let windowID: WindowID
 
     package init(
@@ -339,11 +348,16 @@ package struct WaylandGraphicsExternalSyncPoint: Equatable, Sendable {
     }
 }
 
-package enum WaylandGraphicsExternalAcquireSynchronization: Equatable, Sendable {
+public enum WaylandGraphicsExternalAcquireSynchronization: Equatable, Sendable {
     case drmSyncobj(WaylandGraphicsExternalSyncPoint)
 }
 
-public struct WaylandGraphicsRenderNode: Equatable, Hashable, Sendable {
+public struct WaylandGraphicsRenderNode:
+    CustomStringConvertible,
+    Equatable,
+    Hashable,
+    Sendable
+{
     package let path: String?
     package let targetDevice: RawLinuxDmabufDevice
 
@@ -354,8 +368,17 @@ public struct WaylandGraphicsRenderNode: Equatable, Hashable, Sendable {
         path = renderNodePath
         targetDevice = renderNodeTargetDevice
     }
+
+    public var deviceIDBytes: [UInt8] {
+        targetDevice.bytes
+    }
+
+    public var description: String {
+        deviceIDBytes.map { String(format: "%02x", $0) }.joined()
+    }
 }
 
+// swiftlint:disable:next type_name
 public enum WaylandGraphicsExternalSynchronizationAvailability:
     Equatable,
     Sendable
@@ -402,14 +425,14 @@ public struct WaylandGraphicsExternalBufferConfiguration:
     }
 }
 
-package struct WaylandGraphicsExternalBuffer: Sendable, Identifiable {
-    package let id: WaylandGraphicsExternalBufferID
-    package let generation: WaylandGraphicsSurfaceGeneration
-    package let configurationID: WaylandGraphicsExternalConfigurationID
-    package let size: PositivePixelSize
-    package let format: WaylandGraphicsDRMFormat
-    package let modifier: WaylandGraphicsDRMFormatModifier
-    package let renderNode: WaylandGraphicsRenderNode
+public struct WaylandGraphicsExternalBuffer: Sendable, Identifiable {
+    public let id: WaylandGraphicsExternalBufferID
+    public let generation: WaylandGraphicsSurfaceGeneration
+    public let configurationID: WaylandGraphicsExternalConfigurationID
+    public let size: PositivePixelSize
+    public let format: WaylandGraphicsDRMFormat
+    public let modifier: WaylandGraphicsDRMFormatModifier
+    public let renderNode: WaylandGraphicsRenderNode
 
     package let windowID: WindowID
     package let slotRawValue: Int
@@ -639,13 +662,13 @@ public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
     }
 }
 
-package struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
+public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     package var fileDescriptor: OwnedFileDescriptor
-    package let offset: UInt32
-    package let stride: UInt32
+    public let offset: UInt32
+    public let stride: UInt32
     package let planeIndex: Int
 
-    package init(
+    public init(
         fileDescriptor planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32
@@ -658,11 +681,11 @@ package struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
         )
     }
 
-    package init(
+    public init(
         fileDescriptor planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32,
-        planeIndex planeIndexValue: UInt32
+        planeIndex planeIndexValue: UInt32 = 0
     ) throws {
         try self.init(
             fd: planeFileDescriptor,
@@ -698,7 +721,7 @@ package struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     }
 }
 
-package enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
+public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
     case one(WaylandGraphicsExternalBufferPlane)
     case two(WaylandGraphicsExternalBufferPlane, WaylandGraphicsExternalBufferPlane)
     case three(
@@ -767,13 +790,13 @@ package enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
     }
 }
 
-package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
-    package let size: PositivePixelSize
-    package let format: WaylandGraphicsDRMFormat
-    package let modifier: WaylandGraphicsDRMFormatModifier
+public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
+    public let size: PositivePixelSize
+    public let format: WaylandGraphicsDRMFormat
+    public let modifier: WaylandGraphicsDRMFormatModifier
     private var planes: WaylandGraphicsExternalBufferPlanes
 
-    package init(
+    public init(
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
@@ -787,7 +810,7 @@ package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
         )
     }
 
-    package init(
+    public init(
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
@@ -802,7 +825,7 @@ package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
         )
     }
 
-    package init(
+    public init(
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
@@ -818,7 +841,7 @@ package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
         )
     }
 
-    package init(
+    public init(
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
@@ -835,7 +858,7 @@ package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
         )
     }
 
-    package init(
+    public init(
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
@@ -1150,9 +1173,29 @@ public struct WaylandGraphicsFrameResult: Equatable, Sendable {
     }
 }
 
-package enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {
-    case released
+public enum WaylandGraphicsExternalRetirementReason: Equatable, Sendable {
     case backingClosed
+    case windowClosed
+    case displayClosed
+    case unregistered
+}
+
+public enum WaylandGraphicsExternalReleaseMechanism: Equatable, Sendable {
+    case implicitWaylandBufferRelease
+    case explicitSyncobjTimelinePoint
+}
+
+public enum WaylandGraphicsExternalBufferLifecycle: Equatable, Sendable {
+    case available
+    case reserved
+    case submittedAwaitingRelease
+    case unregistered
+    case foreign
+}
+
+public enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {
+    case released
+    case retired(WaylandGraphicsExternalRetirementReason)
     case failed(WaylandGraphicsUnavailableReason)
 }
 
@@ -1160,7 +1203,9 @@ package actor WaylandGraphicsExternalReleaseState {
     private var result: WaylandGraphicsExternalReleaseResult?
     private var waiters: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>] = []
 
-    package init() {}
+    package init() {
+        // Starts unresolved until compositor release, backing close, or failure.
+    }
 
     package func wait() async -> WaylandGraphicsExternalReleaseResult {
         if let result {
@@ -1184,30 +1229,41 @@ package actor WaylandGraphicsExternalReleaseState {
     }
 }
 
-package struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
-    package let id: WaylandGraphicsExternalSubmissionID
-    package let frameResult: WaylandGraphicsFrameResult
+// swiftlint:disable:next type_name
+public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
+    public let id: WaylandGraphicsExternalSubmissionID
+    public let bufferID: WaylandGraphicsExternalBufferID
+    public let contractGeneration: WaylandGraphicsSurfaceGeneration
+    public let frameResult: WaylandGraphicsFrameResult
+    public let releaseMechanism: WaylandGraphicsExternalReleaseMechanism
 
     private let releaseState: WaylandGraphicsExternalReleaseState
 
     package init(
         id submissionID: WaylandGraphicsExternalSubmissionID,
+        bufferID submittedBufferID: WaylandGraphicsExternalBufferID,
+        contractGeneration submittedContractGeneration: WaylandGraphicsSurfaceGeneration,
         frameResult submittedFrameResult: WaylandGraphicsFrameResult,
+        releaseMechanism submissionReleaseMechanism:
+            WaylandGraphicsExternalReleaseMechanism,
         releaseState submissionReleaseState: WaylandGraphicsExternalReleaseState
     ) {
         id = submissionID
+        bufferID = submittedBufferID
+        contractGeneration = submittedContractGeneration
         frameResult = submittedFrameResult
+        releaseMechanism = submissionReleaseMechanism
         releaseState = submissionReleaseState
     }
 
-    package func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {
+    public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {
         await releaseState.wait()
     }
 }
 
-package struct WaylandGraphicsExternalBufferRenderLease: Sendable {
-    package let buffer: WaylandGraphicsExternalBuffer
-    package let contract: WaylandGraphicsFrameContract
+public struct WaylandGraphicsExternalBufferRenderLease: Sendable {
+    public let buffer: WaylandGraphicsExternalBuffer
+    public let contract: WaylandGraphicsFrameContract
 
     private let frameLeaseID: WaylandGraphicsFrameLeaseID
     private let storage: WaylandGraphicsWindowBackingStorage
@@ -1225,20 +1281,21 @@ package struct WaylandGraphicsExternalBufferRenderLease: Sendable {
     }
 
     @discardableResult
-    package func submit(
+    public func submit(
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
     ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
         try await storage.submitRegisteredExternalBuffer(
             leaseID: frameLeaseID,
             buffer: buffer,
+            acquireSynchronization: nil,
             metadata: frameMetadata,
             schedule: frameSchedule
         )
     }
 
     @discardableResult
-    package func submit(
+    public func submit(
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization,
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
@@ -1252,7 +1309,7 @@ package struct WaylandGraphicsExternalBufferRenderLease: Sendable {
         )
     }
 
-    package func cancel() async {
+    public func cancel() async {
         await storage.cancelExternalBufferReservation(buffer, leaseID: frameLeaseID)
     }
 }
@@ -1305,9 +1362,14 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
     case unsupportedMetadata
     case invalidDamageRegion
     case unsupportedPacing
-    case staleFrameContract
-    case externalBufferUnavailable
-    case foreignExternalBuffer
+    case staleFrameContract(
+        rendered: WaylandGraphicsSurfaceGeneration,
+        current: WaylandGraphicsSurfaceGeneration
+    )
+    case externalBufferUnavailable(
+        id: WaylandGraphicsExternalBufferID,
+        state: WaylandGraphicsExternalBufferLifecycle
+    )
     case submissionFailed(WaylandGraphicsSubmissionFailure)
 }
 
@@ -1342,7 +1404,7 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     /// Registration consumes the descriptor and imports it once for this
     /// backing. The returned buffer handle is scoped to this backing and frame
     /// contract generation.
-    package func registerExternalBuffer(
+    public func registerExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
         contract frameContract: WaylandGraphicsFrameContract,
         configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
@@ -1358,7 +1420,7 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     ///
     /// The descriptor is consumed by WCK and either transferred to the compositor
     /// or closed on failure. The returned timeline is scoped to this backing.
-    package func importExternalSyncTimeline(
+    public func importExternalSyncTimeline(
         _ fileDescriptor: consuming OwnedFileDescriptor
     ) async throws -> WaylandGraphicsExternalSyncTimeline {
         try await storage.importExternalSyncTimeline(fileDescriptor)
@@ -1368,7 +1430,7 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     ///
     /// The buffer must not be reserved or awaiting compositor release. Await the
     /// submission receipt before unregistering a submitted buffer.
-    package func unregisterExternalBuffer(
+    public func unregisterExternalBuffer(
         _ buffer: WaylandGraphicsExternalBuffer
     ) async throws {
         try await storage.unregisterExternalBuffer(buffer)
@@ -1484,7 +1546,7 @@ public struct WaylandGraphicsFrameLease: Sendable {
         await storage.cancel(leaseID: id)
     }
 
-    package func reserveExternalBuffer(
+    public func reserveExternalBuffer(
         _ buffer: WaylandGraphicsExternalBuffer
     ) async throws -> WaylandGraphicsExternalBufferRenderLease {
         try await storage.reserveExternalBuffer(

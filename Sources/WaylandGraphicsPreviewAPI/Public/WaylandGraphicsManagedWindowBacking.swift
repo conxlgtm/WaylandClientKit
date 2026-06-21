@@ -38,6 +38,10 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         identity: SurfaceSyncTimelineIdentity
     ) async throws
 
+    func removeGraphicsPreviewSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity
+    ) async throws
+
     func importGraphicsPreviewExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
     ) async throws -> RawLinuxDmabufBuffer
@@ -71,6 +75,12 @@ extension WaylandGraphicsManagedWindow {
     ) async throws {
         fileDescriptor.close()
         throw SurfaceSubmitConstraintError.explicitSyncUnavailable
+    }
+
+    package func removeGraphicsPreviewSynchronizationTimeline(
+        identity _: SurfaceSyncTimelineIdentity
+    ) async throws {
+        // No imported timeline exists for the default non-explicit-sync window.
     }
 
     package func importGraphicsPreviewExternalBuffer(

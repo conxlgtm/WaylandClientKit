@@ -109,6 +109,28 @@ extension WaylandGraphicsWindowBackingStorage {
 
     package static func runtimePath(
         _ runtimePath: WaylandGraphicsRuntimePath,
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        surfaceFeedback: WaylandGraphicsRuntimeStatus
+    ) -> WaylandGraphicsRuntimePath {
+        WaylandGraphicsRuntimePath(
+            capabilities: capabilities,
+            backing: runtimePath.backing,
+            dmabuf: runtimePath.dmabuf,
+            surfaceFeedback: surfaceFeedback,
+            renderNode: runtimePath.renderNode,
+            gbm: runtimePath.gbm,
+            egl: runtimePath.egl,
+            dmabufImport: runtimePath.dmabufImport,
+            bufferLifecycle: runtimePath.bufferLifecycle,
+            explicitSync: runtimePath.explicitSync,
+            pacing: runtimePath.pacing,
+            metadata: runtimePath.metadata,
+            presentationFeedback: runtimePath.presentationFeedback
+        )
+    }
+
+    package static func runtimePath(
+        _ runtimePath: WaylandGraphicsRuntimePath,
         externalBufferBacking backing: WaylandGraphicsRuntimeStatus
     ) -> WaylandGraphicsRuntimePath {
         WaylandGraphicsRuntimePath(

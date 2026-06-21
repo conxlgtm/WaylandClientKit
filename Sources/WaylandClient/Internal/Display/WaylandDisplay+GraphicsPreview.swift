@@ -231,6 +231,16 @@ extension WaylandDisplay {
         )
     }
 
+    package func removeGraphicsPreviewSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity,
+        for windowID: WindowID
+    ) throws {
+        try requireCore().removeGraphicsPreviewSynchronizationTimeline(
+            identity: identity,
+            for: windowID
+        )
+    }
+
     package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
         _ body:
             @Sendable (
@@ -343,6 +353,19 @@ extension DisplayCore {
                 try session.connection.completeInitialDiscovery(
                     timeoutMilliseconds: timeoutMilliseconds
                 )
+            }
+        }
+    }
+
+    func removeGraphicsPreviewSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity,
+        for windowID: WindowID
+    ) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID)
+                .removePreviewSynchronizationTimelineOnOwnerThread(identity: identity)
+            guard !isClosed else {
+                throw ClientError.display(.closed)
             }
         }
     }

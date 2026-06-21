@@ -1455,6 +1455,13 @@ extension TopLevelWindow {
         surfaceRuntime.installSynchronizationTimeline(timeline, identity: identity)
     }
 
+    package func removePreviewSynchronizationTimelineOnOwnerThread(
+        identity: SurfaceSyncTimelineIdentity
+    ) {
+        connection.preconditionIsOwnerThread()
+        surfaceRuntime.removeSynchronizationTimeline(identity: identity)
+    }
+
     private func ensureSubmitConstraintObjectsInstalled(
         for constraints: SurfaceSubmitConstraints
     ) throws {

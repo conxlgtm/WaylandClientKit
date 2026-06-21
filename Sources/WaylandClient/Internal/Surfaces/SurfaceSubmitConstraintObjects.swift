@@ -31,6 +31,10 @@ struct SurfaceSubmitConstraintObjects {
         timelines[identity] = timeline
     }
 
+    mutating func removeTimeline(identity: SurfaceSyncTimelineIdentity) {
+        timelines.removeValue(forKey: identity)?.destroy()
+    }
+
     mutating func installFifo(_ newFifo: RawFifo) {
         fifo?.destroy()
         fifo = newFifo
