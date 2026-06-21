@@ -48,7 +48,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("feature: external-gpu-buffer")
             log("scope: public-wck-api-with-package-renderer-helper")
             log("requested backing: external-dmabuf")
-            log("dmabuf: \(status(runtimePath.dmabufImport))")
+            log("initial dmabuf status: \(status(runtimePath.dmabufImport))")
             log("format: XRGB8888")
             log("modifier: 0")
             log("planes: 1")
