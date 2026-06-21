@@ -182,6 +182,54 @@ struct WaylandGraphicsPreviewClientTests {
         #expect(configuration.backingPreference == .managedGPU)
         #expect(configuration.fallbackPolicy == .requireGPU)
     }
+
+    @Test
+    func externalBufferLifecycleCompilesForExternalClients() throws {
+        func driveExternalBufferLifecycle(
+            backing: WaylandGraphicsWindowBacking
+        ) async throws {
+            let lease = try await backing.nextFrame()
+            let configuration = try #require(
+                lease.contract.externalBufferConfigurations.first
+            )
+            let plane = try WaylandGraphicsExternalBufferPlane(
+                fileDescriptor: try OwnedFileDescriptor(adopting: -1),
+                offset: 0,
+                stride: 256,
+                planeIndex: 0
+            )
+            let descriptor = try WaylandGraphicsExternalBufferDescriptor(
+                size: lease.size,
+                format: configuration.format,
+                modifier: configuration.modifier,
+                planes: .one(plane)
+            )
+            let buffer = try await backing.registerExternalBuffer(
+                descriptor,
+                contract: lease.contract,
+                configurationID: configuration.id
+            )
+            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            let timeline = try await backing.importExternalSyncTimeline(
+                try OwnedFileDescriptor(adopting: -1)
+            )
+            let acquirePoint = try timeline.point(1)
+            let receipt = try await renderLease.submit(
+                acquireSynchronization: .drmSyncobj(acquirePoint),
+                metadata: .default,
+                schedule: nil
+            )
+            _ = receipt.id
+            _ = receipt.bufferID
+            _ = receipt.contractGeneration
+            _ = receipt.frameResult
+            _ = receipt.releaseMechanism
+            _ = await receipt.waitForRelease()
+            try await backing.unregisterExternalBuffer(buffer)
+        }
+
+        _ = driveExternalBufferLifecycle
+    }
 }
 
 private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {
