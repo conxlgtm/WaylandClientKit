@@ -47,6 +47,20 @@ struct WaylandGraphicsPreviewBackingPreferenceTests {
     }
 
     @Test
+    func mutatingBackingPreferenceUpdatesPresentationMode() throws {
+        var configuration = WaylandGraphicsConfiguration(fallbackPolicy: .requireGPU)
+
+        configuration.backingPreference = .software
+        let path = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(configuration.presentationMode == .software)
+        #expect(path.backing == .fallback(.forcedSoftware))
+    }
+
+    @Test
     func requireExplicitRejectsSoftwareBackingPreference() {
         #expect(
             throws: WaylandGraphicsError.unavailable(

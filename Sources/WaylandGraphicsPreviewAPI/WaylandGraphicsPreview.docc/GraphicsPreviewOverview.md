@@ -33,8 +33,9 @@ back to software or must throw a typed ``WaylandGraphicsError``.
 
 ## Current External Buffer Scope
 
-- One-plane XRGB8888 or ARGB8888 images.
-- Public move-only descriptors that consume `OwnedFileDescriptor`.
+- One-to-four-plane XRGB8888 or ARGB8888 images.
+- Move-only descriptors whose file-descriptor transfer plumbing stays out of
+  public graphics API.
 - Persistent registration and release-gated reservation.
 - Implicit synchronization and DRM syncobj explicit synchronization.
 - Release-gated reuse through ``WaylandGraphicsExternalBufferSubmissionReceipt``.

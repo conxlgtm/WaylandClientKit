@@ -357,11 +357,10 @@ Remaining unsafe constructs:
   transferred to `zwp_linux_buffer_params_v1.add`.
 - `WaylandGraphicsExternalBufferDescriptor` and
   `WaylandGraphicsExternalBufferPlane` are public preview move-only values.
-  Their manufacturing path consumes an `OwnedFileDescriptor`, offset, and
-  stride, then stores the descriptor package-internally for transfer into the
-  dmabuf import path. Callers can describe one-to-four-plane renderer-owned images
-  without receiving reusable file-descriptor access, raw Wayland proxies,
-  GBM/EGL/DRM objects, syncobj handles, or pointers.
+  Their package manufacturing path stores descriptor facts for transfer into the
+  dmabuf import path. Public API can carry one-to-four-plane renderer-owned image
+  descriptors without receiving reusable file-descriptor access, raw Wayland
+  proxies, GBM/EGL/DRM objects, syncobj handles, or pointers.
 - `WaylandGraphicsExternalBufferSubmissionReceipt` retains a private actor
   release state. The receipt may be awaited repeatedly, and all waiters resolve
   to the same terminal release result. The release registry is package-private,
@@ -369,9 +368,8 @@ Remaining unsafe constructs:
   while a submitted buffer awaits release.
 - `WaylandGraphicsExternalSyncTimeline` and
   `WaylandGraphicsExternalSyncPoint` are public opaque sync identity values. The
-  timeline import API consumes `OwnedFileDescriptor`; WCK transfers that
-  descriptor to the compositor or closes it on failure without exposing the raw
-  integer descriptor.
+  timeline import plumbing is package-scoped so public graphics API does not
+  expose raw syncobj or file-descriptor handles.
 - `WaylandGraphicsExternalBuffer` is a public opaque registration handle. It
   stores diagnostic/public format facts plus package-private backing and slot
   tokens. Raw presenter slot types are not exposed from public declarations.

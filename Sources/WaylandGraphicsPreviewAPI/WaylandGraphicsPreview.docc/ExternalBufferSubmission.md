@@ -6,9 +6,9 @@ frames through shared-memory software buffers.
 
 This is source-breaking preview API. It is intentionally narrow: the public
 shape accepts renderer-owned dma-buf images with one to four planes, XRGB8888 or
-ARGB8888 format facts, a DRM modifier value, and one consumed
-`OwnedFileDescriptor` per plane. WCK owns Wayland import, `wl_buffer` lifetime,
-surface commit, release observation, and backing shutdown cleanup.
+ARGB8888 format facts, and a DRM modifier value. WCK owns Wayland import,
+`wl_buffer` lifetime, surface commit, release observation, and backing shutdown
+cleanup.
 
 ## Registered Public Flow
 
@@ -25,9 +25,7 @@ surface commit, release observation, and backing shutdown cleanup.
    ``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)``.
 8. Render into the reserved image.
 9. Submit with ``WaylandGraphicsExternalBufferRenderLease/submit(metadata:schedule:)``.
-   For DRM syncobj explicit synchronization, first import the renderer's acquire
-   timeline with ``WaylandGraphicsWindowBacking/importExternalSyncTimeline(_:)``
-   and submit an acquire point with
+   For DRM syncobj explicit synchronization, submit an acquire point with
    ``WaylandGraphicsExternalBufferRenderLease/submit(acquireSynchronization:metadata:schedule:)``.
 10. Keep the renderer allocation alive and unavailable to the renderer pool until
     the returned ``WaylandGraphicsExternalBufferSubmissionReceipt`` reaches a
@@ -83,10 +81,9 @@ Sync-file fences are not supported.
 ## What Stays Private
 
 Public external-buffer API does not expose raw Wayland objects, GBM/EGL objects,
-DRM object handles, protocol proxies, raw pointers, or reusable borrowed file
-descriptor access. The public descriptor boundary is narrow and move-only:
-external buffer planes consume `OwnedFileDescriptor`, and external sync timeline
-import consumes `OwnedFileDescriptor`.
+DRM object handles, protocol proxies, raw pointers, file-descriptor handles, or
+reusable borrowed file descriptor access. The public descriptor boundary is
+narrow and move-only.
 
 ## Current Limitations
 

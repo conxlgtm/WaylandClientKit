@@ -312,6 +312,7 @@ Intentionally public:
 - `WaylandGraphicsExternalSyncTimeline`
 - `WaylandGraphicsExternalSyncPoint`
 - `WaylandGraphicsExternalAcquireSynchronization`
+- `WaylandGraphicsRenderNode`
 - `WaylandGraphicsExternalSynchronizationAvailability`
 - `WaylandGraphicsExternalAlphaMode`
 - `WaylandGraphicsExternalBufferConfiguration`
@@ -349,9 +350,9 @@ Current preview contract:
   objects.
 - The external-buffer import path is public preview API for renderer-owned
   one-to-four-plane dmabuf images. Public descriptor values are move-only and
-  consume `OwnedFileDescriptor` so each plane descriptor is transferred or closed
-  exactly once. Registration imports a descriptor once and returns a stable
-  public buffer handle. Frame leases reserve available registered buffers, and
+  keep file-descriptor transfer plumbing out of public graphics API. Registration
+  imports a descriptor once and returns a stable public buffer handle. Frame
+  leases reserve available registered buffers, and
   render leases submit them after the renderer has drawn into the image.
   Submission returns a receipt with a stable submission identity and an
   idempotent release wait. The receipt resolves from authoritative implicit
@@ -385,11 +386,8 @@ Current preview contract:
   implementation path with typed fallback/failure evidence, not active live
   proof.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM objects, syncobj handles,
-  SHM pools, scene rendering, swapchains, drawables, or raw
-  color-management/image-description protocol objects. The preview graphics API
-  intentionally accepts `OwnedFileDescriptor` only through move-only external
-  buffer plane descriptors and syncobj timeline import; callers do not get
-  reusable raw descriptor access.
+  file-descriptor handles, SHM pools, scene rendering, swapchains, drawables, or
+  raw color-management/image-description protocol objects.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is

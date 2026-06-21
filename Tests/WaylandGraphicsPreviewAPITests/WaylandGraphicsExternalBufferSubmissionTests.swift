@@ -769,6 +769,53 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         try await storage.closeForTesting()
     }
+
+    @Test
+    func submittedStaleRegisteredBufferRetiresAfterRelease() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor(
+                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+                offset: 0,
+                fd: testOwnedFileDescriptor()
+            )
+        )
+        let renderLease = try await firstLease.reserveExternalBuffer(buffer)
+        let receipt = try await renderLease.submit()
+
+        await window.setGeometry(try testGraphicsSurfaceGeometry(width: 128, height: 96))
+        let secondLease = try await storage.nextFrame()
+
+        #expect(secondLease.contract.generation != firstLease.contract.generation)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await receipt.waitForRelease() == .released)
+        for _ in 0..<10 {
+            if await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty {
+                break
+            }
+            await Task.yield()
+        }
+
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+
+        do {
+            _ = try await secondLease.reserveExternalBuffer(buffer)
+            Issue.record("expected released old-generation external buffer to be retired")
+        } catch WaylandGraphicsError.externalBufferUnavailable {
+            await secondLease.cancel()
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        try await storage.closeForTesting()
+    }
 }
 
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {

@@ -9,10 +9,10 @@ baseline and audit tracked, but framework authors should expect source changes
 while managed GPU behavior is proven across compositors.
 
 Raw protocol and raw GPU objects stay internal. The external-buffer preview
-boundary accepts move-only descriptors that consume `OwnedFileDescriptor`
-instances without exposing raw Wayland, GBM, EGL, or pointer handles. Runtime
-results report active, fallback, failed, unavailable, advertised, and configured
-states through public value types.
+boundary accepts move-only descriptor values without exposing raw Wayland, GBM,
+EGL, file descriptor, or pointer handles. Runtime results report active,
+fallback, failed, unavailable, advertised, and configured states through public
+value types.
 
 ## Topics
 

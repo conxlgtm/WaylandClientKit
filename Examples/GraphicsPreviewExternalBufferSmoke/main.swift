@@ -167,7 +167,8 @@ enum GraphicsPreviewExternalBufferSmoke {
             configurationID: configuration.id
         )
         let renderLease = try await lease.reserveExternalBuffer(buffer)
-        _ = try await renderLease.submit()
+        let receipt = try await renderLease.submit()
+        _ = await receipt.waitForRelease()
     }
 
     private static func submitNegativeTestBuffer(

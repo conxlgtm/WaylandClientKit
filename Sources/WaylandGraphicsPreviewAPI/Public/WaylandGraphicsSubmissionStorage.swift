@@ -195,12 +195,32 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
     }
 }
 
+private final class WaylandGraphicsExternalReleaseRetirementNotifier: @unchecked Sendable {
+    private let lock = NSLock()
+    private var onRelease: (@Sendable () -> Void)?
+
+    func setHandler(_ handler: @escaping @Sendable () -> Void) {
+        lock.lock()
+        onRelease = handler
+        lock.unlock()
+    }
+
+    func notify() {
+        lock.lock()
+        let handler = onRelease
+        lock.unlock()
+        handler?()
+    }
+}
+
 // swiftlint:disable:next type_body_length
 package actor WaylandGraphicsWindowBackingStorage {
     let window: any WaylandGraphicsManagedWindow
     private let configuration: WaylandGraphicsConfiguration
     private let managedGPUBacking: (any WaylandGraphicsManagedGPUBacking)?
     private let externalReleaseRegistry: WaylandGraphicsExternalReleaseRegistry
+    private let externalReleaseRetirementNotifier:
+        WaylandGraphicsExternalReleaseRetirementNotifier
     private let externalBufferPresenter: GPUWindowPresenter
     private var backingRuntimePath: WaylandGraphicsRuntimePath
     private var leaseState = WaylandGraphicsFrameLeaseState()
@@ -227,16 +247,24 @@ package actor WaylandGraphicsWindowBackingStorage {
         configuration = backingConfiguration
         managedGPUBacking = gpuBacking
         let releaseRegistry = WaylandGraphicsExternalReleaseRegistry()
+        let releaseRetirementNotifier = WaylandGraphicsExternalReleaseRetirementNotifier()
         externalReleaseRegistry = releaseRegistry
+        externalReleaseRetirementNotifier = releaseRetirementNotifier
         externalBufferPresenter = GPUWindowPresenter(
-            onImplicitRelease: { [releaseRegistry] slotID in
+            onImplicitRelease: { [releaseRegistry, releaseRetirementNotifier] slotID in
                 releaseRegistry.finish(
                     slotID: slotID,
                     result: .released
                 )
+                releaseRetirementNotifier.notify()
             }
         )
         backingRuntimePath = initialRuntimePath
+        releaseRetirementNotifier.setHandler { [weak self] in
+            Task {
+                await self?.retireStaleAvailableExternalBuffers()
+            }
+        }
     }
 
     func runtimePath() throws -> WaylandGraphicsRuntimePath {
@@ -1519,6 +1547,7 @@ extension WaylandGraphicsWindowBackingStorage {
     ) {
         let presenter = externalBufferPresenter
         let releaseRegistry = externalReleaseRegistry
+        let releaseRetirementNotifier = externalReleaseRetirementNotifier
         let monitorTask = Task {
             do {
                 while !Task.isCancelled {
@@ -1528,6 +1557,7 @@ extension WaylandGraphicsWindowBackingStorage {
                             submissionID: submissionID,
                             result: .released
                         )
+                        releaseRetirementNotifier.notify()
                         return
                     }
                     try await Task.sleep(

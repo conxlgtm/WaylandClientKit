@@ -1,4 +1,3 @@
-import Glibc
 import Testing
 import WaylandClient
 import WaylandGraphicsPreview
@@ -172,12 +171,11 @@ struct WaylandGraphicsPreviewClientTests {
     func externalBufferRegistrationTypesCompileForExternalClients() async throws {
         func registerExternalBuffer(
             backing: WaylandGraphicsWindowBacking,
-            lease: WaylandGraphicsFrameLease
+            lease: WaylandGraphicsFrameLease,
+            descriptor: consuming WaylandGraphicsExternalBufferDescriptor
         ) async throws {
             let configurationID = try #require(
                 lease.contract.recommendedExternalConfigurationID)
-            _ = try externalClientTwoPlaneDescriptor(size: lease.size)
-            let descriptor = try externalClientDescriptor(size: lease.size)
             let buffer = try await backing.registerExternalBuffer(
                 descriptor,
                 contract: lease.contract,
@@ -199,17 +197,8 @@ struct WaylandGraphicsPreviewClientTests {
             )
         }
 
-        func importExternalSyncTimeline(
-            backing: WaylandGraphicsWindowBacking
-        ) async throws -> WaylandGraphicsExternalSyncTimeline {
-            try await backing.importExternalSyncTimeline(
-                try externalClientPipeDescriptor()
-            )
-        }
-
         _ = registerExternalBuffer
         _ = submitExternalBufferWithExplicitSync
-        _ = importExternalSyncTimeline
     }
 
     @Test
@@ -227,61 +216,6 @@ struct WaylandGraphicsPreviewClientTests {
         #expect(configuration.backingPreference == .managedGPU)
         #expect(configuration.fallbackPolicy == .requireGPU)
     }
-}
-
-private func externalClientDescriptor(
-    size: PositivePixelSize
-) throws -> WaylandGraphicsExternalBufferDescriptor {
-    let stride = UInt32(size.width.rawValue) * 4
-    let plane = try WaylandGraphicsExternalBufferPlane(
-        fileDescriptor: try externalClientPipeDescriptor(),
-        offset: 0,
-        stride: stride
-    )
-    return try WaylandGraphicsExternalBufferDescriptor(
-        size: size,
-        format: .xrgb8888,
-        modifier: .linear,
-        plane: plane
-    )
-}
-
-private func externalClientTwoPlaneDescriptor(
-    size: PositivePixelSize
-) throws -> WaylandGraphicsExternalBufferDescriptor {
-    let stride = UInt32(size.width.rawValue) * 4
-    let firstPlane = try WaylandGraphicsExternalBufferPlane(
-        fileDescriptor: try externalClientPipeDescriptor(),
-        offset: 0,
-        stride: stride,
-        planeIndex: 0
-    )
-    let secondPlane = try WaylandGraphicsExternalBufferPlane(
-        fileDescriptor: try externalClientPipeDescriptor(),
-        offset: 0,
-        stride: stride,
-        planeIndex: 1
-    )
-    return try WaylandGraphicsExternalBufferDescriptor(
-        size: size,
-        format: .xrgb8888,
-        modifier: .linear,
-        plane0: firstPlane,
-        plane1: secondPlane
-    )
-}
-
-private func externalClientPipeDescriptor() throws -> OwnedFileDescriptor {
-    var descriptors = [Int32](repeating: -1, count: 2)
-    let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
-        unsafe Glibc.pipe(buffer.baseAddress)
-    }
-    guard result == 0 else {
-        throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-    }
-
-    Glibc.close(descriptors[1])
-    return try OwnedFileDescriptor(adopting: descriptors[0])
 }
 
 private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {

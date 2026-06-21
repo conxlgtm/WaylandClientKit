@@ -8,7 +8,17 @@ import WaylandRaw
 public struct WaylandGraphicsConfiguration: Equatable, Sendable {
     public var presentationMode: WaylandGraphicsPresentationMode
     public var fallbackPolicy: WaylandGraphicsFallbackPolicy
-    public var backingPreference: WaylandGraphicsBackingKind
+    public var backingPreference: WaylandGraphicsBackingKind {
+        get {
+            presentationMode.backingPreference
+        }
+        set {
+            presentationMode = WaylandGraphicsPresentationMode(
+                backingPreference: newValue,
+                fallbackPolicy: fallbackPolicy
+            )
+        }
+    }
     public var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
     public var pacingPolicy: WaylandGraphicsPacingPolicy
     public var metadataPolicy: WaylandGraphicsMetadataPolicy
@@ -33,9 +43,8 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
             ?? WaylandGraphicsPresentationMode(
                 backingPreference: preferredBacking,
                 fallbackPolicy: backingFallbackPolicy
-            )
+        )
         fallbackPolicy = backingFallbackPolicy
-        backingPreference = preferredBacking
         synchronizationPolicy = frameSynchronizationPolicy
         pacingPolicy = framePacingPolicy
         metadataPolicy = frameMetadataPolicy
@@ -636,7 +645,7 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     public let stride: UInt32
     package let planeIndex: Int
 
-    public init(
+    package init(
         fileDescriptor planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32
@@ -649,7 +658,7 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
         )
     }
 
-    public init(
+    package init(
         fileDescriptor planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32,
@@ -1349,7 +1358,7 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     ///
     /// The descriptor is consumed by WCK and either transferred to the compositor
     /// or closed on failure. The returned timeline is scoped to this backing.
-    public func importExternalSyncTimeline(
+    package func importExternalSyncTimeline(
         _ fileDescriptor: consuming OwnedFileDescriptor
     ) async throws -> WaylandGraphicsExternalSyncTimeline {
         try await storage.importExternalSyncTimeline(fileDescriptor)

@@ -33,11 +33,10 @@ Then call ``WaylandGraphicsFrameLease/reserveExternalBuffer(_:)`` to create a
 ``WaylandGraphicsExternalBufferRenderLease``. Submit that render lease after the
 renderer has finished drawing into the reserved image.
 
-For explicit synchronization, import a renderer-owned acquire timeline with
-``WaylandGraphicsWindowBacking/importExternalSyncTimeline(_:)`` and submit a
-`WaylandGraphicsExternalAcquireSynchronization.drmSyncobj` acquire point.
-WCK creates and tracks the per-buffer release timeline used to decide when the
-image can be reused.
+For explicit synchronization, submit a
+`WaylandGraphicsExternalAcquireSynchronization.drmSyncobj` acquire point. WCK
+creates and tracks the per-buffer release timeline used to decide when the image
+can be reused.
 
 External descriptors must be registered before presentation. That registered
 ownership model lets WCK prevent reuse while the previous submission is still
