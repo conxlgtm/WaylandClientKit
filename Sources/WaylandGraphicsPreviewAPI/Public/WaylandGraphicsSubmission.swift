@@ -667,6 +667,20 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
         )
     }
 
+    public init(
+        fileDescriptor planeFileDescriptor: consuming OwnedFileDescriptor,
+        offset planeOffset: UInt32,
+        stride planeStride: UInt32,
+        planeIndex planeIndexValue: UInt32
+    ) throws {
+        try self.init(
+            fd: planeFileDescriptor,
+            offset: planeOffset,
+            stride: planeStride,
+            planeIndex: Int(planeIndexValue)
+        )
+    }
+
     package init(
         fd planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
@@ -779,6 +793,54 @@ public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
             format: bufferFormat,
             modifier: bufferModifier,
             planes: .one(bufferPlane)
+        )
+    }
+
+    public init(
+        size bufferSize: PositivePixelSize,
+        format bufferFormat: WaylandGraphicsDRMFormat,
+        modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        plane0 firstPlane: consuming WaylandGraphicsExternalBufferPlane,
+        plane1 secondPlane: consuming WaylandGraphicsExternalBufferPlane
+    ) throws {
+        try self.init(
+            size: bufferSize,
+            format: bufferFormat,
+            modifier: bufferModifier,
+            planes: .two(firstPlane, secondPlane)
+        )
+    }
+
+    public init(
+        size bufferSize: PositivePixelSize,
+        format bufferFormat: WaylandGraphicsDRMFormat,
+        modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        plane0 firstPlane: consuming WaylandGraphicsExternalBufferPlane,
+        plane1 secondPlane: consuming WaylandGraphicsExternalBufferPlane,
+        plane2 thirdPlane: consuming WaylandGraphicsExternalBufferPlane
+    ) throws {
+        try self.init(
+            size: bufferSize,
+            format: bufferFormat,
+            modifier: bufferModifier,
+            planes: .three(firstPlane, secondPlane, thirdPlane)
+        )
+    }
+
+    public init(
+        size bufferSize: PositivePixelSize,
+        format bufferFormat: WaylandGraphicsDRMFormat,
+        modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        plane0 firstPlane: consuming WaylandGraphicsExternalBufferPlane,
+        plane1 secondPlane: consuming WaylandGraphicsExternalBufferPlane,
+        plane2 thirdPlane: consuming WaylandGraphicsExternalBufferPlane,
+        plane3 fourthPlane: consuming WaylandGraphicsExternalBufferPlane
+    ) throws {
+        try self.init(
+            size: bufferSize,
+            format: bufferFormat,
+            modifier: bufferModifier,
+            planes: .four(firstPlane, secondPlane, thirdPlane, fourthPlane)
         )
     }
 

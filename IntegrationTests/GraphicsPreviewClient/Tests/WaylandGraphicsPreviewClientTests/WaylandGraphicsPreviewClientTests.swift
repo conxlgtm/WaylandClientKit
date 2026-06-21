@@ -176,6 +176,7 @@ struct WaylandGraphicsPreviewClientTests {
         ) async throws {
             let configurationID = try #require(
                 lease.contract.recommendedExternalConfigurationID)
+            _ = try externalClientTwoPlaneDescriptor(size: lease.size)
             let descriptor = try externalClientDescriptor(size: lease.size)
             let buffer = try await backing.registerExternalBuffer(
                 descriptor,
@@ -242,6 +243,31 @@ private func externalClientDescriptor(
         format: .xrgb8888,
         modifier: .linear,
         plane: plane
+    )
+}
+
+private func externalClientTwoPlaneDescriptor(
+    size: PositivePixelSize
+) throws -> WaylandGraphicsExternalBufferDescriptor {
+    let stride = UInt32(size.width.rawValue) * 4
+    let firstPlane = try WaylandGraphicsExternalBufferPlane(
+        fileDescriptor: try externalClientPipeDescriptor(),
+        offset: 0,
+        stride: stride,
+        planeIndex: 0
+    )
+    let secondPlane = try WaylandGraphicsExternalBufferPlane(
+        fileDescriptor: try externalClientPipeDescriptor(),
+        offset: 0,
+        stride: stride,
+        planeIndex: 1
+    )
+    return try WaylandGraphicsExternalBufferDescriptor(
+        size: size,
+        format: .xrgb8888,
+        modifier: .linear,
+        plane0: firstPlane,
+        plane1: secondPlane
     )
 }
 

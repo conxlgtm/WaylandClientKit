@@ -343,13 +343,44 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
         )
         let format = try WaylandGraphicsDRMFormat(rawValue: export.format)
         let modifier = WaylandGraphicsDRMFormatModifier(rawValue: export.modifier)
-        let plane = try Self.plane(at: 0, from: export)
-        return try WaylandGraphicsExternalBufferDescriptor(
-            size: size,
-            format: format,
-            modifier: modifier,
-            plane: plane
-        )
+        switch export.planeCount {
+        case 1:
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane: try Self.plane(at: 0, from: export)
+            )
+        case 2:
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane0: try Self.plane(at: 0, from: export),
+                plane1: try Self.plane(at: 1, from: export)
+            )
+        case 3:
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane0: try Self.plane(at: 0, from: export),
+                plane1: try Self.plane(at: 1, from: export),
+                plane2: try Self.plane(at: 2, from: export)
+            )
+        case 4:
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane0: try Self.plane(at: 0, from: export),
+                plane1: try Self.plane(at: 1, from: export),
+                plane2: try Self.plane(at: 2, from: export),
+                plane3: try Self.plane(at: 3, from: export)
+            )
+        default:
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
     }
 
     func close() {
@@ -412,9 +443,6 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
         at index: Int,
         from export: GBMDmabufExport
     ) throws -> WaylandGraphicsExternalBufferPlane {
-        guard export.planeCount == 1 else {
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-        }
         let layout = try export.planeLayout(at: index)
         var planeDescriptor = try export.takePlaneFileDescriptor(at: index)
         let ownedDescriptor = try OwnedFileDescriptor(
@@ -423,7 +451,8 @@ private final class ExternalDmabufRenderer: @unchecked Sendable {
         return try WaylandGraphicsExternalBufferPlane(
             fileDescriptor: ownedDescriptor,
             offset: layout.offset,
-            stride: layout.stride
+            stride: layout.stride,
+            planeIndex: UInt32(index)
         )
     }
 }

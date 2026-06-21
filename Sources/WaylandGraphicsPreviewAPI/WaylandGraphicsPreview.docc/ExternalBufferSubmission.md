@@ -4,11 +4,11 @@ Use external buffer submission when a renderer owns GPU images and wants WCK to
 import and present those images through a window surface without staging normal
 frames through shared-memory software buffers.
 
-This is source-breaking preview API. It is intentionally narrow: the first public
-shape accepts one-plane renderer-owned dma-buf images, XRGB8888 or ARGB8888
-format facts, a DRM modifier value, and one consumed `OwnedFileDescriptor` per
-image. WCK owns Wayland import, `wl_buffer` lifetime, surface commit, release
-observation, and backing shutdown cleanup.
+This is source-breaking preview API. It is intentionally narrow: the public
+shape accepts renderer-owned dma-buf images with one to four planes, XRGB8888 or
+ARGB8888 format facts, a DRM modifier value, and one consumed
+`OwnedFileDescriptor` per plane. WCK owns Wayland import, `wl_buffer` lifetime,
+surface commit, release observation, and backing shutdown cleanup.
 
 ## Registered Public Flow
 
@@ -17,8 +17,8 @@ observation, and backing shutdown cleanup.
 3. Read ``WaylandGraphicsFrameLease/contract`` before allocating or rendering.
 4. Pick one exact ``WaylandGraphicsExternalBufferConfiguration`` from the
    contract.
-5. Export each renderer-owned image as a one-plane
-   ``WaylandGraphicsExternalBufferDescriptor``.
+5. Export each renderer-owned image as a
+   ``WaylandGraphicsExternalBufferDescriptor`` with one to four planes.
 6. Register each descriptor with
    ``WaylandGraphicsWindowBacking/registerExternalBuffer(_:contract:configurationID:)``.
 7. Reserve an available registered buffer with
