@@ -188,7 +188,27 @@ struct WaylandGraphicsPreviewClientTests {
             _ = await receipt.waitForRelease()
         }
 
+        func submitExternalBufferWithExplicitSync(
+            renderLease: WaylandGraphicsExternalBufferRenderLease,
+            timeline: WaylandGraphicsExternalSyncTimeline
+        ) async throws {
+            let point = WaylandGraphicsExternalSyncPoint(timeline: timeline, value: 1)
+            _ = try await renderLease.submit(
+                acquireSynchronization: .drmSyncobj(point)
+            )
+        }
+
+        func importExternalSyncTimeline(
+            backing: WaylandGraphicsWindowBacking
+        ) async throws -> WaylandGraphicsExternalSyncTimeline {
+            try await backing.importExternalSyncTimeline(
+                try externalClientPipeDescriptor()
+            )
+        }
+
         _ = registerExternalBuffer
+        _ = submitExternalBufferWithExplicitSync
+        _ = importExternalSyncTimeline
     }
 
     @Test

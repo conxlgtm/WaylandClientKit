@@ -297,6 +297,44 @@ public struct WaylandGraphicsExternalSyncTimelineID:
     }
 }
 
+public struct WaylandGraphicsExternalSyncTimeline:
+    Equatable,
+    Hashable,
+    Sendable,
+    Identifiable
+{
+    public let id: WaylandGraphicsExternalSyncTimelineID
+    package let windowID: WindowID
+
+    package init(
+        id timelineID: WaylandGraphicsExternalSyncTimelineID,
+        windowID backingWindowID: WindowID
+    ) {
+        id = timelineID
+        windowID = backingWindowID
+    }
+}
+
+public struct WaylandGraphicsExternalSyncPoint: Equatable, Sendable {
+    public let timelineID: WaylandGraphicsExternalSyncTimelineID
+    public let value: UInt64
+    package let windowID: WindowID
+
+    public init(
+        timeline: WaylandGraphicsExternalSyncTimeline,
+        value timelinePointValue: UInt64
+    ) {
+        timelineID = timeline.id
+        value = timelinePointValue
+        windowID = timeline.windowID
+    }
+}
+
+public enum WaylandGraphicsExternalAcquireSynchronization: Equatable, Sendable {
+    case implicit
+    case drmSyncobj(WaylandGraphicsExternalSyncPoint)
+}
+
 public struct WaylandGraphicsRenderNode: Equatable, Hashable, Sendable {
     public let path: String?
     package let targetDevice: RawLinuxDmabufDevice
@@ -1182,6 +1220,21 @@ public struct WaylandGraphicsExternalBufferRenderLease: Sendable {
         )
     }
 
+    @discardableResult
+    public func submit(
+        acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization,
+        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
+    ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
+        try await storage.submitRegisteredExternalBuffer(
+            leaseID: frameLeaseID,
+            buffer: buffer,
+            acquireSynchronization: acquireSynchronization,
+            metadata: frameMetadata,
+            schedule: frameSchedule
+        )
+    }
+
     public func cancel() async {
         await storage.cancelExternalBufferReservation(buffer)
     }
@@ -1282,6 +1335,16 @@ public struct WaylandGraphicsWindowBacking: Sendable {
             contract: frameContract,
             configurationID: externalConfigurationID
         )
+    }
+
+    /// Imports a renderer-owned DRM syncobj timeline for explicit external submissions.
+    ///
+    /// The descriptor is consumed by WCK and either transferred to the compositor
+    /// or closed on failure. The returned timeline is scoped to this backing.
+    public func importExternalSyncTimeline(
+        _ fileDescriptor: consuming OwnedFileDescriptor
+    ) async throws -> WaylandGraphicsExternalSyncTimeline {
+        try await storage.importExternalSyncTimeline(fileDescriptor)
     }
 
     /// Retires a registered external buffer that is no longer in the renderer pool.

@@ -357,7 +357,7 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
 }
 
 @safe
-package final class GPUWindowPresenter {
+package final class GPUWindowPresenter: @unchecked Sendable {
     private let lock = NSLock()
     private let onImplicitRelease: (@Sendable (GBMBufferPoolSlotID) -> Void)?
     private var state = GPUWindowPresenterState()
