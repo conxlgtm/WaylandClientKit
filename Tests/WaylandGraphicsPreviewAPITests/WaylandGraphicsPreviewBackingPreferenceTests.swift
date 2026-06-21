@@ -60,6 +60,30 @@ struct WaylandGraphicsPreviewBackingPreferenceTests {
     }
 
     @Test
+    func forceSoftwarePreservesRequestedBackingPreference() throws {
+        var configuration = WaylandGraphicsConfiguration(
+            fallbackPolicy: .forceSoftware,
+            backingPreference: .managedGPU
+        )
+        let forcedPath = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(configuration.presentationMode == .managedGPU)
+        #expect(configuration.backingPreference == .managedGPU)
+        #expect(forcedPath.backing == .fallback(.forcedSoftware))
+
+        configuration.fallbackPolicy = .preferGPUFallbackToSoftware
+        let resumedPath = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(resumedPath.backing == .advertised)
+    }
+
+    @Test
     func mutatingBackingPreferenceUpdatesPresentationMode() throws {
         var configuration = WaylandGraphicsConfiguration(fallbackPolicy: .requireGPU)
 

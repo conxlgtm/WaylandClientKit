@@ -153,9 +153,9 @@ public enum WaylandGraphicsPresentationMode: Equatable, Sendable {
 extension WaylandGraphicsPresentationMode {
     fileprivate init(
         backingPreference: WaylandGraphicsBackingKind,
-        fallbackPolicy: WaylandGraphicsFallbackPolicy
+        fallbackPolicy _: WaylandGraphicsFallbackPolicy
     ) {
-        if fallbackPolicy == .forceSoftware || backingPreference == .software {
+        if backingPreference == .software {
             self = .software
         } else {
             self = .managedGPU
