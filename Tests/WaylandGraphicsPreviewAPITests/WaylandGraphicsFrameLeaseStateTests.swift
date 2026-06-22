@@ -21,7 +21,7 @@ struct WaylandGraphicsFrameLeaseStateTests {
         var leaseState = WaylandGraphicsFrameLeaseState()
 
         let leaseID = try leaseState.issueLease()
-        leaseState.cancel(leaseID: leaseID)
+        _ = leaseState.cancel(leaseID: leaseID)
 
         #expect(try leaseState.issueLease() == 2)
     }

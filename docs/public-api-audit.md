@@ -260,9 +260,11 @@ Current user-facing contract:
   `outputTopology()` returns the same output snapshot array sorted by identity.
   WaylandClientKit reports output facts, it does not apply monitor settings or
   own display-configuration policy.
-- GPU and GBM/EGL/dmabuf work remains package-internal and is surfaced only
-  through the separate preview product. There is no public renderer, swapchain,
-  drawable, or GPU buffer API in `WaylandClient`.
+- GPU and GBM/EGL work remains package-internal and is surfaced only through the
+  separate preview product. There is no public renderer, swapchain, drawable, or
+  GPU buffer API in `WaylandClient`. Renderer-owned dmabuf descriptor
+  construction, registration, submission, and release tracking are package-
+  scoped preview helpers.
 - `WaylandGraphicsRuntimePath` exposes renderer-neutral stage facts for
   surface feedback, render-node selection, dmabuf import, and buffer lifecycle.
   These are status values only and do not expose GBM/EGL/DRM/dmabuf handles.
@@ -288,6 +290,7 @@ Intentionally public:
 - `WaylandGraphicsRuntimePath`
 - `WaylandGraphicsConfiguration`
 - `WaylandGraphicsBackingKind`
+- `WaylandGraphicsPresentationMode`
 - `WaylandGraphicsSynchronizationPolicy`
 - `WaylandGraphicsPacingPolicy`
 - `WaylandGraphicsFrameSchedule`
@@ -302,9 +305,34 @@ Intentionally public:
 - `WaylandGraphicsColorAlphaMode`
 - `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsXRGBColor`
+- `WaylandGraphicsSurfaceGeneration`
+- `WaylandGraphicsExternalConfigurationID`
+- `WaylandGraphicsExternalBufferID`
+- `WaylandGraphicsExternalSubmissionID`
+- `WaylandGraphicsExternalSyncTimelineID`
+- `WaylandGraphicsExternalSyncTimeline`
+- `WaylandGraphicsExternalSyncPoint`
+- `WaylandGraphicsExternalAcquireSynchronization`
+- `WaylandGraphicsRenderNode`
+- `WaylandGraphicsExternalSynchronizationAvailability`
+- `WaylandGraphicsExternalAlphaMode`
+- `WaylandGraphicsExternalBufferConfiguration`
+- `WaylandGraphicsFrameContract`
+- `WaylandGraphicsExternalBuffer`
+- `WaylandGraphicsDRMFormat`
+- `WaylandGraphicsDRMFormatModifier`
+- `WaylandGraphicsExternalBufferPlane`
+- `WaylandGraphicsExternalBufferPlanes`
+- `WaylandGraphicsExternalBufferDescriptor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
 - `WaylandGraphicsFrameResult`
+- `WaylandGraphicsExternalRetirementReason`
+- `WaylandGraphicsExternalReleaseMechanism`
+- `WaylandGraphicsExternalBufferLifecycle`
+- `WaylandGraphicsExternalReleaseResult`
+- `WaylandGraphicsExternalBufferSubmissionReceipt`
+- `WaylandGraphicsExternalBufferRenderLease`
 - `WaylandGraphicsError`
 - `WaylandGraphicsWindowBacking`
 - `WaylandGraphicsFrameLease`
@@ -323,11 +351,26 @@ Current preview contract:
 - The managed preview submission path can create a window backing, lease a
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
-  result, and cancel or close resources without exposing raw graphics handles.
-- The external-buffer import path is package-internal preview plumbing. It can
-  import a renderer-produced dmabuf descriptor, commit it, track compositor
-  release, and clean up late releases without exposing public DRM, dmabuf, or
-  file descriptor handles.
+  result, and cancel or close resources without exposing raw protocol or renderer
+  objects.
+- The external-buffer import path is public source-breaking preview API for
+  renderer-owned one-to-four-plane dmabuf images. Public descriptor and sync
+  timeline values are move-only and consume `OwnedFileDescriptor` ownership;
+  public API does not expose raw Wayland proxies, GBM/EGL objects, borrowed
+  descriptor integers, or pointers. External configurations expose selected
+  format/modifier facts and render-node device identity bytes, leaving native
+  device opening/allocation to the renderer. Registration imports a descriptor
+  once, frame leases reserve registered buffers, render leases submit implicit
+  or explicit synchronization, and receipts report submission identity, buffer
+  identity, contract generation, runtime facts, release mechanism, and terminal
+  compositor-release result.
+- `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
+  synchronization availability, runtime-path snapshot, and initial normalized
+  XRGB8888/ARGB8888 external-buffer candidates needed before rendering.
+- `WaylandGraphicsError.staleFrameContract` and
+  `WaylandGraphicsError.externalBufferUnavailable` remain public typed failures
+  for stale frame contracts and external-buffer ownership checks. Stale and
+  unavailable external-buffer failures include generation or lifecycle details.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure, display-level dmabuf advertisement alone is
@@ -346,11 +389,9 @@ Current preview contract:
   currently proves explicit sync and FIFO active. Commit timing remains an
   implementation path with typed fallback/failure evidence, not active live
   proof.
-- It does not expose raw Wayland proxies, EGL/GBM/DRM objects, dmabuf
-  descriptors, syncobj handles, SHM pools, scene rendering, swapchains,
-  drawables, file descriptors, or raw color-management/image-description
-  protocol objects. `OwnedFileDescriptor` remains part of the stable
-  data-transfer APIs, but is not part of public graphics preview API.
+- It does not expose raw Wayland proxies, EGL/GBM/DRM objects, syncobj handles,
+  file-descriptor handles, SHM pools, scene rendering, swapchains, drawables, or
+  raw color-management/image-description protocol objects.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is
@@ -391,7 +432,9 @@ Notes:
   Input-specific diagnostics also remain available on `inputEvents`.
 - `Window` is the ergonomic async handle. Windows are still addressable by `WindowID`,
   and teardown is routed through `WaylandDisplay.closeWindow(_:)` or
-  `WaylandDisplay.close()`.
+  awaited `WaylandDisplay.close()`. Display-level close drains registered
+  window-close observers before destroying surfaces so graphics release waiters
+  terminate with a closed-backing result.
 - `PopupSurface` is the public popup handle. Popup lifecycle display events carry
   the popup identity and parent window identity.
 - `WindowPresentationEvents` is a public async sequence for presentation

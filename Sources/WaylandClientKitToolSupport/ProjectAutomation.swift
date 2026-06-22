@@ -472,33 +472,83 @@ public struct SwiftCommandResolver {
             ".swiftlint.yml",
         ]
         if let override = context.runner.environment["SWIFTLINT_BIN"], !override.isEmpty {
-            try context.runner.run(override, args, workingDirectory: context.repository.root)
+            try runStrictSwiftLint(override, args: args)
             return
         }
 
-        let tools = RepositoryNixTools(
+        let pinned = context.repository.url(".build/tools/swiftlint")
+        if context.fileSystem.isExecutable(pinned) {
+            try runStrictSwiftLint(pinned.path, args: args)
+            return
+        }
+
+        if tools.canRunPathTool("swiftlint", probeArguments: ["version"]) {
+            try runStrictSwiftLint("swiftlint", args: args)
+            return
+        }
+
+        throw strictSwiftLintError()
+    }
+
+    private var tools: RepositoryNixTools {
+        RepositoryNixTools(
             repository: context.repository,
             fileSystem: context.fileSystem,
             runner: context.runner,
             diagnostics: context.diagnostics
         )
+    }
 
-        if tools.canRunInNix(
-            "swiftlint",
-            probeArguments: ["version"],
-            requiresSwift: true,
-            label: "flake SwiftLint"
-        ) {
-            try tools.runInNix("swiftlint", args, requiresSwift: true)
-            return
+    private func runStrictSwiftLint(_ executable: String, args: [String]) throws {
+        guard swiftLintEnforcesCustomRules(executable) else {
+            throw strictSwiftLintError()
+        }
+        try context.runner.run(executable, args, workingDirectory: context.repository.root)
+    }
+
+    private func swiftLintEnforcesCustomRules(_ executable: String) -> Bool {
+        let probe = context.repository.url(
+            "Sources/.swiftlint-custom-rules-probe-\(UUID().uuidString).swift")
+        do {
+            try context.fileSystem.writeText(
+                "func throwingProbe() throws {}\n"
+                    + "func probe() { _ = try" + "? throwingProbe() }\n",
+                to: probe
+            )
+        } catch {
+            return false
+        }
+        defer {
+            do {
+                try context.fileSystem.removeItem(probe)
+            } catch {
+                // Cleanup best-effort only.
+            }
         }
 
-        if tools.canRunPathTool("swiftlint", probeArguments: ["version"]) {
-            try context.runner.run("swiftlint", args, workingDirectory: context.repository.root)
-            return
+        do {
+            let result = try context.runner.run(
+                executable,
+                [
+                    "lint", "--strict", "--no-cache", "--quiet", "--force-exclude", "--config",
+                    ".swiftlint.yml", probe.path,
+                ],
+                workingDirectory: context.repository.root,
+                requireSuccess: false
+            )
+            let output = result.stdout + result.stderr
+            return result.exitCode != 0 && output.contains("no_silent_try_optional")
+        } catch {
+            return false
         }
+    }
 
-        try context.runner.run("swiftlint", args, workingDirectory: context.repository.root)
+    private func strictSwiftLintError() -> ToolError {
+        ToolError(
+            "SwiftLint with SourceKit custom_rules is required. "
+                + "Run `swift run wck tools install-swiftlint --destination .build/tools`.",
+            exitCode: ToolExitCode.environment
+        )
     }
 }
 

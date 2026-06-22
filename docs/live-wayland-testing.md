@@ -15,6 +15,7 @@ GNOME.
 swift run wck smoke live
 swift run wck smoke integration
 swift run wck smoke gpu-preview
+swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer
 swift run wck smoke headless -- wck smoke live
 swift run wck smoke headless -- wck smoke integration
 swift run wck smoke headless -- wck smoke gpu-preview
@@ -48,6 +49,14 @@ pasteable `WaylandClientKit GPU Preview Runtime Path` block for
 [compositor-matrix.md](compositor-matrix.md).
 
 The command runs `swift run wck smoke gpu-preview`.
+
+`swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer` submits a
+renderer-owned dmabuf through the graphics preview external-buffer path against
+the current compositor. It requires `WAYLAND_DISPLAY` and an accessible render
+node. The command should report import, submit, and release/reuse facts without
+software staging. The bundled renderer helper uses package-internal GBM/EGL code
+to create a test dmabuf; it is live WCK presentation evidence, not proof that an
+external package can allocate renderer images without internal imports.
 
 `swift run wck smoke headless -- wck smoke live` starts headless Weston, then
 runs the noninteractive smoke executable against that private compositor.

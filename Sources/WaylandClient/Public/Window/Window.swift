@@ -128,6 +128,15 @@ public struct Window: Sendable, Hashable {
         )
     }
 
+    package func removeGraphicsPreviewSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity
+    ) async throws {
+        try await display.removeGraphicsPreviewSynchronizationTimeline(
+            identity: identity,
+            for: id
+        )
+    }
+
     package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
         _ body:
             @Sendable (

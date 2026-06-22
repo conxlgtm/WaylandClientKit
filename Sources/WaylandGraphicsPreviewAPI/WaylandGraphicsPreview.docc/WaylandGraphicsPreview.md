@@ -1,13 +1,14 @@
 # WaylandGraphicsPreview
 
-Use renderer-neutral preview APIs to request software or managed GPU backing
-for a Wayland window and inspect typed runtime-path facts.
+Use renderer-neutral preview APIs to request software, managed GPU, or
+renderer-owned external-buffer presentation for a Wayland window and inspect
+typed runtime-path facts.
 
 `WaylandGraphicsPreview` is source-breaking preview API. Public drift is still
 baseline and audit tracked, but framework authors should expect source changes
 while managed GPU behavior is proven across compositors.
 
-Raw protocol and raw GPU handles stay internal. Runtime results report active,
+Raw protocol and raw GPU objects stay internal. Runtime results report active,
 fallback, failed, unavailable, advertised, and configured states through public
 value types.
 
@@ -18,6 +19,7 @@ value types.
 - <doc:GraphicsPreviewOverview>
 - <doc:ManagedGraphicsBacking>
 - <doc:FrameLeases>
+- <doc:ExternalBufferSubmission>
 - <doc:SchedulingAndColorMetadata>
 
 ### Runtime Truth
@@ -42,9 +44,33 @@ value types.
 
 - ``WaylandGraphicsWindowBacking``
 - ``WaylandGraphicsFrameLease``
+- ``WaylandGraphicsFrameContract``
 - ``WaylandGraphicsSubmittedFrame``
 - ``WaylandGraphicsClearFrame``
 - ``WaylandGraphicsFrameResult``
+- ``WaylandGraphicsExternalBuffer``
+- ``WaylandGraphicsExternalBufferID``
+- ``WaylandGraphicsExternalBufferPlane``
+- ``WaylandGraphicsExternalBufferPlanes``
+- ``WaylandGraphicsExternalBufferDescriptor``
+- ``WaylandGraphicsExternalBufferConfiguration``
+- ``WaylandGraphicsExternalBufferRenderLease``
+- ``WaylandGraphicsExternalBufferSubmissionReceipt``
+- ``WaylandGraphicsExternalReleaseResult``
+- ``WaylandGraphicsExternalReleaseMechanism``
+- ``WaylandGraphicsExternalRetirementReason``
+- ``WaylandGraphicsExternalBufferLifecycle``
+- ``WaylandGraphicsExternalSubmissionID``
+- ``WaylandGraphicsExternalSyncTimeline``
+- ``WaylandGraphicsExternalSyncTimelineID``
+- ``WaylandGraphicsExternalSyncPoint``
+- ``WaylandGraphicsExternalAcquireSynchronization``
+- ``WaylandGraphicsSurfaceGeneration``
+- ``WaylandGraphicsExternalConfigurationID``
+- ``WaylandGraphicsDRMFormat``
+- ``WaylandGraphicsDRMFormatModifier``
+- ``WaylandGraphicsExternalSynchronizationAvailability``
+- ``WaylandGraphicsExternalAlphaMode``
 - ``WaylandGraphicsXRGBColor``
 - ``WaylandGraphicsFrameMetadata``
 - ``WaylandGraphicsDamageRegion``

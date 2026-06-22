@@ -1,10 +1,11 @@
+import CEGLShims
+import CGBMShims
+import CGLESv2System
 import Foundation
 import Glibc
 import WaylandClient
 import WaylandExampleSupport
-import WaylandGraphicsCore
 import WaylandGraphicsPreview
-import WaylandRaw
 
 @main
 enum GraphicsPreviewExternalBufferSmoke {
@@ -40,15 +41,15 @@ enum GraphicsPreviewExternalBufferSmoke {
                     bufferCount: 2
                 ),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .requireGPU,
-                    backingPreference: .managedGPU
+                    presentationMode: .externalGPU,
+                    fallbackPolicy: .requireGPU
                 )
             )
             let runtimePath = try await backing.runtimePath
             log("feature: external-gpu-buffer")
-            log("scope: maintainer-internal")
+            log("scope: public-wck-api-with-direct-renderer-helper")
             log("requested backing: external-dmabuf")
-            log("dmabuf: \(status(runtimePath.dmabufImport))")
+            log("initial dmabuf status: \(status(runtimePath.dmabufImport))")
             log("format: XRGB8888")
             log("modifier: 0")
             log("planes: 1")
@@ -81,12 +82,19 @@ enum GraphicsPreviewExternalBufferSmoke {
         backing: WaylandGraphicsWindowBacking
     ) async throws -> Bool {
         log("mode: renderer-dmabuf")
-        let primedSize = try await primeSurfaceGeometry(backing: backing)
-        log("primed frame size: \(primedSize.width.rawValue)x\(primedSize.height.rawValue)")
-        let lease = try await backing.nextFrame()
+        let firstLease = try await backing.nextFrame()
+        log(
+            "frame size: \(firstLease.size.width.rawValue)x\(firstLease.size.height.rawValue)"
+        )
+        let configuration = try requireExternalConfiguration(
+            firstLease.contract
+        )
         let renderer: ExternalDmabufRenderer
         do {
-            renderer = try ExternalDmabufRenderer(size: lease.size)
+            renderer = try ExternalDmabufRenderer(
+                size: firstLease.size,
+                configuration: configuration
+            )
         } catch {
             log("renderer: unavailable(\(error))")
             log("import: skipped(renderer-setup-failed)")
@@ -102,17 +110,33 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
 
         do {
-            let result = try await lease.submitExternalBuffer(try renderer.makeDescriptor())
+            let buffer = try await backing.registerExternalBuffer(
+                try renderer.makeDescriptor(),
+                contract: firstLease.contract,
+                configurationID: configuration.id
+            )
+            let renderLease = try await firstLease.reserveExternalBuffer(buffer)
+            let result = try await renderLease.submit()
+            let replacementRenderer = try await submitReplacementBuffer(backing: backing)
+            defer {
+                replacementRenderer.close()
+            }
+            let release = await releaseStatus(result)
             log("renderer: active")
             log("format: \(renderer.formatDescription)")
             log("modifier: \(renderer.modifierDescription)")
             log("planes: \(renderer.planeCount)")
             log("import: pass")
             log("submit: pass")
-            log("release: \(releaseStatus(result.runtimePath.bufferLifecycle))")
+            log("sync mode: \(firstLease.contract.synchronization)")
+            log("release mechanism: \(result.releaseMechanism)")
+            log("target device: \(configuration.renderNode)")
+            log("wck-cpu-readback: not-performed")
+            log("wck-software-staging: not-performed")
+            log("release: \(release)")
             log("release/reuse: tracked-by-wayland-client-kit")
             log(
-                "fallback reason: \(result.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
+                "fallback reason: \(result.frameResult.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
             )
             log("failure: none")
             try await backing.close()
@@ -131,22 +155,24 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
     }
 
-    private static func primeSurfaceGeometry(
+    private static func submitReplacementBuffer(
         backing: WaylandGraphicsWindowBacking
-    ) async throws -> PositivePixelSize {
+    ) async throws -> ExternalDmabufRenderer {
         let lease = try await backing.nextFrame()
-        let result = try await lease.submitSoftware { frame in
-            drawPrimeFrame(frame)
-        }
-        return result.size
-    }
+        let configuration = try requireExternalConfiguration(lease.contract)
+        let renderer = try ExternalDmabufRenderer(
+            size: lease.size,
+            configuration: configuration
+        )
 
-    private static func drawPrimeFrame(_ frame: borrowing SoftwareFrame) {
-        frame.withXRGB8888Rows { _, pixels in
-            for index in 0..<pixels.count {
-                unsafe pixels[unchecked: index] = 0x0010_1820
-            }
-        }
+        let buffer = try await backing.registerExternalBuffer(
+            try renderer.makeDescriptor(),
+            contract: lease.contract,
+            configurationID: configuration.id
+        )
+        let renderLease = try await lease.reserveExternalBuffer(buffer)
+        _ = try await renderLease.submit()
+        return renderer
     }
 
     private static func submitNegativeTestBuffer(
@@ -156,9 +182,13 @@ enum GraphicsPreviewExternalBufferSmoke {
         log("test buffer: pipe-fd-not-dmabuf")
         let lease = try await backing.nextFrame()
         do {
-            _ = try await lease.submitExternalBuffer(
-                try pipeBackedExternalDescriptor(size: lease.size)
+            let buffer = try await backing.registerExternalBuffer(
+                try pipeBackedExternalDescriptor(size: lease.size),
+                contract: lease.contract,
+                configurationID: try requireExternalConfiguration(lease.contract).id
             )
+            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            _ = try await renderLease.submit()
             log("import: pass(unexpected)")
             log("submit: pass(unexpected)")
             log("release: observed(unexpected)")
@@ -170,6 +200,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("release: not observed")
             log("fallback reason: none")
             log("failure: expected-negative-test(\(error))")
+            await lease.cancel()
         }
     }
 
@@ -178,16 +209,15 @@ enum GraphicsPreviewExternalBufferSmoke {
     ) throws -> WaylandGraphicsExternalBufferDescriptor {
         let stride = UInt32(size.width.rawValue) * 4
         let plane = try WaylandGraphicsExternalBufferPlane(
-            fd: try pipeReadDescriptor(),
+            fileDescriptor: try pipeReadDescriptor(),
             offset: 0,
-            stride: stride,
-            planeIndex: 0
+            stride: stride
         )
         return try WaylandGraphicsExternalBufferDescriptor(
             size: size,
             format: WaylandGraphicsDRMFormat(rawValue: drmFormatXRGB8888),
             modifier: WaylandGraphicsDRMFormatModifier(rawValue: 0),
-            planes: .one(plane)
+            plane: plane
         )
     }
 
@@ -223,17 +253,46 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
     }
 
-    nonisolated private static func releaseStatus(
-        _ status: WaylandGraphicsRuntimeStatus
-    ) -> String {
-        switch status {
-        case .active:
-            "not-observed"
-        case .failed:
-            "retired"
-        default:
-            "not-observed"
+    private static func requireExternalConfiguration(
+        _ contract: WaylandGraphicsFrameContract
+    ) throws -> WaylandGraphicsExternalBufferConfiguration {
+        guard let configurationID = contract.recommendedExternalConfigurationID,
+            let configuration = contract.externalBufferConfigurations.first(
+                where: { $0.id == configurationID }
+            )
+        else {
+            throw WaylandGraphicsError.unavailable(.noCompatibleFormat)
         }
+
+        return configuration
+    }
+
+    private static func releaseStatus(
+        _ receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+    ) async -> String {
+        let probe = ReleaseStatusProbe()
+        let task = Task {
+            let status =
+                switch await receipt.waitForRelease() {
+                case .released:
+                    "released"
+                case .retired(let reason):
+                    "retired(\(reason))"
+                case .failed(let reason):
+                    "failed(\(reason))"
+                }
+            await probe.record(status)
+        }
+        defer { task.cancel() }
+
+        for _ in 0..<20 {
+            if let status = await probe.status {
+                return status
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+
+        return await probe.status ?? "not-observed"
     }
 
     nonisolated private static func log(_ message: String) {
@@ -241,145 +300,346 @@ enum GraphicsPreviewExternalBufferSmoke {
     }
 }
 
-private final class ExternalDmabufRenderer: @unchecked Sendable {
-    private var device: GBMDevice?
-    private var renderTarget: EGLGBMRenderTarget?
-    private var lockedBuffer: GBMLockedSurfaceBuffer?
+private actor ReleaseStatusProbe {
+    private(set) var status: String?
+
+    func record(_ releaseStatus: String) {
+        guard status == nil else { return }
+
+        status = releaseStatus
+    }
+}
+
+@safe
+private final class ExternalDmabufRenderer {
+    private var renderNodeFileDescriptor: Int32?
+    private var gbmDevice: OpaquePointer?
+    private var gbmSurface: OpaquePointer?
+    private var lockedBuffer: OpaquePointer?
+    private var eglDisplay: UnsafeMutableRawPointer?
+    private var eglContext: UnsafeMutableRawPointer?
+    private var eglSurface: UnsafeMutableRawPointer?
 
     private(set) var formatDescription = "unknown"
     private(set) var modifierDescription = "unknown"
     private(set) var planeCount = 0
 
-    init(size: PositivePixelSize) throws {
-        guard let renderNodePath = Self.firstRenderNodePath() else {
-            throw WaylandGraphicsError.unavailable(.noRenderNode)
-        }
-
-        let renderNodeFD = unsafe renderNodePath.withCString { pathPointer in
-            unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
-        }
-        guard renderNodeFD >= 0 else {
-            throw WaylandGraphicsError.unavailable(.noRenderNode)
-        }
-
-        let renderNode = try GBMRenderNodeFileDescriptor(adopting: renderNodeFD)
-        let createdDevice = try GBMDevice(adoptingRenderNodeFileDescriptor: renderNode)
-        let bufferSize = try GBMBufferSize(
-            width: UInt32(size.width.rawValue),
-            height: UInt32(size.height.rawValue)
-        )
-        let createdRenderTarget = try EGLGBMRenderTarget(
-            device: createdDevice,
-            surfaceDescriptor: GBMSurfaceDescriptor(
-                size: bufferSize,
-                formatModifier: RawLinuxDmabufFormatModifier(
-                    format: GBMDRMFormat.xrgb8888,
-                    modifier: GBMDRMModifier.invalid
-                ),
-                flags: .rendering
+    init(
+        size: PositivePixelSize,
+        configuration: WaylandGraphicsExternalBufferConfiguration
+    ) throws {
+        do {
+            let renderNodeFD = try Self.openRenderNode(
+                deviceIDBytes: configuration.renderNode.deviceIDBytes
             )
-        )
-        _ = try createdRenderTarget.drawClear(red: 0.08, green: 0.35, blue: 0.95, alpha: 1)
+            renderNodeFileDescriptor = renderNodeFD
 
-        device = createdDevice
-        renderTarget = createdRenderTarget
-        lockedBuffer = try createdRenderTarget.lockFrontBuffer()
+            guard let createdDevice = unsafe swl_gbm_create_device(renderNodeFD) else {
+                throw WaylandGraphicsError.unavailable(.noRenderNode)
+            }
+            unsafe gbmDevice = createdDevice
+
+            guard
+                let createdSurface = unsafe swl_gbm_surface_create_for_modifier(
+                    createdDevice,
+                    UInt32(size.width.rawValue),
+                    UInt32(size.height.rawValue),
+                    configuration.format.rawValue,
+                    configuration.modifier.rawValue,
+                    swl_gbm_bo_use_rendering()
+                )
+            else {
+                throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+            }
+            unsafe gbmSurface = createdSurface
+
+            try unsafe createEGLTarget(
+                gbmDevice: createdDevice,
+                gbmSurface: createdSurface,
+                format: configuration.format.rawValue
+            )
+            try drawScene(width: UInt32(size.width.rawValue), height: UInt32(size.height.rawValue))
+
+            guard let frontBuffer = unsafe swl_gbm_surface_lock_front_buffer(createdSurface) else {
+                throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+            }
+            unsafe lockedBuffer = frontBuffer
+        } catch {
+            close()
+            throw error
+        }
     }
 
     func makeDescriptor() throws -> WaylandGraphicsExternalBufferDescriptor {
-        guard let lockedBuffer else {
+        guard let lockedBuffer = unsafe lockedBuffer else {
             throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
         }
 
-        let export = try lockedBuffer.exportDmabuf()
-        formatDescription = String(export.format)
-        modifierDescription = String(export.modifier)
-        planeCount = export.planeCount
-
-        let size = try PositivePixelSize(
-            width: Int32(export.width),
-            height: Int32(export.height)
-        )
-        let format = try WaylandGraphicsDRMFormat(rawValue: export.format)
-        let modifier = WaylandGraphicsDRMFormatModifier(rawValue: export.modifier)
-        return try WaylandGraphicsExternalBufferDescriptor(
-            size: size,
-            format: format,
-            modifier: modifier,
-            planes: try Self.planes(from: export)
-        )
-    }
-
-    func close() {
-        lockedBuffer?.release()
-        lockedBuffer = nil
-        renderTarget?.destroy()
-        renderTarget = nil
-        device?.destroy()
-        device = nil
-    }
-
-    deinit {
-        close()
-    }
-
-    private static func firstRenderNodePath() -> String? {
-        for index in 128..<192 {
-            let path = "/dev/dri/renderD\(index)"
-            let isAccessible = unsafe path.withCString { pathPointer in
-                unsafe Glibc.access(pathPointer, R_OK | W_OK)
-            }
-            if isAccessible == 0 {
-                return path
-            }
+        var exportedBuffer = swl_gbm_bo_export()
+        guard unsafe swl_gbm_bo_export_dmabuf(lockedBuffer, &exportedBuffer) == 0 else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+        defer {
+            unsafe swl_gbm_bo_export_close(&exportedBuffer)
         }
 
-        return nil
-    }
+        formatDescription = String(exportedBuffer.format)
+        modifierDescription = String(exportedBuffer.modifier)
+        planeCount = Int(exportedBuffer.plane_count)
 
-    private static func planes(
-        from export: GBMDmabufExport
-    ) throws -> WaylandGraphicsExternalBufferPlanes {
-        switch export.planeCount {
+        let size = try PositivePixelSize(
+            width: Int32(exportedBuffer.width),
+            height: Int32(exportedBuffer.height)
+        )
+        let format = try WaylandGraphicsDRMFormat(rawValue: exportedBuffer.format)
+        let modifier = WaylandGraphicsDRMFormatModifier(rawValue: exportedBuffer.modifier)
+        switch planeCount {
         case 1:
-            return .one(try plane(at: 0, from: export))
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane: try Self.plane(at: 0, from: &exportedBuffer)
+            )
         case 2:
-            return .two(
-                try plane(at: 0, from: export),
-                try plane(at: 1, from: export)
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane0: try Self.plane(at: 0, from: &exportedBuffer),
+                plane1: try Self.plane(at: 1, from: &exportedBuffer)
             )
         case 3:
-            return .three(
-                try plane(at: 0, from: export),
-                try plane(at: 1, from: export),
-                try plane(at: 2, from: export)
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane0: try Self.plane(at: 0, from: &exportedBuffer),
+                plane1: try Self.plane(at: 1, from: &exportedBuffer),
+                plane2: try Self.plane(at: 2, from: &exportedBuffer)
             )
         case 4:
-            return .four(
-                try plane(at: 0, from: export),
-                try plane(at: 1, from: export),
-                try plane(at: 2, from: export),
-                try plane(at: 3, from: export)
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: size,
+                format: format,
+                modifier: modifier,
+                plane0: try Self.plane(at: 0, from: &exportedBuffer),
+                plane1: try Self.plane(at: 1, from: &exportedBuffer),
+                plane2: try Self.plane(at: 2, from: &exportedBuffer),
+                plane3: try Self.plane(at: 3, from: &exportedBuffer)
             )
         default:
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
     }
 
+    func close() {
+        let surfaceForRelease = unsafe gbmSurface
+        let bufferForRelease = unsafe lockedBuffer
+        if let surface = unsafe surfaceForRelease,
+            let buffer = unsafe bufferForRelease
+        {
+            unsafe swl_gbm_surface_release_buffer(surface, buffer)
+        }
+        unsafe lockedBuffer = nil
+
+        let displayForSurface = unsafe eglDisplay
+        let eglSurfaceForDestroy = unsafe eglSurface
+        if let display = unsafe displayForSurface,
+            let surface = unsafe eglSurfaceForDestroy
+        {
+            unsafe swl_egl_destroy_surface(display, surface)
+        }
+        unsafe eglSurface = nil
+
+        let displayForContext = unsafe eglDisplay
+        let eglContextForDestroy = unsafe eglContext
+        if let display = unsafe displayForContext,
+            let context = unsafe eglContextForDestroy
+        {
+            unsafe swl_egl_destroy_context(display, context)
+        }
+        unsafe eglContext = nil
+
+        let displayForTerminate = unsafe eglDisplay
+        if let display = unsafe displayForTerminate {
+            unsafe swl_egl_terminate(display)
+        }
+        unsafe eglDisplay = nil
+
+        let gbmSurfaceForDestroy = unsafe gbmSurface
+        if let surface = unsafe gbmSurfaceForDestroy {
+            unsafe swl_gbm_surface_destroy(surface)
+        }
+        unsafe gbmSurface = nil
+
+        let gbmDeviceForDestroy = unsafe gbmDevice
+        if let device = unsafe gbmDeviceForDestroy {
+            unsafe swl_gbm_device_destroy(device)
+        }
+        unsafe gbmDevice = nil
+
+        if let renderNodeFileDescriptor {
+            Glibc.close(renderNodeFileDescriptor)
+        }
+        renderNodeFileDescriptor = nil
+    }
+
+    deinit {
+        close()
+    }
+
+    private static func openRenderNode(deviceIDBytes: [UInt8]) throws -> Int32 {
+        let path = try renderNodePath(deviceIDBytes: deviceIDBytes)
+        let fileDescriptor = unsafe path.withCString { pathPointer in
+            unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
+        }
+        guard fileDescriptor >= 0 else {
+            throw WaylandGraphicsError.unavailable(.noRenderNode)
+        }
+
+        return fileDescriptor
+    }
+
+    private static func renderNodePath(deviceIDBytes: [UInt8]) throws -> String {
+        guard deviceIDBytes.count == Int(swl_drm_device_id_byte_count()) else {
+            throw WaylandGraphicsError.unavailable(.noRenderNode)
+        }
+
+        var pathBytes = [CChar](
+            repeating: 0,
+            count: Int(swl_drm_render_node_path_max())
+        )
+        let result = unsafe deviceIDBytes.withUnsafeBufferPointer { deviceBytes in
+            unsafe pathBytes.withUnsafeMutableBufferPointer { outputPathBytes in
+                guard let deviceBaseAddress = deviceBytes.baseAddress,
+                    let outputBaseAddress = outputPathBytes.baseAddress
+                else {
+                    return Int32(-1)
+                }
+
+                return unsafe swl_drm_render_node_path_from_device_bytes(
+                    deviceBaseAddress,
+                    UInt32(deviceBytes.count),
+                    outputBaseAddress,
+                    UInt32(outputPathBytes.count)
+                )
+            }
+        }
+        guard result == 0 else {
+            throw WaylandGraphicsError.unavailable(.noRenderNode)
+        }
+
+        let path = unsafe pathBytes.withUnsafeBufferPointer { pathBuffer in
+            guard let baseAddress = pathBuffer.baseAddress else { return "" }
+
+            return unsafe String(cString: baseAddress)
+        }
+        guard !path.isEmpty else {
+            throw WaylandGraphicsError.unavailable(.noRenderNode)
+        }
+
+        return path
+    }
+
+    private func createEGLTarget(
+        gbmDevice createdDevice: OpaquePointer,
+        gbmSurface createdSurface: OpaquePointer,
+        format: UInt32
+    ) throws {
+        guard let display = unsafe swl_egl_display_for_gbm_device(createdDevice) else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+        unsafe eglDisplay = display
+
+        var major: Int32 = 0
+        var minor: Int32 = 0
+        guard unsafe swl_egl_initialize(display, &major, &minor) == 0 else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+
+        guard swl_egl_bind_gles_api() == 0 else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+
+        guard let config = unsafe swl_egl_choose_gles_window_config(display, format) else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+
+        guard let context = unsafe swl_egl_create_gles2_context(display, config) else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+        unsafe eglContext = context
+
+        guard
+            let surface = unsafe swl_egl_create_window_surface(
+                display,
+                config,
+                createdSurface
+            )
+        else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+        unsafe eglSurface = surface
+    }
+
+    private func drawScene(width: UInt32, height: UInt32) throws {
+        guard let display = unsafe eglDisplay,
+            let surface = unsafe eglSurface,
+            let context = unsafe eglContext
+        else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+
+        guard unsafe swl_egl_make_current(display, surface, context) == 0 else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+        defer {
+            _ = unsafe swl_egl_clear_current(display)
+        }
+
+        glViewport(0, 0, GLsizei(width), GLsizei(height))
+        glDisable(GLenum(GL_SCISSOR_TEST))
+        glClearColor(0.05, 0.12, 0.20, 1)
+        glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
+
+        glEnable(GLenum(GL_SCISSOR_TEST))
+        glScissor(
+            GLint(width / 6),
+            GLint(height / 6),
+            GLsizei((width * 2) / 3),
+            GLsizei((height * 2) / 3)
+        )
+        glClearColor(0.95, 0.30, 0.10, 1)
+        glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
+        glDisable(GLenum(GL_SCISSOR_TEST))
+
+        guard swl_gles2_error() == 0 else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+        guard unsafe swl_egl_swap_buffers(display, surface) == 0 else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+    }
+
     private static func plane(
         at index: Int,
-        from export: GBMDmabufExport
+        from exportedBuffer: inout swl_gbm_bo_export
     ) throws -> WaylandGraphicsExternalBufferPlane {
-        let layout = try export.planeLayout(at: index)
-        var planeDescriptor = try export.takePlaneFileDescriptor(at: index)
-        let ownedDescriptor = try OwnedFileDescriptor(
-            adopting: planeDescriptor.releaseForWaylandRequest()
+        let planeIndex = UInt32(index)
+        let fileDescriptor = unsafe swl_gbm_bo_export_take_plane_fd(
+            &exportedBuffer,
+            planeIndex
         )
+        guard fileDescriptor >= 0 else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+
         return try WaylandGraphicsExternalBufferPlane(
-            fd: ownedDescriptor,
-            offset: layout.offset,
-            stride: layout.stride,
-            planeIndex: layout.index
+            fileDescriptor: try OwnedFileDescriptor(adopting: fileDescriptor),
+            offset: unsafe swl_gbm_bo_export_plane_offset(&exportedBuffer, planeIndex),
+            stride: unsafe swl_gbm_bo_export_plane_stride(&exportedBuffer, planeIndex),
+            planeIndex: planeIndex
         )
     }
 }
@@ -394,7 +654,7 @@ private struct ExternalBufferSmokeOptions: Equatable, Sendable {
     let mode: Mode
 
     static func parse(_ arguments: ArraySlice<String>) throws -> Self {
-        var mode = Mode.probe
+        var mode = Mode.internalTestBuffer
         let optionArguments =
             arguments.first == "--" ? arguments.dropFirst() : arguments
 

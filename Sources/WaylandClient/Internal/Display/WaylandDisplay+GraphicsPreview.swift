@@ -49,6 +49,7 @@ package struct GraphicsPreviewMetadataCapabilities: Equatable, Sendable {
 
 package struct GraphicsPreviewSurfaceCapabilitySnapshot: Equatable, Sendable {
     package let dmabuf: GraphicsPreviewProtocolCapability
+    package let dmabufFeedback: SurfaceDmabufFeedback?
     package let explicitSync: GraphicsPreviewProtocolCapability
     package let framePacing: GraphicsPreviewFramePacingCapabilities
     package let metadata: GraphicsPreviewMetadataCapabilities
@@ -56,6 +57,7 @@ package struct GraphicsPreviewSurfaceCapabilitySnapshot: Equatable, Sendable {
 
     package init(snapshot: SurfaceCapabilitySnapshot) {
         dmabuf = Self.dmabufCapability(snapshot.dmabuf)
+        dmabufFeedback = Self.dmabufFeedback(snapshot.dmabuf)
         explicitSync = Self.synchronizationCapability(snapshot.synchronization)
         framePacing = Self.pacingCapabilities(snapshot.pacing)
         metadata = GraphicsPreviewMetadataCapabilities(
@@ -91,6 +93,17 @@ package struct GraphicsPreviewSurfaceCapabilitySnapshot: Equatable, Sendable {
             .available(version: version.value)
         case .surfaceFeedback(let version, feedback: _):
             .available(version: version.value)
+        }
+    }
+
+    private static func dmabufFeedback(
+        _ capability: SurfaceDmabufCapability
+    ) -> SurfaceDmabufFeedback? {
+        switch capability {
+        case .surfaceFeedback(_, let feedback):
+            feedback
+        case .advertised, .unavailable:
+            nil
         }
     }
 
@@ -218,6 +231,16 @@ extension WaylandDisplay {
         )
     }
 
+    package func removeGraphicsPreviewSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity,
+        for windowID: WindowID
+    ) throws {
+        try requireCore().removeGraphicsPreviewSynchronizationTimeline(
+            identity: identity,
+            for: windowID
+        )
+    }
+
     package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
         _ body:
             @Sendable (
@@ -330,6 +353,19 @@ extension DisplayCore {
                 try session.connection.completeInitialDiscovery(
                     timeoutMilliseconds: timeoutMilliseconds
                 )
+            }
+        }
+    }
+
+    func removeGraphicsPreviewSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity,
+        for windowID: WindowID
+    ) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID)
+                .removePreviewSynchronizationTimelineOnOwnerThread(identity: identity)
+            guard !isClosed else {
+                throw ClientError.display(.closed)
             }
         }
     }

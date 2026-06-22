@@ -201,6 +201,7 @@ struct WaylandGraphicsPreviewAPITests {
     func managedPreviewConfigurationDefaultsAreConservative() {
         let configuration = WaylandGraphicsConfiguration.default
 
+        #expect(configuration.presentationMode == .managedGPU)
         #expect(configuration.fallbackPolicy == .preferGPUFallbackToSoftware)
         #expect(configuration.synchronizationPolicy == .implicitOnly)
         #expect(configuration.pacingPolicy == .none)

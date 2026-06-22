@@ -6,11 +6,42 @@ import WaylandGraphicsPreview
 struct WaylandGraphicsPreviewBackingPreferenceTests {
     @Test
     func defaultConfigurationRequestsManagedGPUWithSoftwareFallback() {
+        #expect(WaylandGraphicsConfiguration.default.presentationMode == .managedGPU)
         #expect(WaylandGraphicsConfiguration.default.backingPreference == .managedGPU)
         #expect(
             WaylandGraphicsConfiguration.default.fallbackPolicy
                 == .preferGPUFallbackToSoftware
         )
+    }
+
+    @Test
+    func externalGPUPresentationModeProjectsAdvertisedPath() throws {
+        let configuration = WaylandGraphicsConfiguration(
+            presentationMode: .externalGPU,
+            fallbackPolicy: .requireGPU
+        )
+        let path = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(configuration.presentationMode == .externalGPU)
+        #expect(configuration.backingPreference == .managedGPU)
+        #expect(path.backing == .advertised)
+        #expect(path.dmabuf == .advertised)
+    }
+
+    @Test
+    func externalGPUPresentationModeRejectsUnavailableDmabuf() {
+        #expect(throws: WaylandGraphicsError.unavailable(.dmabufUnavailable)) {
+            _ = try WaylandDisplay.managedPreviewRuntimePath(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                configuration: WaylandGraphicsConfiguration(
+                    presentationMode: .externalGPU,
+                    fallbackPolicy: .preferGPUFallbackToSoftware
+                )
+            )
+        }
     }
 
     @Test
@@ -26,6 +57,44 @@ struct WaylandGraphicsPreviewBackingPreferenceTests {
         #expect(path.backing == .fallback(.forcedSoftware))
         #expect(path.gbm == .fallback(.forcedSoftware))
         #expect(path.egl == .fallback(.forcedSoftware))
+    }
+
+    @Test
+    func forceSoftwarePreservesRequestedBackingPreference() throws {
+        var configuration = WaylandGraphicsConfiguration(
+            fallbackPolicy: .forceSoftware,
+            backingPreference: .managedGPU
+        )
+        let forcedPath = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(configuration.presentationMode == .managedGPU)
+        #expect(configuration.backingPreference == .managedGPU)
+        #expect(forcedPath.backing == .fallback(.forcedSoftware))
+
+        configuration.fallbackPolicy = .preferGPUFallbackToSoftware
+        let resumedPath = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(resumedPath.backing == .advertised)
+    }
+
+    @Test
+    func mutatingBackingPreferenceUpdatesPresentationMode() throws {
+        var configuration = WaylandGraphicsConfiguration(fallbackPolicy: .requireGPU)
+
+        configuration.backingPreference = .software
+        let path = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: configuration
+        )
+
+        #expect(configuration.presentationMode == .software)
+        #expect(path.backing == .fallback(.forcedSoftware))
     }
 
     @Test

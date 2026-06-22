@@ -54,7 +54,11 @@ work:
 - Treat `WaylandGraphicsPreview` as preview, but still baseline/audit tracked.
 - Reject active managed GPU claims without runtime-path evidence from a live
   compositor.
-- Reject public raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, file descriptor,
-  or unsafe implementation handles.
+- Reject public raw Wayland proxies, GBM objects, EGL objects, borrowed integer
+  file descriptors, raw pointers, or unsafe implementation handles.
+- Permit narrow, audited, move-only graphics interop values in
+  `WaylandGraphicsPreview` when they consume `OwnedFileDescriptor` ownership for
+  renderer-owned dma-buf planes or synchronization timelines and do not expose
+  borrowed descriptor integers or protocol objects.
 - Check that user-facing docs explain new public behavior before release notes
   or status docs claim it.

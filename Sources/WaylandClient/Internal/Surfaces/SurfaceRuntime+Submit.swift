@@ -66,6 +66,14 @@ extension SurfaceRuntime {
         }
     }
 
+    mutating func removeSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity
+    ) {
+        updateSurfaceObjects { objects in
+            objects.submitConstraintObjects.removeTimeline(identity: identity)
+        }
+    }
+
     mutating func installFifoObject(_ fifo: RawFifo) {
         updateSurfaceObjects { objects in
             objects.submitConstraintObjects.installFifo(fifo)

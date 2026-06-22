@@ -356,12 +356,23 @@ Remaining unsafe constructs:
 - `RawLinuxDmabufPlaneFileDescriptor` owns a plane descriptor before it is
   transferred to `zwp_linux_buffer_params_v1.add`.
 - `WaylandGraphicsExternalBufferDescriptor` and
-  `WaylandGraphicsExternalBufferPlane` are package-internal move-only values.
-  Their manufacturing path consumes an `OwnedFileDescriptor`, offset, stride,
-  and plane index, then stores the descriptor package-internally for transfer
-  into the dmabuf import path. Public `WaylandGraphicsPreview` does not expose
-  descriptor facts, reusable file-descriptor access, raw Wayland proxies,
-  GBM/EGL/DRM objects, syncobj handles, or pointers.
+  `WaylandGraphicsExternalBufferPlane` are public preview move-only values that
+  consume `OwnedFileDescriptor` ownership for transfer into the dmabuf import
+  path. They do not expose reusable file-descriptor access, borrowed descriptor
+  integers, raw Wayland proxies, GBM/EGL/DRM objects, syncobj handles, or
+  pointers from public API.
+- `WaylandGraphicsExternalBufferSubmissionReceipt` is public and retains a
+  private actor release state. The receipt may be awaited repeatedly, and all
+  waiters resolve to the same terminal release result. The release registry is
+  package-private, protected by `NSLock`, and maps presenter slots to submission
+  identities only while a submitted buffer awaits release.
+- `WaylandGraphicsExternalSyncTimeline` and
+  `WaylandGraphicsExternalSyncPoint` are public opaque sync identity values.
+  Timeline import consumes `OwnedFileDescriptor` ownership and does not expose
+  raw syncobj or borrowed file-descriptor handles.
+- `WaylandGraphicsExternalBuffer` is a public registration handle. It stores
+  public diagnostic format facts plus package-private backing and slot tokens.
+  Raw presenter slot types are not exposed from public declarations.
 - `RawSurfaceBuffer` is `@unchecked Sendable` because the managed GPU preview
   presenter passes an imported `wl_buffer` wrapper through the async
   owner-thread commit bridge without exposing the proxy to public API.
@@ -385,8 +396,20 @@ Audit invariant:
   planes remain locally owned and are closed by their wrapper.
 - External buffer descriptors validate positive size, nonzero DRM format,
   positive stride, consecutive plane indices, and single ownership before any
-  import request. Import-plan deinitialization closes any plane descriptor that
-  was not transferred to Wayland.
+  import request. Package descriptor planes use consecutive indices from 0.
+  Import-plan deinitialization closes any plane descriptor that was not
+  transferred to Wayland.
+- External submission receipts are completed only by implicit compositor buffer
+  release, explicit DRM syncobj release timeline signaling, backing close, or a
+  terminal submission failure. A successful commit, presentation feedback event,
+  timeout, `wl_buffer.release` for an explicit submission, or later submission
+  does not make a renderer-owned image reusable.
+- Registered external buffers are imported once, reserved before rendering, and
+  rejected for a second reservation until the presenter reports compositor
+  release for the previous submitted use.
+- Registered external buffers can be unregistered only when no reservation or
+  submitted use is in flight. Unregistration retires WCK's imported buffer
+  wrapper before the renderer pool releases its image.
 - The display-owned linux-dmabuf manager is accessed only through package-only
   `Window`/`WaylandDisplay` helpers that execute on the display owner thread.
 - Imported dmabuf buffers are destroyed by the GPU presenter buffer wrapper and
@@ -405,8 +428,10 @@ Tests:
 - `LinuxDmabufShimContractTests` covers request wrapper targets, dimensions,
   flags, modifier splitting, and feedback request targets.
 - `WaylandGraphicsExternalBufferSubmissionTests` covers descriptor validation,
-  ownership transfer into an import plan, and unavailable/fallback preflight
-  before Wayland import.
+  ownership transfer into an import plan, unavailable/fallback preflight before
+  Wayland import, registered-buffer import-once behavior, release-gated
+  reservation and unregistration, public release receipt completion, and
+  backing-close waiter resolution.
 
 ## Surface Submit Constraint Boundary
 
@@ -593,8 +618,10 @@ Audit invariant:
   software and GPU commits do not allocate independent generation sequences.
 - Submitted GPU buffer-pool slots return to availability only after the matching
   Wayland buffer release.
-- GPU preview APIs remain package-internal until the public graphics contract
-  has surface capability, color metadata, and synchronization requirements.
+- Raw GPU preview plumbing remains package-internal. The public graphics preview
+  contract exposes renderer-neutral capabilities, selected format/modifier and
+  render-node device identity facts, plus move-only external-buffer descriptor,
+  registration, render-lease, synchronization, and release-receipt values.
 - `GPUWindowBackingState` is the internal state snapshot for lifecycle,
   runtime-path facts, buffer-pool readiness, last submitted frame, diagnostics,
   fallback, and failure.

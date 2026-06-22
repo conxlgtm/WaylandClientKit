@@ -1,18 +1,269 @@
+import Foundation
+import Glibc
 import WaylandClient
 import WaylandGPUPreview
 import WaylandGraphicsCore
 import WaylandRaw
 
 // swiftlint:disable file_length
+private struct RegisteredExternalBuffer: Sendable {
+    let handle: WaylandGraphicsExternalBuffer
+    let explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+    var nextExplicitReleasePoint: UInt64 = 1
+}
+
+// SAFETY: Access to the syncobj timeline and destroy flag is serialized by
+// lock because explicit release polling can run concurrently with unregister
+// or backing-close cleanup.
+private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable {
+    static let pollSleepNanoseconds: UInt64 = 10_000_000
+
+    let identity: GPUSyncTimeline
+    private let lock = NSLock()
+    private let deviceFileDescriptor: Int32
+    private let timeline: DRMSyncobjTimeline
+    private var isDestroyed = false
+
+    init(
+        renderNode: WaylandGraphicsRenderNode,
+        identity timelineIdentity: GPUSyncTimeline
+    ) throws {
+        guard let path = renderNode.path else {
+            throw WaylandGraphicsError.unavailable(.noRenderNode)
+        }
+
+        let fileDescriptor = unsafe path.withCString { pathPointer in
+            unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
+        }
+        guard fileDescriptor >= 0 else {
+            throw WaylandGraphicsError.unavailable(.noRenderNode)
+        }
+
+        do {
+            timeline = try DRMSyncobjTimeline(deviceFileDescriptor: fileDescriptor)
+            deviceFileDescriptor = fileDescriptor
+            identity = timelineIdentity
+        } catch {
+            Glibc.close(fileDescriptor)
+            throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+        }
+    }
+
+    func exportFileDescriptor() throws -> RawDrmSyncobjTimelineFD {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !isDestroyed else {
+            throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+        }
+
+        do {
+            return try timeline.exportFileDescriptor()
+        } catch {
+            throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+        }
+    }
+
+    func releasePointIsSignaled(_ point: RawSyncobjTimelinePoint) throws -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !isDestroyed else {
+            throw WaylandGraphicsError.unavailable(.explicitSyncReleaseFailed)
+        }
+
+        do {
+            try timeline.wait(
+                point,
+                timeoutNanoseconds: 0,
+                waitForSubmit: true
+            )
+            return true
+        } catch let error where error.isSyncobjTimelineWaitTimeout {
+            return false
+        } catch {
+            throw WaylandGraphicsError.unavailable(.explicitSyncReleaseFailed)
+        }
+    }
+
+    func destroy() {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !isDestroyed else {
+            return
+        }
+
+        isDestroyed = true
+        timeline.destroy()
+        Glibc.close(deviceFileDescriptor)
+    }
+
+    deinit {
+        destroy()
+    }
+}
+
+private struct ExternalBufferConfigurationFact: Equatable, Sendable {
+    let format: WaylandGraphicsDRMFormat
+    let modifier: WaylandGraphicsDRMFormatModifier
+    let renderNode: WaylandGraphicsRenderNode
+    let alphaMode: WaylandGraphicsExternalAlphaMode
+    let scanoutPreferred: Bool
+}
+
+// SAFETY: All mutable registry dictionaries are protected by lock; public
+// receipt continuations are completed through the registry without exposing
+// unsynchronized state.
+@safe
+private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable {
+    private let lock = NSLock()
+    private var statesBySubmissionID:
+        [WaylandGraphicsExternalSubmissionID: WaylandGraphicsExternalReleaseState] = [:]
+    private var submissionIDsBySlotID: [GBMBufferPoolSlotID: WaylandGraphicsExternalSubmissionID] =
+        [:]
+    private var monitorTasksBySubmissionID:
+        [WaylandGraphicsExternalSubmissionID: Task<Void, Never>] = [:]
+
+    func begin(
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        slotID: GBMBufferPoolSlotID
+    ) -> WaylandGraphicsExternalReleaseState {
+        let state = WaylandGraphicsExternalReleaseState()
+        lock.lock()
+        statesBySubmissionID[submissionID] = state
+        submissionIDsBySlotID[slotID] = submissionID
+        lock.unlock()
+        return state
+    }
+
+    func finish(
+        slotID: GBMBufferPoolSlotID,
+        result: WaylandGraphicsExternalReleaseResult
+    ) {
+        let state: WaylandGraphicsExternalReleaseState?
+        let monitorTask: Task<Void, Never>?
+        lock.lock()
+        if let submissionID = submissionIDsBySlotID.removeValue(forKey: slotID) {
+            state = statesBySubmissionID.removeValue(forKey: submissionID)
+            monitorTask = monitorTasksBySubmissionID.removeValue(forKey: submissionID)
+        } else {
+            state = nil
+            monitorTask = nil
+        }
+        lock.unlock()
+
+        monitorTask?.cancel()
+        guard let state else { return }
+        // swiftlint:disable:next no_unstructured_task
+        Task {
+            await state.finish(result)
+        }
+    }
+
+    func finish(
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        result: WaylandGraphicsExternalReleaseResult
+    ) {
+        let state: WaylandGraphicsExternalReleaseState?
+        let monitorTask: Task<Void, Never>?
+        lock.lock()
+        state = statesBySubmissionID.removeValue(forKey: submissionID)
+        monitorTask = monitorTasksBySubmissionID.removeValue(forKey: submissionID)
+        submissionIDsBySlotID = submissionIDsBySlotID.filter { $0.value != submissionID }
+        lock.unlock()
+
+        monitorTask?.cancel()
+        guard let state else { return }
+        // swiftlint:disable:next no_unstructured_task
+        Task {
+            await state.finish(result)
+        }
+    }
+
+    func trackMonitorTask(
+        _ task: Task<Void, Never>,
+        submissionID: WaylandGraphicsExternalSubmissionID
+    ) {
+        var shouldCancel = false
+        lock.lock()
+        if statesBySubmissionID[submissionID] == nil {
+            shouldCancel = true
+        } else {
+            monitorTasksBySubmissionID[submissionID] = task
+        }
+        lock.unlock()
+
+        if shouldCancel {
+            task.cancel()
+        }
+    }
+
+    func finishAll(result: WaylandGraphicsExternalReleaseResult) {
+        let states: [WaylandGraphicsExternalReleaseState]
+        let monitorTasks: [Task<Void, Never>]
+        lock.lock()
+        states = Array(statesBySubmissionID.values)
+        monitorTasks = Array(monitorTasksBySubmissionID.values)
+        statesBySubmissionID.removeAll()
+        submissionIDsBySlotID.removeAll()
+        monitorTasksBySubmissionID.removeAll()
+        lock.unlock()
+
+        for task in monitorTasks {
+            task.cancel()
+        }
+        for state in states {
+            // swiftlint:disable:next no_unstructured_task
+            Task {
+                await state.finish(result)
+            }
+        }
+    }
+}
+
+// SAFETY: The release-retirement handler is protected by lock and invoked
+// outside the critical section so callback work cannot re-enter locked state.
+// swiftlint:disable:next type_name
+private final class WaylandGraphicsExternalReleaseRetirementNotifier: @unchecked Sendable {
+    private let lock = NSLock()
+    private var onRelease: (@Sendable () -> Void)?
+
+    func setHandler(_ handler: @escaping @Sendable () -> Void) {
+        lock.lock()
+        onRelease = handler
+        lock.unlock()
+    }
+
+    func notify() {
+        lock.lock()
+        let handler = onRelease
+        lock.unlock()
+        handler?()
+    }
+}
+
 // swiftlint:disable:next type_body_length
 package actor WaylandGraphicsWindowBackingStorage {
     let window: any WaylandGraphicsManagedWindow
     private let configuration: WaylandGraphicsConfiguration
     private let managedGPUBacking: (any WaylandGraphicsManagedGPUBacking)?
-    private let externalBufferPresenter = GPUWindowPresenter()
+    private let externalReleaseRegistry: WaylandGraphicsExternalReleaseRegistry
+    private let externalReleaseRetirementNotifier: WaylandGraphicsExternalReleaseRetirementNotifier
+    private let externalBufferPresenter: GPUWindowPresenter
     private var backingRuntimePath: WaylandGraphicsRuntimePath
     private var leaseState = WaylandGraphicsFrameLeaseState()
     private var nextExternalBufferSlotRawValue = 0
+    private var nextExternalBufferIDRawValue: UInt64 = 1
+    private var nextExternalSubmissionRawValue: UInt64 = 1
+    private var nextExternalSyncTimelineRawValue: UInt64 = 1
+    private var currentSurfaceGeneration = WaylandGraphicsSurfaceGeneration(rawValue: 1)
+    private var lastContractGeometry: SurfaceGeometry?
+    // swiftlint:disable:next discouraged_optional_collection
+    private var lastContractConfigurationFacts: [ExternalBufferConfigurationFact]?
+    private var lastContractSynchronization: WaylandGraphicsExternalSynchronizationAvailability?
+    private var registeredExternalBuffers:
+        [WaylandGraphicsExternalBufferID: RegisteredExternalBuffer] = [:]
+    private var reservedExternalBufferLeaseIDs:
+        [WaylandGraphicsExternalBufferID: WaylandGraphicsFrameLeaseID] = [:]
+    private var importedExternalSyncTimelineIDs: Set<WaylandGraphicsExternalSyncTimelineID> = []
 
     package init(
         window backingWindow: any WaylandGraphicsManagedWindow,
@@ -23,7 +274,27 @@ package actor WaylandGraphicsWindowBackingStorage {
         window = backingWindow
         configuration = backingConfiguration
         managedGPUBacking = gpuBacking
+        let releaseRegistry = WaylandGraphicsExternalReleaseRegistry()
+        let releaseRetirementNotifier = WaylandGraphicsExternalReleaseRetirementNotifier()
+        externalReleaseRegistry = releaseRegistry
+        externalReleaseRetirementNotifier = releaseRetirementNotifier
+        let releaseRegistryForPresenter = releaseRegistry
+        let releaseNotifierForPresenter = releaseRetirementNotifier
+        let onImplicitRelease: @Sendable (GBMBufferPoolSlotID) -> Void = { slotID in
+            releaseRegistryForPresenter.finish(
+                slotID: slotID,
+                result: .released
+            )
+            releaseNotifierForPresenter.notify()
+        }
+        externalBufferPresenter = GPUWindowPresenter(onImplicitRelease: onImplicitRelease)
         backingRuntimePath = initialRuntimePath
+        releaseRetirementNotifier.setHandler { [weak self] in
+            // swiftlint:disable:next no_unstructured_task
+            Task {
+                await self?.retireStaleAvailableExternalBuffers()
+            }
+        }
     }
 
     func runtimePath() throws -> WaylandGraphicsRuntimePath {
@@ -51,9 +322,11 @@ package actor WaylandGraphicsWindowBackingStorage {
             throw graphicsError(for: error, stage: .frameGeometry)
         }
         let leaseID = try leaseState.issueLease()
+        let contract = await frameContract(for: geometry)
         return WaylandGraphicsFrameLease(
             id: leaseID,
             size: geometry.bufferSize,
+            contract: contract,
             runtimePath: backingRuntimePath,
             storage: self
         )
@@ -70,6 +343,494 @@ package actor WaylandGraphicsWindowBackingStorage {
             beforeSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook,
             afterSubmissionEffect: noGraphicsPreviewSubmissionHook
         )
+    }
+
+    private func frameContract(
+        for geometry: SurfaceGeometry
+    ) async -> WaylandGraphicsFrameContract {
+        let configurationFacts = externalBufferConfigurationFacts()
+        let synchronization = externalSynchronizationAvailability()
+        var generationChanged = false
+        if let lastContractGeometry,
+            lastContractGeometry != geometry
+                || lastContractConfigurationFacts != configurationFacts
+                || lastContractSynchronization != synchronization
+        {
+            currentSurfaceGeneration = WaylandGraphicsSurfaceGeneration(
+                rawValue: currentSurfaceGeneration.rawValue + 1
+            )
+            generationChanged = true
+        }
+        lastContractGeometry = geometry
+        lastContractConfigurationFacts = configurationFacts
+        lastContractSynchronization = synchronization
+        if generationChanged {
+            await retireStaleAvailableExternalBuffers()
+        }
+
+        let configurations = configurationFacts.enumerated().map { index, fact in
+            WaylandGraphicsExternalBufferConfiguration(
+                id: WaylandGraphicsExternalConfigurationID(
+                    rawValue: UInt64(index + 1)
+                ),
+                format: fact.format,
+                modifier: fact.modifier,
+                renderNode: fact.renderNode,
+                alphaMode: fact.alphaMode,
+                scanoutPreferred: fact.scanoutPreferred,
+                generation: currentSurfaceGeneration
+            )
+        }
+        return WaylandGraphicsFrameContract(
+            generation: currentSurfaceGeneration,
+            windowID: window.id,
+            geometry: geometry,
+            externalBufferConfigurations: configurations,
+            recommendedExternalConfigurationID: configurations.first?.id,
+            synchronization: synchronization,
+            runtimePath: backingRuntimePath
+        )
+    }
+
+    private func externalBufferConfigurationFacts()
+        -> [ExternalBufferConfigurationFact]
+    {
+        guard let feedback = backingRuntimePath.capabilities.dmabufFeedback else {
+            return []
+        }
+
+        var facts: [ExternalBufferConfigurationFact] = []
+        for tranche in feedback.snapshot.tranches {
+            for formatModifier in tranche.formats
+            where
+                (formatModifier.format == WaylandGraphicsDRMFormat.xrgb8888.rawValue
+                || formatModifier.format
+                    == WaylandGraphicsDRMFormat.argb8888.rawValue)
+            {
+                let format: WaylandGraphicsDRMFormat =
+                    formatModifier.format == WaylandGraphicsDRMFormat.argb8888.rawValue
+                    ? .argb8888
+                    : .xrgb8888
+                let renderNodePath: String?
+                do {
+                    renderNodePath = try DRMRenderNodeSelector.renderNodePath(
+                        for: tranche.targetDevice
+                    )
+                } catch {
+                    _ = error
+                    renderNodePath = nil
+                }
+                let fact = ExternalBufferConfigurationFact(
+                    format: format,
+                    modifier: WaylandGraphicsDRMFormatModifier(
+                        rawValue: formatModifier.modifier
+                    ),
+                    renderNode: WaylandGraphicsRenderNode(
+                        path: renderNodePath,
+                        targetDevice: tranche.targetDevice
+                    ),
+                    alphaMode: format == .argb8888 ? .premultiplied : .opaque,
+                    scanoutPreferred: tranche.flags.contains(.scanout)
+                )
+                if !facts.contains(fact) {
+                    facts.append(fact)
+                }
+            }
+        }
+        return facts
+    }
+
+    private func retireStaleAvailableExternalBuffers() async {
+        let availableSlots = Set(externalBufferPresenter.availableSlotIDs)
+        var retiredBufferIDs: [WaylandGraphicsExternalBufferID] = []
+        for (bufferID, registration) in registeredExternalBuffers {
+            let buffer = registration.handle
+            guard buffer.generation != currentSurfaceGeneration else {
+                continue
+            }
+
+            do {
+                let slotID = try externalBufferSlotID(for: buffer)
+                guard availableSlots.contains(slotID) else {
+                    continue
+                }
+
+                try externalBufferPresenter.retireAvailableBuffer(slotID)
+                retiredBufferIDs.append(bufferID)
+            } catch {
+                _ = error
+            }
+        }
+
+        for bufferID in retiredBufferIDs {
+            reservedExternalBufferLeaseIDs.removeValue(forKey: bufferID)
+            guard let registration = registeredExternalBuffers.removeValue(forKey: bufferID) else {
+                continue
+            }
+            if let timeline = registration.explicitReleaseTimeline {
+                do {
+                    try await window.removeGraphicsPreviewSynchronizationTimeline(
+                        identity: SurfaceSyncTimelineIdentity(timeline.identity.rawValue)
+                    )
+                } catch {
+                    _ = error
+                }
+                timeline.destroy()
+            }
+        }
+    }
+
+    private func externalSynchronizationAvailability()
+        -> WaylandGraphicsExternalSynchronizationAvailability
+    {
+        guard backingRuntimePath.capabilities.explicitSync.isAvailable else {
+            return configuration.synchronizationPolicy == .requireExplicit
+                ? .explicitRequiredUnavailable
+                : .implicitOnly
+        }
+
+        return configuration.synchronizationPolicy == .implicitOnly
+            ? .implicitOnly
+            : .explicitAvailable
+    }
+
+    // swiftlint:disable:next function_body_length
+    package func registerExternalBuffer(
+        _ externalDescriptor: consuming WaylandGraphicsExternalBufferDescriptor,
+        contract frameContract: WaylandGraphicsFrameContract,
+        configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
+    ) async throws -> WaylandGraphicsExternalBuffer {
+        var descriptor = externalDescriptor
+        let selectedConfiguration: WaylandGraphicsExternalBufferConfiguration
+        do {
+            try leaseState.requireNotClosed()
+            try await ensureWindowOpen()
+            selectedConfiguration = try validateExternalBufferRegistration(
+                descriptor,
+                contract: frameContract,
+                configurationID: externalConfigurationID
+            )
+        } catch {
+            closeExternalDescriptor(&descriptor)
+            throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
+        }
+
+        let bufferSize = descriptor.size
+        let bufferFormat = descriptor.format
+        let bufferModifier = descriptor.modifier
+        let importedBuffer: RawLinuxDmabufBuffer
+        do {
+            importedBuffer = try await window.importGraphicsPreviewExternalBuffer(
+                descriptor
+            )
+        } catch {
+            throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
+        }
+
+        let explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+        do {
+            explicitReleaseTimeline = try await prepareExternalReleaseTimelineIfNeeded(
+                selectedConfiguration: selectedConfiguration
+            )
+        } catch {
+            importedBuffer.destroy()
+            throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
+        }
+
+        let slotID = try nextExternalBufferSlotID()
+        do {
+            try externalBufferPresenter.installBuffer(
+                importedBuffer,
+                slotID: slotID
+            )
+        } catch {
+            importedBuffer.destroy()
+            explicitReleaseTimeline?.destroy()
+            throw graphicsError(for: externalGraphicsError(error), stage: .frameGeometry)
+        }
+
+        let bufferID = nextExternalBufferID()
+        let handle = WaylandGraphicsExternalBuffer(
+            id: bufferID,
+            generation: frameContract.generation,
+            configurationID: externalConfigurationID,
+            size: bufferSize,
+            format: bufferFormat,
+            modifier: bufferModifier,
+            renderNode: selectedConfiguration.renderNode,
+            windowID: window.id,
+            slotRawValue: slotID.rawValue,
+            storage: self
+        )
+        registeredExternalBuffers[bufferID] = RegisteredExternalBuffer(
+            handle: handle,
+            explicitReleaseTimeline: explicitReleaseTimeline
+        )
+        refreshRuntimePathFromExternalBuffer(backing: .configured)
+        return handle
+    }
+
+    private func validateExternalBufferRegistration(
+        _ descriptor: borrowing WaylandGraphicsExternalBufferDescriptor,
+        contract frameContract: WaylandGraphicsFrameContract,
+        configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
+    ) throws -> WaylandGraphicsExternalBufferConfiguration {
+        guard configuration.presentationMode == .externalGPU,
+            configuration.fallbackPolicy != .forceSoftware
+        else {
+            throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+        }
+        guard frameContract.windowID == window.id else {
+            throw staleFrameContract(rendered: frameContract.generation)
+        }
+        guard frameContract.generation == currentSurfaceGeneration else {
+            throw staleFrameContract(rendered: frameContract.generation)
+        }
+        guard frameContract.geometry.bufferSize == descriptor.size else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+        guard backingRuntimePath.capabilities.dmabuf.isAvailable else {
+            throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
+        }
+        guard
+            let configuration = frameContract.externalBufferConfigurations.first(
+                where: { $0.id == externalConfigurationID }
+            )
+        else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+        guard configuration.generation == frameContract.generation,
+            configuration.format == descriptor.format,
+            configuration.modifier == descriptor.modifier
+        else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+        try validateExternalSynchronizationAvailability(frameContract)
+        return configuration
+    }
+
+    private func validateExternalSynchronizationAvailability(
+        _ frameContract: WaylandGraphicsFrameContract
+    ) throws {
+        guard configuration.synchronizationPolicy == .requireExplicit else {
+            return
+        }
+        guard frameContract.synchronization == .explicitAvailable else {
+            throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+        }
+    }
+
+    private func prepareExternalReleaseTimelineIfNeeded(
+        selectedConfiguration: WaylandGraphicsExternalBufferConfiguration
+    ) async throws -> WaylandGraphicsExternalReleaseTimeline? {
+        guard configuration.synchronizationPolicy != .implicitOnly else {
+            return nil
+        }
+        guard backingRuntimePath.capabilities.explicitSync.isAvailable else {
+            if configuration.synchronizationPolicy == .requireExplicit {
+                throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+            }
+            return nil
+        }
+
+        do {
+            let timelineID = nextExternalSyncTimelineID()
+            let releaseTimeline = try WaylandGraphicsExternalReleaseTimeline(
+                renderNode: selectedConfiguration.renderNode,
+                identity: GPUSyncTimeline(timelineID.rawValue)
+            )
+            do {
+                var timelineFileDescriptor = try releaseTimeline.exportFileDescriptor()
+                try await window.importGraphicsPreviewSynchronizationTimeline(
+                    &timelineFileDescriptor,
+                    identity: SurfaceSyncTimelineIdentity(timelineID.rawValue)
+                )
+                return releaseTimeline
+            } catch {
+                releaseTimeline.destroy()
+                throw error
+            }
+        } catch let error as WaylandGraphicsError {
+            if configuration.synchronizationPolicy == .requireExplicit {
+                throw error
+            }
+            return nil
+        } catch {
+            if configuration.synchronizationPolicy == .requireExplicit {
+                throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+            }
+            return nil
+        }
+    }
+
+    package func importExternalSyncTimeline(
+        _ fileDescriptor: consuming OwnedFileDescriptor
+    ) async throws -> WaylandGraphicsExternalSyncTimeline {
+        var descriptor = fileDescriptor
+        try leaseState.requireNotClosed()
+        try await ensureWindowOpen()
+        guard backingRuntimePath.capabilities.explicitSync.isAvailable else {
+            do {
+                try descriptor.close()
+            } catch {
+                _ = error
+            }
+            throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+        }
+
+        let timelineID = nextExternalSyncTimelineID()
+        let rawFileDescriptor = descriptor.releaseRawValue()
+        do {
+            var timelineFileDescriptor = try RawDrmSyncobjTimelineFD(
+                adopting: rawFileDescriptor
+            )
+            do {
+                try await window.importGraphicsPreviewSynchronizationTimeline(
+                    &timelineFileDescriptor,
+                    identity: SurfaceSyncTimelineIdentity(timelineID.rawValue)
+                )
+            } catch {
+                timelineFileDescriptor.close()
+                throw graphicsError(for: error, stage: .submissionPreparation)
+            }
+        } catch let error as RuntimeError {
+            _ = error
+            Glibc.close(rawFileDescriptor)
+            throw graphicsError(
+                for: WaylandGraphicsError.unavailable(.explicitSyncSetupFailed),
+                stage: .submissionPreparation
+            )
+        } catch let error as WaylandGraphicsError {
+            throw error
+        } catch {
+            throw graphicsError(for: error, stage: .submissionPreparation)
+        }
+
+        importedExternalSyncTimelineIDs.insert(timelineID)
+        return WaylandGraphicsExternalSyncTimeline(
+            id: timelineID,
+            windowID: window.id
+        )
+    }
+
+    package func reserveExternalBuffer(
+        _ buffer: WaylandGraphicsExternalBuffer,
+        leaseID: WaylandGraphicsFrameLeaseID,
+        contract frameContract: WaylandGraphicsFrameContract
+    ) throws -> WaylandGraphicsExternalBufferRenderLease {
+        try leaseState.requireSubmittable(leaseID: leaseID)
+        try requireLocalRegisteredExternalBuffer(buffer)
+        guard frameContract.generation == currentSurfaceGeneration,
+            buffer.generation == currentSurfaceGeneration
+        else {
+            throw staleFrameContract(rendered: buffer.generation)
+        }
+        let slotID = try externalBufferSlotID(for: buffer)
+        guard reservedExternalBufferLeaseIDs[buffer.id] == nil,
+            !reservedExternalBufferLeaseIDs.values.contains(leaseID),
+            externalBufferPresenter.availableSlotIDs.contains(slotID)
+        else {
+            throw externalBufferUnavailable(buffer)
+        }
+
+        reservedExternalBufferLeaseIDs[buffer.id] = leaseID
+        return WaylandGraphicsExternalBufferRenderLease(
+            buffer: buffer,
+            contract: frameContract,
+            frameLeaseID: leaseID,
+            storage: self
+        )
+    }
+
+    package func unregisterExternalBuffer(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) async throws {
+        try leaseState.requireNotClosed()
+        try requireLocalRegisteredExternalBuffer(buffer)
+        guard reservedExternalBufferLeaseIDs[buffer.id] == nil else {
+            throw externalBufferUnavailable(buffer)
+        }
+
+        let slotID = try externalBufferSlotID(for: buffer)
+        do {
+            try externalBufferPresenter.retireAvailableBuffer(slotID)
+        } catch {
+            throw externalBufferUnavailable(buffer)
+        }
+
+        if let timeline = registeredExternalBuffers[buffer.id]?.explicitReleaseTimeline {
+            try await window.removeGraphicsPreviewSynchronizationTimeline(
+                identity: SurfaceSyncTimelineIdentity(timeline.identity.rawValue)
+            )
+            timeline.destroy()
+        }
+        registeredExternalBuffers.removeValue(forKey: buffer.id)
+    }
+
+    private func requireLocalRegisteredExternalBuffer(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) throws {
+        guard buffer.windowID == window.id else {
+            throw WaylandGraphicsError.externalBufferUnavailable(
+                id: buffer.id,
+                state: .foreign
+            )
+        }
+        guard
+            registeredExternalBuffers[buffer.id]?.handle.slotRawValue
+                == buffer.slotRawValue
+        else {
+            throw WaylandGraphicsError.externalBufferUnavailable(
+                id: buffer.id,
+                state: .unregistered
+            )
+        }
+    }
+
+    private func externalBufferSlotID(
+        for buffer: WaylandGraphicsExternalBuffer
+    ) throws -> GBMBufferPoolSlotID {
+        do {
+            return try GBMBufferPoolSlotID(buffer.slotRawValue)
+        } catch {
+            throw externalBufferUnavailable(buffer)
+        }
+    }
+
+    private func staleFrameContract(
+        rendered generation: WaylandGraphicsSurfaceGeneration
+    ) -> WaylandGraphicsError {
+        .staleFrameContract(rendered: generation, current: currentSurfaceGeneration)
+    }
+
+    private func externalBufferUnavailable(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) -> WaylandGraphicsError {
+        .externalBufferUnavailable(id: buffer.id, state: externalBufferLifecycle(buffer))
+    }
+
+    private func externalBufferLifecycle(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) -> WaylandGraphicsExternalBufferLifecycle {
+        if reservedExternalBufferLeaseIDs[buffer.id] != nil {
+            return .reserved
+        }
+        guard
+            let registration = registeredExternalBuffers[buffer.id],
+            registration.handle.slotRawValue == buffer.slotRawValue
+        else {
+            return .unregistered
+        }
+        let slotID: GBMBufferPoolSlotID
+        do {
+            slotID = try GBMBufferPoolSlotID(buffer.slotRawValue)
+        } catch {
+            return .unregistered
+        }
+        if externalBufferPresenter.availableSlotIDs.contains(slotID) {
+            return .available
+        }
+        return .submittedAwaitingRelease
     }
 
     func submit(
@@ -94,22 +855,28 @@ package actor WaylandGraphicsWindowBackingStorage {
         afterSubmissionEffect: @Sendable () async throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
         let effectiveConfiguration = configuration.applying(schedule: frameSchedule)
+        let geometry: SurfaceGeometry
         try leaseState.requireNotClosed()
-        try await ensureWindowOpen()
-        try await prepareInitialConfigure(
-            leaseID: leaseID,
-            shouldPrepare: shouldAttemptManagedGPU
-        )
+        do {
+            try await ensureWindowOpen()
+            try await prepareInitialConfigure(
+                leaseID: leaseID,
+                shouldPrepare: shouldAttemptManagedGPU
+            )
 
-        let geometry = try await submissionGeometry(for: leaseID)
-        try effectiveConfiguration.validateManagedPreviewSupport(
-            capabilities: backingRuntimePath.capabilities
-        )
-        try frame.validateManagedPreviewSupport(
-            configuration: effectiveConfiguration,
-            capabilities: backingRuntimePath.capabilities,
-            geometry: geometry
-        )
+            geometry = try await submissionGeometry(for: leaseID)
+            try effectiveConfiguration.validateManagedPreviewSupport(
+                capabilities: backingRuntimePath.capabilities
+            )
+            try frame.validateManagedPreviewSupport(
+                configuration: effectiveConfiguration,
+                capabilities: backingRuntimePath.capabilities,
+                geometry: geometry
+            )
+        } catch {
+            releaseExternalBufferReservationsAndCancelLease(leaseID: leaseID)
+            throw error
+        }
         let operation = try leaseState.prepareSubmission(leaseID: leaseID)
         var stage = WaylandGraphicsSubmissionStage.submissionPreparation
         do {
@@ -123,6 +890,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             )
             stage = .submissionCompletion
             try await afterSubmissionEffect()
+            releaseExternalBufferReservations(leaseID: leaseID)
             try leaseState.finishSubmission()
             return frameResult(
                 operation: operation,
@@ -131,6 +899,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 configuration: effectiveConfiguration
             )
         } catch {
+            releaseExternalBufferReservations(leaseID: leaseID)
             if Self.isCommittedManagedGPUFrameFailure(error) {
                 finishCommittedSubmissionFailure()
             } else {
@@ -160,19 +929,25 @@ package actor WaylandGraphicsWindowBackingStorage {
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
         let effectiveConfiguration = configuration.applying(schedule: frameSchedule)
+        let geometry: SurfaceGeometry
         try leaseState.requireNotClosed()
-        try await ensureWindowOpen()
-        try rejectSoftwareSubmissionWhenExplicitRequired(configuration: effectiveConfiguration)
+        do {
+            try await ensureWindowOpen()
+            try rejectSoftwareSubmissionWhenUnavailable(configuration: effectiveConfiguration)
 
-        let geometry = try await submissionGeometry(for: leaseID)
-        try effectiveConfiguration.validateManagedPreviewSupport(
-            capabilities: backingRuntimePath.capabilities
-        )
-        try frameMetadata.validateManagedPreviewSupport(
-            configuration: effectiveConfiguration,
-            capabilities: backingRuntimePath.capabilities,
-            geometry: geometry
-        )
+            geometry = try await submissionGeometry(for: leaseID)
+            try effectiveConfiguration.validateManagedPreviewSupport(
+                capabilities: backingRuntimePath.capabilities
+            )
+            try frameMetadata.validateManagedPreviewSupport(
+                configuration: effectiveConfiguration,
+                capabilities: backingRuntimePath.capabilities,
+                geometry: geometry
+            )
+        } catch {
+            releaseExternalBufferReservationsAndCancelLease(leaseID: leaseID)
+            throw error
+        }
         let operation = try leaseState.prepareSubmission(leaseID: leaseID)
         var stage = WaylandGraphicsSubmissionStage.submissionPreparation
         do {
@@ -185,6 +960,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 draw
             )
             stage = .submissionCompletion
+            releaseExternalBufferReservations(leaseID: leaseID)
             try leaseState.finishSubmission()
             return frameResult(
                 operation: operation,
@@ -193,6 +969,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 configuration: effectiveConfiguration
             )
         } catch {
+            releaseExternalBufferReservations(leaseID: leaseID)
             leaseState.failSubmission()
             if let drawError = WaylandGraphicsErrorMapper.callerDrawError(from: error) {
                 throw drawError
@@ -201,59 +978,75 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    func submitExternalBuffer(
+    // swiftlint:disable:next function_body_length
+    package func submitRegisteredExternalBuffer(
         leaseID: WaylandGraphicsFrameLeaseID,
-        descriptor externalDescriptor: consuming WaylandGraphicsExternalBufferDescriptor,
+        buffer externalBuffer: WaylandGraphicsExternalBuffer,
+        acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         schedule frameSchedule: WaylandGraphicsFrameSchedule?
-    ) async throws -> WaylandGraphicsFrameResult {
-        var descriptor = externalDescriptor
+    ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
         let effectiveConfiguration = configuration.applying(schedule: frameSchedule)
-        try closeDescriptorOnFailure(&descriptor) {
-            try rejectExternalBufferExplicitSyncIfRequired(
-                configuration: effectiveConfiguration)
-        }
-
         let geometry: SurfaceGeometry
         let operation: WaylandGraphicsFrameSubmissionOperation
         do {
             try leaseState.requireNotClosed()
             try await ensureWindowOpen()
-            try await prepareInitialConfigure(
-                leaseID: leaseID,
-                shouldPrepare: shouldAttemptExternalBufferPresentation
-            )
+            try requireLocalRegisteredExternalBuffer(externalBuffer)
+            guard reservedExternalBufferLeaseIDs[externalBuffer.id] == leaseID else {
+                throw externalBufferUnavailable(externalBuffer)
+            }
             geometry = try await submissionGeometry(for: leaseID)
-            operation = try prepareExternalBufferSubmission(
-                descriptor,
+            operation = try prepareRegisteredExternalBufferSubmission(
+                externalBuffer,
                 leaseID: leaseID,
                 metadata: frameMetadata,
                 geometry: geometry,
                 configuration: effectiveConfiguration
             )
         } catch {
-            closeExternalDescriptor(&descriptor)
+            releaseExternalBufferReservation(
+                bufferID: externalBuffer.id,
+                leaseID: leaseID
+            )
             throw error
         }
 
         var stage = WaylandGraphicsSubmissionStage.submissionPreparation
         do {
             stage = .frameSubmission
-            try await submitExternalBufferFrame(
-                descriptor,
+            let submittedExternalFrame = try await submitRegisteredExternalBufferFrame(
+                externalBuffer,
+                acquireSynchronization: acquireSynchronization,
                 metadata: frameMetadata,
                 geometry: geometry,
                 configuration: effectiveConfiguration
             )
             stage = .submissionCompletion
+            releaseExternalBufferReservation(
+                bufferID: externalBuffer.id,
+                leaseID: leaseID
+            )
             try leaseState.finishSubmission()
-            return frameResult(
+            let result = frameResult(
                 operation: operation,
                 size: geometry.bufferSize,
                 metadata: frameMetadata,
                 configuration: effectiveConfiguration
             )
+            return WaylandGraphicsExternalBufferSubmissionReceipt(
+                id: submittedExternalFrame.submissionID,
+                bufferID: externalBuffer.id,
+                contractGeneration: externalBuffer.generation,
+                frameResult: result,
+                releaseMechanism: submittedExternalFrame.releaseMechanism,
+                releaseState: submittedExternalFrame.releaseState
+            )
         } catch {
+            releaseExternalBufferReservation(
+                bufferID: externalBuffer.id,
+                leaseID: leaseID
+            )
             if Self.isCommittedExternalBufferFrameFailure(error) {
                 finishCommittedSubmissionFailure()
             } else {
@@ -264,16 +1057,35 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private func closeDescriptorOnFailure(
-        _ descriptor: inout WaylandGraphicsExternalBufferDescriptor,
-        _ body: () throws -> Void
-    ) throws {
-        do {
-            try body()
-        } catch {
-            closeExternalDescriptor(&descriptor)
-            throw error
+    package func cancelExternalBufferReservation(
+        _ buffer: WaylandGraphicsExternalBuffer,
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) {
+        releaseExternalBufferReservation(bufferID: buffer.id, leaseID: leaseID)
+    }
+
+    private func releaseExternalBufferReservation(
+        bufferID: WaylandGraphicsExternalBufferID,
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) {
+        guard reservedExternalBufferLeaseIDs[bufferID] == leaseID else { return }
+        reservedExternalBufferLeaseIDs.removeValue(forKey: bufferID)
+    }
+
+    private func releaseExternalBufferReservations(
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) {
+        let activeReservations = reservedExternalBufferLeaseIDs.filter { reservation in
+            reservation.value != leaseID
         }
+        reservedExternalBufferLeaseIDs = activeReservations
+    }
+
+    private func releaseExternalBufferReservationsAndCancelLease(
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) {
+        releaseExternalBufferReservations(leaseID: leaseID)
+        _ = leaseState.cancel(leaseID: leaseID)
     }
 
     private func closeExternalDescriptor(
@@ -286,12 +1098,17 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private func submitExternalBufferFrame(
-        _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
+    private func submitRegisteredExternalBufferFrame(
+        _ externalBuffer: WaylandGraphicsExternalBuffer,
+        acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         geometry: SurfaceGeometry,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
-    ) async throws {
+    ) async throws -> (
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        releaseMechanism: WaylandGraphicsExternalReleaseMechanism,
+        releaseState: WaylandGraphicsExternalReleaseState
+    ) {
         let resolvedMetadata = try frameMetadata.resolveManagedPreviewMetadata(
             configuration: effectiveConfiguration,
             capabilities: backingRuntimePath.capabilities,
@@ -302,11 +1119,14 @@ package actor WaylandGraphicsWindowBackingStorage {
             capabilities: backingRuntimePath.capabilities,
             fifoBarrierPrimed: leaseState.hasSubmittedFrame
         )
-        let importedBuffer = try await window.importGraphicsPreviewExternalBuffer(
-            descriptor
+        let synchronization = try externalSubmissionSynchronization(
+            for: externalBuffer,
+            acquireSynchronization: acquireSynchronization,
+            configuration: effectiveConfiguration
         )
-        try await presentExternalBuffer(
-            importedBuffer,
+        let submittedExternalFrame = try await presentRegisteredExternalBuffer(
+            externalBuffer,
+            synchronization: synchronization,
             pacing: pacingSelection.constraint,
             metadata: resolvedMetadata.commitMetadata,
             requestPresentationFeedback: shouldRequestPresentationFeedback(
@@ -316,7 +1136,11 @@ package actor WaylandGraphicsWindowBackingStorage {
         refreshRuntimePathFromExternalBuffer(backing: .active)
         applyPacingSelection(pacingSelection)
         applyMetadataFallbacks(resolvedMetadata.fallbacks)
-        applyExternalSynchronizationFallbackIfNeeded(configuration: effectiveConfiguration)
+        applyExternalSynchronizationStatus(
+            configuration: effectiveConfiguration,
+            synchronization: synchronization.presentation
+        )
+        return submittedExternalFrame
     }
 
     private func submissionGeometry(
@@ -333,6 +1157,29 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     private func frameLeaseGeometry() async throws -> SurfaceGeometry {
+        if shouldAttemptExternalBufferPresentation {
+            let geometry = try await window.prepareGraphicsPreviewPresentation(
+                timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
+            )
+            do {
+                let capabilities = try await window.requestGraphicsPreviewSurfaceFeedback(
+                    timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
+                )
+                backingRuntimePath = Self.runtimePath(
+                    backingRuntimePath,
+                    capabilities: WaylandGraphicsSurfaceCapabilities(
+                        snapshot: GraphicsPreviewSurfaceCapabilitySnapshot(
+                            snapshot: capabilities
+                        )
+                    ),
+                    surfaceFeedback: .active
+                )
+            } catch let error as GraphicsPreviewSurfaceFeedbackError {
+                try handleExternalSurfaceFeedbackFailure(error)
+            }
+            return geometry
+        }
+
         guard shouldAttemptManagedGPU, leaseState.hasSubmittedFrame else {
             return try await window.geometry
         }
@@ -355,6 +1202,11 @@ package actor WaylandGraphicsWindowBackingStorage {
         shouldPrepare: Bool
     ) async throws {
         guard shouldPrepare else { return }
+        if shouldAttemptExternalBufferPresentation,
+            lastContractGeometry != nil
+        {
+            return
+        }
 
         let operation = try leaseState.submissionOperation(leaseID: leaseID)
         guard operation == .show else { return }
@@ -404,18 +1256,33 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
-        leaseState.cancel(leaseID: leaseID)
+        if leaseState.cancel(leaseID: leaseID) {
+            releaseExternalBufferReservations(leaseID: leaseID)
+        }
     }
 
     func close() async throws {
+        await close(shouldCloseWindow: true)
+    }
+
+    package func closeBecauseWindowClosed() async {
+        await close(shouldCloseWindow: false)
+    }
+
+    private func close(shouldCloseWindow: Bool) async {
         guard !leaseState.isClosed else {
             return
         }
 
         leaseState.close()
+        externalReleaseRegistry.finishAll(result: .retired(.backingClosed))
+        reservedExternalBufferLeaseIDs.removeAll()
+        registeredExternalBuffers.removeAll()
         managedGPUBacking?.close()
         externalBufferPresenter.retireAll(reason: .windowClosed)
-        await window.close()
+        if shouldCloseWindow {
+            await window.close()
+        }
     }
 
     private func submitFrame(
@@ -472,7 +1339,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             }
         }
 
-        try rejectSoftwareSubmissionWhenExplicitRequired(configuration: effectiveConfiguration)
+        try rejectSoftwareSubmissionWhenUnavailable(configuration: effectiveConfiguration)
         let pacingSelection = try Self.softwarePacingSelection(
             policy: effectiveConfiguration.gpuPacingPolicy,
             capabilities: backingRuntimePath.capabilities,
@@ -595,7 +1462,7 @@ extension WaylandGraphicsWindowBackingStorage {
         guard managedGPUBacking != nil else {
             return false
         }
-        guard configuration.backingPreference == .managedGPU,
+        guard configuration.presentationMode == .managedGPU,
             configuration.fallbackPolicy != .forceSoftware
         else {
             return false
@@ -608,7 +1475,7 @@ extension WaylandGraphicsWindowBackingStorage {
     }
 
     private var shouldAttemptExternalBufferPresentation: Bool {
-        configuration.backingPreference == .managedGPU
+        configuration.presentationMode == .externalGPU
             && configuration.fallbackPolicy != .forceSoftware
     }
 
@@ -650,41 +1517,8 @@ extension WaylandGraphicsWindowBackingStorage {
         backingRuntimePath = Self.runtimePath(backingRuntimePath, backing: status)
     }
 
-    private func rejectExternalBufferExplicitSyncIfRequired(
-        configuration effectiveConfiguration: WaylandGraphicsConfiguration
-    ) throws {
-        guard effectiveConfiguration.synchronizationPolicy == .requireExplicit else {
-            return
-        }
-
-        let reason = WaylandGraphicsUnavailableReason.externalSynchronizationUnavailable
-        backingRuntimePath = Self.runtimePath(
-            backingRuntimePath,
-            externalBufferFailure: reason
-        )
-        throw WaylandGraphicsError.unavailable(reason)
-    }
-
-    private func validateExternalBufferDescriptor(
-        _ descriptor: borrowing WaylandGraphicsExternalBufferDescriptor,
-        geometry: SurfaceGeometry,
-        configuration effectiveConfiguration: WaylandGraphicsConfiguration
-    ) throws {
-        guard backingRuntimePath.capabilities.dmabuf.isAvailable else {
-            throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
-        }
-        guard effectiveConfiguration.backingPreference == .managedGPU,
-            effectiveConfiguration.fallbackPolicy != .forceSoftware
-        else {
-            throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
-        }
-        guard descriptor.size == geometry.bufferSize else {
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-        }
-    }
-
-    private func prepareExternalBufferSubmission(
-        _ descriptor: borrowing WaylandGraphicsExternalBufferDescriptor,
+    private func prepareRegisteredExternalBufferSubmission(
+        _ externalBuffer: WaylandGraphicsExternalBuffer,
         leaseID: WaylandGraphicsFrameLeaseID,
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         geometry: SurfaceGeometry,
@@ -693,8 +1527,8 @@ extension WaylandGraphicsWindowBackingStorage {
         try effectiveConfiguration.validateManagedPreviewSupport(
             capabilities: backingRuntimePath.capabilities
         )
-        try validateExternalBufferDescriptor(
-            descriptor,
+        try validateRegisteredExternalBuffer(
+            externalBuffer,
             geometry: geometry,
             configuration: effectiveConfiguration
         )
@@ -706,28 +1540,48 @@ extension WaylandGraphicsWindowBackingStorage {
         return try leaseState.prepareSubmission(leaseID: leaseID)
     }
 
-    private func presentExternalBuffer(
-        _ buffer: RawLinuxDmabufBuffer,
+    private func validateRegisteredExternalBuffer(
+        _ externalBuffer: WaylandGraphicsExternalBuffer,
+        geometry: SurfaceGeometry,
+        configuration effectiveConfiguration: WaylandGraphicsConfiguration
+    ) throws {
+        guard backingRuntimePath.capabilities.dmabuf.isAvailable else {
+            throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
+        }
+        guard effectiveConfiguration.presentationMode == .externalGPU,
+            effectiveConfiguration.fallbackPolicy != .forceSoftware
+        else {
+            throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+        }
+        guard externalBuffer.generation == currentSurfaceGeneration else {
+            throw staleFrameContract(rendered: externalBuffer.generation)
+        }
+        guard externalBuffer.size == geometry.bufferSize else {
+            throw staleFrameContract(rendered: externalBuffer.generation)
+        }
+    }
+
+    private func presentRegisteredExternalBuffer(
+        _ externalBuffer: WaylandGraphicsExternalBuffer,
+        synchronization externalSynchronization: (
+            presentation: GPUBufferSubmissionSynchronization,
+            explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+        ),
         pacing: SurfacePacingConstraint,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool
-    ) async throws {
-        var presenterOwnsBuffer = false
+    ) async throws -> (
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        releaseMechanism: WaylandGraphicsExternalReleaseMechanism,
+        releaseState: WaylandGraphicsExternalReleaseState
+    ) {
+        let submissionID = nextExternalSubmissionID()
+        let slotID = try externalBufferSlotID(for: externalBuffer)
+        let releaseState = externalReleaseRegistry.begin(
+            submissionID: submissionID,
+            slotID: slotID
+        )
         do {
-            let slotID: GBMBufferPoolSlotID
-            if let reusableSlotID = externalBufferPresenter.availableSlotIDs.first {
-                slotID = reusableSlotID
-                try externalBufferPresenter.replaceAvailableBuffer(
-                    buffer,
-                    slotID: reusableSlotID
-                )
-                presenterOwnsBuffer = true
-            } else {
-                slotID = try nextExternalBufferSlotID()
-                try externalBufferPresenter.installBuffer(buffer, slotID: slotID)
-                presenterOwnsBuffer = true
-            }
-
             _ = try await externalBufferPresenter.presentSlot(
                 slotID,
                 submit: { [window] surfaceBuffer, submitConstraints, commitMetadata in
@@ -738,22 +1592,203 @@ extension WaylandGraphicsWindowBackingStorage {
                         requestPresentationFeedback: requestPresentationFeedback
                     )
                 },
-                synchronization: .implicit,
+                synchronization: externalSynchronization.presentation,
                 pacing: pacing,
                 metadata: metadata
             )
-        } catch {
-            if !presenterOwnsBuffer {
-                buffer.destroy()
+            if case .explicit(let syncState) = externalSynchronization.presentation,
+                let explicitReleaseTimeline = externalSynchronization.explicitReleaseTimeline
+            {
+                monitorExternalExplicitRelease(
+                    submissionID: submissionID,
+                    slotID: slotID,
+                    syncState: syncState,
+                    releaseTimeline: explicitReleaseTimeline
+                )
             }
+            return (
+                submissionID: submissionID,
+                releaseMechanism: externalSynchronization.explicitReleaseTimeline == nil
+                    ? .implicitWaylandBufferRelease
+                    : .explicitSyncobjTimelinePoint,
+                releaseState: releaseState
+            )
+        } catch {
+            externalReleaseRegistry.finish(
+                submissionID: submissionID,
+                result: .failed(.commitFailed)
+            )
             throw error
         }
+    }
+
+    private func externalSubmissionSynchronization(
+        for externalBuffer: WaylandGraphicsExternalBuffer,
+        acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
+        configuration effectiveConfiguration: WaylandGraphicsConfiguration
+    ) throws -> (
+        presentation: GPUBufferSubmissionSynchronization,
+        explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+    ) {
+        switch effectiveConfiguration.synchronizationPolicy {
+        case .implicitOnly:
+            if acquireSynchronization != nil {
+                throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+            }
+            return (
+                presentation: .implicit,
+                explicitReleaseTimeline: nil
+            )
+        case .preferExplicit, .requireExplicit:
+            guard
+                let explicit = try explicitExternalSubmissionSynchronization(
+                    for: externalBuffer,
+                    acquireSynchronization: acquireSynchronization
+                )
+            else {
+                if effectiveConfiguration.synchronizationPolicy == .requireExplicit
+                    || acquireSynchronization != nil
+                {
+                    throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+                }
+                return (
+                    presentation: .implicit,
+                    explicitReleaseTimeline: nil
+                )
+            }
+            return explicit
+        }
+    }
+
+    private func explicitExternalSubmissionSynchronization(
+        for externalBuffer: WaylandGraphicsExternalBuffer,
+        acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?
+    ) throws -> (
+        presentation: GPUBufferSubmissionSynchronization,
+        explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
+    )? {
+        guard backingRuntimePath.capabilities.explicitSync.isAvailable else {
+            return nil
+        }
+        guard
+            let registration = registeredExternalBuffers[externalBuffer.id],
+            let releaseTimeline = registration.explicitReleaseTimeline
+        else {
+            return nil
+        }
+        guard case .drmSyncobj(let acquirePoint) = acquireSynchronization else {
+            return nil
+        }
+        guard acquirePoint.windowID == window.id,
+            importedExternalSyncTimelineIDs.contains(acquirePoint.timelineID),
+            acquirePoint.value > 0
+        else {
+            throw WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
+        }
+
+        let slotID = try externalBufferSlotID(for: externalBuffer)
+        let releasePointValue = registration.nextExplicitReleasePoint
+        registeredExternalBuffers[externalBuffer.id]?.nextExplicitReleasePoint += 1
+        let syncState = GPUSubmittedBufferSyncState(
+            slotID: slotID,
+            acquirePoint: GPUSyncPoint(
+                timeline: GPUSyncTimeline(acquirePoint.timelineID.rawValue),
+                point: RawSyncobjTimelinePoint(acquirePoint.value)
+            ),
+            releasePoint: GPUSyncPoint(
+                timeline: releaseTimeline.identity,
+                point: RawSyncobjTimelinePoint(releasePointValue)
+            )
+        )
+        return (
+            presentation: .explicit(syncState),
+            explicitReleaseTimeline: releaseTimeline
+        )
+    }
+
+    private func monitorExternalExplicitRelease(
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        slotID: GBMBufferPoolSlotID,
+        syncState: GPUSubmittedBufferSyncState,
+        releaseTimeline: WaylandGraphicsExternalReleaseTimeline
+    ) {
+        let presenter = externalBufferPresenter
+        let releaseRegistry = externalReleaseRegistry
+        let releaseRetirementNotifier = externalReleaseRetirementNotifier
+        // swiftlint:disable:next no_unstructured_task
+        let monitorTask = Task {
+            do {
+                while !Task.isCancelled {
+                    if try releaseTimeline.releasePointIsSignaled(syncState.releasePoint.point) {
+                        try presenter.recordExplicitReleaseSignal(slotID: slotID)
+                        releaseRegistry.finish(
+                            submissionID: submissionID,
+                            result: .released
+                        )
+                        releaseRetirementNotifier.notify()
+                        return
+                    }
+                    try await Task.sleep(
+                        nanoseconds: WaylandGraphicsExternalReleaseTimeline.pollSleepNanoseconds
+                    )
+                }
+                releaseRegistry.finish(
+                    submissionID: submissionID,
+                    result: .retired(.backingClosed)
+                )
+            } catch is CancellationError {
+                releaseRegistry.finish(
+                    submissionID: submissionID,
+                    result: .retired(.backingClosed)
+                )
+            } catch {
+                releaseRegistry.finish(
+                    submissionID: submissionID,
+                    result: .failed(.explicitSyncReleaseFailed)
+                )
+            }
+        }
+        releaseRegistry.trackMonitorTask(monitorTask, submissionID: submissionID)
+    }
+
+    private func handleExternalSurfaceFeedbackFailure(
+        _ error: GraphicsPreviewSurfaceFeedbackError
+    ) throws {
+        _ = error
+        let unavailableReason = WaylandGraphicsUnavailableReason.surfaceFeedbackUnavailable
+        backingRuntimePath = Self.runtimePath(
+            Self.runtimePath(backingRuntimePath, backingUnavailable: unavailableReason),
+            surfaceFeedback: .failed(unavailableReason)
+        )
+        throw WaylandGraphicsError.unavailable(unavailableReason)
     }
 
     private func nextExternalBufferSlotID() throws -> GBMBufferPoolSlotID {
         let slotID = try GBMBufferPoolSlotID(nextExternalBufferSlotRawValue)
         nextExternalBufferSlotRawValue += 1
         return slotID
+    }
+
+    private func nextExternalBufferID() -> WaylandGraphicsExternalBufferID {
+        let id = WaylandGraphicsExternalBufferID(rawValue: nextExternalBufferIDRawValue)
+        nextExternalBufferIDRawValue += 1
+        return id
+    }
+
+    private func nextExternalSubmissionID() -> WaylandGraphicsExternalSubmissionID {
+        let id = WaylandGraphicsExternalSubmissionID(
+            rawValue: nextExternalSubmissionRawValue
+        )
+        nextExternalSubmissionRawValue += 1
+        return id
+    }
+
+    private func nextExternalSyncTimelineID() -> WaylandGraphicsExternalSyncTimelineID {
+        let id = WaylandGraphicsExternalSyncTimelineID(
+            rawValue: nextExternalSyncTimelineRawValue
+        )
+        nextExternalSyncTimelineRawValue += 1
+        return id
     }
 
     private func refreshRuntimePathFromExternalBuffer(
@@ -765,15 +1800,26 @@ extension WaylandGraphicsWindowBackingStorage {
         )
     }
 
-    private func applyExternalSynchronizationFallbackIfNeeded(
-        configuration effectiveConfiguration: WaylandGraphicsConfiguration
+    private func applyExternalSynchronizationStatus(
+        configuration effectiveConfiguration: WaylandGraphicsConfiguration,
+        synchronization: GPUBufferSubmissionSynchronization
     ) {
-        guard effectiveConfiguration.synchronizationPolicy == .preferExplicit else { return }
+        switch synchronization {
+        case .implicit:
+            guard effectiveConfiguration.synchronizationPolicy == .preferExplicit else {
+                return
+            }
 
-        backingRuntimePath = Self.runtimePath(
-            backingRuntimePath,
-            explicitSync: .fallback(.externalSynchronizationUnavailable)
-        )
+            backingRuntimePath = Self.runtimePath(
+                backingRuntimePath,
+                explicitSync: .fallback(.externalSynchronizationUnavailable)
+            )
+        case .explicit:
+            backingRuntimePath = Self.runtimePath(
+                backingRuntimePath,
+                explicitSync: .active
+            )
+        }
     }
 
     private func externalGraphicsError(_ error: any Error) -> any Error {
@@ -811,17 +1857,30 @@ extension WaylandGraphicsWindowBackingStorage {
         do { try leaseState.finishSubmission() } catch { leaseState.failSubmission() }
     }
 
-    private func rejectSoftwareSubmissionWhenExplicitRequired(
+    private func rejectSoftwareSubmissionWhenUnavailable(
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) throws {
         let shouldReject =
-            switch effectiveConfiguration.synchronizationPolicy {
-            case .implicitOnly: false
-            case .preferExplicit:
-                Self.explicitSyncBlocksSoftwareFallback(
-                    backingRuntimePath.explicitSync
-                )
-            case .requireExplicit: true
+            switch effectiveConfiguration.presentationMode {
+            case .software:
+                false
+            case .externalGPU:
+                true
+            case .managedGPU:
+                if effectiveConfiguration.fallbackPolicy == .requireGPU {
+                    true
+                } else {
+                    switch effectiveConfiguration.synchronizationPolicy {
+                    case .implicitOnly:
+                        false
+                    case .preferExplicit:
+                        Self.explicitSyncBlocksSoftwareFallback(
+                            backingRuntimePath.explicitSync
+                        )
+                    case .requireExplicit:
+                        true
+                    }
+                }
             }
 
         guard !shouldReject else {

@@ -11,6 +11,10 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         timeoutMilliseconds: Int32
     ) async throws -> SurfaceGeometry
 
+    func requestGraphicsPreviewSurfaceFeedback(
+        timeoutMilliseconds: Int32
+    ) async throws -> SurfaceCapabilitySnapshot
+
     // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds: Int32,
@@ -31,6 +35,10 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
 
     func importGraphicsPreviewSynchronizationTimeline(
         _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity
+    ) async throws
+
+    func removeGraphicsPreviewSynchronizationTimeline(
         identity: SurfaceSyncTimelineIdentity
     ) async throws
 
@@ -55,12 +63,24 @@ extension WaylandGraphicsManagedWindow {
         try await geometry
     }
 
+    package func requestGraphicsPreviewSurfaceFeedback(
+        timeoutMilliseconds _: Int32
+    ) async throws -> SurfaceCapabilitySnapshot {
+        throw GraphicsPreviewSurfaceFeedbackError.surfaceFeedbackUnavailable
+    }
+
     package func importGraphicsPreviewSynchronizationTimeline(
         _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
         identity _: SurfaceSyncTimelineIdentity
     ) async throws {
         fileDescriptor.close()
         throw SurfaceSubmitConstraintError.explicitSyncUnavailable
+    }
+
+    package func removeGraphicsPreviewSynchronizationTimeline(
+        identity _: SurfaceSyncTimelineIdentity
+    ) async throws {
+        // No imported timeline exists for the default non-explicit-sync window.
     }
 
     package func importGraphicsPreviewExternalBuffer(

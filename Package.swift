@@ -211,11 +211,12 @@ let package = Package(
         .executableTarget(
             name: "GraphicsPreviewExternalBufferSmoke",
             dependencies: [
+                "CEGLShims",
+                "CGBMShims",
+                "CGLESv2System",
                 "WaylandClient",
                 "WaylandExampleSupport",
-                "WaylandGraphicsCore",
                 "WaylandGraphicsPreview",
-                "WaylandRaw",
             ],
             path: "Examples/GraphicsPreviewExternalBufferSmoke",
             swiftSettings: strictMemorySafetySwiftSettings

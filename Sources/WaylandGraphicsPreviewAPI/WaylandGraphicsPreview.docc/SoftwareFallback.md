@@ -17,11 +17,16 @@ and set the next barrier.
 ## Policies
 
 - `WaylandGraphicsFallbackPolicy.preferGPUFallbackToSoftware` attempts managed
-  GPU when requested and falls back to software with a typed
+  GPU clear-frame presentation when requested and falls back to software with a typed
   ``WaylandGraphicsFallbackReason``.
-- `WaylandGraphicsFallbackPolicy.requireGPU` attempts managed GPU and throws
-  a typed unavailable/failure reason instead of falling back.
+- `WaylandGraphicsFallbackPolicy.requireGPU` attempts the requested GPU
+  presentation path and throws a typed unavailable/failure reason instead of
+  falling back.
 - `WaylandGraphicsFallbackPolicy.forceSoftware` never attempts managed GPU.
+
+`WaylandGraphicsPresentationMode.externalGPU` is reserved for renderer-owned
+external-buffer presentation. Normal clear/software submissions in that mode do
+not silently become software submissions.
 
 Use ``WaylandGraphicsFrameResult/backing`` and
 ``WaylandGraphicsRuntimePath/fallback`` to tell whether a submitted frame used

@@ -1,3 +1,4 @@
+import Foundation
 import WaylandRaw
 import WaylandRuntime
 
@@ -8,6 +9,10 @@ public actor WaylandDisplay {
     nonisolated let runtime: WaylandDisplayRuntime
     private var lifecycle = WaylandDisplayLifecycle.initializing
     private var cursorAnimationTask: Task<Void, Never>?, cursorAnimationTaskGeneration: UInt64 = 0
+
+    private typealias WindowCloseObserver = @Sendable () async -> Void
+
+    private var windowCloseObservers: [WindowID: [UUID: WindowCloseObserver]] = [:]
 
     nonisolated public var unownedExecutor: UnownedSerialExecutor {
         unsafe runtime.executor.asUnownedSerialExecutor()
@@ -209,7 +214,9 @@ public actor WaylandDisplay {
         try requireCore().requestPopupRedraw(popupID)
     }
 
-    package func closeWindow(_ windowID: WindowID) {
+    package func closeWindow(_ windowID: WindowID) async {
+        await notifyWindowCloseObservers(for: windowID)
+
         guard case .active(let core, _) = lifecycle else {
             return
         }
@@ -233,12 +240,13 @@ public actor WaylandDisplay {
         core.closeSubsurface(subsurfaceID)
     }
 
-    public func close() {
+    public func close() async {
         cursorAnimationTaskGeneration += 1
         cursorAnimationTask?.cancel()
         cursorAnimationTask = nil
         switch lifecycle {
         case .active(let activeCore, let activeEventSource):
+            await notifyAllWindowCloseObservers()
             runtime.clearEventSource(activeEventSource)
             activeCore.close()
             lifecycle = .closed
@@ -303,6 +311,43 @@ extension WaylandDisplay {
     public func outputTopology() throws -> [OutputSnapshot] {
         try outputs().sorted { lhs, rhs in
             lhs.id.rawValue < rhs.id.rawValue
+        }
+    }
+}
+
+extension WaylandDisplay {
+    @discardableResult
+    package func registerWindowCloseObserver(
+        for windowID: WindowID,
+        _ observer: @escaping @Sendable () async -> Void
+    ) -> UUID {
+        let observerID = UUID()
+        windowCloseObservers[windowID, default: [:]][observerID] = observer
+        return observerID
+    }
+
+    private func notifyWindowCloseObservers(for windowID: WindowID) async {
+        let observers: [WindowCloseObserver]
+        if let observersByID = windowCloseObservers.removeValue(forKey: windowID) {
+            observers = Array(observersByID.values)
+        } else {
+            observers = []
+        }
+        for observer in observers {
+            await observer()
+        }
+    }
+
+    private func notifyAllWindowCloseObservers() async {
+        var observerGroups: [[WindowCloseObserver]] = []
+        for observersByID in windowCloseObservers.values {
+            observerGroups.append(Array(observersByID.values))
+        }
+        windowCloseObservers.removeAll()
+        for observers in observerGroups {
+            for observer in observers {
+                await observer()
+            }
         }
     }
 }

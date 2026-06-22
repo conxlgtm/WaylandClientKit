@@ -22,7 +22,7 @@ another client requests bytes from a published clipboard, primary selection, or
 drag source, WaylandClientKit emits a source-send request event with the source
 identity and MIME type. A later source-write success event means the payload was
 written to the compositor-provided descriptor. If writing fails, WaylandClientKit
-publishes a ``DataTransferDiagnosticOperation/sourceWriteFailed`` diagnostic
+publishes a `DataTransferDiagnosticOperation.sourceWriteFailed` diagnostic
 instead.
 
 ## Capability Gates

@@ -45,6 +45,9 @@ extension WaylandDisplay {
                 configuration: graphicsConfiguration
             ) ? ManagedGPUPreviewBacking(window: window) : nil
         )
+        registerWindowCloseObserver(for: window.id) { [weak storage] in
+            await storage?.closeBecauseWindowClosed()
+        }
         return WaylandGraphicsWindowBacking(window: window, storage: storage)
     }
 
@@ -54,11 +57,20 @@ extension WaylandDisplay {
     ) throws -> WaylandGraphicsRuntimePath {
         try configuration.validateManagedPreviewSupport(capabilities: capabilities)
 
-        switch configuration.backingPreference {
+        switch configuration.presentationMode {
         case .software:
             return .softwareFallback(capabilities: capabilities, reason: .forcedSoftware)
         case .managedGPU:
             break
+        case .externalGPU:
+            guard configuration.fallbackPolicy != .forceSoftware else {
+                throw WaylandGraphicsError.unavailable(
+                    .managedGPUSubmissionUnavailable
+                )
+            }
+            guard capabilities.dmabuf.isAvailable else {
+                throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
+            }
         }
 
         switch configuration.fallbackPolicy {
@@ -79,7 +91,7 @@ extension WaylandDisplay {
         runtimePath: WaylandGraphicsRuntimePath,
         configuration: WaylandGraphicsConfiguration
     ) -> Bool {
-        guard configuration.backingPreference == .managedGPU,
+        guard configuration.presentationMode == .managedGPU,
             configuration.fallbackPolicy != .forceSoftware
         else {
             return false

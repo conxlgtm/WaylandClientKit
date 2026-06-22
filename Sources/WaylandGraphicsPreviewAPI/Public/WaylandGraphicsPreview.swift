@@ -90,6 +90,7 @@ public struct WaylandGraphicsColorMetadataAvailability: Equatable, Sendable {
 /// Renderer-neutral compositor facts relevant to graphics backing.
 public struct WaylandGraphicsSurfaceCapabilities: Equatable, Sendable {
     public let dmabuf: WaylandGraphicsProtocolAvailability
+    package let dmabufFeedback: SurfaceDmabufFeedback?
     public let explicitSync: WaylandGraphicsProtocolAvailability
     public let framePacing: WaylandGraphicsFramePacingAvailability
     public let colorMetadata: WaylandGraphicsColorMetadataAvailability
@@ -103,6 +104,7 @@ public struct WaylandGraphicsSurfaceCapabilities: Equatable, Sendable {
         presentationFeedback: WaylandGraphicsProtocolAvailability
     ) {
         self.dmabuf = dmabuf
+        dmabufFeedback = nil
         self.explicitSync = explicitSync
         self.framePacing = framePacing
         self.colorMetadata = colorMetadata
@@ -122,35 +124,34 @@ public struct WaylandGraphicsSurfaceCapabilities: Equatable, Sendable {
     }
 
     package init(snapshot: GraphicsPreviewSurfaceCapabilitySnapshot) {
-        self.init(
-            dmabuf: WaylandGraphicsProtocolAvailability(snapshot.dmabuf),
-            explicitSync: WaylandGraphicsProtocolAvailability(snapshot.explicitSync),
-            framePacing: WaylandGraphicsFramePacingAvailability(
-                fifo: WaylandGraphicsProtocolAvailability(snapshot.framePacing.fifo),
-                commitTiming: WaylandGraphicsProtocolAvailability(
-                    snapshot.framePacing.commitTiming
-                )
-            ),
-            colorMetadata: WaylandGraphicsColorMetadataAvailability(
-                contentType: WaylandGraphicsProtocolAvailability(
-                    snapshot.metadata.contentType
-                ),
-                alphaModifier: WaylandGraphicsProtocolAvailability(
-                    snapshot.metadata.alphaModifier
-                ),
-                tearingControl: WaylandGraphicsProtocolAvailability(
-                    snapshot.metadata.tearingControl
-                ),
-                colorRepresentation: WaylandGraphicsProtocolAvailability(
-                    snapshot.metadata.colorRepresentation
-                ),
-                colorManagement: WaylandGraphicsProtocolAvailability(
-                    snapshot.metadata.colorManagement
-                )
-            ),
-            presentationFeedback: WaylandGraphicsProtocolAvailability(
-                snapshot.presentationFeedback
+        dmabuf = WaylandGraphicsProtocolAvailability(snapshot.dmabuf)
+        dmabufFeedback = snapshot.dmabufFeedback
+        explicitSync = WaylandGraphicsProtocolAvailability(snapshot.explicitSync)
+        framePacing = WaylandGraphicsFramePacingAvailability(
+            fifo: WaylandGraphicsProtocolAvailability(snapshot.framePacing.fifo),
+            commitTiming: WaylandGraphicsProtocolAvailability(
+                snapshot.framePacing.commitTiming
             )
+        )
+        colorMetadata = WaylandGraphicsColorMetadataAvailability(
+            contentType: WaylandGraphicsProtocolAvailability(
+                snapshot.metadata.contentType
+            ),
+            alphaModifier: WaylandGraphicsProtocolAvailability(
+                snapshot.metadata.alphaModifier
+            ),
+            tearingControl: WaylandGraphicsProtocolAvailability(
+                snapshot.metadata.tearingControl
+            ),
+            colorRepresentation: WaylandGraphicsProtocolAvailability(
+                snapshot.metadata.colorRepresentation
+            ),
+            colorManagement: WaylandGraphicsProtocolAvailability(
+                snapshot.metadata.colorManagement
+            )
+        )
+        presentationFeedback = WaylandGraphicsProtocolAvailability(
+            snapshot.presentationFeedback
         )
     }
 }

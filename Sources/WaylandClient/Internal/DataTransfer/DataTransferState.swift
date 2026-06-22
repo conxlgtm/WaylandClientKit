@@ -268,7 +268,7 @@ extension DataTransferState {
         }
 
         var effects: [DataTransferEffect] = []
-        appendSelectionOfferCleanup(seat.selection.offerID, seatID: seatID, to: &effects)
+        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
         try seat.setSelection(nextSelection)
         seats[seatID] = seat
         effects.append(.publishSelectionChanged(seatID: seatID, offerID: offerID))
