@@ -102,7 +102,6 @@ enum GraphicsPreviewExternalBufferSmoke {
                 renderer.close()
             }
         }
-        await lease.cancel()
 
         var receipts = [WaylandGraphicsExternalBufferSubmissionReceipt?](
             repeating: nil,
@@ -119,7 +118,10 @@ enum GraphicsPreviewExternalBufferSmoke {
                 releaseCount += 1
             }
 
-            let frameLease = try await backing.nextFrame()
+            let frameLease =
+                frameIndex == 0
+                ? lease
+                : try await backing.nextFrame()
             guard frameLease.contract.generation == pool.generation else {
                 throw WaylandGraphicsError.staleFrameContract(
                     rendered: pool.generation,
