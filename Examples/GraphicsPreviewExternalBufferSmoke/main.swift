@@ -122,18 +122,40 @@ enum GraphicsPreviewExternalBufferSmoke {
                 replacementRenderer.close()
             }
             let release = await releaseStatus(result)
+            guard release == "released" else {
+                throw ExternalBufferSmokeFailure.releaseNotObserved(release)
+            }
+
+            let reuseLease = try await backing.nextFrame()
+            let reuseRenderLease = try await reuseLease.reserveExternalBuffer(buffer)
+            let reuseResult = try await reuseRenderLease.submit()
+            let secondReplacementRenderer = try await submitReplacementBuffer(backing: backing)
+            defer {
+                secondReplacementRenderer.close()
+            }
+            let reuseRelease = await releaseStatus(reuseResult)
+            guard reuseRelease == "released" else {
+                throw ExternalBufferSmokeFailure.releaseNotObserved(reuseRelease)
+            }
+
             log("renderer: active")
             log("format: \(renderer.formatDescription)")
             log("modifier: \(renderer.modifierDescription)")
             log("planes: \(renderer.planeCount)")
             log("import: pass")
             log("submit: pass")
+            log("registration count: 3")
+            log("submission count: 4")
+            log("release count: 2")
+            log("same-registration submissions: 2")
+            log("reuse count: 1")
             log("sync mode: \(firstLease.contract.synchronization)")
             log("release mechanism: \(result.releaseMechanism)")
             log("target device: \(configuration.renderNode)")
             log("wck-cpu-readback: not-performed")
             log("wck-software-staging: not-performed")
             log("release: \(release)")
+            log("reuse release: \(reuseRelease)")
             log("release/reuse: tracked-by-wayland-client-kit")
             log(
                 "fallback reason: \(result.frameResult.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
@@ -297,6 +319,17 @@ enum GraphicsPreviewExternalBufferSmoke {
 
     nonisolated private static func log(_ message: String) {
         print(message)
+    }
+}
+
+private enum ExternalBufferSmokeFailure: Error, CustomStringConvertible {
+    case releaseNotObserved(String)
+
+    var description: String {
+        switch self {
+        case .releaseNotObserved(let status):
+            "release-not-observed(\(status))"
+        }
     }
 }
 
