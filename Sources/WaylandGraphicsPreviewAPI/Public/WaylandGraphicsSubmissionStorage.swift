@@ -127,6 +127,7 @@ private struct ExternalBufferRegistryState: Sendable {
         )
     }
 
+    @discardableResult
     mutating func removeValue(
         for bufferID: WaylandGraphicsExternalBufferID
     ) -> Entry? {
