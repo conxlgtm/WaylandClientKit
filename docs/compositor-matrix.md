@@ -47,6 +47,7 @@ swift run GPUPreviewSmokeClient
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 swift run GraphicsPreviewExternalBufferSmoke -- --probe
+swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer --stress-frames 120
 swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
 swift run ColorManagementSmoke
 ```
@@ -91,7 +92,7 @@ example or manual probe has been run:
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
-| external graphics buffer | Maintainer probe `GraphicsPreviewExternalBufferSmoke -- --probe`, `GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` import-cleanup probe |
+| external graphics buffer | Maintainer probe `GraphicsPreviewExternalBufferSmoke -- --probe`, `GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release/reuse run, or `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` import-cleanup probe |
 | graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
 | color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
@@ -110,6 +111,19 @@ active.
 | GNOME / Mutter | Fedora GNOME Wayland VM on `wayland-0`, 2026-06-11 | `wayland-info`: dmabuf v3, presentation v2, FIFO v1, commit timing v1, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, idle inhibit v1, system bell v1, xdg activation v1, color management v2, color representation v1, linux-drm-syncobj unavailable, top-level icon unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, and `swift run wck smoke gpu-preview` passed | GNOME VM integration smoke passed after Fedora Swift index-store/toolchain fixes | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported software fallback `surfaceFeedbackUnavailable` | Real GNOME/Mutter desktop-family evidence. Active GPU was not proven because surface dmabuf feedback was unavailable to the managed GPU path. |
 | KDE / KWin | KDE / plasma session, 2026-06-09 plus manual pointer/serial/data-transfer/managed-GPU-resize addendum on 2026-06-11 | `wayland-info`: dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon v1, idle inhibit v1, system bell v1, xdg activation v1, color metadata advertised, commit timing unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, `swift run wck smoke gpu-preview`, and individual auto-close feature examples passed | live integration smoke passed, `swift run wck ci check` was attempted but hung after building `wck` with no child process/output | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Active GPU presentation and managed GPU resize/reconfigure are proven for clear-frame submission on this run. Manual pointer lock/confine with relative motion is proven. Manual data-transfer drag-source/drop/read/finish is proven. Manual serial move/window-menu requests are proven, serial resize is proven through the managed GPU resize run and drag-source serial is proven through `DataTransferSmoke`. |
 | Sway / wlroots | nested Sway/wlroots under KDE/Plasma, 2026-06-09 | `wayland-info`: dmabuf v4, linux-drm-syncobj v1, presentation v2, text-input v3 v1, cursor-shape v1, pointer constraints v1, relative pointer v1, idle inhibit v1, xdg activation v1, content type/alpha/tearing metadata advertised, FIFO/color management/color representation/top-level icon/system bell unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, and `swift run wck smoke gpu-preview` passed inside nested Sway | nested integration smoke passed | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Nested wlroots evidence. Active GPU clear-frame submission was proven at 96x96, full bare-metal Sway evidence is still desirable. |
+
+## External Graphics Buffer Evidence
+
+These rows record the pre-reuse `GraphicsPreviewExternalBufferSmoke` evidence
+captured for the public external-buffer API. Rerun the same command after the
+same-registration reuse smoke update before claiming sustained reuse evidence.
+
+| Compositor | Version | Command | Result |
+| ---------- | ------- | ------- | ------ |
+| KDE / KWin | KDE / Plasma Wayland session, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713112`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
+| KDE / KWin | KDE / Plasma Wayland session, 2026-06-23 | `swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer --stress-frames 120` | renderer active, 3 registrations, 3 Wayland imports, 120 submissions, 117 releases, 117 reuse cycles, maximum compositor ownership 3, implicit sync, no WCK readback, no WCK software staging, cleanup pass |
+| Sway / wlroots | Sway 1.11, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
+| Hyprland / wlroots-family | Hyprland 0.55.2, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
 
 KDE/KWin manual interaction addendum on 2026-06-11:
 `swift run PointerCaptureSmoke` passed manual pointer-lock, pointer-confine, and
@@ -169,7 +183,7 @@ before exit, and closed with `remainingWindows=0`.
 
 Use this table for framework-facing behavior that is not captured by generic
 smoke tests. Record whether the evidence came from a bounded WaylandClientKit
-example, a manual example run, or an external framework harness.
+example, a manual example run, or an external framework test app.
 
 | Compositor | Client-side resize chrome | Serial-sensitive resize/move/menu/drag | Pointer capture | Text input | Interpreted keyboard fallback | Clipboard/private MIME behavior | Drag-source behavior | Popup lifecycle | Presentation feedback | Cursor theme behavior | Graphics preview software fallback | Fatal cleanup/shutdown |
 | ---------- | ------------------------- | -------------------------------------- | --------------- | ---------- | ----------------------------- | ------------------------------- | -------------------- | --------------- | --------------------- | --------------------- | ---------------------------------- | ---------------------- |

@@ -66,7 +66,14 @@ enum GraphicsPreviewExternalBufferSmoke {
                 )
                 log("failure: none")
             case .internalTestBuffer:
-                backingWasClosed = try await submitInternalTestBuffer(backing: backing)
+                if options.stressFrames > 0 {
+                    backingWasClosed = try await submitStressBuffers(
+                        backing: backing,
+                        frameCount: options.stressFrames
+                    )
+                } else {
+                    backingWasClosed = try await submitInternalTestBuffer(backing: backing)
+                }
             case .negativeTestBuffer:
                 try await submitNegativeTestBuffer(backing: backing)
             }
@@ -76,6 +83,113 @@ enum GraphicsPreviewExternalBufferSmoke {
             }
             log("cleanup: pass")
         }
+    }
+
+    private static func submitStressBuffers(
+        backing: WaylandGraphicsWindowBacking,
+        frameCount: Int
+    ) async throws -> Bool {
+        log("mode: renderer-dmabuf-stress")
+        let lease = try await backing.nextFrame()
+        let configuration = try requireExternalConfiguration(lease.contract)
+        let pool = try await registerStressPool(
+            backing: backing,
+            lease: lease,
+            configuration: configuration
+        )
+        defer {
+            for renderer in pool.renderers {
+                renderer.close()
+            }
+        }
+
+        var receipts = [WaylandGraphicsExternalBufferSubmissionReceipt?](
+            repeating: nil,
+            count: pool.buffers.count
+        )
+        var releaseCount = 0
+        for frameIndex in 0..<frameCount {
+            let bufferIndex = frameIndex % pool.buffers.count
+            if let receipt = receipts[bufferIndex] {
+                let release = await releaseStatus(receipt)
+                guard release == "released" else {
+                    throw ExternalBufferSmokeFailure.releaseNotObserved(release)
+                }
+                releaseCount += 1
+            }
+
+            let frameLease =
+                frameIndex == 0
+                ? lease
+                : try await backing.nextFrame()
+            guard frameLease.contract.generation == pool.generation else {
+                throw WaylandGraphicsError.staleFrameContract(
+                    rendered: pool.generation,
+                    current: frameLease.contract.generation
+                )
+            }
+            let renderLease = try await frameLease.reserveExternalBuffer(
+                pool.buffers[bufferIndex]
+            )
+            receipts[bufferIndex] = try await renderLease.submit()
+        }
+
+        logStressResult(
+            pool: pool,
+            frameCount: frameCount,
+            releaseCount: releaseCount
+        )
+        try await backing.close()
+        return true
+    }
+
+    private static func registerStressPool(
+        backing: WaylandGraphicsWindowBacking,
+        lease: WaylandGraphicsFrameLease,
+        configuration: WaylandGraphicsExternalBufferConfiguration
+    ) async throws -> StressPool {
+        var renderers: [ExternalDmabufRenderer] = []
+        var buffers: [WaylandGraphicsExternalBuffer] = []
+        for _ in 0..<3 {
+            let renderer = try ExternalDmabufRenderer(
+                size: lease.size,
+                configuration: configuration
+            )
+            let buffer = try await backing.registerExternalBuffer(
+                try renderer.makeDescriptor(),
+                contract: lease.contract,
+                configurationID: configuration.id
+            )
+            renderers.append(renderer)
+            buffers.append(buffer)
+        }
+
+        return StressPool(
+            renderers: renderers,
+            buffers: buffers,
+            generation: lease.contract.generation,
+            configuration: configuration
+        )
+    }
+
+    private static func logStressResult(
+        pool: StressPool,
+        frameCount: Int,
+        releaseCount: Int
+    ) {
+        log("renderer: active")
+        log("registration count: \(pool.buffers.count)")
+        log("Wayland import count: \(pool.buffers.count)")
+        log("submission count: \(frameCount)")
+        log("release count: \(releaseCount)")
+        log("reuse count: \(max(0, frameCount - pool.buffers.count))")
+        log("maximum simultaneous compositor ownership: \(pool.buffers.count)")
+        log("sync mode: implicitOnly")
+        log("target device: \(pool.configuration.renderNode)")
+        log("wck-cpu-readback: not-performed")
+        log("wck-software-staging: not-performed")
+        log("fallback reason: none")
+        log("failure: none")
     }
 
     private static func submitInternalTestBuffer(
@@ -122,18 +236,40 @@ enum GraphicsPreviewExternalBufferSmoke {
                 replacementRenderer.close()
             }
             let release = await releaseStatus(result)
+            guard release == "released" else {
+                throw ExternalBufferSmokeFailure.releaseNotObserved(release)
+            }
+
+            let reuseLease = try await backing.nextFrame()
+            let reuseRenderLease = try await reuseLease.reserveExternalBuffer(buffer)
+            let reuseResult = try await reuseRenderLease.submit()
+            let secondReplacementRenderer = try await submitReplacementBuffer(backing: backing)
+            defer {
+                secondReplacementRenderer.close()
+            }
+            let reuseRelease = await releaseStatus(reuseResult)
+            guard reuseRelease == "released" else {
+                throw ExternalBufferSmokeFailure.releaseNotObserved(reuseRelease)
+            }
+
             log("renderer: active")
             log("format: \(renderer.formatDescription)")
             log("modifier: \(renderer.modifierDescription)")
             log("planes: \(renderer.planeCount)")
             log("import: pass")
             log("submit: pass")
+            log("registration count: 3")
+            log("submission count: 4")
+            log("release count: 2")
+            log("same-registration submissions: 2")
+            log("reuse count: 1")
             log("sync mode: \(firstLease.contract.synchronization)")
             log("release mechanism: \(result.releaseMechanism)")
             log("target device: \(configuration.renderNode)")
             log("wck-cpu-readback: not-performed")
             log("wck-software-staging: not-performed")
             log("release: \(release)")
+            log("reuse release: \(reuseRelease)")
             log("release/reuse: tracked-by-wayland-client-kit")
             log(
                 "fallback reason: \(result.frameResult.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
@@ -298,6 +434,24 @@ enum GraphicsPreviewExternalBufferSmoke {
     nonisolated private static func log(_ message: String) {
         print(message)
     }
+}
+
+private enum ExternalBufferSmokeFailure: Error, CustomStringConvertible {
+    case releaseNotObserved(String)
+
+    var description: String {
+        switch self {
+        case .releaseNotObserved(let status):
+            "release-not-observed(\(status))"
+        }
+    }
+}
+
+private struct StressPool {
+    let renderers: [ExternalDmabufRenderer]
+    let buffers: [WaylandGraphicsExternalBuffer]
+    let generation: WaylandGraphicsSurfaceGeneration
+    let configuration: WaylandGraphicsExternalBufferConfiguration
 }
 
 private actor ReleaseStatusProbe {
@@ -652,13 +806,16 @@ private struct ExternalBufferSmokeOptions: Equatable, Sendable {
     }
 
     let mode: Mode
+    let stressFrames: Int
 
     static func parse(_ arguments: ArraySlice<String>) throws -> Self {
         var mode = Mode.internalTestBuffer
+        var stressFrames = 0
         let optionArguments =
             arguments.first == "--" ? arguments.dropFirst() : arguments
 
-        for argument in optionArguments {
+        var iterator = optionArguments.makeIterator()
+        while let argument = iterator.next() {
             switch argument {
             case "--probe":
                 mode = .probe
@@ -666,15 +823,25 @@ private struct ExternalBufferSmokeOptions: Equatable, Sendable {
                 mode = .internalTestBuffer
             case "--negative-test-buffer":
                 mode = .negativeTestBuffer
+            case "--stress-frames":
+                guard let value = iterator.next() else {
+                    throw ExampleRunOptionError.missingValue(argument)
+                }
+                guard let parsedValue = Int(value),
+                    parsedValue >= 0
+                else {
+                    throw ExampleRunOptionError.unknownArgument(value)
+                }
+                stressFrames = parsedValue
             case "--auto-close", "--print-summary":
                 continue
             case "--":
-                return Self(mode: mode)
+                return Self(mode: mode, stressFrames: stressFrames)
             default:
                 throw ExampleRunOptionError.unknownArgument(argument)
             }
         }
 
-        return Self(mode: mode)
+        return Self(mode: mode, stressFrames: stressFrames)
     }
 }

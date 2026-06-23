@@ -4,7 +4,7 @@
 notices, input diagnostics, window diagnostics, data-transfer diagnostics, and
 text-input diagnostics.
 
-``WaylandDisplayError`` represents stream termination and fatal display/runtime
+``WaylandDisplayError`` covers stream termination and fatal display/runtime
 failures. Applications should treat diagnostics as observable state and display
 errors as control-flow termination for the affected stream.
 
