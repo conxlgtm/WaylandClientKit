@@ -1009,6 +1009,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await receipt.waitForRelease() == .released)
         let importedTimelineCount =
             await window.importedSynchronizationTimelineIdentities().count
+        try? await storage.unregisterExternalBuffer(buffer)
         if importedTimelineCount > 0 {
             #expect(
                 await window.removedSynchronizationTimelineCountReaches(

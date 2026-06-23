@@ -111,6 +111,14 @@ private struct ExternalBufferRegistryState: Sendable {
         let explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
         var nextExplicitReleasePoint: UInt64 = 1
         var lifecycle = Lifecycle.available
+
+        var isRetiring: Bool {
+            if case .retiring = lifecycle {
+                return true
+            }
+
+            return false
+        }
     }
 
     enum Lifecycle: Sendable {
@@ -926,6 +934,12 @@ package actor WaylandGraphicsWindowBackingStorage {
 
         let slotID = try externalBufferSlotID(for: buffer)
         synchronizeExternalBufferRelease(bufferID: buffer.id, slotID: slotID)
+        if let entry = externalBufferRegistry.entry(for: buffer.id),
+            entry.isRetiring,
+            let retiredEntry = externalBufferRegistry.markReleased(bufferID: buffer.id)
+        {
+            await removeExternalReleaseTimelineIfNeeded(retiredEntry)
+        }
         do {
             try externalBufferPresenter.retireAvailableBuffer(slotID)
         } catch {
