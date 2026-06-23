@@ -1783,9 +1783,11 @@ extension WaylandGraphicsWindowBackingStorage {
     private func requireExternalReleasePoint(
         for externalBuffer: WaylandGraphicsExternalBuffer
     ) throws -> UInt64 {
-        guard let releasePoint = externalBufferRegistry.nextReleasePoint(
-            for: externalBuffer.id
-        ) else {
+        guard
+            let releasePoint = externalBufferRegistry.nextReleasePoint(
+                for: externalBuffer.id
+            )
+        else {
             throw externalBufferUnavailable(externalBuffer)
         }
 
