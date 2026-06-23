@@ -1009,7 +1009,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await receipt.waitForRelease() == .released)
         let importedTimelineCount =
             await window.importedSynchronizationTimelineIdentities().count
-        try? await storage.unregisterExternalBuffer(buffer)
+        await unregisterIfAvailable(storage: storage, buffer: buffer)
         if importedTimelineCount > 0 {
             #expect(
                 await window.removedSynchronizationTimelineCountReaches(
@@ -1043,6 +1043,19 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             Issue.record("expected external buffer to be unavailable")
         } catch WaylandGraphicsError.externalBufferUnavailable {
             // Expected.
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    private func unregisterIfAvailable(
+        storage: WaylandGraphicsWindowBackingStorage,
+        buffer: WaylandGraphicsExternalBuffer
+    ) async {
+        do {
+            try await storage.unregisterExternalBuffer(buffer)
+        } catch WaylandGraphicsError.externalBufferUnavailable {
+            // The notifier may have already retired the stale buffer.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
