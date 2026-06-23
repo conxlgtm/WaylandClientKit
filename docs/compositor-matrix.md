@@ -121,6 +121,7 @@ same-registration reuse smoke update before claiming sustained reuse evidence.
 | Compositor | Version | Command | Result |
 | ---------- | ------- | ------- | ------ |
 | KDE / KWin | KDE / Plasma Wayland session, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713112`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
+| KDE / KWin | KDE / Plasma Wayland session, 2026-06-23 | `swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer --stress-frames 120` | renderer active, 3 registrations, 3 Wayland imports, 120 submissions, 117 releases, 117 reuse cycles, maximum compositor ownership 3, implicit sync, no WCK readback, no WCK software staging, cleanup pass |
 | Sway / wlroots | Sway 1.11, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
 | Hyprland / wlroots-family | Hyprland 0.55.2, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
 
