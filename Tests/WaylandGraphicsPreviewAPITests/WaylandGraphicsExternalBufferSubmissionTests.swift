@@ -869,6 +869,37 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func cancelDuringExternalSubmitDoesNotClearSubmission() async throws {
+        let hook = ExternalBufferPresentationHook()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed
+        ) {
+            await hook.run()
+        }
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor(
+                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+                offset: 0,
+                fd: testOwnedFileDescriptor()
+            )
+        )
+
+        let renderLease = try await lease.reserveExternalBuffer(buffer)
+        await hook.set { await renderLease.cancel() }
+        let receipt = try await renderLease.submit()
+
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await receipt.waitForRelease() == .released)
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
     func registeredExternalBufferCanUnregisterWhenAvailable() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
@@ -1063,6 +1094,20 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 }
 // swiftlint:enable type_body_length
 
+private actor ExternalBufferPresentationHook {
+    private var operation: (@Sendable () async -> Void)?
+
+    func set(_ presentationOperation: @escaping @Sendable () async -> Void) {
+        operation = presentationOperation
+    }
+
+    func run() async {
+        guard let operation else { return }
+
+        await operation()
+    }
+}
+
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     enum ImportBehavior: Sendable {
         case fail
@@ -1085,6 +1130,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private var removedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
     private let surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
     private let includeDistinctDuplicateSurfaceFeedback: Bool
+    private let presentationHook: (@Sendable () async -> Void)?
 
     init(
         windowID backingWindowID: WindowID = WindowID(rawValue: 910),
@@ -1093,7 +1139,8 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         surfaceFeedbackSynchronization requestedSurfaceFeedbackSynchronization:
             SurfaceSynchronizationCapability? = .implicitOnly,
         includeDistinctDuplicateSurfaceFeedback includeDistinctFeedbackDuplicates:
-            Bool = false
+            Bool = false,
+        presentationHook requestedPresentationHook: (@Sendable () async -> Void)? = nil
     ) throws {
         id = backingWindowID
         geometryValue = try testGraphicsSurfaceGeometry()
@@ -1101,6 +1148,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         presentationFailuresBeforeSuccess = requestedPresentationFailures
         surfaceFeedbackSynchronization = requestedSurfaceFeedbackSynchronization
         includeDistinctDuplicateSurfaceFeedback = includeDistinctFeedbackDuplicates
+        presentationHook = requestedPresentationHook
     }
 
     var geometry: SurfaceGeometry {
@@ -1199,6 +1247,10 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         _ = buffer
         guard !isWindowClosed else {
             throw WaylandGraphicsError.windowClosed
+        }
+
+        if let presentationHook {
+            await presentationHook()
         }
 
         submitConstraints.append(submittedConstraints)

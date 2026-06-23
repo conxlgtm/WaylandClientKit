@@ -1209,19 +1209,21 @@ package actor WaylandGraphicsWindowBackingStorage {
         var stage = WaylandGraphicsSubmissionStage.submissionPreparation
         do {
             stage = .frameSubmission
+            let submissionID = nextExternalSubmissionID()
+            try markExternalBufferSubmitted(
+                externalBuffer,
+                leaseID: leaseID,
+                submissionID: submissionID
+            )
             let submittedExternalFrame = try await submitRegisteredExternalBufferFrame(
                 externalBuffer,
+                submissionID: submissionID,
                 acquireSynchronization: acquireSynchronization,
                 metadata: frameMetadata,
                 geometry: geometry,
                 configuration: effectiveConfiguration
             )
             stage = .submissionCompletion
-            try markExternalBufferSubmitted(
-                externalBuffer,
-                leaseID: leaseID,
-                submissionID: submittedExternalFrame.submissionID
-            )
             try leaseState.finishSubmission()
             let result = frameResult(
                 operation: operation,
@@ -1241,6 +1243,10 @@ package actor WaylandGraphicsWindowBackingStorage {
             releaseExternalBufferReservation(
                 bufferID: externalBuffer.id,
                 leaseID: leaseID
+            )
+            _ = synchronizeExternalBufferRelease(
+                bufferID: externalBuffer.id,
+                slotID: try externalBufferSlotID(for: externalBuffer)
             )
             if Self.isCommittedExternalBufferFrameFailure(error) {
                 finishCommittedSubmissionFailure()
@@ -1308,8 +1314,10 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func submitRegisteredExternalBufferFrame(
         _ externalBuffer: WaylandGraphicsExternalBuffer,
+        submissionID: WaylandGraphicsExternalSubmissionID,
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         geometry: SurfaceGeometry,
@@ -1336,6 +1344,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         )
         let submittedExternalFrame = try await presentRegisteredExternalBuffer(
             externalBuffer,
+            submissionID: submissionID,
             synchronization: synchronization,
             pacing: pacingSelection.constraint,
             metadata: resolvedMetadata.commitMetadata,
@@ -1770,8 +1779,10 @@ extension WaylandGraphicsWindowBackingStorage {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func presentRegisteredExternalBuffer(
         _ externalBuffer: WaylandGraphicsExternalBuffer,
+        submissionID: WaylandGraphicsExternalSubmissionID,
         synchronization externalSynchronization: (
             presentation: GPUBufferSubmissionSynchronization,
             explicitReleaseTimeline: WaylandGraphicsExternalReleaseTimeline?
@@ -1784,7 +1795,6 @@ extension WaylandGraphicsWindowBackingStorage {
         releaseMechanism: WaylandGraphicsExternalReleaseMechanism,
         releaseState: WaylandGraphicsExternalReleaseState
     ) {
-        let submissionID = nextExternalSubmissionID()
         let slotID = try externalBufferSlotID(for: externalBuffer)
         let releaseState = externalReleaseRegistry.begin(
             submissionID: submissionID,
