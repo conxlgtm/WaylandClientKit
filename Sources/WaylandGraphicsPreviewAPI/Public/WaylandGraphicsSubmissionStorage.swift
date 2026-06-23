@@ -616,7 +616,11 @@ package actor WaylandGraphicsWindowBackingStorage {
                 }
 
                 try externalBufferPresenter.retireAvailableBuffer(slotID)
-                _ = externalBufferRegistry.markReleased(bufferID: bufferID)
+                if let retiredEntry = externalBufferRegistry.markReleased(
+                    bufferID: bufferID
+                ) {
+                    retiredEntries.append(retiredEntry)
+                }
                 if let retiredEntry = externalBufferRegistry.markRetiring(
                     bufferID: bufferID,
                     reason: .staleContract

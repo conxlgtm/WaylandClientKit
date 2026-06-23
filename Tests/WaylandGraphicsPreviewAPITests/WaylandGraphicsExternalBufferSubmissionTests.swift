@@ -974,8 +974,18 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
     @Test
     func submittedStaleRegisteredBufferRetiresAfterRelease() async throws {
-        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
-        let storage = externalBufferStorage(window: window)
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+        )
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
+                fallbackPolicy: .requireGPU,
+                synchronizationPolicy: .preferExplicit
+            )
+        )
         let firstLease = try await storage.nextFrame()
         let buffer = try await registerTestExternalBuffer(
             storage: storage,
@@ -997,6 +1007,15 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         await window.emitImportedBufferRelease(at: 0)
         #expect(await receipt.waitForRelease() == .released)
+        let importedTimelineCount =
+            await window.importedSynchronizationTimelineIdentities().count
+        if importedTimelineCount > 0 {
+            #expect(
+                await window.removedSynchronizationTimelineCountReaches(
+                    importedTimelineCount
+                )
+            )
+        }
         for _ in 0..<10 {
             if await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty {
                 break
@@ -1007,16 +1026,25 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
-        do {
+        await expectExternalBufferUnavailable {
             _ = try await secondLease.reserveExternalBuffer(buffer)
-            Issue.record("expected released old-generation external buffer to be retired")
+        }
+        await secondLease.cancel()
+
+        try await storage.closeForTesting()
+    }
+
+    private func expectExternalBufferUnavailable(
+        _ operation: () async throws -> Void
+    ) async {
+        do {
+            try await operation()
+            Issue.record("expected external buffer to be unavailable")
         } catch WaylandGraphicsError.externalBufferUnavailable {
-            await secondLease.cancel()
+            // Expected.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
-
-        try await storage.closeForTesting()
     }
 }
 // swiftlint:enable type_body_length
@@ -1039,6 +1067,8 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private var submittedMetadata: [SurfaceCommitMetadata] = []
     private var presentationFeedbackRequests: [Bool] = []
     private(set) var preparePresentationRequests = 0
+    private var importedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
+    private var removedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
     private let surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
     private let includeDistinctDuplicateSurfaceFeedback: Bool
 
@@ -1111,6 +1141,39 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
             importedBuffers.append(buffer)
             return buffer
         }
+    }
+
+    func importGraphicsPreviewSynchronizationTimeline(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity
+    ) async throws {
+        fileDescriptor.close()
+        importedSyncTimelineIdentities.append(identity)
+    }
+
+    func removeGraphicsPreviewSynchronizationTimeline(
+        identity: SurfaceSyncTimelineIdentity
+    ) async throws {
+        removedSyncTimelineIdentities.append(identity)
+    }
+
+    func removedSynchronizationTimelineIdentities() -> [SurfaceSyncTimelineIdentity] {
+        removedSyncTimelineIdentities
+    }
+
+    func importedSynchronizationTimelineIdentities() -> [SurfaceSyncTimelineIdentity] {
+        importedSyncTimelineIdentities
+    }
+
+    func removedSynchronizationTimelineCountReaches(_ count: Int) async -> Bool {
+        for _ in 0..<10 {
+            if removedSyncTimelineIdentities.count == count {
+                return true
+            }
+            await Task.yield()
+        }
+
+        return removedSyncTimelineIdentities.count == count
     }
 
     func presentGraphicsPreviewBuffer(
