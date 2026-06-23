@@ -111,6 +111,18 @@ active.
 | KDE / KWin | KDE / plasma session, 2026-06-09 plus manual pointer/serial/data-transfer/managed-GPU-resize addendum on 2026-06-11 | `wayland-info`: dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon v1, idle inhibit v1, system bell v1, xdg activation v1, color metadata advertised, commit timing unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, `swift run wck smoke gpu-preview`, and individual auto-close feature examples passed | live integration smoke passed, `swift run wck ci check` was attempted but hung after building `wck` with no child process/output | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Active GPU presentation and managed GPU resize/reconfigure are proven for clear-frame submission on this run. Manual pointer lock/confine with relative motion is proven. Manual data-transfer drag-source/drop/read/finish is proven. Manual serial move/window-menu requests are proven, serial resize is proven through the managed GPU resize run and drag-source serial is proven through `DataTransferSmoke`. |
 | Sway / wlroots | nested Sway/wlroots under KDE/Plasma, 2026-06-09 | `wayland-info`: dmabuf v4, linux-drm-syncobj v1, presentation v2, text-input v3 v1, cursor-shape v1, pointer constraints v1, relative pointer v1, idle inhibit v1, xdg activation v1, content type/alpha/tearing metadata advertised, FIFO/color management/color representation/top-level icon/system bell unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, and `swift run wck smoke gpu-preview` passed inside nested Sway | nested integration smoke passed | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Nested wlroots evidence. Active GPU clear-frame submission was proven at 96x96, full bare-metal Sway evidence is still desirable. |
 
+## External Graphics Buffer Evidence
+
+These rows record the pre-reuse `GraphicsPreviewExternalBufferSmoke` evidence
+captured for the public external-buffer API. Rerun the same command after the
+same-registration reuse smoke update before claiming sustained reuse evidence.
+
+| Compositor | Version | Command | Result |
+| ---------- | ------- | ------- | ------ |
+| KDE / KWin | KDE / Plasma Wayland session, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713112`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
+| Sway / wlroots | Sway 1.11, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
+| Hyprland / wlroots-family | Hyprland 0.55.2, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
+
 KDE/KWin manual interaction addendum on 2026-06-11:
 `swift run PointerCaptureSmoke` passed manual pointer-lock, pointer-confine, and
 relative-motion proof across two runs. The lock run logged `relative pointer
