@@ -47,6 +47,7 @@ swift run GPUPreviewSmokeClient
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 swift run GraphicsPreviewExternalBufferSmoke -- --probe
+swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer --stress-frames 120
 swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
 swift run ColorManagementSmoke
 ```
