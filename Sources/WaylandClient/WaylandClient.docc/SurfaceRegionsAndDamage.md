@@ -15,7 +15,7 @@ its surface.
 ## Capability Gate
 
 Regions use `wl_compositor` region objects and the managed surface path. Damage
-does not require an optional protocol, but WaylandClientKit validates damage against
+is part of core Wayland. WaylandClientKit validates damage against
 the current ``SurfaceGeometry`` and maps logical rectangles to buffer
 coordinates for the active scale.
 

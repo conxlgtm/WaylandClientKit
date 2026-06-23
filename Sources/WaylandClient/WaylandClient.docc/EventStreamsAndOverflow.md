@@ -6,7 +6,7 @@ streams.
 
 Configure stream capacities with ``EventStreamConfiguration``. Subscriber
 overflow is local to the affected stream subscription unless a diagnostic
-represents a fatal input pipeline failure. ``TextInputEvents`` has an independent
+is a fatal input pipeline failure. ``TextInputEvents`` has an independent
 text-input capacity. Display close and fatal display errors finish all streams.
 
 Diagnostics are published both as display events and on the diagnostics stream.

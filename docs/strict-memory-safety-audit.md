@@ -584,7 +584,7 @@ Audit invariant:
   clear-current failure instead of returning success with a still-current
   context.
 - GBM platform support is detected from the parsed EGL client extension set.
-- Render-target destruction marks live GBM surface-buffer leases terminal before
+- Render-target destruction sets live GBM surface-buffer leases terminal before
   destroying the backing surface.
 
 Tests:

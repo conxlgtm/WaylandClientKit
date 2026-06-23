@@ -505,7 +505,7 @@ Notes:
   `PointerCaptureError.invalidCursorHint` for non-finite or out-of-range
   coordinates.
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
-  with a timeout, and `ClipboardSourceConfiguration` represents local regular
+  with a timeout, and `ClipboardSourceConfiguration` describes local regular
   clipboard payloads.
 - Drag offers are seat-scoped and serial-bound to the current drag operation.
   `DragOffer.read` uses the same bounded transfer rules as clipboard and primary
@@ -543,7 +543,7 @@ Notes:
 - Primary selection offers are seat-scoped and expire when the compositor sends
   a null selection or focus changes. `PrimarySelectionOffer.read` uses the same
   bounded transfer rules as clipboard reads, and `PrimarySelectionSourceConfiguration`
-  represents local primary-selection payloads.
+  describes local primary-selection payloads.
 - `WindowDecorationPreference.preferServerSide` is the default because WaylandClientKit
   does not draw client-side titlebars. `preferClientSide` requests no server-side
   decorations. Applications remain responsible for any custom chrome they want.

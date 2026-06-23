@@ -183,7 +183,7 @@ before exit, and closed with `remainingWindows=0`.
 
 Use this table for framework-facing behavior that is not captured by generic
 smoke tests. Record whether the evidence came from a bounded WaylandClientKit
-example, a manual example run, or an external framework harness.
+example, a manual example run, or an external framework test app.
 
 | Compositor | Client-side resize chrome | Serial-sensitive resize/move/menu/drag | Pointer capture | Text input | Interpreted keyboard fallback | Clipboard/private MIME behavior | Drag-source behavior | Popup lifecycle | Presentation feedback | Cursor theme behavior | Graphics preview software fallback | Fatal cleanup/shutdown |
 | ---------- | ------------------------- | -------------------------------------- | --------------- | ---------- | ----------------------------- | ------------------------------- | -------------------- | --------------- | --------------------- | --------------------- | ---------------------------------- | ---------------------- |

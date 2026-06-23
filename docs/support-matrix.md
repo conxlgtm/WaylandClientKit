@@ -2,11 +2,11 @@
 
 This matrix describes the current experimental baseline. Status labels:
 
-- **Public**: available through `WaylandClient`.
-- **Preview**: public but source-breaking preview API.
-- **Internal preview**: package-internal support used by preview work.
-- **Raw/generated**: generated or raw wrapper support without a stable overlay.
-- **Unsupported**: intentionally not in the current baseline.
+- Public: available through `WaylandClient`.
+- Preview: public but source-breaking preview API.
+- Internal preview: package-internal support used by preview work.
+- Raw/generated: generated or raw wrapper support without a stable overlay.
+- Unsupported: intentionally not in the current baseline.
 
 ## Core Protocols
 
