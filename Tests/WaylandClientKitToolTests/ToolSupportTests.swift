@@ -72,9 +72,18 @@ struct ToolSupportTests {
     @Test
     func processRunnerRestoresCurrentDirectoryAfterWorkingDirectoryRun() throws {
         let root = try temporaryRepository()
+        let fixture = root.appendingPathComponent("print-working-directory")
+        let shell = try ProcessRunner().executableURL(for: "sh").path
+        try writeExecutable(
+            """
+            #!\(shell)
+            pwd
+            """,
+            to: fixture
+        )
         let originalDirectory = FileManager.default.currentDirectoryPath
 
-        let result = try ProcessRunner().run("/bin/pwd", [], workingDirectory: root)
+        let result = try ProcessRunner().run(fixture.path, [], workingDirectory: root)
 
         #expect(result.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == root.path)
         #expect(FileManager.default.currentDirectoryPath == originalDirectory)
@@ -272,4 +281,12 @@ struct ToolSupportTests {
             at: root.appendingPathComponent("protocols"), withIntermediateDirectories: true)
         return root
     }
+}
+
+private func writeExecutable(_ contents: String, to url: URL) throws {
+    try contents.write(to: url, atomically: true, encoding: .utf8)
+    try FileManager.default.setAttributes(
+        [.posixPermissions: 0o755],
+        ofItemAtPath: url.path
+    )
 }
