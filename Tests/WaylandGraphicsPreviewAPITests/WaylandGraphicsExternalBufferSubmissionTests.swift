@@ -1004,6 +1004,64 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func failedSubmitCleansRetiringTimeline() async throws {
+        let presentationHook = ExternalBufferPresentationHook()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            presentationFailuresBeforeSuccess: 1,
+            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+        ) {
+            await presentationHook.run()
+        }
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
+                fallbackPolicy: .requireGPU,
+                synchronizationPolicy: .preferExplicit
+            )
+        )
+        await storage.useFakeExternalReleaseTimelineForTesting()
+
+        let lease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor(
+                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
+                offset: 0,
+                fd: testOwnedFileDescriptor()
+            )
+        )
+        let importedTimelineCount =
+            await window.importedSynchronizationTimelineIdentities().count
+        #expect(importedTimelineCount == 1)
+
+        await presentationHook.set {
+            await storage.markExternalBufferStaleForTesting(buffer)
+            await window.emitImportedBufferRelease(at: 0)
+        }
+
+        let renderLease = try await lease.reserveExternalBuffer(buffer)
+        do {
+            _ = try await renderLease.submit()
+            Issue.record("expected external buffer commit failure")
+        } catch WaylandGraphicsError.unavailable(.commitFailed) {
+            #expect(
+                await window.removedSynchronizationTimelineCountReaches(
+                    importedTimelineCount
+                )
+            )
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
     func submittedStaleRegisteredBufferRetiresAfterRelease() async throws {
         let window = try ExternalBufferFakeManagedWindow(
             importBehavior: .succeed,

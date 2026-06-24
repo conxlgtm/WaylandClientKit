@@ -12,10 +12,14 @@ import WaylandRaw
 private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable {
     static let pollSleepNanoseconds: UInt64 = 10_000_000
 
+    private enum Storage {
+        case real(deviceFileDescriptor: Int32, timeline: DRMSyncobjTimeline)
+        case fake
+    }
+
     let identity: GPUSyncTimeline
     private let lock = NSLock()
-    private let deviceFileDescriptor: Int32
-    private let timeline: DRMSyncobjTimeline
+    private let storage: Storage
     private var isDestroyed = false
 
     init(
@@ -34,13 +38,21 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
         }
 
         do {
-            timeline = try DRMSyncobjTimeline(deviceFileDescriptor: fileDescriptor)
-            deviceFileDescriptor = fileDescriptor
+            let timeline = try DRMSyncobjTimeline(deviceFileDescriptor: fileDescriptor)
+            storage = .real(
+                deviceFileDescriptor: fileDescriptor,
+                timeline: timeline
+            )
             identity = timelineIdentity
         } catch {
             Glibc.close(fileDescriptor)
             throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
         }
+    }
+
+    init(fakeIdentity timelineIdentity: GPUSyncTimeline) {
+        storage = .fake
+        identity = timelineIdentity
     }
 
     func exportFileDescriptor() throws -> RawDrmSyncobjTimelineFD {
@@ -50,10 +62,25 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
             throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
         }
 
-        do {
-            return try timeline.exportFileDescriptor()
-        } catch {
-            throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+        switch storage {
+        case .real(_, let timeline):
+            do {
+                return try timeline.exportFileDescriptor()
+            } catch {
+                throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+            }
+        case .fake:
+            let fileDescriptor = Glibc.dup(STDIN_FILENO)
+            guard fileDescriptor >= 0 else {
+                throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+            }
+
+            do {
+                return try RawDrmSyncobjTimelineFD(adopting: fileDescriptor)
+            } catch {
+                Glibc.close(fileDescriptor)
+                throw WaylandGraphicsError.unavailable(.explicitSyncSetupFailed)
+            }
         }
     }
 
@@ -62,6 +89,10 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
         defer { lock.unlock() }
         guard !isDestroyed else {
             throw WaylandGraphicsError.unavailable(.explicitSyncReleaseFailed)
+        }
+
+        guard case .real(_, let timeline) = storage else {
+            return true
         }
 
         do {
@@ -86,6 +117,10 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
         }
 
         isDestroyed = true
+        guard case .real(let deviceFileDescriptor, let timeline) = storage else {
+            return
+        }
+
         timeline.destroy()
         Glibc.close(deviceFileDescriptor)
     }
@@ -94,6 +129,12 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
         destroy()
     }
 }
+
+private typealias ExternalReleaseTimelineFactory =
+    @Sendable (
+        WaylandGraphicsRenderNode,
+        GPUSyncTimeline
+    ) throws -> WaylandGraphicsExternalReleaseTimeline
 
 private struct ExternalBufferConfigurationFact: Equatable, Sendable {
     let format: WaylandGraphicsDRMFormat
@@ -420,6 +461,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     private var lastContractSynchronization: WaylandGraphicsExternalSynchronizationAvailability?
     private var externalBufferRegistry = ExternalBufferRegistryState()
     private var importedExternalSyncTimelineIDs: Set<WaylandGraphicsExternalSyncTimelineID> = []
+    private var externalReleaseTimelineFactoryForTesting: ExternalReleaseTimelineFactory?
 
     package init(
         window backingWindow: any WaylandGraphicsManagedWindow,
@@ -809,10 +851,19 @@ package actor WaylandGraphicsWindowBackingStorage {
 
         do {
             let timelineID = nextExternalSyncTimelineID()
-            let releaseTimeline = try WaylandGraphicsExternalReleaseTimeline(
-                renderNode: selectedConfiguration.renderNode,
-                identity: GPUSyncTimeline(timelineID.rawValue)
-            )
+            let timelineIdentity = GPUSyncTimeline(timelineID.rawValue)
+            let releaseTimeline =
+                if let externalReleaseTimelineFactoryForTesting {
+                    try externalReleaseTimelineFactoryForTesting(
+                        selectedConfiguration.renderNode,
+                        timelineIdentity
+                    )
+                } else {
+                    try WaylandGraphicsExternalReleaseTimeline(
+                        renderNode: selectedConfiguration.renderNode,
+                        identity: timelineIdentity
+                    )
+                }
             do {
                 var timelineFileDescriptor = try releaseTimeline.exportFileDescriptor()
                 try await window.importGraphicsPreviewSynchronizationTimeline(
@@ -1244,10 +1295,12 @@ package actor WaylandGraphicsWindowBackingStorage {
                 bufferID: externalBuffer.id,
                 leaseID: leaseID
             )
-            _ = synchronizeExternalBufferRelease(
+            if let retiredEntry = synchronizeExternalBufferRelease(
                 bufferID: externalBuffer.id,
                 slotID: try externalBufferSlotID(for: externalBuffer)
-            )
+            ) {
+                await removeExternalReleaseTimelineIfNeeded(retiredEntry)
+            }
             if Self.isCommittedExternalBufferFrameFailure(error) {
                 finishCommittedSubmissionFailure()
             } else {
@@ -2172,6 +2225,21 @@ extension WaylandGraphicsWindowBackingStorage {
 }
 
 extension WaylandGraphicsWindowBackingStorage {
+    package func useFakeExternalReleaseTimelineForTesting() {
+        externalReleaseTimelineFactoryForTesting = { _, identity in
+            WaylandGraphicsExternalReleaseTimeline(fakeIdentity: identity)
+        }
+    }
+
+    package func markExternalBufferStaleForTesting(
+        _ buffer: WaylandGraphicsExternalBuffer
+    ) {
+        _ = externalBufferRegistry.markRetiring(
+            bufferID: buffer.id,
+            reason: .staleContract
+        )
+    }
+
     package func closeForTesting() async throws {
         try await close()
     }
