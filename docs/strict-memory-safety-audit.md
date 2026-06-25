@@ -366,6 +366,10 @@ Remaining unsafe constructs:
   waiters resolve to the same terminal release result. The release registry is
   package-private, protected by `NSLock`, and maps presenter slots to submission
   identities only while a submitted buffer awaits release.
+- `ExternalReleaseTimelineTestBackend` is a package-internal `@unchecked
+  Sendable` test backend for explicit-release timeline tests. It lets tests
+  signal or fail release points from another executor without exposing the fake
+  timeline state outside the package.
 - `WaylandGraphicsExternalSyncTimeline` and
   `WaylandGraphicsExternalSyncPoint` are public opaque sync identity values.
   Timeline import consumes `OwnedFileDescriptor` ownership and does not expose
@@ -404,6 +408,9 @@ Audit invariant:
   terminal submission failure. A successful commit, presentation feedback event,
   timeout, `wl_buffer.release` for an explicit submission, or later submission
   does not make a renderer-owned image reusable.
+- The fake external-release timeline backend serializes all mutable release
+  point state and destroy-count state with its private lock, matching the
+  executor-crossing access pattern used by release monitor tasks in tests.
 - Registered external buffers are imported once, reserved before rendering, and
   rejected for a second reservation until the presenter reports compositor
   release for the previous submitted use.

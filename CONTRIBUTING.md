@@ -55,6 +55,7 @@ swift run wck bootstrap install-command --package-manager nix
 Before opening a pull request, run:
 
 ```bash
+swift run wck tools install-swiftlint --destination .build/tools
 swift run wck tools toolchain-smoke
 swift run wck ci check
 ```

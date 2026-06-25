@@ -28,6 +28,9 @@ doctor:
 bootstrap:
     swift run wck bootstrap check
 
+swiftlint-tool:
+    swift run wck tools install-swiftlint --destination .build/tools
+
 nix-check:
     nix develop -c swift run wck ci check
 
