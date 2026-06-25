@@ -37,10 +37,6 @@ public struct ProcessRunner: Sendable {
     public var environment: [String: String]
     public var diagnostics: Diagnostics
 
-    #if os(Linux)
-        private static let currentDirectorySpawnLock = NSLock()
-    #endif
-
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         diagnostics: Diagnostics = Diagnostics()
@@ -196,44 +192,30 @@ public struct ProcessRunner: Sendable {
             defer { posix_spawn_file_actions_destroy(&actions) }
             posix_spawn_file_actions_adddup2(&actions, stdoutFD, STDOUT_FILENO)
             posix_spawn_file_actions_adddup2(&actions, stderrFD, STDERR_FILENO)
+            if let workingDirectory {
+                let chdirStatus = posix_spawn_file_actions_addchdir_np(
+                    &actions,
+                    workingDirectory.path
+                )
+                guard chdirStatus == 0 else {
+                    throw ToolError(
+                        "failed to set spawn working directory to \(workingDirectory.path): "
+                            + String(cString: strerror(chdirStatus)),
+                        exitCode: ToolExitCode.environment
+                    )
+                }
+            }
 
             let spawnStatus: Int32
             var processID = pid_t()
-            Self.currentDirectorySpawnLock.lock()
-            let originalDirectory = FileManager.default.currentDirectoryPath
-            var changedDirectory = false
-            do {
-                if let workingDirectory {
-                    guard FileManager.default.changeCurrentDirectoryPath(workingDirectory.path)
-                    else {
-                        throw ToolError(
-                            "failed to change directory to \(workingDirectory.path)",
-                            exitCode: ToolExitCode.environment)
-                    }
-                    changedDirectory = true
-                }
-
-                let merged = mergedEnvironment(overrides)
-                let environmentStrings = merged.map { "\($0.key)=\($0.value)" }.sorted()
-                spawnStatus = try withCStringArray([executablePath] + arguments) { argv in
-                    try withCStringArray(environmentStrings) { environment in
-                        executablePath.withCString { path in
-                            posix_spawn(&processID, path, &actions, nil, argv, environment)
-                        }
+            let merged = mergedEnvironment(overrides)
+            let environmentStrings = merged.map { "\($0.key)=\($0.value)" }.sorted()
+            spawnStatus = try withCStringArray([executablePath] + arguments) { argv in
+                try withCStringArray(environmentStrings) { environment in
+                    executablePath.withCString { path in
+                        posix_spawn(&processID, path, &actions, nil, argv, environment)
                     }
                 }
-
-                if changedDirectory {
-                    _ = FileManager.default.changeCurrentDirectoryPath(originalDirectory)
-                    changedDirectory = false
-                }
-                Self.currentDirectorySpawnLock.unlock()
-            } catch {
-                if changedDirectory {
-                    _ = FileManager.default.changeCurrentDirectoryPath(originalDirectory)
-                }
-                Self.currentDirectorySpawnLock.unlock()
-                throw error
             }
             guard spawnStatus == 0 else {
                 throw ToolError(

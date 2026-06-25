@@ -230,7 +230,14 @@
 
               swl_check_version "Swift" "$swift_version" || exit 1
 
-              swift_resource_dir="$(dirname "$(dirname "$SWIFT_BIN")")/lib/swift"
+              swift_resource_dir="$("$SWIFT_BIN" -print-target-info 2>/dev/null \
+                | sed -n 's/.*"runtimeResourcePath"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+                | head -n 1)"
+              if [ -z "$swift_resource_dir" ]; then
+                echo "error: Swift toolchain did not report a runtime resource path" >&2
+                echo "hint: check that SWIFT_BIN points to a working Swift compiler or wrapper" >&2
+                exit 1
+              fi
               swift_libc_arch="${pkgs.stdenv.hostPlatform.parsed.cpu.name}"
               swift_glibc_modulemap="$swift_resource_dir/linux/$swift_libc_arch/glibc.modulemap"
               swift_glibc_runtime="$swift_resource_dir/linux/$swift_libc_arch/swiftrt.o"
