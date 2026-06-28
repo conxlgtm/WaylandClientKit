@@ -1223,6 +1223,7 @@ public enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {
     case failed(WaylandGraphicsUnavailableReason)
 }
 
+// swiftlint:disable:next type_name
 public struct WaylandGraphicsExternalPresentationFeedbackIdentity:
     Equatable,
     Hashable,
@@ -1243,6 +1244,7 @@ public struct WaylandGraphicsExternalPresentationFeedbackIdentity:
     }
 }
 
+// swiftlint:disable:next type_name
 public enum WaylandGraphicsExternalPresentationFeedbackResult:
     Equatable,
     Sendable
@@ -1291,7 +1293,7 @@ package actor WaylandGraphicsExternalReleaseState {
     }
 }
 
-package actor WaylandGraphicsExternalPresentationFeedbackState {
+package actor ExternalPresentationFeedbackState {
     private var result: WaylandGraphicsExternalPresentationFeedbackResult?
     private var waiters:
         [CheckedContinuation<WaylandGraphicsExternalPresentationFeedbackResult, Never>] = []
@@ -1337,7 +1339,7 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     public let presentationFeedbackIdentity: WaylandGraphicsExternalPresentationFeedbackIdentity?
 
     private let releaseState: WaylandGraphicsExternalReleaseState
-    private let presentationFeedbackState: WaylandGraphicsExternalPresentationFeedbackState
+    private let presentationFeedbackState: ExternalPresentationFeedbackState
 
     package init(
         id submissionID: WaylandGraphicsExternalSubmissionID,
@@ -1352,7 +1354,7 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
         presentationFeedbackIdentity submissionPresentationFeedbackIdentity:
             WaylandGraphicsExternalPresentationFeedbackIdentity?,
         presentationFeedbackState submissionPresentationFeedbackState:
-            WaylandGraphicsExternalPresentationFeedbackState
+            ExternalPresentationFeedbackState
     ) {
         id = submissionID
         bufferID = submittedBufferID

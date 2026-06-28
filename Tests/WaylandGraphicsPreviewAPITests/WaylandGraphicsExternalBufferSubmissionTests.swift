@@ -1402,45 +1402,14 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     @Test
     func explicitSubmitReleasesAfterFakeTimelineSignal() async throws {
         let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
-        let window = try ExternalBufferFakeManagedWindow(
-            importBehavior: .succeed,
-            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
-        )
-        let storage = externalBufferStorage(
-            window: window,
-            configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
-                synchronizationPolicy: .preferExplicit
-            )
-        )
-        await storage.useFakeExternalReleaseTimelineForTesting(backend)
-
-        let lease = try await storage.nextFrame()
-        let buffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: lease,
-            descriptor: try testExternalDescriptor()
-        )
-        let acquireTimeline = try await storage.importExternalSyncTimeline(
-            testOwnedFileDescriptor()
-        )
-        let renderLease = try await lease.reserveExternalBuffer(buffer)
-        let receipt = try await renderLease.submit(
-            acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
-        )
+        let fixture = try await explicitReleaseSubmissionFixture(backend: backend)
+        let storage = fixture.storage
+        let buffer = fixture.buffer
+        let receipt = fixture.receipt
+        let acquireTimeline = fixture.acquireTimeline
 
         #expect(receipt.releaseMechanism == .explicitSyncobjTimelinePoint)
-        guard
-            case .explicitSyncobjTimelinePoint(
-                let firstReleasePoint,
-                compositorAccepted: let firstAccepted
-            ) = receipt.releaseSynchronization
-        else {
-            Issue.record("expected explicit release synchronization facts")
-            return
-        }
-        #expect(firstAccepted)
+        let firstReleasePoint = try #require(explicitReleasePoint(from: receipt))
         #expect(firstReleasePoint.timelineID.rawValue == 1)
         #expect(firstReleasePoint.point == 1)
         #expect(
@@ -1475,16 +1444,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let reuseReceipt = try await reuseRenderLease.submit(
             acquireSynchronization: .drmSyncobj(try acquireTimeline.point(2))
         )
-        guard
-            case .explicitSyncobjTimelinePoint(
-                let secondReleasePoint,
-                compositorAccepted: let secondAccepted
-            ) = reuseReceipt.releaseSynchronization
-        else {
-            Issue.record("expected explicit release synchronization facts")
-            return
-        }
-        #expect(secondAccepted)
+        let secondReleasePoint = try #require(explicitReleasePoint(from: reuseReceipt))
         #expect(secondReleasePoint.timelineID == firstReleasePoint.timelineID)
         #expect(secondReleasePoint.point == 2)
         backend.signal(2)
@@ -1997,6 +1957,68 @@ private func registerAndSubmitTestExternalBuffer(
 
 private func presentationFeedbackSchedule() -> WaylandGraphicsFrameSchedule {
     WaylandGraphicsFrameSchedule(presentationFeedback: .requestWhenAvailable)
+}
+
+private struct ExplicitReleaseSubmissionFixture {
+    let storage: WaylandGraphicsWindowBackingStorage
+    let buffer: WaylandGraphicsExternalBuffer
+    let acquireTimeline: WaylandGraphicsExternalSyncTimeline
+    let receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+}
+
+private func explicitReleaseSubmissionFixture(
+    backend: ExternalReleaseTimelineTestBackend
+) async throws -> ExplicitReleaseSubmissionFixture {
+    let window = try ExternalBufferFakeManagedWindow(
+        importBehavior: .succeed,
+        surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+    )
+    let storage = externalBufferStorage(
+        window: window,
+        configuration: WaylandGraphicsConfiguration(
+            presentationMode: .externalGPU,
+            fallbackPolicy: .requireGPU,
+            synchronizationPolicy: .preferExplicit
+        )
+    )
+    await storage.useFakeExternalReleaseTimelineForTesting(backend)
+
+    let lease = try await storage.nextFrame()
+    let buffer = try await registerTestExternalBuffer(
+        storage: storage,
+        lease: lease,
+        descriptor: try testExternalDescriptor()
+    )
+    let acquireTimeline = try await storage.importExternalSyncTimeline(
+        testOwnedFileDescriptor()
+    )
+    let renderLease = try await lease.reserveExternalBuffer(buffer)
+    let receipt = try await renderLease.submit(
+        acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
+    )
+    return ExplicitReleaseSubmissionFixture(
+        storage: storage,
+        buffer: buffer,
+        acquireTimeline: acquireTimeline,
+        receipt: receipt
+    )
+}
+
+private func explicitReleasePoint(
+    from receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+) -> WaylandGraphicsExternalSyncobjTimelinePoint? {
+    guard
+        case .explicitSyncobjTimelinePoint(
+            let releasePoint,
+            compositorAccepted: let compositorAccepted
+        ) = receipt.releaseSynchronization
+    else {
+        Issue.record("expected explicit release synchronization facts")
+        return nil
+    }
+
+    #expect(compositorAccepted)
+    return releasePoint
 }
 
 private func registerTestExternalBuffer(
