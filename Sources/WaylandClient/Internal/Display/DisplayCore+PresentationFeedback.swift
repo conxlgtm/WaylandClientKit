@@ -21,7 +21,8 @@ extension DisplayCore {
     func presentationFeedbackCommitRequest(
         for window: TopLevelWindow,
         windowID: WindowID,
-        isRequested: Bool
+        isRequested: Bool,
+        onFeedback: (@Sendable (SurfacePresentationFeedback) -> Void)? = nil
     ) throws -> WindowPresentationFeedbackCommitRequest? {
         guard isRequested else { return nil }
 
@@ -41,6 +42,7 @@ extension DisplayCore {
                                 feedback: feedback
                             )
                         )
+                        onFeedback?(feedback)
                     }
                 )
             },

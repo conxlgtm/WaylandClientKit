@@ -21,7 +21,10 @@ enum WindowExternalBufferPresenter {
         _ request: WindowExternalBufferPresentationRequest,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
-    ) throws -> SurfaceCommitPlan {
+    ) throws -> (
+        commitPlan: SurfaceCommitPlan,
+        presentationFeedbackIdentity: SurfacePresentationIdentity?
+    ) {
         let preparedCommit = try SurfaceFrameCommitter.prepare(
             SurfaceFrameCommitRequest(
                 surface: request.surface,
@@ -69,9 +72,12 @@ enum WindowExternalBufferPresenter {
         commit: () throws -> SurfaceCommitPlan,
         cancelFrameCallback: () -> Void,
         cancelPresentationFeedback: (SurfacePresentationIdentity) -> Void
-    ) throws -> SurfaceCommitPlan {
+    ) throws -> (
+        commitPlan: SurfaceCommitPlan,
+        presentationFeedbackIdentity: SurfacePresentationIdentity?
+    ) {
         var committedPlan: SurfaceCommitPlan?
-        try WindowSoftwarePresentationCommitSequence.perform {
+        let feedbackIdentity = try WindowSoftwarePresentationCommitSequence.perform {
             try requestFrameCallback()
         } requestPresentationFeedback: {
             try requestPresentationFeedback()
@@ -88,6 +94,6 @@ enum WindowExternalBufferPresenter {
         guard let committedPlan else {
             throw PresentationError.missingCommitPlan
         }
-        return committedPlan
+        return (committedPlan, feedbackIdentity)
     }
 }

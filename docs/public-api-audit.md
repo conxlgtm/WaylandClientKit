@@ -329,8 +329,12 @@ Intentionally public:
 - `WaylandGraphicsFrameResult`
 - `WaylandGraphicsExternalRetirementReason`
 - `WaylandGraphicsExternalReleaseMechanism`
+- `WaylandGraphicsExternalSyncobjTimelinePoint`
+- `WaylandGraphicsExternalReleaseSynchronization`
 - `WaylandGraphicsExternalBufferLifecycle`
 - `WaylandGraphicsExternalReleaseResult`
+- `WaylandGraphicsExternalPresentationFeedbackIdentity`
+- `WaylandGraphicsExternalPresentationFeedbackResult`
 - `WaylandGraphicsExternalBufferSubmissionReceipt`
 - `WaylandGraphicsExternalBufferRenderLease`
 - `WaylandGraphicsError`
@@ -362,8 +366,18 @@ Current preview contract:
   device opening/allocation to the renderer. Registration imports a descriptor
   once, frame leases reserve registered buffers, render leases submit implicit
   or explicit synchronization, and receipts report submission identity, buffer
-  identity, contract generation, runtime facts, release mechanism, and terminal
-  compositor-release result.
+  identity, contract generation, runtime facts, release mechanism, typed release
+  synchronization facts, and terminal compositor-release result. Explicit
+  release facts expose WCK's release timeline ID and point without exposing raw
+  protocol or DRM objects; they are diagnostics, not reuse authority.
+- External-buffer receipts correlate presentation feedback to the same
+  submission and buffer IDs as the release receipt. The presentation waiter is
+  independent from release, completes exactly once when requested, and never
+  unlocks renderer buffer reuse.
+- Imported renderer acquire timelines are backing-scoped. WCK consumes the file
+  descriptor, keeps the compositor mapping alive until backing close, and
+  removes imported acquire mappings during backing cleanup. There is no public
+  raw proxy, borrowed descriptor, or per-frame import requirement.
 - `WaylandGraphicsFrameLease.contract` exposes the generation-bound geometry,
   synchronization availability, runtime-path snapshot, and initial normalized
   XRGB8888/ARGB8888 external-buffer candidates needed before rendering.

@@ -464,6 +464,55 @@ struct ExternalBufferSyncTests {
         }
     }
 
+    @Test
+    func backingCloseRemovesImportedAcquireTimelinesAndIsIdempotent() async throws {
+        let backend = ExternalReleaseTimelineTestBackend()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+        )
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
+                fallbackPolicy: .requireGPU,
+                synchronizationPolicy: .preferExplicit
+            )
+        )
+        await storage.useFakeExternalReleaseTimelineForTesting(backend)
+
+        let lease = try await storage.nextFrame()
+        _ = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
+        let firstAcquireTimeline = try await storage.importExternalSyncTimeline(
+            testOwnedFileDescriptor()
+        )
+        let secondAcquireTimeline = try await storage.importExternalSyncTimeline(
+            testOwnedFileDescriptor()
+        )
+
+        #expect(
+            await storage.importedExternalSyncTimelineIDsForTesting()
+                == Set([firstAcquireTimeline.id, secondAcquireTimeline.id])
+        )
+        let importedIdentities = await window.importedSynchronizationTimelineIdentities()
+        #expect(importedIdentities.count == 3)
+
+        try await storage.closeForTesting()
+        try await storage.closeForTesting()
+
+        #expect(await storage.importedExternalSyncTimelineIDsForTesting().isEmpty)
+        #expect(
+            Set(await window.removedSynchronizationTimelineIdentities())
+                == Set(importedIdentities)
+        )
+        #expect(await window.removedSynchronizationTimelineIdentities().count == 3)
+        #expect(backend.destroyCount() == 1)
+    }
+
     private func expectExplicitAcquireRejected(
         _ acquirePoint: WaylandGraphicsExternalSyncPoint
     ) async throws {
@@ -496,6 +545,173 @@ struct ExternalBufferSyncTests {
                 acquireSynchronization: .drmSyncobj(acquirePoint)
             )
         }
+
+        try await storage.closeForTesting()
+    }
+}
+
+@Suite
+struct ExternalBufferPresentationFeedbackTests {
+    @Test
+    func requestedPresentationFeedbackResolvesPresentedReceipt() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor(),
+            schedule: presentationFeedbackSchedule()
+        )
+        let identity = try #require(submitted.receipt.presentationFeedbackIdentity)
+
+        #expect(identity.submissionID == submitted.receipt.id)
+        #expect(identity.bufferID == submitted.buffer.id)
+        #expect(
+            await window.presentationFeedbackIdentitySnapshot() == [
+                identity.surfacePresentationID
+            ])
+        #expect(
+            await storage.externalPresentationFeedbackSnapshotForTesting()
+                .pendingReceipts == 1
+        )
+
+        async let feedback = submitted.receipt.waitForPresentationFeedback()
+        await window.emitPresentedFeedback(identity.surfacePresentationID)
+
+        let result = await feedback
+        guard
+            case .presented(
+                submissionID: let feedbackSubmissionID,
+                bufferID: let feedbackBufferID,
+                feedback: let presentation
+            ) = result
+        else {
+            Issue.record("expected presented feedback result, got \(result)")
+            return
+        }
+        #expect(feedbackSubmissionID == submitted.receipt.id)
+        #expect(feedbackBufferID == submitted.buffer.id)
+        #expect(presentation.surface == identity.surfacePresentationID)
+        #expect(await submitted.receipt.waitForPresentationFeedback() == result)
+        #expect(
+            await storage.externalPresentationFeedbackSnapshotForTesting()
+                .pendingReceipts == 0
+        )
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func requestedPresentationFeedbackResolvesDiscardedReceipt() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor(),
+            schedule: presentationFeedbackSchedule()
+        )
+        let identity = try #require(submitted.receipt.presentationFeedbackIdentity)
+
+        async let feedback = submitted.receipt.waitForPresentationFeedback()
+        await window.emitDiscardedFeedback(identity.surfacePresentationID)
+
+        #expect(
+            await feedback
+                == .discarded(
+                    submissionID: submitted.receipt.id,
+                    bufferID: submitted.buffer.id,
+                    identity: identity.surfacePresentationID
+                )
+        )
+        #expect(
+            await storage.externalPresentationFeedbackSnapshotForTesting()
+                .pendingReceipts == 0
+        )
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func presentationFeedbackNotRequestedReturnsImmediately() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor()
+        )
+
+        #expect(submitted.receipt.presentationFeedbackIdentity == nil)
+        #expect(await submitted.receipt.waitForPresentationFeedback() == .notRequested)
+        #expect(await window.presentationFeedbackIdentitySnapshot().isEmpty)
+        #expect(
+            await storage.externalPresentationFeedbackSnapshotForTesting()
+                .pendingReceipts == 0
+        )
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func backingCloseRetiresPendingPresentationFeedback() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor(),
+            schedule: presentationFeedbackSchedule()
+        )
+        let identity = try #require(submitted.receipt.presentationFeedbackIdentity)
+
+        async let feedback = submitted.receipt.waitForPresentationFeedback()
+        try await storage.closeForTesting()
+        await window.emitPresentedFeedback(identity.surfacePresentationID)
+
+        #expect(await feedback == .retired(.backingClosed))
+        #expect(
+            await storage.externalPresentationFeedbackSnapshotForTesting()
+                .pendingReceipts == 0
+        )
+    }
+
+    @Test
+    func presentationFeedbackDoesNotMakeExternalBufferReusable() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: lease,
+            descriptor: try testExternalDescriptor(),
+            schedule: presentationFeedbackSchedule()
+        )
+        let identity = try #require(submitted.receipt.presentationFeedbackIdentity)
+
+        async let feedback = submitted.receipt.waitForPresentationFeedback()
+        await window.emitPresentedFeedback(identity.surfacePresentationID)
+        guard case .presented = await feedback else {
+            Issue.record("expected presented feedback")
+            return
+        }
+
+        let blockedLease = try await storage.nextFrame()
+        do {
+            _ = try await blockedLease.reserveExternalBuffer(submitted.buffer)
+            Issue.record("presentation feedback must not release external buffer")
+        } catch WaylandGraphicsError.externalBufferUnavailable {
+            await blockedLease.cancel()
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await submitted.receipt.waitForRelease() == .released)
 
         try await storage.closeForTesting()
     }
@@ -831,6 +1047,8 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let renderLease = try await lease.reserveExternalBuffer(buffer)
         let receipt = try await renderLease.submit()
 
+        #expect(receipt.releaseMechanism == .implicitWaylandBufferRelease)
+        #expect(receipt.releaseSynchronization == .implicitWaylandBufferRelease)
         #expect(await window.importRequests == 1)
         #expect(receipt.frameResult.runtimePath.backing == .active)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
@@ -1184,40 +1402,31 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     @Test
     func explicitSubmitReleasesAfterFakeTimelineSignal() async throws {
         let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
-        let window = try ExternalBufferFakeManagedWindow(
-            importBehavior: .succeed,
-            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
-        )
-        let storage = externalBufferStorage(
-            window: window,
-            configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
-                synchronizationPolicy: .preferExplicit
-            )
-        )
-        await storage.useFakeExternalReleaseTimelineForTesting(backend)
-
-        let lease = try await storage.nextFrame()
-        let buffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: lease,
-            descriptor: try testExternalDescriptor()
-        )
-        let acquireTimeline = try await storage.importExternalSyncTimeline(
-            testOwnedFileDescriptor()
-        )
-        let renderLease = try await lease.reserveExternalBuffer(buffer)
-        let receipt = try await renderLease.submit(
-            acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
-        )
+        let fixture = try await explicitReleaseSubmissionFixture(backend: backend)
+        let storage = fixture.storage
+        let buffer = fixture.buffer
+        let receipt = fixture.receipt
+        let acquireTimeline = fixture.acquireTimeline
 
         #expect(receipt.releaseMechanism == .explicitSyncobjTimelinePoint)
+        let firstReleasePoint = try #require(explicitReleasePoint(from: receipt))
+        #expect(firstReleasePoint.timelineID.rawValue == 1)
+        #expect(firstReleasePoint.point == 1)
         #expect(
             await storage.externalBufferLifecycleSnapshotForTesting().submitted == 1
         )
         #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 1)
         #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 1)
+
+        let blockedLease = try await storage.nextFrame()
+        do {
+            _ = try await blockedLease.reserveExternalBuffer(buffer)
+            Issue.record("release facts must not make a submitted buffer reusable")
+        } catch WaylandGraphicsError.externalBufferUnavailable {
+            await blockedLease.cancel()
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
 
         async let firstRelease = receipt.waitForRelease()
         async let secondRelease = receipt.waitForRelease()
@@ -1235,6 +1444,9 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let reuseReceipt = try await reuseRenderLease.submit(
             acquireSynchronization: .drmSyncobj(try acquireTimeline.point(2))
         )
+        let secondReleasePoint = try #require(explicitReleasePoint(from: reuseReceipt))
+        #expect(secondReleasePoint.timelineID == firstReleasePoint.timelineID)
+        #expect(secondReleasePoint.point == 2)
         backend.signal(2)
         #expect(await reuseReceipt.waitForRelease() == .released)
 
@@ -1277,6 +1489,17 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
         )
 
+        guard
+            case .explicitSyncobjTimelinePoint(
+                let releasePoint,
+                compositorAccepted: let compositorAccepted
+            ) = receipt.releaseSynchronization
+        else {
+            Issue.record("expected explicit release synchronization facts")
+            return
+        }
+        #expect(compositorAccepted)
+        #expect(releasePoint.point == 1)
         backend.fail(1)
         #expect(await receipt.waitForRelease() == .failed(.explicitSyncReleaseFailed))
         #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 0)
@@ -1448,6 +1671,10 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private var submitConstraints: [SurfaceSubmitConstraints] = []
     private var submittedMetadata: [SurfaceCommitMetadata] = []
     private var presentationFeedbackRequests: [Bool] = []
+    private var presentationFeedbackIdentities: [SurfacePresentationIdentity] = []
+    private var presentationFeedbackHandlers:
+        [SurfacePresentationIdentity: @Sendable (SurfacePresentationFeedback) -> Void] = [:]
+    private var nextPresentationFeedbackIdentityRawValue: UInt64 = 1
     private(set) var preparePresentationRequests = 0
     private var importedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
     private var removedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
@@ -1565,7 +1792,9 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         _ buffer: RawSurfaceBuffer,
         submitConstraints submittedConstraints: SurfaceSubmitConstraints,
         metadata submittedFrameMetadata: SurfaceCommitMetadata,
-        requestPresentationFeedback: Bool
+        requestPresentationFeedback: Bool,
+        presentationFeedbackHandler:
+            (@Sendable (SurfacePresentationFeedback) -> Void)?
     ) async throws -> PreviewBufferPresentationResult {
         _ = buffer
         guard !isWindowClosed else {
@@ -1585,8 +1814,26 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
             throw WaylandGraphicsError.unavailable(.commitFailed)
         }
 
+        let presentationFeedbackIdentity: SurfacePresentationIdentity?
+        if requestPresentationFeedback {
+            let identity = SurfacePresentationIdentity(
+                rawValue: nextPresentationFeedbackIdentityRawValue
+            )
+            nextPresentationFeedbackIdentityRawValue += 1
+            presentationFeedbackIdentities.append(identity)
+            if let presentationFeedbackHandler {
+                presentationFeedbackHandlers[identity] = presentationFeedbackHandler
+            }
+            presentationFeedbackIdentity = identity
+        } else {
+            presentationFeedbackIdentity = nil
+        }
+
         defer { nextGeneration += 1 }
-        return try testPreviewBufferPresentationResult(generation: nextGeneration)
+        return try testPreviewBufferPresentationResult(
+            generation: nextGeneration,
+            presentationFeedbackIdentity: presentationFeedbackIdentity
+        )
     }
 
     func submitConstraintsSnapshot() -> [SurfaceSubmitConstraints] {
@@ -1599,6 +1846,36 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 
     func presentationFeedbackRequestSnapshot() -> [Bool] {
         presentationFeedbackRequests
+    }
+
+    func presentationFeedbackIdentitySnapshot() -> [SurfacePresentationIdentity] {
+        presentationFeedbackIdentities
+    }
+
+    func pendingPresentationFeedbackHandlerCount() -> Int {
+        presentationFeedbackHandlers.count
+    }
+
+    func emitPresentedFeedback(_ identity: SurfacePresentationIdentity) {
+        guard let handler = presentationFeedbackHandlers.removeValue(forKey: identity)
+        else { return }
+
+        handler(
+            .presented(
+                PresentationFeedback(
+                    surface: identity,
+                    timestamp: PresentationTimestamp(seconds: 1, nanoseconds: 2),
+                    refreshNanoseconds: 16_666_666,
+                    sequence: PresentationSequence(value: 3),
+                    flags: [.vsync],
+                    synchronizedOutput: nil
+                )
+            )
+        )
+    }
+
+    func emitDiscardedFeedback(_ identity: SurfacePresentationIdentity) {
+        presentationFeedbackHandlers.removeValue(forKey: identity)?(.discarded(identity))
     }
 
     func emitImportedBufferRelease(at index: Int) {
@@ -1678,6 +1955,72 @@ private func registerAndSubmitTestExternalBuffer(
     return (buffer, receipt)
 }
 
+private func presentationFeedbackSchedule() -> WaylandGraphicsFrameSchedule {
+    WaylandGraphicsFrameSchedule(presentationFeedback: .requestWhenAvailable)
+}
+
+private struct ExplicitReleaseSubmissionFixture {
+    let storage: WaylandGraphicsWindowBackingStorage
+    let buffer: WaylandGraphicsExternalBuffer
+    let acquireTimeline: WaylandGraphicsExternalSyncTimeline
+    let receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+}
+
+private func explicitReleaseSubmissionFixture(
+    backend: ExternalReleaseTimelineTestBackend
+) async throws -> ExplicitReleaseSubmissionFixture {
+    let window = try ExternalBufferFakeManagedWindow(
+        importBehavior: .succeed,
+        surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+    )
+    let storage = externalBufferStorage(
+        window: window,
+        configuration: WaylandGraphicsConfiguration(
+            presentationMode: .externalGPU,
+            fallbackPolicy: .requireGPU,
+            synchronizationPolicy: .preferExplicit
+        )
+    )
+    await storage.useFakeExternalReleaseTimelineForTesting(backend)
+
+    let lease = try await storage.nextFrame()
+    let buffer = try await registerTestExternalBuffer(
+        storage: storage,
+        lease: lease,
+        descriptor: try testExternalDescriptor()
+    )
+    let acquireTimeline = try await storage.importExternalSyncTimeline(
+        testOwnedFileDescriptor()
+    )
+    let renderLease = try await lease.reserveExternalBuffer(buffer)
+    let receipt = try await renderLease.submit(
+        acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
+    )
+    return ExplicitReleaseSubmissionFixture(
+        storage: storage,
+        buffer: buffer,
+        acquireTimeline: acquireTimeline,
+        receipt: receipt
+    )
+}
+
+private func explicitReleasePoint(
+    from receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+) -> WaylandGraphicsExternalSyncobjTimelinePoint? {
+    guard
+        case .explicitSyncobjTimelinePoint(
+            let releasePoint,
+            compositorAccepted: let compositorAccepted
+        ) = receipt.releaseSynchronization
+    else {
+        Issue.record("expected explicit release synchronization facts")
+        return nil
+    }
+
+    #expect(compositorAccepted)
+    return releasePoint
+}
+
 private func registerTestExternalBuffer(
     storage: WaylandGraphicsWindowBackingStorage,
     lease: WaylandGraphicsFrameLease,
@@ -1698,7 +2041,8 @@ private func testRawLinuxDmabufBuffer(pointer rawPointer: UInt) throws -> RawLin
 }
 
 private func testPreviewBufferPresentationResult(
-    generation: UInt64
+    generation: UInt64,
+    presentationFeedbackIdentity: SurfacePresentationIdentity? = nil
 ) throws -> PreviewBufferPresentationResult {
     try PreviewBufferPresentationResult(
         generation: generation,
@@ -1727,7 +2071,8 @@ private func testPreviewBufferPresentationResult(
                 support: SurfaceColorRepresentationSupport(alphaModes: [.straight])
             ),
             color: .available(version: 1)
-        )
+        ),
+        presentationFeedbackIdentity: presentationFeedbackIdentity
     )
 }
 

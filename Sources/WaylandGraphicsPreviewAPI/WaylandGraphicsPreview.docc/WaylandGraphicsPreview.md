@@ -58,6 +58,10 @@ value types.
 - ``WaylandGraphicsExternalBufferSubmissionReceipt``
 - ``WaylandGraphicsExternalReleaseResult``
 - ``WaylandGraphicsExternalReleaseMechanism``
+- ``WaylandGraphicsExternalReleaseSynchronization``
+- ``WaylandGraphicsExternalSyncobjTimelinePoint``
+- ``WaylandGraphicsExternalPresentationFeedbackIdentity``
+- ``WaylandGraphicsExternalPresentationFeedbackResult``
 - ``WaylandGraphicsExternalRetirementReason``
 - ``WaylandGraphicsExternalBufferLifecycle``
 - ``WaylandGraphicsExternalSubmissionID``
