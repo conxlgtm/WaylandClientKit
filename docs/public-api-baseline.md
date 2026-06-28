@@ -3023,23 +3023,23 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L1221: `    case released`
 - L1222: `    case retired(WaylandGraphicsExternalRetirementReason)`
 - L1223: `    case failed(WaylandGraphicsUnavailableReason)`
-- L1226: `public struct WaylandGraphicsExternalPresentationFeedbackIdentity:`
-- L1231: `    public let surfacePresentationID: SurfacePresentationIdentity`
-- L1232: `    public let submissionID: WaylandGraphicsExternalSubmissionID`
-- L1233: `    public let bufferID: WaylandGraphicsExternalBufferID`
-- L1246: `public enum WaylandGraphicsExternalPresentationFeedbackResult:`
-- L1250: `    case notRequested`
-- L1251: `    case presented(`
-- L1256: `    case discarded(`
-- L1261: `    case retired(WaylandGraphicsExternalRetirementReason)`
-- L1330: `public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {`
-- L1331: `    public let id: WaylandGraphicsExternalSubmissionID`
-- L1332: `    public let bufferID: WaylandGraphicsExternalBufferID`
-- L1333: `    public let contractGeneration: WaylandGraphicsSurfaceGeneration`
-- L1334: `    public let frameResult: WaylandGraphicsFrameResult`
-- L1335: `    public let releaseMechanism: WaylandGraphicsExternalReleaseMechanism`
-- L1336: `    public let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization`
-- L1337: `    public let presentationFeedbackIdentity:`
+- L1227: `public struct WaylandGraphicsExternalPresentationFeedbackIdentity:`
+- L1232: `    public let surfacePresentationID: SurfacePresentationIdentity`
+- L1233: `    public let submissionID: WaylandGraphicsExternalSubmissionID`
+- L1234: `    public let bufferID: WaylandGraphicsExternalBufferID`
+- L1248: `public enum WaylandGraphicsExternalPresentationFeedbackResult:`
+- L1252: `    case notRequested`
+- L1253: `    case presented(`
+- L1258: `    case discarded(`
+- L1263: `    case retired(WaylandGraphicsExternalRetirementReason)`
+- L1332: `public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {`
+- L1333: `    public let id: WaylandGraphicsExternalSubmissionID`
+- L1334: `    public let bufferID: WaylandGraphicsExternalBufferID`
+- L1335: `    public let contractGeneration: WaylandGraphicsSurfaceGeneration`
+- L1336: `    public let frameResult: WaylandGraphicsFrameResult`
+- L1337: `    public let releaseMechanism: WaylandGraphicsExternalReleaseMechanism`
+- L1338: `    public let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization`
+- L1339: `    public let presentationFeedbackIdentity: WaylandGraphicsExternalPresentationFeedbackIdentity?`
 - L1370: `    public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {`
 - L1374: `    public func waitForPresentationFeedback() async`
 - L1381: `public struct WaylandGraphicsExternalBufferRenderLease: Sendable {`
