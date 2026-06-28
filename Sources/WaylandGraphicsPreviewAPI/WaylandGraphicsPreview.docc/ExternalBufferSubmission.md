@@ -50,7 +50,18 @@ registered WCK-side buffer and do not re-import the same renderer image.
 ``WaylandGraphicsExternalBufferSubmissionReceipt`` is the ownership signal for a
 submitted image. The receipt exposes the submission identity, buffer identity,
 contract generation, frame result, runtime report, release mechanism, and an
-exactly-once terminal release result.
+exactly-once terminal release result. It also exposes typed release
+synchronization facts:
+
+- `WaylandGraphicsExternalReleaseSynchronization.implicitWaylandBufferRelease`
+  means this receipt uses the matching `wl_buffer.release` as the release
+  authority.
+- `WaylandGraphicsExternalReleaseSynchronization.explicitSyncobjTimelinePoint`
+  reports the WCK-owned release timeline ID and release point submitted to the
+  compositor for this receipt. `compositorAccepted` only means WCK committed the
+  frame with explicit sync constraints and did not fall back to implicit
+  synchronization for this receipt. It does not mean displayed, presented, or
+  released.
 
 - `WaylandGraphicsExternalReleaseResult.released` means WCK observed the
   authoritative release mechanism for that submission. In implicit mode this is
@@ -82,7 +93,32 @@ explicit synchronization.
 - `requireExplicit` fails before renderer work can be submitted when WCK cannot
   configure the acquire/release timeline contract.
 
+``WaylandGraphicsWindowBacking/importExternalSyncTimeline(_:)`` consumes the
+renderer-owned DRM syncobj timeline descriptor on success, or closes it on
+failure. The returned timeline is scoped to the backing that imported it, and
+timeline points are valid only when submitted back to the same backing. WCK keeps
+the compositor timeline mapping alive until backing close; dropping the Swift
+timeline value does not unregister the compositor mapping. Renderers may import
+once per native source timeline and reuse later points without a per-frame
+import.
+
 Sync-file fences are not supported.
+
+## Presentation Feedback Correlation
+
+Release and presentation are independent terminal channels. Presentation
+feedback never unlocks renderer buffer reuse; only
+``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()`` does.
+
+When presentation feedback is requested for an external-buffer frame, the
+receipt includes a
+``WaylandGraphicsExternalPresentationFeedbackIdentity`` that pairs the
+`SurfacePresentationIdentity` with the same submission and buffer IDs as the
+receipt. ``WaylandGraphicsExternalBufferSubmissionReceipt/waitForPresentationFeedback()``
+then completes exactly once with `.presented`, `.discarded`, `.notRequested`, or
+`.retired(_:)`. Presented and discarded results carry the same submission and
+buffer IDs so diagnostics can distinguish submitted, displayed, discarded, and
+retired frames.
 
 ## Current Limitations
 

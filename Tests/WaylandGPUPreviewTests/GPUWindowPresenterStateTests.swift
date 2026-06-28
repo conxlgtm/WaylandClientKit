@@ -2237,7 +2237,8 @@ private func presentedFrame(
         commitPlan: try surfaceCommitPlan(),
         synchronization: .implicit,
         pacing: .none,
-        metadata: .default
+        metadata: .default,
+        presentationFeedbackIdentity: nil
     )
 }
 
@@ -2484,7 +2485,8 @@ private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sen
                 commitPlan: surfaceCommitPlan(),
                 synchronization: .implicit,
                 pacing: .none,
-                metadata: submission.metadata
+                metadata: submission.metadata,
+                presentationFeedbackIdentity: nil
             )
         } catch {
             throw .setup(.gbmAllocationFailed)

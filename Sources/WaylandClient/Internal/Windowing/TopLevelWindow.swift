@@ -1411,7 +1411,7 @@ extension TopLevelWindow {
         ) { [weak self] in
             self?.handleFrameDone()
         }
-        let commitPlan = try WindowExternalBufferPresenter.present(
+        let presentation = try WindowExternalBufferPresenter.present(
             presentationRequest,
             runtime: &surfaceRuntime,
             pendingFrameRegistration: &pendingFrameRegistration
@@ -1433,8 +1433,9 @@ extension TopLevelWindow {
 
         return try PreviewBufferPresentationResult(
             generation: generation,
-            commitPlan: commitPlan,
-            capabilities: surfaceRuntime.capabilitySnapshot()
+            commitPlan: presentation.commitPlan,
+            capabilities: surfaceRuntime.capabilitySnapshot(),
+            presentationFeedbackIdentity: presentation.presentationFeedbackIdentity
         )
     }
 

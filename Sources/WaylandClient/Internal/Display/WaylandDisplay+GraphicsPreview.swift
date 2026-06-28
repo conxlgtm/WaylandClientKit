@@ -208,14 +208,17 @@ extension WaylandDisplay {
         on windowID: WindowID,
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
-        requestPresentationFeedback: Bool
+        requestPresentationFeedback: Bool,
+        presentationFeedbackHandler:
+            (@Sendable (SurfacePresentationFeedback) -> Void)? = nil
     ) throws -> PreviewBufferPresentationResult {
         try requireCore().presentGraphicsPreviewBuffer(
             buffer,
             on: windowID,
             submitConstraints: submitConstraints,
             metadata: metadata,
-            requestPresentationFeedback: requestPresentationFeedback
+            requestPresentationFeedback: requestPresentationFeedback,
+            presentationFeedbackHandler: presentationFeedbackHandler
         )
     }
 
@@ -296,14 +299,17 @@ extension DisplayCore {
         on windowID: WindowID,
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
-        requestPresentationFeedback: Bool
+        requestPresentationFeedback: Bool,
+        presentationFeedbackHandler:
+            (@Sendable (SurfacePresentationFeedback) -> Void)? = nil
     ) throws -> PreviewBufferPresentationResult {
         try withFatalFailureFinalization {
             let window = try requireOpenWindow(windowID)
             let presentationFeedback = try presentationFeedbackCommitRequest(
                 for: window,
                 windowID: windowID,
-                isRequested: requestPresentationFeedback
+                isRequested: requestPresentationFeedback,
+                onFeedback: presentationFeedbackHandler
             )
             let presentation = try window.presentPreviewBufferOnOwnerThread(
                 buffer,

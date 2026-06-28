@@ -253,6 +253,18 @@
               ln -sfn "$swift_resource_dir" "$swift_sdkroot/usr/lib/swift"
               export SDKROOT="$swift_sdkroot"
 
+              swift_symbolgraph_extract="$(command -v swift-symbolgraph-extract || true)"
+              if [ -n "$swift_symbolgraph_extract" ] && [ -x "$swift_symbolgraph_extract" ]; then
+                swift_symbolgraph_wrapper="$swift_sdkroot/bin/swift-symbolgraph-extract"
+                mkdir -p "$swift_sdkroot/bin"
+                cat > "$swift_symbolgraph_wrapper" <<EOF
+#!/usr/bin/env bash
+exec "$swift_symbolgraph_extract" -sdk "$SDKROOT" -resource-dir "$swift_resource_dir" "\$@"
+EOF
+                chmod +x "$swift_symbolgraph_wrapper"
+                export SWIFT_SYMBOLGRAPH_EXTRACT="$swift_symbolgraph_wrapper"
+              fi
+
               if [ -z "''${SWIFT_FORMAT_BIN:-}" ]; then
                 SWIFT_FORMAT_BIN="$(command -v swift-format || true)"
                 export SWIFT_FORMAT_BIN

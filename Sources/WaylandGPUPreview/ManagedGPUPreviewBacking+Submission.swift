@@ -134,7 +134,8 @@ extension ManagedGPUPreviewBacking {
                         buffer,
                         submitConstraints: submitConstraints,
                         metadata: commitMetadata,
-                        requestPresentationFeedback: options.requestPresentationFeedback
+                        requestPresentationFeedback: options.requestPresentationFeedback,
+                        presentationFeedbackHandler: nil
                     )
                 },
                 synchronization: synchronization,

@@ -1185,6 +1185,30 @@ public enum WaylandGraphicsExternalReleaseMechanism: Equatable, Sendable {
     case explicitSyncobjTimelinePoint
 }
 
+public struct WaylandGraphicsExternalSyncobjTimelinePoint:
+    Equatable,
+    Sendable
+{
+    public let timelineID: WaylandGraphicsExternalSyncTimelineID
+    public let point: UInt64
+
+    package init(
+        timelineID releaseTimelineID: WaylandGraphicsExternalSyncTimelineID,
+        point releasePoint: UInt64
+    ) {
+        timelineID = releaseTimelineID
+        point = releasePoint
+    }
+}
+
+public enum WaylandGraphicsExternalReleaseSynchronization: Equatable, Sendable {
+    case implicitWaylandBufferRelease
+    case explicitSyncobjTimelinePoint(
+        WaylandGraphicsExternalSyncobjTimelinePoint,
+        compositorAccepted: Bool
+    )
+}
+
 public enum WaylandGraphicsExternalBufferLifecycle: Equatable, Sendable {
     case available
     case reserved
@@ -1197,6 +1221,44 @@ public enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {
     case released
     case retired(WaylandGraphicsExternalRetirementReason)
     case failed(WaylandGraphicsUnavailableReason)
+}
+
+public struct WaylandGraphicsExternalPresentationFeedbackIdentity:
+    Equatable,
+    Hashable,
+    Sendable
+{
+    public let surfacePresentationID: SurfacePresentationIdentity
+    public let submissionID: WaylandGraphicsExternalSubmissionID
+    public let bufferID: WaylandGraphicsExternalBufferID
+
+    package init(
+        surfacePresentationID presentationID: SurfacePresentationIdentity,
+        submissionID feedbackSubmissionID: WaylandGraphicsExternalSubmissionID,
+        bufferID feedbackBufferID: WaylandGraphicsExternalBufferID
+    ) {
+        surfacePresentationID = presentationID
+        submissionID = feedbackSubmissionID
+        bufferID = feedbackBufferID
+    }
+}
+
+public enum WaylandGraphicsExternalPresentationFeedbackResult:
+    Equatable,
+    Sendable
+{
+    case notRequested
+    case presented(
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        bufferID: WaylandGraphicsExternalBufferID,
+        feedback: PresentationFeedback
+    )
+    case discarded(
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        bufferID: WaylandGraphicsExternalBufferID,
+        identity: SurfacePresentationIdentity
+    )
+    case retired(WaylandGraphicsExternalRetirementReason)
 }
 
 package actor WaylandGraphicsExternalReleaseState {
@@ -1229,6 +1291,41 @@ package actor WaylandGraphicsExternalReleaseState {
     }
 }
 
+package actor WaylandGraphicsExternalPresentationFeedbackState {
+    private var result: WaylandGraphicsExternalPresentationFeedbackResult?
+    private var waiters:
+        [CheckedContinuation<WaylandGraphicsExternalPresentationFeedbackResult, Never>] = []
+
+    package init(
+        initialResult: WaylandGraphicsExternalPresentationFeedbackResult? = nil
+    ) {
+        result = initialResult
+    }
+
+    package func wait() async -> WaylandGraphicsExternalPresentationFeedbackResult {
+        if let result {
+            return result
+        }
+
+        return await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    package func finish(
+        _ terminalResult: WaylandGraphicsExternalPresentationFeedbackResult
+    ) {
+        guard result == nil else { return }
+
+        result = terminalResult
+        let continuations = waiters
+        waiters.removeAll()
+        for continuation in continuations {
+            continuation.resume(returning: terminalResult)
+        }
+    }
+}
+
 // swiftlint:disable:next type_name
 public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     public let id: WaylandGraphicsExternalSubmissionID
@@ -1236,8 +1333,13 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     public let contractGeneration: WaylandGraphicsSurfaceGeneration
     public let frameResult: WaylandGraphicsFrameResult
     public let releaseMechanism: WaylandGraphicsExternalReleaseMechanism
+    public let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization
+    public let presentationFeedbackIdentity:
+        WaylandGraphicsExternalPresentationFeedbackIdentity?
 
     private let releaseState: WaylandGraphicsExternalReleaseState
+    private let presentationFeedbackState:
+        WaylandGraphicsExternalPresentationFeedbackState
 
     package init(
         id submissionID: WaylandGraphicsExternalSubmissionID,
@@ -1246,18 +1348,33 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
         frameResult submittedFrameResult: WaylandGraphicsFrameResult,
         releaseMechanism submissionReleaseMechanism:
             WaylandGraphicsExternalReleaseMechanism,
-        releaseState submissionReleaseState: WaylandGraphicsExternalReleaseState
+        releaseSynchronization submissionReleaseSynchronization:
+            WaylandGraphicsExternalReleaseSynchronization,
+        releaseState submissionReleaseState: WaylandGraphicsExternalReleaseState,
+        presentationFeedbackIdentity submissionPresentationFeedbackIdentity:
+            WaylandGraphicsExternalPresentationFeedbackIdentity?,
+        presentationFeedbackState submissionPresentationFeedbackState:
+            WaylandGraphicsExternalPresentationFeedbackState
     ) {
         id = submissionID
         bufferID = submittedBufferID
         contractGeneration = submittedContractGeneration
         frameResult = submittedFrameResult
         releaseMechanism = submissionReleaseMechanism
+        releaseSynchronization = submissionReleaseSynchronization
+        presentationFeedbackIdentity = submissionPresentationFeedbackIdentity
         releaseState = submissionReleaseState
+        presentationFeedbackState = submissionPresentationFeedbackState
     }
 
     public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {
         await releaseState.wait()
+    }
+
+    public func waitForPresentationFeedback() async
+        -> WaylandGraphicsExternalPresentationFeedbackResult
+    {
+        await presentationFeedbackState.wait()
     }
 }
 
@@ -1419,7 +1536,12 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     /// Imports a renderer-owned DRM syncobj timeline for explicit external submissions.
     ///
     /// The descriptor is consumed by WCK and either transferred to the compositor
-    /// or closed on failure. The returned timeline is scoped to this backing.
+    /// or closed on failure. The returned timeline is scoped to this backing,
+    /// and timeline points are valid only for submissions on this same backing.
+    /// WCK keeps the compositor mapping alive until backing close; dropping the
+    /// Swift value does not unregister the timeline. Renderers may import once
+    /// per native source timeline and reuse later points without per-frame
+    /// imports.
     public func importExternalSyncTimeline(
         _ fileDescriptor: consuming OwnedFileDescriptor
     ) async throws -> WaylandGraphicsExternalSyncTimeline {

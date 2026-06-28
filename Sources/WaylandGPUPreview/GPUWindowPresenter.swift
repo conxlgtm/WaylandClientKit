@@ -24,6 +24,7 @@ package struct GPUWindowPresentedFrame: Equatable, Sendable {
     package let synchronization: GPUBufferSubmissionSynchronization
     package let pacing: SurfacePacingConstraint
     package let metadata: SurfaceCommitMetadata
+    package let presentationFeedbackIdentity: SurfacePresentationIdentity?
 }
 
 package enum GPUWindowPresenterRetireReason: Equatable, Sendable, CustomStringConvertible {
@@ -861,7 +862,8 @@ extension GPUWindowPresenter {
             commitPlan: presentation.commitPlan,
             synchronization: options.synchronization,
             pacing: options.pacing,
-            metadata: options.metadata
+            metadata: options.metadata,
+            presentationFeedbackIdentity: presentation.presentationFeedbackIdentity
         )
         presentationCorrelation.record(frame)
         runtimePath = GPURuntimePathSnapshot.afterPresentation(

@@ -141,7 +141,7 @@
             let identity = SurfacePresentationIdentity(rawValue: 31)
             let expectedPlan = try testSurfaceCommitPlan()
 
-            let plan = try WindowExternalBufferPresenter.performCommitSequence {
+            let presentation = try WindowExternalBufferPresenter.performCommitSequence {
                 events.append(.frameCallback)
             } requestPresentationFeedback: {
                 events.append(.presentationFeedback)
@@ -155,7 +155,8 @@
                 events.append(.cancelPresentationFeedback(cancelledIdentity))
             }
 
-            #expect(plan == expectedPlan)
+            #expect(presentation.commitPlan == expectedPlan)
+            #expect(presentation.presentationFeedbackIdentity == identity)
             #expect(
                 events == [
                     .frameCallback,

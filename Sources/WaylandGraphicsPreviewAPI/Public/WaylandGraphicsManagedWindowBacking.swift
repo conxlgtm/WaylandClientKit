@@ -50,7 +50,9 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         _ buffer: RawSurfaceBuffer,
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
-        requestPresentationFeedback: Bool
+        requestPresentationFeedback: Bool,
+        presentationFeedbackHandler:
+            (@Sendable (SurfacePresentationFeedback) -> Void)?
     ) async throws -> PreviewBufferPresentationResult
 
     func close() async
@@ -99,7 +101,8 @@ extension WaylandGraphicsManagedWindow {
         _: RawSurfaceBuffer,
         submitConstraints _: SurfaceSubmitConstraints,
         metadata _: SurfaceCommitMetadata,
-        requestPresentationFeedback _: Bool
+        requestPresentationFeedback _: Bool,
+        presentationFeedbackHandler _: (@Sendable (SurfacePresentationFeedback) -> Void)?
     ) async throws -> PreviewBufferPresentationResult {
         throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
     }

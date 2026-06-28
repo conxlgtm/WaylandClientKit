@@ -265,6 +265,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("reuse count: 1")
             log("sync mode: \(firstLease.contract.synchronization)")
             log("release mechanism: \(result.releaseMechanism)")
+            log("release synchronization: \(releaseSynchronizationStatus(result))")
             log("target device: \(configuration.renderNode)")
             log("wck-cpu-readback: not-performed")
             log("wck-software-staging: not-performed")
@@ -429,6 +430,18 @@ enum GraphicsPreviewExternalBufferSmoke {
         }
 
         return await probe.status ?? "not-observed"
+    }
+
+    private static func releaseSynchronizationStatus(
+        _ receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+    ) -> String {
+        switch receipt.releaseSynchronization {
+        case .implicitWaylandBufferRelease:
+            "implicit"
+        case .explicitSyncobjTimelinePoint(let point, let compositorAccepted):
+            "explicit(timeline=\(point.timelineID), point=\(point.point), "
+                + "accepted=\(compositorAccepted))"
+        }
     }
 
     nonisolated private static func log(_ message: String) {
