@@ -855,7 +855,12 @@ private func runDoccSymbolLinks(context: ToolContext) throws {
 
 private func runUnitTests(context: ToolContext) throws {
     try context.swift.runSwift(
-        ["test", "--no-parallel", "-Xswiftc", "-warnings-as-errors"],
+        [
+            "test", "--no-parallel",
+            "-Xswiftc", "-Xcc",
+            "-Xswiftc", "-Wno-macro-redefined",
+            "-Xswiftc", "-warnings-as-errors",
+        ],
         repository: context.repository,
         environment: try compilerFilterEnvironment(context: context)
     )
