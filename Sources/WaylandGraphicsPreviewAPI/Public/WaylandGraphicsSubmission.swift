@@ -1334,12 +1334,10 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     public let frameResult: WaylandGraphicsFrameResult
     public let releaseMechanism: WaylandGraphicsExternalReleaseMechanism
     public let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization
-    public let presentationFeedbackIdentity:
-        WaylandGraphicsExternalPresentationFeedbackIdentity?
+    public let presentationFeedbackIdentity: WaylandGraphicsExternalPresentationFeedbackIdentity?
 
     private let releaseState: WaylandGraphicsExternalReleaseState
-    private let presentationFeedbackState:
-        WaylandGraphicsExternalPresentationFeedbackState
+    private let presentationFeedbackState: WaylandGraphicsExternalPresentationFeedbackState
 
     package init(
         id submissionID: WaylandGraphicsExternalSubmissionID,

@@ -2194,8 +2194,7 @@ extension WaylandGraphicsWindowBackingStorage {
                 initialResult: requestPresentationFeedback ? nil : .notRequested
             )
         let presentationFeedbackRegistry = externalPresentationFeedbackRegistry
-        let presentationFeedbackHandler:
-            (@Sendable (SurfacePresentationFeedback) -> Void)? =
+        let presentationFeedbackHandler: (@Sendable (SurfacePresentationFeedback) -> Void)? =
             requestPresentationFeedback
             ? { @Sendable feedback in
                 presentationFeedbackRegistry.finish(feedback)
@@ -2243,8 +2242,7 @@ extension WaylandGraphicsWindowBackingStorage {
                     state: presentationFeedbackState
                 )
             }
-            let releaseSynchronization:
-                WaylandGraphicsExternalReleaseSynchronization =
+            let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization =
                 if let releasePoint = externalSynchronization.explicitReleasePoint {
                     .explicitSyncobjTimelinePoint(
                         releasePoint,

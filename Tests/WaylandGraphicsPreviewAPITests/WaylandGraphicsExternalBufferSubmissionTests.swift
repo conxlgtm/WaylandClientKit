@@ -567,9 +567,10 @@ struct ExternalBufferPresentationFeedbackTests {
 
         #expect(identity.submissionID == submitted.receipt.id)
         #expect(identity.bufferID == submitted.buffer.id)
-        #expect(await window.presentationFeedbackIdentitySnapshot() == [
-            identity.surfacePresentationID
-        ])
+        #expect(
+            await window.presentationFeedbackIdentitySnapshot() == [
+                identity.surfacePresentationID
+            ])
         #expect(
             await storage.externalPresentationFeedbackSnapshotForTesting()
                 .pendingReceipts == 1
@@ -579,11 +580,13 @@ struct ExternalBufferPresentationFeedbackTests {
         await window.emitPresentedFeedback(identity.surfacePresentationID)
 
         let result = await feedback
-        guard case .presented(
-            submissionID: let feedbackSubmissionID,
-            bufferID: let feedbackBufferID,
-            feedback: let presentation
-        ) = result else {
+        guard
+            case .presented(
+                submissionID: let feedbackSubmissionID,
+                bufferID: let feedbackBufferID,
+                feedback: let presentation
+            ) = result
+        else {
             Issue.record("expected presented feedback result, got \(result)")
             return
         }
@@ -1428,10 +1431,12 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         )
 
         #expect(receipt.releaseMechanism == .explicitSyncobjTimelinePoint)
-        guard case .explicitSyncobjTimelinePoint(
-            let firstReleasePoint,
-            compositorAccepted: let firstAccepted
-        ) = receipt.releaseSynchronization else {
+        guard
+            case .explicitSyncobjTimelinePoint(
+                let firstReleasePoint,
+                compositorAccepted: let firstAccepted
+            ) = receipt.releaseSynchronization
+        else {
             Issue.record("expected explicit release synchronization facts")
             return
         }
@@ -1470,10 +1475,12 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let reuseReceipt = try await reuseRenderLease.submit(
             acquireSynchronization: .drmSyncobj(try acquireTimeline.point(2))
         )
-        guard case .explicitSyncobjTimelinePoint(
-            let secondReleasePoint,
-            compositorAccepted: let secondAccepted
-        ) = reuseReceipt.releaseSynchronization else {
+        guard
+            case .explicitSyncobjTimelinePoint(
+                let secondReleasePoint,
+                compositorAccepted: let secondAccepted
+            ) = reuseReceipt.releaseSynchronization
+        else {
             Issue.record("expected explicit release synchronization facts")
             return
         }
@@ -1522,10 +1529,12 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
         )
 
-        guard case .explicitSyncobjTimelinePoint(
-            let releasePoint,
-            compositorAccepted: let compositorAccepted
-        ) = receipt.releaseSynchronization else {
+        guard
+            case .explicitSyncobjTimelinePoint(
+                let releasePoint,
+                compositorAccepted: let compositorAccepted
+            ) = receipt.releaseSynchronization
+        else {
             Issue.record("expected explicit release synchronization facts")
             return
         }
