@@ -159,6 +159,10 @@ public struct DocCVerifier {
         }
     }
 
+    public func publicProductSymbolGraphs() throws -> [URL] {
+        try Self.publicProducts.map { try requireSymbolGraph(for: $0) }
+    }
+
     private func requireSymbolGraph(for product: Product) throws -> URL {
         try requireSymbolGraph(for: product.moduleName)
     }

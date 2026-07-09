@@ -481,7 +481,11 @@ struct API: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            context.diagnostics.info(try PublicAPIAuditor(context: context).dump())
+            context.diagnostics.info(
+                try PublicAPIAuditor(context: context).dump(
+                    environment: compilerFilterEnvironment(context: context)
+                )
+            )
         }
     }
 
@@ -490,7 +494,11 @@ struct API: ParsableCommand {
         @Flag(name: .long) var update = false
         @Flag(name: .long) var verbose = false
         func run() throws {
-            try PublicAPIAuditor(context: context()).verify(update: update)
+            let context = try context()
+            try PublicAPIAuditor(context: context).verify(
+                update: update,
+                environment: compilerFilterEnvironment(context: context)
+            )
         }
     }
 }
@@ -1008,7 +1016,10 @@ private func runCheap(context: ToolContext) throws {
     try ProtocolTooling(repository: context.repository, diagnostics: context.diagnostics)
         .validateManifest()
     try VerificationChecks(context: context).verifyShims()
-    try PublicAPIAuditor(context: context).verify(update: false)
+    try PublicAPIAuditor(context: context).verify(
+        update: false,
+        environment: compilerFilterEnvironment(context: context)
+    )
     try VerificationChecks(context: context).verifyTargetImports()
     try VerificationChecks(context: context).verifyToolDependencyBoundaries()
     try VerificationChecks(context: context).verifyUnsafeAllowlist()
