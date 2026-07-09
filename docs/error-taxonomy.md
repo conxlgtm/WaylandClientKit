@@ -45,3 +45,6 @@ nonterminal runtime diagnostics, and fatal display failure.
 - `WaylandGraphicsPreview` exposes preview fallback and unavailable reasons for
   renderer-facing capability decisions. Software fallback is nonfatal, a
   required-GPU decision reports unavailability without closing the display.
+- External explicit-release tracking failure is terminal for its graphics
+  backing, not for the display. It fails the external runtime path and closes the
+  backing because WCK can no longer prove compositor release.

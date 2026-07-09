@@ -35,10 +35,11 @@ descriptor access.
    explicit synchronization, import an acquire timeline with
    ``WaylandGraphicsWindowBacking/importExternalSyncTimeline(_:)`` and submit a
    `WaylandGraphicsExternalAcquireSynchronization.drmSyncobj(_:)` point.
-10. Keep the renderer allocation alive and unavailable to the renderer pool until
-    ``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()`` reaches
-    a terminal result.
-11. Reuse the image only after release, or retire it with
+10. Keep the renderer allocation alive and unavailable to the renderer pool while
+    awaiting ``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()``.
+11. Reuse the image only after `.released`. A `.failed` result is terminal for
+    the waiter but is not release evidence; close and await the backing before
+    destroying that allocation. Retire an available image with
     ``WaylandGraphicsWindowBacking/unregisterExternalBuffer(_:)`` when the pool
     drops the allocation.
 
@@ -71,11 +72,36 @@ synchronization facts:
   window, or display ended ownership tracking before normal release. The caller
   should retire the image instead of reuse it for a later frame.
 - `WaylandGraphicsExternalReleaseResult.failed(_:)` means WCK reached a
-  terminal tracking failure for the submission.
+  terminal tracking failure for the submission. It does not prove that the
+  compositor stopped using the image. Keep the allocation alive, close and await
+  the owning backing, then destroy the allocation instead of returning it to the
+  renderer pool.
+
+Use the terminal result as an explicit allocation-lifetime branch:
+
+```swift
+switch await receipt.waitForRelease() {
+case .released:
+    rendererPool.recycle(allocation)
+case .retired(_):
+    rendererPool.retire(allocation)
+case .failed(_):
+    try await backing.close()
+    rendererPool.destroy(allocation)
+}
+```
+
+If DRM syncobj release polling fails, WCK marks the external runtime path failed,
+poisons every registered slot, and closes the backing and window before the
+failed receipt completes. Other pending release and presentation waiters retire
+with `.backingClosed`. Calling `close()` in the failure branch is still useful:
+it is idempotent, joins cleanup already in progress, and states the renderer's
+lifetime boundary directly.
 
 A successful commit, frame callback, presentation feedback event, timeout,
 `wl_buffer.release` while explicit synchronization is active, or later frame
-submission is not release evidence. A registered buffer cannot be reserved again
+submission is not release evidence. A late `wl_buffer.release` cannot revive a
+slot after release tracking fails. A registered buffer cannot be reserved again
 while it is rendering, submitted, or awaiting release. After release, the
 registered buffer may be reserved again or unregistered.
 

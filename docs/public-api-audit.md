@@ -369,7 +369,11 @@ Current preview contract:
   identity, contract generation, runtime facts, release mechanism, typed release
   synchronization facts, and terminal compositor-release result. Explicit
   release facts expose WCK's release timeline ID and point without exposing raw
-  protocol or DRM objects; they are diagnostics, not reuse authority.
+  protocol or DRM objects; they are diagnostics, not reuse authority. Only a
+  `.released` result is compositor release evidence. A failed result requires
+  the renderer to keep its allocation alive until backing close; explicit
+  release polling failure automatically fails the external runtime path and
+  closes the backing before completing that receipt.
 - External-buffer receipts correlate presentation feedback to the same
   submission and buffer IDs as the release receipt. The presentation waiter is
   independent from release, completes exactly once when requested, and never

@@ -80,7 +80,7 @@ package final class DRMSyncobjTimeline {
         var timelinePoint = point.rawValue
         var firstSignaled: UInt32 = 0
         let flags = waitForSubmit ? Self.waitForSubmitFlag : 0
-        guard
+        let waitResult = Self.retryingInterruptedWait {
             unsafe drmSyncobjTimelineWait(
                 deviceFileDescriptor,
                 &timelineHandle,
@@ -89,8 +89,9 @@ package final class DRMSyncobjTimeline {
                 deadlineNanoseconds,
                 flags,
                 &firstSignaled
-            ) == 0
-        else {
+            )
+        }
+        guard waitResult == 0 else {
             throw GBMAllocationError.syncobjTimelineWaitFailed(
                 point: point.rawValue,
                 errno: GBMAllocationError.capturedCurrentErrno()
@@ -99,6 +100,17 @@ package final class DRMSyncobjTimeline {
     }
 
     package static let waitForSubmitFlag = UInt32(DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT)
+
+    package static func retryingInterruptedWait(
+        _ wait: () -> Int32
+    ) -> Int32 {
+        while true {
+            let result = wait()
+            guard result < 0, errno == EINTR else {
+                return result
+            }
+        }
+    }
 
     package static func absoluteDeadlineNanoseconds(
         currentSeconds: Int64,

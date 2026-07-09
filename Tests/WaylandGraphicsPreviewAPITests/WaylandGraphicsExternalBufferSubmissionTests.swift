@@ -720,6 +720,20 @@ struct ExternalBufferPresentationFeedbackTests {
 // swiftlint:disable type_body_length
 @Suite
 struct WaylandGraphicsExternalBufferLifecycleTests {
+    @Test(.timeLimit(.minutes(1)))
+    func backingCloseDoesNotJoinItsReentrantWindowCloseObserver() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        await window.setCloseObserver {
+            await storage.closeBecauseWindowClosed()
+        }
+
+        try await storage.closeForTesting()
+
+        #expect(try await window.isClosed)
+        #expect(await window.closeRequests == 1)
+    }
+
     @Test
     func firstExternalBufferShowPreparesInitialConfigureBeforeImport() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
@@ -1459,53 +1473,152 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
-    func explicitReleaseFailureCompletesReceipt() async throws {
+    func explicitReleaseFailureRetiresBackingAndPoisonsSlot() async throws {
+        let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
+        let fixture = try await explicitReleaseSubmissionFixture(backend: backend)
+        let storage = fixture.storage
+        let buffer = fixture.buffer
+        let receipt = fixture.receipt
+        let window = fixture.window
+        let releasePoint = try #require(explicitReleasePoint(from: receipt))
+        #expect(releasePoint.point == 1)
+        let blockedLease = try await storage.nextFrame()
+        await window.setCloseObserver {
+            await storage.closeBecauseWindowClosed()
+        }
+        backend.fail(1)
+
+        #expect(await receipt.waitForRelease() == .failed(.explicitSyncReleaseFailed))
+        let runtimePath = await storage.runtimePathSnapshotForTesting()
+        #expect(runtimePath.backing == .failed(.explicitSyncReleaseFailed))
+        #expect(runtimePath.dmabufImport == .failed(.explicitSyncReleaseFailed))
+        #expect(runtimePath.bufferLifecycle == .failed(.explicitSyncReleaseFailed))
+        #expect(runtimePath.explicitSync == .failed(.explicitSyncReleaseFailed))
+        #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 0)
+        #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 0)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+        #expect(try await window.isClosed)
+        #expect(await window.closeRequests == 1)
+        #expect(backend.destroyCount() == 1)
+        #expect(await window.removedSynchronizationTimelineIdentities().count == 2)
+
+        do {
+            _ = try await blockedLease.reserveExternalBuffer(buffer)
+            Issue.record("release tracking failure must prevent buffer reuse")
+        } catch WaylandGraphicsError.backingClosed {
+            // Expected terminal backing state.
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        do {
+            try await storage.unregisterExternalBuffer(buffer)
+            Issue.record("release tracking failure must retire registrations")
+        } catch WaylandGraphicsError.backingClosed {
+            // Automatic backing retirement defines unregister after tracking loss.
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+
+        try await storage.closeForTesting()
+        #expect(await window.closeRequests == 1)
+        #expect(backend.destroyCount() == 1)
+        #expect(await window.removedSynchronizationTimelineIdentities().count == 2)
+    }
+
+    @Test
+    func explicitReleaseMonitorRetainsBackingUntilFailureCleanup() async throws {
         let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
         let window = try ExternalBufferFakeManagedWindow(
             importBehavior: .succeed,
             surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
         )
-        let storage = externalBufferStorage(
-            window: window,
-            configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
-                synchronizationPolicy: .preferExplicit
+        let receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+        weak var retainedStorage: WaylandGraphicsWindowBackingStorage?
+        do {
+            let storage = externalBufferStorage(
+                window: window,
+                configuration: WaylandGraphicsConfiguration(
+                    presentationMode: .externalGPU,
+                    fallbackPolicy: .requireGPU,
+                    synchronizationPolicy: .preferExplicit
+                )
             )
-        )
-        await storage.useFakeExternalReleaseTimelineForTesting(backend)
-
-        let lease = try await storage.nextFrame()
-        let buffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: lease,
-            descriptor: try testExternalDescriptor()
-        )
-        let acquireTimeline = try await storage.importExternalSyncTimeline(
-            testOwnedFileDescriptor()
-        )
-        let renderLease = try await lease.reserveExternalBuffer(buffer)
-        let receipt = try await renderLease.submit(
-            acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
-        )
-
-        guard
-            case .explicitSyncobjTimelinePoint(
-                let releasePoint,
-                compositorAccepted: let compositorAccepted
-            ) = receipt.releaseSynchronization
-        else {
-            Issue.record("expected explicit release synchronization facts")
-            return
+            retainedStorage = storage
+            await storage.useFakeExternalReleaseTimelineForTesting(backend)
+            let lease = try await storage.nextFrame()
+            let buffer = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: try testExternalDescriptor()
+            )
+            let acquireTimeline = try await storage.importExternalSyncTimeline(
+                testOwnedFileDescriptor()
+            )
+            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            receipt = try await renderLease.submit(
+                acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
+            )
         }
-        #expect(compositorAccepted)
-        #expect(releasePoint.point == 1)
+
+        try #require(retainedStorage != nil)
         backend.fail(1)
         #expect(await receipt.waitForRelease() == .failed(.explicitSyncReleaseFailed))
+        #expect(try await window.isClosed)
+        #expect(await window.closeRequests == 1)
+
+        for _ in 0..<10 where retainedStorage != nil {
+            await Task.yield()
+        }
+        #expect(retainedStorage == nil)
+    }
+
+    @Test
+    func releaseTrackingFailureRetiresOtherPendingResourcesOnce() async throws {
+        let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
+        let fixture = try await pendingReleaseAuthorityLossFixture(backend: backend)
+        let storage = fixture.storage
+        let window = fixture.window
+        let explicitReceipt = fixture.explicitReceipt
+        let implicitReceipt = fixture.implicitReceipt
+        #expect(implicitReceipt.releaseMechanism == .implicitWaylandBufferRelease)
+
+        async let explicitRelease = explicitReceipt.waitForRelease()
+        async let implicitRelease = implicitReceipt.waitForRelease()
+        async let implicitPresentation = implicitReceipt.waitForPresentationFeedback()
+        backend.fail(1)
+
+        #expect(await explicitRelease == .failed(.explicitSyncReleaseFailed))
+        #expect(await implicitRelease == .retired(.backingClosed))
+        #expect(await implicitPresentation == .retired(.backingClosed))
+        #expect(
+            await explicitReceipt.waitForRelease()
+                == .failed(.explicitSyncReleaseFailed)
+        )
+        #expect(
+            await implicitReceipt.waitForRelease()
+                == .retired(.backingClosed)
+        )
+        #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
         #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 0)
         #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 0)
+        #expect(
+            await storage.externalPresentationFeedbackSnapshotForTesting().pendingReceipts == 0
+        )
+        #expect(await window.closeRequests == 1)
+        #expect(backend.destroyCount() == 2)
+        #expect(await window.removedSynchronizationTimelineIdentities().count == 3)
 
         try await storage.closeForTesting()
+        #expect(await window.closeRequests == 1)
+        #expect(backend.destroyCount() == 2)
+        #expect(await window.removedSynchronizationTimelineIdentities().count == 3)
     }
 
     @Test
@@ -1666,7 +1779,9 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private var presentationFailuresBeforeSuccess: Int
     private var nextGeneration: UInt64 = 1
     private(set) var importRequests = 0
+    private(set) var closeRequests = 0
     private var isWindowClosed = false
+    private var closeObserver: (@Sendable () async -> Void)?
     private var importedBuffers: [RawLinuxDmabufBuffer] = []
     private var submitConstraints: [SurfaceSubmitConstraints] = []
     private var submittedMetadata: [SurfaceCommitMetadata] = []
@@ -1884,6 +1999,10 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         importedBuffers[index].emitReleaseForTesting()
     }
 
+    func setCloseObserver(_ observer: @escaping @Sendable () async -> Void) {
+        closeObserver = observer
+    }
+
     // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds _: Int32,
@@ -1907,7 +2026,11 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     }
 
     func close() async {
+        closeRequests += 1
         isWindowClosed = true
+        let observer = closeObserver
+        closeObserver = nil
+        await observer?()
     }
 }
 
@@ -1960,6 +2083,7 @@ private func presentationFeedbackSchedule() -> WaylandGraphicsFrameSchedule {
 }
 
 private struct ExplicitReleaseSubmissionFixture {
+    let window: ExternalBufferFakeManagedWindow
     let storage: WaylandGraphicsWindowBackingStorage
     let buffer: WaylandGraphicsExternalBuffer
     let acquireTimeline: WaylandGraphicsExternalSyncTimeline
@@ -1997,10 +2121,67 @@ private func explicitReleaseSubmissionFixture(
         acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
     )
     return ExplicitReleaseSubmissionFixture(
+        window: window,
         storage: storage,
         buffer: buffer,
         acquireTimeline: acquireTimeline,
         receipt: receipt
+    )
+}
+
+private struct PendingReleaseAuthorityLossFixture {
+    let window: ExternalBufferFakeManagedWindow
+    let storage: WaylandGraphicsWindowBackingStorage
+    let explicitReceipt: WaylandGraphicsExternalBufferSubmissionReceipt
+    let implicitReceipt: WaylandGraphicsExternalBufferSubmissionReceipt
+}
+
+private func pendingReleaseAuthorityLossFixture(
+    backend: ExternalReleaseTimelineTestBackend
+) async throws -> PendingReleaseAuthorityLossFixture {
+    let window = try ExternalBufferFakeManagedWindow(
+        importBehavior: .succeed,
+        surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+    )
+    let storage = externalBufferStorage(
+        window: window,
+        configuration: WaylandGraphicsConfiguration(
+            presentationMode: .externalGPU,
+            fallbackPolicy: .requireGPU,
+            synchronizationPolicy: .preferExplicit
+        )
+    )
+    await storage.useFakeExternalReleaseTimelineForTesting(backend)
+
+    let firstLease = try await storage.nextFrame()
+    let explicitBuffer = try await registerTestExternalBuffer(
+        storage: storage,
+        lease: firstLease,
+        descriptor: try testExternalDescriptor()
+    )
+    let implicitBuffer = try await registerTestExternalBuffer(
+        storage: storage,
+        lease: firstLease,
+        descriptor: try testExternalDescriptor()
+    )
+    let acquireTimeline = try await storage.importExternalSyncTimeline(
+        testOwnedFileDescriptor()
+    )
+    let explicitRenderLease = try await firstLease.reserveExternalBuffer(explicitBuffer)
+    let explicitReceipt = try await explicitRenderLease.submit(
+        acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
+    )
+
+    let secondLease = try await storage.nextFrame()
+    let implicitRenderLease = try await secondLease.reserveExternalBuffer(implicitBuffer)
+    let implicitReceipt = try await implicitRenderLease.submit(
+        schedule: presentationFeedbackSchedule()
+    )
+    return PendingReleaseAuthorityLossFixture(
+        window: window,
+        storage: storage,
+        explicitReceipt: explicitReceipt,
+        implicitReceipt: implicitReceipt
     )
 }
 

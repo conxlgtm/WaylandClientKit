@@ -427,6 +427,26 @@ private struct ExternalBufferRegistryState: Sendable {
         entries[bufferID]?.lifecycle
     }
 
+    func bufferID(
+        for submissionID: WaylandGraphicsExternalSubmissionID,
+        slotID: GBMBufferPoolSlotID
+    ) -> WaylandGraphicsExternalBufferID? {
+        entries.first { _, entry in
+            guard entry.handle.slotRawValue == slotID.rawValue else {
+                return false
+            }
+
+            switch entry.lifecycle {
+            case .inCompositorUse(let activeSubmissionID):
+                return activeSubmissionID == submissionID
+            case .retiring(_, let activeSubmissionID):
+                return activeSubmissionID == submissionID
+            case .available, .reserved:
+                return false
+            }
+        }?.key
+    }
+
     func snapshot() -> ExternalBufferLifecycleSnapshot {
         var snapshot = ExternalBufferLifecycleSnapshot()
         for entry in entries.values {
@@ -738,6 +758,8 @@ package actor WaylandGraphicsWindowBackingStorage {
     private var importedExternalSyncTimelineIDs: Set<WaylandGraphicsExternalSyncTimelineID> = []
     private var externalReleaseTimelineFactoryForTesting: ExternalReleaseTimelineFactory?
     private var externalReleaseMonitorFactoryForTesting: ExternalReleaseMonitorFactory?
+    private var closeHasFinished = false
+    private var closeWaiters: [CheckedContinuation<Void, Never>] = []
 
     package init(
         window backingWindow: any WaylandGraphicsManagedWindow,
@@ -1870,18 +1892,103 @@ package actor WaylandGraphicsWindowBackingStorage {
 
     private func close(shouldCloseWindow: Bool) async {
         guard !leaseState.isClosed else {
+            // A window-close observer runs inside window.close(). It must return
+            // while that initiating backing cleanup is still in progress.
+            if shouldCloseWindow {
+                await waitForCloseCompletion()
+            }
             return
         }
 
+        await retireBacking(
+            shouldCloseWindow: shouldCloseWindow,
+            presenterReason: .windowClosed,
+            failedReleaseSubmissionID: nil,
+            registryEffects: ExternalBufferRegistryEffects()
+        )
+    }
+
+    private func handleExternalExplicitReleaseTrackingFailure(
+        submissionID: WaylandGraphicsExternalSubmissionID,
+        slotID: GBMBufferPoolSlotID
+    ) async {
+        guard !leaseState.isClosed else {
+            await waitForCloseCompletion()
+            return
+        }
+
+        let failure = WaylandGraphicsUnavailableReason.explicitSyncReleaseFailed
+        backingRuntimePath = Self.runtimePath(
+            Self.runtimePath(backingRuntimePath, externalBufferFailure: failure),
+            explicitSync: .failed(failure)
+        )
+
+        var effects = ExternalBufferRegistryEffects()
+        if let bufferID = externalBufferRegistry.bufferID(
+            for: submissionID,
+            slotID: slotID
+        ) {
+            effects.append(
+                externalBufferRegistry.markRetiring(
+                    bufferID: bufferID,
+                    reason: .releaseTrackingFailure
+                )
+            )
+        }
+
+        await retireBacking(
+            shouldCloseWindow: true,
+            presenterReason: .releaseAuthorityLost,
+            failedReleaseSubmissionID: submissionID,
+            registryEffects: effects
+        )
+    }
+
+    private func retireBacking(
+        shouldCloseWindow: Bool,
+        presenterReason: GPUWindowPresenterRetireReason,
+        failedReleaseSubmissionID: WaylandGraphicsExternalSubmissionID?,
+        registryEffects initialRegistryEffects: ExternalBufferRegistryEffects
+    ) async {
         leaseState.close()
-        externalReleaseRegistry.finishAll(result: .retired(.backingClosed))
-        externalPresentationFeedbackRegistry.finishAll(result: .retired(.backingClosed))
-        await apply(externalBufferRegistry.removeAll())
+        externalBufferPresenter.retireAll(reason: presenterReason)
+
+        var registryEffects = initialRegistryEffects
+        registryEffects.append(externalBufferRegistry.removeAll())
+        await apply(registryEffects)
         await removeImportedExternalSyncTimelines()
         managedGPUBacking?.close()
-        externalBufferPresenter.retireAll(reason: .windowClosed)
         if shouldCloseWindow {
             await window.close()
+        }
+
+        if let failedReleaseSubmissionID {
+            externalReleaseRegistry.finish(
+                submissionID: failedReleaseSubmissionID,
+                result: .failed(.explicitSyncReleaseFailed)
+            )
+        }
+        externalReleaseRegistry.finishAll(result: .retired(.backingClosed))
+        externalPresentationFeedbackRegistry.finishAll(result: .retired(.backingClosed))
+        finishClose()
+    }
+
+    private func waitForCloseCompletion() async {
+        guard !closeHasFinished else {
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            closeWaiters.append(continuation)
+        }
+    }
+
+    private func finishClose() {
+        closeHasFinished = true
+        let waiters = closeWaiters
+        closeWaiters.removeAll()
+        for waiter in waiters {
+            waiter.resume()
         }
     }
 
@@ -2435,7 +2542,9 @@ extension WaylandGraphicsWindowBackingStorage {
         let presenter = externalBufferPresenter
         let releaseRegistry = externalReleaseRegistry
         let releaseRetirementNotifier = externalReleaseRetirementNotifier
-        let operation: @Sendable () async -> Void = {
+        // Keep storage alive until the monitor records a terminal transition.
+        // A receipt can outlive the public backing value, but its waiter must not.
+        let operation: @Sendable () async -> Void = { [self] in
             do {
                 while !Task.isCancelled {
                     if try releaseTimeline.releasePointIsSignaled(syncState.releasePoint.point) {
@@ -2461,9 +2570,9 @@ extension WaylandGraphicsWindowBackingStorage {
                     result: .retired(.backingClosed)
                 )
             } catch {
-                releaseRegistry.finish(
+                await handleExternalExplicitReleaseTrackingFailure(
                     submissionID: submissionID,
-                    result: .failed(.explicitSyncReleaseFailed)
+                    slotID: slotID
                 )
             }
         }
@@ -2723,6 +2832,10 @@ extension WaylandGraphicsWindowBackingStorage {
         -> ExternalPresentationFeedbackSnapshot
     {
         externalPresentationFeedbackRegistry.snapshot()
+    }
+
+    package func runtimePathSnapshotForTesting() -> WaylandGraphicsRuntimePath {
+        backingRuntimePath
     }
 
     package func importedExternalSyncTimelineIDsForTesting()

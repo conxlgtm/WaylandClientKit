@@ -29,11 +29,14 @@ package struct GPUWindowPresentedFrame: Equatable, Sendable {
 
 package enum GPUWindowPresenterRetireReason: Equatable, Sendable, CustomStringConvertible {
     case windowClosed
+    case releaseAuthorityLost
 
     package var description: String {
         switch self {
         case .windowClosed:
             "window closed"
+        case .releaseAuthorityLost:
+            "release authority lost"
         }
     }
 }
