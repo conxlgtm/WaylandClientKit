@@ -835,6 +835,7 @@ private func runDoccVerify(context: ToolContext) throws {
             "--skip-synthesized-members",
         ],
         repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context),
         requireSuccess: false
     )
     try verifier.requirePublicProductSymbolGraphs(

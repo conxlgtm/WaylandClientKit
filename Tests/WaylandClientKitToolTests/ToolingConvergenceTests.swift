@@ -217,6 +217,20 @@ struct ToolingConvergenceTests {
     }
 
     @Test
+    func doccSymbolGraphDumpUsesCompilerFilter() throws {
+        let source = try String(
+            contentsOf: repositoryRoot()
+                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
+            encoding: .utf8)
+        let start = try #require(source.range(of: "private func runDoccVerify"))
+        let end = try #require(source.range(of: "private func runDoccSymbolLinks"))
+        let functionBody = String(source[start.lowerBound..<end.lowerBound])
+
+        #expect(functionBody.contains("compilerFilterEnvironment"))
+        #expect(functionBody.contains(#""package", "dump-symbol-graph""#))
+    }
+
+    @Test
     func exampleBuilderDiscoversExampleTargetsFromPackageManifest() throws {
         let root = try temporaryRepository()
         try """
