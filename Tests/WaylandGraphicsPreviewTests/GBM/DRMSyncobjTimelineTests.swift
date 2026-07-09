@@ -1,3 +1,4 @@
+import Glibc
 import Testing
 
 @testable import WaylandGraphicsCore
@@ -29,5 +30,22 @@ struct DRMSyncobjTimelineTests {
         )
 
         #expect(deadline == Int64.max)
+    }
+
+    @Test
+    func timelineWaitRetriesAfterSignalInterruption() {
+        var waitCalls = 0
+
+        let result = DRMSyncobjTimeline.retryingInterruptedWait {
+            waitCalls += 1
+            guard waitCalls > 1 else {
+                errno = EINTR
+                return -1
+            }
+            return 0
+        }
+
+        #expect(result == 0)
+        #expect(waitCalls == 2)
     }
 }
