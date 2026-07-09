@@ -3020,75 +3020,75 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L1216: `    case unregistered`
 - L1217: `    case foreign`
 - L1220: `public enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {`
-- L1221: `    case released`
-- L1222: `    case retired(WaylandGraphicsExternalRetirementReason)`
-- L1223: `    case failed(WaylandGraphicsUnavailableReason)`
-- L1227: `public struct WaylandGraphicsExternalPresentationFeedbackIdentity:`
-- L1232: `    public let surfacePresentationID: SurfacePresentationIdentity`
-- L1233: `    public let submissionID: WaylandGraphicsExternalSubmissionID`
-- L1234: `    public let bufferID: WaylandGraphicsExternalBufferID`
-- L1248: `public enum WaylandGraphicsExternalPresentationFeedbackResult:`
-- L1252: `    case notRequested`
-- L1253: `    case presented(`
-- L1258: `    case discarded(`
-- L1263: `    case retired(WaylandGraphicsExternalRetirementReason)`
-- L1332: `public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {`
-- L1333: `    public let id: WaylandGraphicsExternalSubmissionID`
-- L1334: `    public let bufferID: WaylandGraphicsExternalBufferID`
-- L1335: `    public let contractGeneration: WaylandGraphicsSurfaceGeneration`
-- L1336: `    public let frameResult: WaylandGraphicsFrameResult`
-- L1337: `    public let releaseMechanism: WaylandGraphicsExternalReleaseMechanism`
-- L1338: `    public let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization`
-- L1339: `    public let presentationFeedbackIdentity: WaylandGraphicsExternalPresentationFeedbackIdentity?`
-- L1370: `    public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {`
-- L1374: `    public func waitForPresentationFeedback() async`
-- L1381: `public struct WaylandGraphicsExternalBufferRenderLease: Sendable {`
-- L1382: `    public let buffer: WaylandGraphicsExternalBuffer`
-- L1383: `    public let contract: WaylandGraphicsFrameContract`
-- L1401: `    public func submit(`
-- L1415: `    public func submit(`
-- L1429: `    public func cancel() async {`
-- L1434: `public enum WaylandGraphicsSubmissionStage: Equatable, Sendable {`
-- L1435: `    case windowStateCheck`
-- L1436: `    case frameGeometry`
-- L1437: `    case submissionPreparation`
-- L1438: `    case frameSubmission`
-- L1439: `    case submissionCompletion`
-- L1442: `public enum WaylandGraphicsSubmissionFailure: Equatable, Sendable {`
-- L1443: `    case windowLifecycle(`
-- L1449: `    case window(`
-- L1455: `    case display(`
-- L1460: `    case client(`
-- L1465: `    case unexpected(`
-- L1472: `public enum WaylandGraphicsError: Error, Equatable, Sendable {`
-- L1473: `    case unavailable(WaylandGraphicsUnavailableReason)`
-- L1474: `    case fallbackRequired(WaylandGraphicsFallbackReason)`
-- L1475: `    case windowClosed`
-- L1476: `    case backingClosed`
-- L1477: `    case frameLeaseActive`
-- L1478: `    case frameLeaseConsumed`
-- L1479: `    case unsupportedMetadata`
-- L1480: `    case invalidDamageRegion`
-- L1481: `    case unsupportedPacing`
-- L1482: `    case staleFrameContract(`
-- L1486: `    case externalBufferUnavailable(`
-- L1490: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
-- L1493: `public struct WaylandGraphicsWindowBacking: Sendable {`
-- L1494: `    public let window: Window`
-- L1505: `    public var runtimePath: WaylandGraphicsRuntimePath {`
-- L1511: `    public var id: WindowID {`
-- L1515: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
-- L1524: `    public func registerExternalBuffer(`
-- L1545: `    public func importExternalSyncTimeline(`
-- L1555: `    public func unregisterExternalBuffer(`
-- L1567: `    public func close() async throws {`
-- L1574: `public struct WaylandGraphicsFrameLease: Sendable {`
-- L1575: `    public let size: PositivePixelSize`
-- L1576: `    public let contract: WaylandGraphicsFrameContract`
-- L1577: `    public let runtimePath: WaylandGraphicsRuntimePath`
-- L1597: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
-- L1604: `    public func submit(`
-- L1616: `    public func submitSoftware(`
-- L1628: `    public func submitSoftware(`
-- L1667: `    public func cancel() async {`
-- L1671: `    public func reserveExternalBuffer(`
+- L1222: `    case released`
+- L1225: `    case retired(WaylandGraphicsExternalRetirementReason)`
+- L1231: `    case failed(WaylandGraphicsUnavailableReason)`
+- L1235: `public struct WaylandGraphicsExternalPresentationFeedbackIdentity:`
+- L1240: `    public let surfacePresentationID: SurfacePresentationIdentity`
+- L1241: `    public let submissionID: WaylandGraphicsExternalSubmissionID`
+- L1242: `    public let bufferID: WaylandGraphicsExternalBufferID`
+- L1256: `public enum WaylandGraphicsExternalPresentationFeedbackResult:`
+- L1260: `    case notRequested`
+- L1261: `    case presented(`
+- L1266: `    case discarded(`
+- L1271: `    case retired(WaylandGraphicsExternalRetirementReason)`
+- L1340: `public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {`
+- L1341: `    public let id: WaylandGraphicsExternalSubmissionID`
+- L1342: `    public let bufferID: WaylandGraphicsExternalBufferID`
+- L1343: `    public let contractGeneration: WaylandGraphicsSurfaceGeneration`
+- L1344: `    public let frameResult: WaylandGraphicsFrameResult`
+- L1345: `    public let releaseMechanism: WaylandGraphicsExternalReleaseMechanism`
+- L1346: `    public let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization`
+- L1347: `    public let presentationFeedbackIdentity: WaylandGraphicsExternalPresentationFeedbackIdentity?`
+- L1382: `    public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {`
+- L1386: `    public func waitForPresentationFeedback() async`
+- L1393: `public struct WaylandGraphicsExternalBufferRenderLease: Sendable {`
+- L1394: `    public let buffer: WaylandGraphicsExternalBuffer`
+- L1395: `    public let contract: WaylandGraphicsFrameContract`
+- L1413: `    public func submit(`
+- L1427: `    public func submit(`
+- L1441: `    public func cancel() async {`
+- L1446: `public enum WaylandGraphicsSubmissionStage: Equatable, Sendable {`
+- L1447: `    case windowStateCheck`
+- L1448: `    case frameGeometry`
+- L1449: `    case submissionPreparation`
+- L1450: `    case frameSubmission`
+- L1451: `    case submissionCompletion`
+- L1454: `public enum WaylandGraphicsSubmissionFailure: Equatable, Sendable {`
+- L1455: `    case windowLifecycle(`
+- L1461: `    case window(`
+- L1467: `    case display(`
+- L1472: `    case client(`
+- L1477: `    case unexpected(`
+- L1484: `public enum WaylandGraphicsError: Error, Equatable, Sendable {`
+- L1485: `    case unavailable(WaylandGraphicsUnavailableReason)`
+- L1486: `    case fallbackRequired(WaylandGraphicsFallbackReason)`
+- L1487: `    case windowClosed`
+- L1488: `    case backingClosed`
+- L1489: `    case frameLeaseActive`
+- L1490: `    case frameLeaseConsumed`
+- L1491: `    case unsupportedMetadata`
+- L1492: `    case invalidDamageRegion`
+- L1493: `    case unsupportedPacing`
+- L1494: `    case staleFrameContract(`
+- L1498: `    case externalBufferUnavailable(`
+- L1502: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
+- L1505: `public struct WaylandGraphicsWindowBacking: Sendable {`
+- L1506: `    public let window: Window`
+- L1517: `    public var runtimePath: WaylandGraphicsRuntimePath {`
+- L1523: `    public var id: WindowID {`
+- L1527: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
+- L1536: `    public func registerExternalBuffer(`
+- L1557: `    public func importExternalSyncTimeline(`
+- L1567: `    public func unregisterExternalBuffer(`
+- L1583: `    public func close() async throws {`
+- L1590: `public struct WaylandGraphicsFrameLease: Sendable {`
+- L1591: `    public let size: PositivePixelSize`
+- L1592: `    public let contract: WaylandGraphicsFrameContract`
+- L1593: `    public let runtimePath: WaylandGraphicsRuntimePath`
+- L1613: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
+- L1620: `    public func submit(`
+- L1632: `    public func submitSoftware(`
+- L1644: `    public func submitSoftware(`
+- L1683: `    public func cancel() async {`
+- L1687: `    public func reserveExternalBuffer(`

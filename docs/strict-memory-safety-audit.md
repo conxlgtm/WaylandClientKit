@@ -407,7 +407,14 @@ Audit invariant:
   release, explicit DRM syncobj release timeline signaling, backing close, or a
   terminal submission failure. A successful commit, presentation feedback event,
   timeout, `wl_buffer.release` for an explicit submission, or later submission
-  does not make a renderer-owned image reusable.
+  does not make a renderer-owned image reusable. A failed receipt is terminal for
+  tracking but is not release evidence.
+- Explicit release polling failure closes the backing before completing the
+  failed receipt. The presenter removes all explicit submissions and reusable
+  slots under its lock, the runtime path records the release failure, all
+  registered buffers and timelines retire exactly once, and late
+  `wl_buffer.release` callbacks cannot revive a slot. Renderer allocations stay
+  alive until backing close completes.
 - The fake external-release timeline backend serializes all mutable release
   point state and destroy-count state with its private lock, matching the
   executor-crossing access pattern used by release monitor tasks in tests.
@@ -437,8 +444,9 @@ Tests:
 - `WaylandGraphicsExternalBufferSubmissionTests` covers descriptor validation,
   ownership transfer into an import plan, unavailable/fallback preflight before
   Wayland import, registered-buffer import-once behavior, release-gated
-  reservation and unregistration, public release receipt completion, and
-  backing-close waiter resolution.
+  reservation and unregistration, public release receipt completion, release
+  authority loss, poisoned-slot late callbacks, terminal runtime status, and
+  exactly-once backing cleanup and backing-close waiter resolution.
 
 ## Surface Submit Constraint Boundary
 

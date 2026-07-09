@@ -1218,8 +1218,16 @@ public enum WaylandGraphicsExternalBufferLifecycle: Equatable, Sendable {
 }
 
 public enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {
+    /// WCK observed the authoritative compositor release for this submission.
     case released
+
+    /// The owning presentation lifetime ended before normal compositor release.
     case retired(WaylandGraphicsExternalRetirementReason)
+
+    /// Release tracking failed. This result is not compositor release evidence.
+    ///
+    /// Do not reuse or destroy the renderer allocation from this result alone.
+    /// Close and await the owning backing before destroying the allocation.
     case failed(WaylandGraphicsUnavailableReason)
 }
 
@@ -1367,6 +1375,10 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
         presentationFeedbackState = submissionPresentationFeedbackState
     }
 
+    /// Waits for the terminal tracking result for this submission.
+    ///
+    /// Only `.released` is compositor release evidence. A `.failed` result requires
+    /// the renderer to keep the allocation alive until the owning backing has closed.
     public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {
         await releaseState.wait()
     }
@@ -1564,6 +1576,10 @@ public struct WaylandGraphicsWindowBacking: Sendable {
         try await storage.nextFrame(afterWindowCheck: afterWindowCheck)
     }
 
+    /// Closes the backing and waits for its imported graphics resources to retire.
+    ///
+    /// After a failed external release result, await this method before destroying
+    /// the renderer allocation. Repeated and concurrent calls join the same cleanup.
     public func close() async throws {
         try await storage.close()
     }
