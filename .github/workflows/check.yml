@@ -14,6 +14,7 @@ on:
         type: choice
         options:
           - cheap
+          - required
           - full
   schedule:
     - cron: '17 8 * * 1'
@@ -22,7 +23,64 @@ permissions:
   contents: read
 
 jobs:
+  cheap:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.2-noble
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            curl \
+            git \
+            libdrm-dev \
+            libegl-dev \
+            libgbm-dev \
+            libgles-dev \
+            libwayland-bin \
+            libwayland-dev \
+            libxkbcommon-dev \
+            pkg-config \
+            ripgrep \
+            unzip \
+            wayland-protocols
+      - name: Install SwiftLint
+        run: swift run wck tools install-swiftlint --destination /usr/local/bin
+      - name: Toolchain smoke
+        run: swift run wck tools toolchain-smoke
+      - name: Cheap check
+        run: swift run wck ci cheap
+
+  required:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'cheap' }}
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.2-noble
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            git \
+            libdrm-dev \
+            libegl-dev \
+            libgbm-dev \
+            libgles-dev \
+            libwayland-bin \
+            libwayland-dev \
+            libxkbcommon-dev \
+            pkg-config \
+            wayland-protocols
+      - name: Required build and tests
+        run: swift run wck ci required
+
   check:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -51,7 +109,6 @@ jobs:
       - name: Toolchain smoke
         run: swift run wck tools toolchain-smoke
       - name: Bootstrap checks
-        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
         run: |
           swift run wck bootstrap check
           swift run wck bootstrap maintainer-check
@@ -62,11 +119,7 @@ jobs:
           swift run wck bootstrap install-command --package-manager apk
           swift run wck bootstrap install-command --package-manager emerge
           swift run wck bootstrap install-command --package-manager nix
-      - name: Cheap check
-        if: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'full') }}
-        run: swift run wck ci cheap
       - name: Full check
-        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
         run: swift run wck ci check
 
   generated-freshness:

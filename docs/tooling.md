@@ -71,3 +71,18 @@ Public library products must not accidentally depend on tool-only packages.
 `swift run wck ci cheap` verifies that the `WaylandClient` and
 `WaylandGraphicsPreview` dependency graphs do not include `ArgumentParser` or
 tool-only targets.
+
+## CI Gates
+
+`swift run wck ci cheap` runs formatting, lint, generated-file, manifest, shim,
+dependency-boundary, import-boundary, and unsafe-token checks. It is a fast
+signal and does not prove that the library products compile.
+
+`swift run wck ci required` verifies the compiler-derived public API baseline,
+performs the strict-concurrency build, runs unit tests, and builds and tests all
+four external integration packages. Pull requests must pass the
+`check / required` status before merge.
+
+`swift run wck ci check` adds documentation and DocC verification to the cheap
+and required gates. Scheduled and manually dispatched full workflows also run
+release, sanitizer, generated-freshness, and headless Wayland jobs.

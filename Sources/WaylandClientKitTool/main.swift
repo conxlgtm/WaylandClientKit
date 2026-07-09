@@ -741,7 +741,10 @@ struct Smoke: ParsableCommand {
 struct CI: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ci",
-        subcommands: [Cheap.self, CheckBase.self, Check.self, Release.self, FoundationCheck.self]
+        subcommands: [
+            Cheap.self, Required.self, CheckBase.self, Check.self, Release.self,
+            FoundationCheck.self,
+        ]
     )
 
     struct Cheap: ToolCommand {
@@ -749,6 +752,14 @@ struct CI: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             try runCheap(context: context())
+        }
+    }
+
+    struct Required: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "required")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            try runRequired(context: context())
         }
     }
 
@@ -1016,19 +1027,16 @@ private func runCheap(context: ToolContext) throws {
     try ProtocolTooling(repository: context.repository, diagnostics: context.diagnostics)
         .validateManifest()
     try VerificationChecks(context: context).verifyShims()
-    try PublicAPIAuditor(context: context).verify(
-        update: false,
-        environment: compilerFilterEnvironment(context: context)
-    )
     try VerificationChecks(context: context).verifyTargetImports()
     try VerificationChecks(context: context).verifyToolDependencyBoundaries()
     try VerificationChecks(context: context).verifyUnsafeAllowlist()
 }
 
-private func runCheckBase(context: ToolContext) throws {
-    try runCheap(context: context)
-    try runDocsVerify(context: context)
-    try runDoccVerify(context: context)
+private func runRequired(context: ToolContext) throws {
+    try PublicAPIAuditor(context: context).verify(
+        update: false,
+        environment: compilerFilterEnvironment(context: context)
+    )
     try context.swift.runSwift(
         [
             "build", "--disable-index-store", "-Xswiftc", "-strict-concurrency=complete",
@@ -1043,6 +1051,13 @@ private func runCheckBase(context: ToolContext) throws {
     try runIntegrationPackage(
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
+}
+
+private func runCheckBase(context: ToolContext) throws {
+    try runCheap(context: context)
+    try runDocsVerify(context: context)
+    try runDoccVerify(context: context)
+    try runRequired(context: context)
 }
 
 private func runCheck(context: ToolContext) throws {
