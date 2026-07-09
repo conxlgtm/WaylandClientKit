@@ -177,6 +177,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
+      # Swift TSan disables ASLR at startup. Docker's default seccomp profile
+      # blocks that operation and the test binary exits before running tests.
+      options: --security-opt seccomp=unconfined
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install sanitizer dependencies

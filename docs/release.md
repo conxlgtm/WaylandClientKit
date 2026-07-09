@@ -65,6 +65,11 @@ parallel execution disabled so sanitizer output is not polluted by unrelated
 test-runner and runtime parallel initialization reports, project data-race
 reports inside tests should remain unsuppressed.
 
+The hosted TSan job runs its Swift container with an unconfined seccomp profile.
+Swift's Linux TSan runtime disables address-space randomization during startup;
+Docker's default seccomp profile blocks that operation and terminates the test
+binary before any test can run. This exception is limited to the TSan job.
+
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
 reflected in the audit and baseline before tagging.
