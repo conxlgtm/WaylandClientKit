@@ -720,6 +720,20 @@ struct ExternalBufferPresentationFeedbackTests {
 // swiftlint:disable type_body_length
 @Suite
 struct WaylandGraphicsExternalBufferLifecycleTests {
+    @Test(.timeLimit(.minutes(1)))
+    func backingCloseDoesNotJoinItsReentrantWindowCloseObserver() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        await window.setCloseObserver {
+            await storage.closeBecauseWindowClosed()
+        }
+
+        try await storage.closeForTesting()
+
+        #expect(try await window.isClosed)
+        #expect(await window.closeRequests == 1)
+    }
+
     @Test
     func firstExternalBufferShowPreparesInitialConfigureBeforeImport() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
@@ -1469,6 +1483,9 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let releasePoint = try #require(explicitReleasePoint(from: receipt))
         #expect(releasePoint.point == 1)
         let blockedLease = try await storage.nextFrame()
+        await window.setCloseObserver {
+            await storage.closeBecauseWindowClosed()
+        }
         backend.fail(1)
 
         #expect(await receipt.waitForRelease() == .failed(.explicitSyncReleaseFailed))
@@ -1764,6 +1781,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private(set) var importRequests = 0
     private(set) var closeRequests = 0
     private var isWindowClosed = false
+    private var closeObserver: (@Sendable () async -> Void)?
     private var importedBuffers: [RawLinuxDmabufBuffer] = []
     private var submitConstraints: [SurfaceSubmitConstraints] = []
     private var submittedMetadata: [SurfaceCommitMetadata] = []
@@ -1981,6 +1999,10 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         importedBuffers[index].emitReleaseForTesting()
     }
 
+    func setCloseObserver(_ observer: @escaping @Sendable () async -> Void) {
+        closeObserver = observer
+    }
+
     // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds _: Int32,
@@ -2006,6 +2028,9 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     func close() async {
         closeRequests += 1
         isWindowClosed = true
+        let observer = closeObserver
+        closeObserver = nil
+        await observer?()
     }
 }
 

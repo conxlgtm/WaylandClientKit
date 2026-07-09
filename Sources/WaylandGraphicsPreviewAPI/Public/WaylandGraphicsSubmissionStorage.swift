@@ -1892,7 +1892,11 @@ package actor WaylandGraphicsWindowBackingStorage {
 
     private func close(shouldCloseWindow: Bool) async {
         guard !leaseState.isClosed else {
-            await waitForCloseCompletion()
+            // A window-close observer runs inside window.close(). It must return
+            // while that initiating backing cleanup is still in progress.
+            if shouldCloseWindow {
+                await waitForCloseCompletion()
+            }
             return
         }
 
