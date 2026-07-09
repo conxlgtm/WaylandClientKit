@@ -2538,7 +2538,9 @@ extension WaylandGraphicsWindowBackingStorage {
         let presenter = externalBufferPresenter
         let releaseRegistry = externalReleaseRegistry
         let releaseRetirementNotifier = externalReleaseRetirementNotifier
-        let operation: @Sendable () async -> Void = { [weak self] in
+        // Keep storage alive until the monitor records a terminal transition.
+        // A receipt can outlive the public backing value, but its waiter must not.
+        let operation: @Sendable () async -> Void = { [self] in
             do {
                 while !Task.isCancelled {
                     if try releaseTimeline.releasePointIsSignaled(syncState.releasePoint.point) {
@@ -2564,7 +2566,7 @@ extension WaylandGraphicsWindowBackingStorage {
                     result: .retired(.backingClosed)
                 )
             } catch {
-                await self?.handleExternalExplicitReleaseTrackingFailure(
+                await handleExternalExplicitReleaseTrackingFailure(
                     submissionID: submissionID,
                     slotID: slotID
                 )

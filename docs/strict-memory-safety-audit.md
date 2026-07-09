@@ -415,6 +415,10 @@ Audit invariant:
   registered buffers and timelines retire exactly once, and late
   `wl_buffer.release` callbacks cannot revive a slot. Renderer allocations stay
   alive until backing close completes.
+- An explicit release monitor retains its backing storage until release,
+  tracking failure, or backing close completes. Keeping only a submission
+  receipt therefore cannot orphan its terminal release waiter while polling is
+  still active.
 - The fake external-release timeline backend serializes all mutable release
   point state and destroy-count state with its private lock, matching the
   executor-crossing access pattern used by release monitor tasks in tests.

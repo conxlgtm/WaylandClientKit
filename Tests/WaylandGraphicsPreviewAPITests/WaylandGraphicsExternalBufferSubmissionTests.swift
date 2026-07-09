@@ -1516,6 +1516,53 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func explicitReleaseMonitorRetainsBackingUntilFailureCleanup() async throws {
+        let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+        )
+        let receipt: WaylandGraphicsExternalBufferSubmissionReceipt
+        weak var retainedStorage: WaylandGraphicsWindowBackingStorage?
+        do {
+            let storage = externalBufferStorage(
+                window: window,
+                configuration: WaylandGraphicsConfiguration(
+                    presentationMode: .externalGPU,
+                    fallbackPolicy: .requireGPU,
+                    synchronizationPolicy: .preferExplicit
+                )
+            )
+            retainedStorage = storage
+            await storage.useFakeExternalReleaseTimelineForTesting(backend)
+            let lease = try await storage.nextFrame()
+            let buffer = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: try testExternalDescriptor()
+            )
+            let acquireTimeline = try await storage.importExternalSyncTimeline(
+                testOwnedFileDescriptor()
+            )
+            let renderLease = try await lease.reserveExternalBuffer(buffer)
+            receipt = try await renderLease.submit(
+                acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1))
+            )
+        }
+
+        try #require(retainedStorage != nil)
+        backend.fail(1)
+        #expect(await receipt.waitForRelease() == .failed(.explicitSyncReleaseFailed))
+        #expect(try await window.isClosed)
+        #expect(await window.closeRequests == 1)
+
+        for _ in 0..<10 where retainedStorage != nil {
+            await Task.yield()
+        }
+        #expect(retainedStorage == nil)
+    }
+
+    @Test
     func releaseTrackingFailureRetiresOtherPendingResourcesOnce() async throws {
         let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
         let fixture = try await pendingReleaseAuthorityLossFixture(backend: backend)
