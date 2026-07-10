@@ -3,7 +3,7 @@
 import Glibc
 import WaylandRaw
 
-private struct TopLevelWindowRoleResources {
+package struct TopLevelWindowRoleResources {
     let xdgSurface: RawXDGSurface
     let topLevel: RawXDGTopLevel
     var decoration: RawXDGToplevelDecoration?
@@ -29,7 +29,7 @@ private struct TopLevelWindowRoleResources {
     }
 }
 
-private struct PendingSoftwareFrameReservation {
+struct PendingSoftwareFrameReservation {
     let request: PresentationRequest
     let geometry: SurfaceGeometry
     let reservedFrame: WindowReservedSoftwareFrame
@@ -44,19 +44,21 @@ package final class TopLevelWindow {
     private let connection: RawDisplayConnection
     private let configuration: WindowConfiguration
     private let initialConfigurePump: (Int32) throws -> Void
-    private let configureState: XDGConfigureState
     private let surface: RawSurface
+    private var coordinators: TopLevelWindowCoordinators
 
     private let failureSink: any WindowFailureSink
     private var model: WindowModel
-    private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
     private var pendingFrameRegistration: FrameCallbackRegistration?
-    private var presentationFeedbackIDs = IDGenerator<SurfacePresentationIdentity>()
-    private var softwareFrameReservationIDs = IDGenerator<SoftwareFrameReservationToken>()
-    private var pendingPresentationFeedbacks:
-        [SurfacePresentationIdentity: RawPresentationFeedback] = [:]
-    private var pendingSoftwareFrameReservations:
-        [SoftwareFrameReservationToken: PendingSoftwareFrameReservation] = [:]
+
+    private var configureState: XDGConfigureState {
+        coordinators.roleLifecycle.configureState
+    }
+
+    private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources> {
+        get { coordinators.graphicsConstraints.runtime }
+        set { coordinators.graphicsConstraints.runtime = newValue }
+    }
 
     #if DEBUG
         private var testingInteractionSeatsByID: [SeatID: RawSeat] = [:]
@@ -78,7 +80,9 @@ package final class TopLevelWindow {
         applicationID displayApplicationID: NonEmptyWaylandString,
         configuration windowConfiguration: WindowConfiguration = .default,
         failureSink windowFailureSink: any WindowFailureSink = DefaultWindowFailureSink(),
-        initialConfigurePump pumpEvents: ((Int32) throws -> Void)? = nil
+        initialConfigurePump pumpEvents: ((Int32) throws -> Void)? = nil,
+        coordinatorFactory: any TopLevelWindowCoordinatorFactory =
+            DefaultTopLevelWindowCoordinatorFactory()
     ) throws {
         id = windowID
         connection = rawConnection
@@ -90,12 +94,8 @@ package final class TopLevelWindow {
                 try rawConnection.pumpEvents(timeoutMilliseconds: timeoutMilliseconds)
             }
         let globals = try rawConnection.bindRequiredGlobals()
-        configureState = .init()
         surface = try globals.compositor.createSurface()
-        surfaceRuntime = SurfaceRuntime(
-            role: .toplevelWindow,
-            surfaceID: surface.objectID
-        )
+        coordinators = coordinatorFactory.makeCoordinators(surfaceID: surface.objectID)
         model = WindowModel(
             id: windowID,
             fallbackSize: windowConfiguration.initialSize,
@@ -454,19 +454,21 @@ package final class TopLevelWindow {
                     damage: nil,
                     presentationFeedback: nil
                 ),
-                reservationID: softwareFrameReservationIDs.next(),
+                reservationID: coordinators.softwarePresentation.allocateIdentity(),
                 runtime: &surfaceRuntime,
                 hasPendingFrameRegistration: pendingFrameRegistration != nil
             )
             try interpretSoftwarePresentationFollowUp(result.followUp)
             guard let reservedFrame = result.reservedFrame else { return nil }
 
-            pendingSoftwareFrameReservations[reservedFrame.reservation.reservationID] =
+            coordinators.softwarePresentation.register(
                 PendingSoftwareFrameReservation(
                     request: request,
                     geometry: geometry,
                     reservedFrame: reservedFrame
-                )
+                ),
+                for: reservedFrame.reservation.reservationID
+            )
             return reservedFrame.reservation
         } catch let failure as WindowSoftwarePresentationFailure {
             failActivePresentation(
@@ -657,8 +659,8 @@ package final class TopLevelWindow {
             return .skippedClosed
         }
         guard
-            let pendingReservation = pendingSoftwareFrameReservations.removeValue(
-                forKey: reservation.reservationID
+            let pendingReservation = coordinators.softwarePresentation.take(
+                reservation.reservationID
             )
         else {
             throw ClientError.invalidWindowState(
@@ -712,24 +714,13 @@ package final class TopLevelWindow {
     }
 
     private func cancelSoftwareFrameReservation(_ reservation: SoftwareFrameReservation) {
-        guard
-            let pendingReservation = pendingSoftwareFrameReservations.removeValue(
-                forKey: reservation.reservationID
-            )
-        else {
-            return
-        }
-
-        pendingReservation.reservedFrame.drawingBuffer.discard()
+        guard coordinators.softwarePresentation.cancel(reservation.reservationID) else { return }
         resetTransientState()
         publishDeferredRedrawAfterReservationCancellation()
     }
 
     private func cancelAllSoftwareFrameReservations() {
-        for pendingReservation in pendingSoftwareFrameReservations.values {
-            pendingReservation.reservedFrame.drawingBuffer.discard()
-        }
-        pendingSoftwareFrameReservations.removeAll()
+        coordinators.softwarePresentation.close()
     }
 
     private func interpretSoftwarePresentationFollowUp(
@@ -920,16 +911,11 @@ extension TopLevelWindow {
     }
 
     private func activeTopLevel(for event: String) throws -> RawXDGTopLevel {
-        guard let topLevel = roleResources?.topLevel else {
-            throw ClientError.window(
-                id,
-                .invalidLifecycleTransition(
-                    .invalidTransition(from: "missing xdg_toplevel", event: event)
-                )
-            )
-        }
-
-        return topLevel
+        try coordinators.desktopIntegration.activeTopLevel(
+            resources: roleResources,
+            windowID: id,
+            event: event
+        )
     }
 
     private func interactionSeat(for seatID: SeatID) throws -> RawSeat {
@@ -1675,7 +1661,7 @@ extension TopLevelWindow {
             )
         }
 
-        let identity = allocatePresentationFeedbackIdentity()
+        let identity = coordinators.presentationFeedback.allocateIdentity()
         let feedback = try presentation.requestFeedback(for: surface) { [weak self] rawEvent in
             self?.handlePresentationFeedback(
                 identity,
@@ -1684,7 +1670,7 @@ extension TopLevelWindow {
                 onFeedback: onFeedback
             )
         }
-        pendingPresentationFeedbacks[identity] = feedback
+        coordinators.presentationFeedback.register(feedback, for: identity)
         return identity
     }
 
@@ -1692,7 +1678,7 @@ extension TopLevelWindow {
         _ identity: SurfacePresentationIdentity
     ) {
         connection.preconditionIsOwnerThread()
-        pendingPresentationFeedbacks.removeValue(forKey: identity)?.cancel()
+        coordinators.presentationFeedback.cancel(identity)
     }
 
     package func setTitleOnOwnerThread(_ title: WaylandString) throws {
@@ -2051,17 +2037,13 @@ extension TopLevelWindow {
 }
 
 extension TopLevelWindow {
-    private func allocatePresentationFeedbackIdentity() -> SurfacePresentationIdentity {
-        presentationFeedbackIDs.next()
-    }
-
     private func handlePresentationFeedback(
         _ identity: SurfacePresentationIdentity,
         event rawEvent: RawPresentationFeedbackEvent,
         outputIDForPresentationSyncOutput: (RawOutputPointerIdentity) throws -> OutputID?,
         onFeedback: (SurfacePresentationFeedback) -> Void
     ) {
-        pendingPresentationFeedbacks.removeValue(forKey: identity)
+        coordinators.presentationFeedback.complete(identity)
 
         do {
             switch rawEvent {
@@ -2097,9 +2079,6 @@ extension TopLevelWindow {
     }
 
     private func cancelPresentationFeedbacks() {
-        for feedback in pendingPresentationFeedbacks.values {
-            feedback.cancel()
-        }
-        pendingPresentationFeedbacks.removeAll()
+        coordinators.presentationFeedback.close()
     }
 }
