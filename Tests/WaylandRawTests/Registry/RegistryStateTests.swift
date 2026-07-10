@@ -88,9 +88,23 @@ struct RegistryStateTests {
         state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
         state.freezeStartupGlobals()
 
-        _ = state.removeGlobal(name: 4)
+        let removed = state.removeGlobal(name: 4)
 
         #expect(state.startupGlobal(named: "wp_presentation") == nil)
+        #expect(removed.map(state.wasSelectedAtStartup) == true)
+    }
+
+    @Test
+    func removedDuplicateDoesNotMatchSelectedStartupGlobal() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+        state.recordGlobal(name: 8, interfaceName: "wp_presentation", version: 2)
+        state.freezeStartupGlobals()
+
+        let removed = state.removeGlobal(name: 4)
+
+        #expect(state.startupGlobal(named: "wp_presentation")?.name == 8)
+        #expect(removed.map(state.wasSelectedAtStartup) == false)
     }
 
     @Test

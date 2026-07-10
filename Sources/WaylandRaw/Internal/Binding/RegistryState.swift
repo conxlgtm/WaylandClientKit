@@ -75,4 +75,8 @@ package final class RegistryState {
 
         return startupGlobal
     }
+
+    package func wasSelectedAtStartup(_ global: RawGlobalAdvertisement) -> Bool {
+        startupGlobalsByInterface[global.interfaceName] == global
+    }
 }

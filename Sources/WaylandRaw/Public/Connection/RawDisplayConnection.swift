@@ -78,7 +78,9 @@ package final class RawDisplayConnection {  // swiftlint:disable:this type_body_
             connection?.boundGlobals?.tabletSeatRegistry?.removeSeat(globalName: global.name)
             connection?.boundGlobals?.seatRegistry.removeSeat(globalName: global.name)
             connection?.boundGlobals?.outputRegistry.removeOutput(globalName: global.name)
-            connection?.boundGlobals?.invalidateOptionalGlobal(named: global.interfaceName)
+            if connection?.registryState.wasSelectedAtStartup(global) == true {
+                connection?.boundGlobals?.invalidateOptionalGlobal(named: global.interfaceName)
+            }
         }
     }
 
