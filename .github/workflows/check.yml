@@ -177,8 +177,8 @@ jobs:
     runs-on: ubuntu-22.04
     container:
       image: swift:6.3.2-noble
-      # Swift TSan disables ASLR at startup. Docker's default seccomp profile
-      # blocks that operation and the test binary exits before running tests.
+      # TSan needs a fixed address layout. Permit setarch to establish it before
+      # Swift starts so the hosted test bundle does not depend on runtime re-exec.
       options: --security-opt seccomp=unconfined
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -198,6 +198,7 @@ jobs:
             libxkbcommon-dev \
             pkg-config \
             ripgrep \
+            util-linux \
             wayland-protocols \
             weston
       - name: ThreadSanitizer runtime probe
@@ -209,11 +210,13 @@ jobs:
           swiftc -sanitize=thread \
             "$probe_directory/probe.swift" \
             -o "$probe_directory/probe"
-          "$probe_directory/probe"
+          setarch "$(uname -m)" -R "$probe_directory/probe"
       - name: ThreadSanitizer tests
-        run: swift run wck test tsan
+        run: setarch "$(uname -m)" -R swift run wck test tsan
       - name: Headless request-path ThreadSanitizer tests
-        run: swift run wck smoke headless -- wck test request-paths-tsan
+        run: |
+          setarch "$(uname -m)" -R \
+            swift run wck smoke headless -- wck test request-paths-tsan
 
   sanitizer-asan:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}

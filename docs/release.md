@@ -66,13 +66,12 @@ test-runner and runtime parallel initialization reports, project data-race
 reports inside tests should remain unsuppressed.
 
 The hosted TSan job runs the Swift 6.3.2 Noble container on an Ubuntu 22.04
-host. The same container passes locally, but the Ubuntu 24.04 hosted runner's
-kernel/container combination exits after linking without starting the test
-process or emitting a sanitizer report. Keeping the Noble container avoids the
-older host headers while the selected host supplies the compatible kernel. The
-container uses an unconfined seccomp profile because Swift TSan disables ASLR
-at startup. A small instrumented runtime probe runs before the package suite so
-a future runner regression fails before the long sanitizer build.
+host. The container uses an unconfined seccomp profile so `setarch` can give
+each sanitizer process a fixed address layout before Swift starts. This avoids
+the runtime ASLR re-exec path, which can exit after linking without starting the
+large test bundle on hosted runners. TSan compilation is limited to two jobs to
+bound peak memory. A small instrumented runtime probe runs before the package
+suite so a future runner regression fails before the long sanitizer build.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
