@@ -1233,7 +1233,11 @@ public enum WaylandGraphicsExternalPresentationFeedbackResult:
     case retired(WaylandGraphicsExternalRetirementReason)
 }
 
-package actor WaylandGraphicsExternalReleaseState {
+// SAFETY: Receipt result and waiter access is protected by lock. Continuations
+// are resumed after unlocking so resumed work cannot re-enter locked state.
+@safe
+package final class WaylandGraphicsExternalReleaseState: @unchecked Sendable {
+    private let lock = NSLock()
     private var result: WaylandGraphicsExternalReleaseResult?
     private var waiters: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>] = []
 
@@ -1242,21 +1246,31 @@ package actor WaylandGraphicsExternalReleaseState {
     }
 
     package func wait() async -> WaylandGraphicsExternalReleaseResult {
-        if let result {
-            return result
-        }
-
         return await withCheckedContinuation { continuation in
-            waiters.append(continuation)
+            lock.lock()
+            if let result {
+                lock.unlock()
+                continuation.resume(returning: result)
+            } else {
+                waiters.append(continuation)
+                lock.unlock()
+            }
         }
     }
 
     package func finish(_ terminalResult: WaylandGraphicsExternalReleaseResult) {
-        guard result == nil else { return }
+        let continuations: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>]
+        lock.lock()
+        guard result == nil else {
+            lock.unlock()
+            return
+        }
 
         result = terminalResult
-        let continuations = waiters
+        continuations = waiters
         waiters.removeAll()
+        lock.unlock()
+
         for continuation in continuations {
             continuation.resume(returning: terminalResult)
         }

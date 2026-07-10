@@ -519,10 +519,7 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
 
         monitorTask?.cancel()
         guard let state else { return }
-        // swiftlint:disable:next no_unstructured_task
-        Task {
-            await state.finish(result)
-        }
+        state.finish(result)
     }
 
     func finish(
@@ -539,10 +536,7 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
 
         monitorTask?.cancel()
         guard let state else { return }
-        // swiftlint:disable:next no_unstructured_task
-        Task {
-            await state.finish(result)
-        }
+        state.finish(result)
     }
 
     func trackMonitorTask(
@@ -578,10 +572,7 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
             task.cancel()
         }
         for state in states {
-            // swiftlint:disable:next no_unstructured_task
-            Task {
-                await state.finish(result)
-            }
+            state.finish(result)
         }
     }
 
@@ -798,9 +789,10 @@ package actor WaylandGraphicsWindowBackingStorage {
         externalBufferPresenter = GPUWindowPresenter(onImplicitRelease: onImplicitRelease)
         backingRuntimePath = initialRuntimePath
         releaseRetirementNotifier.setHandler { [weak self] in
+            guard let self else { return }
             // swiftlint:disable:next no_unstructured_task
-            Task {
-                await self?.synchronizeReleasedExternalBuffers()
+            Task { [self] in
+                await synchronizeReleasedExternalBuffers()
             }
         }
     }
