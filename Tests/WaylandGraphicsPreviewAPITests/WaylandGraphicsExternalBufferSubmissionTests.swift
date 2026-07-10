@@ -365,6 +365,175 @@ struct WaylandGraphicsExternalBufferPreflightTests {
 }
 
 @Suite
+struct ExternalImportTransactionTests {
+    @Test
+    func bufferImportFailureUsesSubmissionPreparationStage() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .clientFailure)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        do {
+            _ = try await registerTestExternalBuffer(
+                storage: storage,
+                lease: lease,
+                descriptor: try testExternalDescriptor()
+            )
+            Issue.record("expected imported buffer failure")
+        } catch WaylandGraphicsError.submissionFailed(
+            .display(
+                error: .presentationTimeUnavailable,
+                operation: nil,
+                stage: .submissionPreparation
+            )
+        ) {
+            // Registration failures are submission preparation diagnostics.
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        await lease.cancel()
+        try await storage.closeForTesting()
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func closeDuringBufferImportDestroysUnpublishedResource() async throws {
+        let barrier = ExternalImportBarrier()
+        let destroyRecorder = ExternalBufferDestroyRecorder()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            importHooks: ExternalImportTestHooks(
+                bufferBarrier: barrier,
+                destroyRecorder: destroyRecorder
+            )
+        )
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let contract = lease.contract
+        let configurationID = try #require(contract.recommendedExternalConfigurationID)
+        await lease.cancel()
+
+        // swiftlint:disable:next no_unstructured_task
+        let registration = Task {
+            try await storage.registerExternalBuffer(
+                try testExternalDescriptor(),
+                contract: contract,
+                configurationID: configurationID
+            )
+        }
+        await barrier.waitUntilSuspended()
+        try await storage.closeForTesting()
+        await barrier.resume()
+
+        do {
+            _ = try await registration.value
+            Issue.record("expected backing close to invalidate suspended import")
+        } catch WaylandGraphicsError.backingClosed {
+            // Stable terminal error for the invalidated registration.
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(destroyRecorder.count == 1)
+        #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        #expect(await window.closeRequests == 1)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func generationChangeDuringBufferImportRejectsAndDestroysResource() async throws {
+        let barrier = ExternalImportBarrier()
+        let destroyRecorder = ExternalBufferDestroyRecorder()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            importHooks: ExternalImportTestHooks(
+                bufferBarrier: barrier,
+                destroyRecorder: destroyRecorder
+            )
+        )
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let staleContract = lease.contract
+        let configurationID = try #require(staleContract.recommendedExternalConfigurationID)
+        await lease.cancel()
+
+        // swiftlint:disable:next no_unstructured_task
+        let registration = Task {
+            try await storage.registerExternalBuffer(
+                try testExternalDescriptor(),
+                contract: staleContract,
+                configurationID: configurationID
+            )
+        }
+        await barrier.waitUntilSuspended()
+        await window.setGeometry(try testGraphicsSurfaceGeometry(width: 5, height: 4))
+        let currentLease = try await storage.nextFrame()
+        let currentGeneration = currentLease.contract.generation
+        await currentLease.cancel()
+        await barrier.resume()
+
+        do {
+            _ = try await registration.value
+            Issue.record("expected generation change to invalidate suspended import")
+        } catch WaylandGraphicsError.staleFrameContract(let rendered, let current) {
+            #expect(rendered == staleContract.generation)
+            #expect(current == currentGeneration)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(destroyRecorder.count == 1)
+        #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        try await storage.closeForTesting()
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func closeDuringTimelineImportRemovesUnpublishedResource() async throws {
+        let barrier = ExternalImportBarrier()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            surfaceFeedbackSynchronization: .explicitAvailable(version: 1),
+            importHooks: ExternalImportTestHooks(timelineBarrier: barrier)
+        )
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationMode: .externalGPU,
+                fallbackPolicy: .requireGPU,
+                synchronizationPolicy: .preferExplicit
+            )
+        )
+
+        // swiftlint:disable:next no_unstructured_task
+        let timelineImport = Task {
+            try await storage.importExternalSyncTimeline(testOwnedFileDescriptor())
+        }
+        await barrier.waitUntilSuspended()
+        let importedIdentities = await window.importedSynchronizationTimelineIdentities()
+        #expect(importedIdentities.count == 1)
+        try await storage.closeForTesting()
+        await barrier.resume()
+
+        do {
+            _ = try await timelineImport.value
+            Issue.record("expected backing close to invalidate suspended timeline import")
+        } catch WaylandGraphicsError.backingClosed {
+            // Stable terminal error for the invalidated import.
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        #expect(await storage.importedExternalSyncTimelineIDsForTesting().isEmpty)
+        #expect(
+            await window.removedSynchronizationTimelineIdentities() == importedIdentities
+        )
+        #expect(await window.closeRequests == 1)
+    }
+}
+
+@Suite
 struct ExternalBufferSyncTests {
     @Test
     func implicitOnlyAcquireSubmitFails() async throws {
@@ -1767,9 +1936,76 @@ private actor ExternalBufferPresentationHook {
     }
 }
 
+private actor ExternalImportBarrier {
+    private var isSuspended = false
+    private var isResumed = false
+    private var suspensionWaiters: [CheckedContinuation<Void, Never>] = []
+    private var resumeWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func suspend() async {
+        isSuspended = true
+        let waiters = suspensionWaiters
+        suspensionWaiters.removeAll()
+        for waiter in waiters {
+            waiter.resume()
+        }
+        guard !isResumed else { return }
+
+        await withCheckedContinuation { continuation in
+            resumeWaiters.append(continuation)
+        }
+    }
+
+    func waitUntilSuspended() async {
+        guard !isSuspended else { return }
+
+        await withCheckedContinuation { continuation in
+            suspensionWaiters.append(continuation)
+        }
+    }
+
+    func resume() {
+        isResumed = true
+        let waiters = resumeWaiters
+        resumeWaiters.removeAll()
+        for waiter in waiters {
+            waiter.resume()
+        }
+    }
+}
+
+private final class ExternalBufferDestroyRecorder: Sendable {
+    private let countStorage = Mutex(0)
+
+    var count: Int {
+        countStorage.withLock { $0 }
+    }
+
+    func recordDestroy() {
+        countStorage.withLock { $0 += 1 }
+    }
+}
+
+private struct ExternalImportTestHooks: Sendable {
+    let bufferBarrier: ExternalImportBarrier?
+    let timelineBarrier: ExternalImportBarrier?
+    let destroyRecorder: ExternalBufferDestroyRecorder?
+
+    init(
+        bufferBarrier: ExternalImportBarrier? = nil,
+        timelineBarrier: ExternalImportBarrier? = nil,
+        destroyRecorder: ExternalBufferDestroyRecorder? = nil
+    ) {
+        self.bufferBarrier = bufferBarrier
+        self.timelineBarrier = timelineBarrier
+        self.destroyRecorder = destroyRecorder
+    }
+}
+
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     enum ImportBehavior: Sendable {
         case fail
+        case clientFailure
         case succeed
     }
 
@@ -1796,6 +2032,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private let surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
     private let includeDistinctDuplicateSurfaceFeedback: Bool
     private let presentationHook: (@Sendable () async -> Void)?
+    private let importHooks: ExternalImportTestHooks
 
     init(
         windowID backingWindowID: WindowID = WindowID(rawValue: 910),
@@ -1805,7 +2042,8 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
             SurfaceSynchronizationCapability? = .implicitOnly,
         includeDistinctDuplicateSurfaceFeedback includeDistinctFeedbackDuplicates:
             Bool = false,
-        presentationHook requestedPresentationHook: (@Sendable () async -> Void)? = nil
+        presentationHook requestedPresentationHook: (@Sendable () async -> Void)? = nil,
+        importHooks requestedImportHooks: ExternalImportTestHooks = ExternalImportTestHooks()
     ) throws {
         id = backingWindowID
         geometryValue = try testGraphicsSurfaceGeometry()
@@ -1814,6 +2052,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         surfaceFeedbackSynchronization = requestedSurfaceFeedbackSynchronization
         includeDistinctDuplicateSurfaceFeedback = includeDistinctFeedbackDuplicates
         presentationHook = requestedPresentationHook
+        importHooks = requestedImportHooks
     }
 
     var geometry: SurfaceGeometry {
@@ -1858,12 +2097,18 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         } catch {
             _ = error
         }
+        if let barrier = importHooks.bufferBarrier {
+            await barrier.suspend()
+        }
         switch importBehavior {
         case .fail:
             throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        case .clientFailure:
+            throw ClientError.display(.presentationTimeUnavailable)
         case .succeed:
             let buffer = try testRawLinuxDmabufBuffer(
-                pointer: UInt(0xE0_000 + importRequests)
+                pointer: UInt(0xE0_000 + importRequests),
+                destroyRecorder: importHooks.destroyRecorder
             )
             importedBuffers.append(buffer)
             return buffer
@@ -1876,6 +2121,9 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     ) async throws {
         fileDescriptor.close()
         importedSyncTimelineIdentities.append(identity)
+        if let barrier = importHooks.timelineBarrier {
+            await barrier.suspend()
+        }
     }
 
     func removeGraphicsPreviewSynchronizationTimeline(
@@ -2216,9 +2464,14 @@ private func registerTestExternalBuffer(
     )
 }
 
-private func testRawLinuxDmabufBuffer(pointer rawPointer: UInt) throws -> RawLinuxDmabufBuffer {
+private func testRawLinuxDmabufBuffer(
+    pointer rawPointer: UInt,
+    destroyRecorder: ExternalBufferDestroyRecorder? = nil
+) throws -> RawLinuxDmabufBuffer {
     let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
-    return unsafe RawLinuxDmabufBuffer(testingPointer: pointer)
+    return unsafe RawLinuxDmabufBuffer(testingPointer: pointer) {
+        destroyRecorder?.recordDestroy()
+    }
 }
 
 private func testPreviewBufferPresentationResult(

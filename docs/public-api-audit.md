@@ -374,6 +374,10 @@ Current preview contract:
   the renderer to keep its allocation alive until backing close; explicit
   release polling failure automatically fails the external runtime path and
   closes the backing before completing that receipt.
+- Dma-buf registration and sync-timeline import revalidate backing epoch, window
+  identity, surface generation, synchronization, and external configuration
+  after suspension. Invalidated imports destroy or remove unpublished raw
+  resources and return a typed closed-backing or stale-contract error.
 - External-buffer receipts correlate presentation feedback to the same
   submission and buffer IDs as the release receipt. The presentation waiter is
   independent from release, completes exactly once when requested, and never

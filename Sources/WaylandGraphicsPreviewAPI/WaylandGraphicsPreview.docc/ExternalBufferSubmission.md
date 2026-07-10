@@ -45,6 +45,12 @@ descriptor access.
 
 Registration imports a descriptor once. Repeated frame submissions reuse the
 registered WCK-side buffer and do not re-import the same renderer image.
+Registration is an atomic transaction scoped to the backing, window, frame
+generation, and selected external configuration. If any of those facts changes
+while the dma-buf import is suspended, WCK destroys the unpublished imported
+buffer and returns `backingClosed` or `staleFrameContract` instead of publishing
+a handle. Sync-timeline import follows the same rule and removes an unpublished
+compositor timeline mapping when its transaction becomes stale.
 
 ## Release Authority
 
