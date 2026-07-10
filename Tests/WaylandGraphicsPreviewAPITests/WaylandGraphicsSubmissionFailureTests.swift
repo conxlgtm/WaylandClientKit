@@ -300,7 +300,7 @@ struct WaylandGraphicsSoftwarePacingSubmissionTests {
                 reason: .forcedSoftware
             ),
             configuration: WaylandGraphicsConfiguration(
-                backingPreference: .software,
+                presentationPolicy: .software,
                 pacingPolicy: .preferFIFO
             )
         )
@@ -322,7 +322,7 @@ struct WaylandGraphicsSoftwarePacingSubmissionTests {
                 reason: .forcedSoftware
             ),
             configuration: WaylandGraphicsConfiguration(
-                backingPreference: .software,
+                presentationPolicy: .software,
                 pacingPolicy: .preferFIFO
             )
         )
@@ -351,7 +351,7 @@ struct WaylandGraphicsSoftwarePacingSubmissionTests {
                 reason: .forcedSoftware
             ),
             configuration: WaylandGraphicsConfiguration(
-                backingPreference: .software,
+                presentationPolicy: .software,
                 pacingPolicy: .preferFIFO
             )
         )

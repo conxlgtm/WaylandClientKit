@@ -931,6 +931,31 @@ private func currentExecutableURL(context: ToolContext) throws -> URL {
         runner: context.runner)
 }
 
+private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) throws {
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "waylandclientkit-invalid-graphics-policy")
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+    let result = try context.swift.runSwift(
+        [
+            "build", "--disable-index-store", "--package-path",
+            context.repository.url("IntegrationTests/InvalidGraphicsPolicyClient").path,
+            "--scratch-path", scratch.path,
+        ],
+        repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context),
+        requireSuccess: false
+    )
+    guard result.exitCode != 0 else {
+        throw ToolError("invalid graphics policy client unexpectedly compiled")
+    }
+    let diagnostics = result.stdout + result.stderr
+    guard diagnostics.contains("presentationMode"), diagnostics.contains("fallbackPolicy") else {
+        throw ToolError(
+            "invalid graphics policy client failed before the contradictory policy was checked"
+        )
+    }
+}
+
 private func runSmokeLive(context: ToolContext) throws {
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
@@ -1051,6 +1076,7 @@ private func runRequired(context: ToolContext) throws {
     try runIntegrationPackage(
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
+    try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
 }
 
 private func runCheckBase(context: ToolContext) throws {

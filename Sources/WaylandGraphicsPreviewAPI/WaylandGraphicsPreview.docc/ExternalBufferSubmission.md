@@ -15,7 +15,7 @@ descriptor access.
 ## Registered Public Flow
 
 1. Create a ``WaylandGraphicsWindowBacking`` with
-   `WaylandGraphicsPresentationMode.externalGPU`.
+   `WaylandGraphicsPresentationPolicy.externalGPU(fallback:)`.
 2. Await ``WaylandGraphicsWindowBacking/nextFrame()``.
 3. Read ``WaylandGraphicsFrameLease/contract`` before allocating or rendering.
 4. Pick one exact ``WaylandGraphicsExternalBufferConfiguration`` from the

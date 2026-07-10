@@ -125,7 +125,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
             window: window,
             runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .requireExplicit
             )
         )
@@ -155,7 +155,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
             window: window,
             runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .requireExplicit
             )
         )
@@ -183,7 +183,9 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 
     @Test
-    func externalGPUFallbackPolicyFailsLeaseWhenSurfaceFeedbackFails() async throws {
+    func externalGPUSoftwareFallbackReturnsSoftwareLeaseWhenSurfaceFeedbackFails()
+        async throws
+    {
         let window = try ExternalBufferFakeManagedWindow(
             surfaceFeedbackSynchronization: nil
         )
@@ -191,17 +193,19 @@ struct WaylandGraphicsExternalBufferPreflightTests {
             window: window,
             runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .preferGPUFallbackToSoftware
+                presentationPolicy: .externalGPU(fallback: .software)
             )
         )
 
-        await #expect(
-            throws: WaylandGraphicsError.unavailable(.surfaceFeedbackUnavailable)
-        ) {
-            _ = try await storage.nextFrame()
-        }
+        let lease = try await storage.nextFrame()
 
+        #expect(lease.contract.externalBufferConfigurations.isEmpty)
+        #expect(
+            await storage.runtimePathSnapshotForTesting().backing
+                == .fallback(.surfaceFeedbackUnavailable)
+        )
+
+        await lease.cancel()
         try await storage.closeForTesting()
     }
 
@@ -239,13 +243,13 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 
     @Test
-    func forceSoftwareExternalBufferFailsBeforeImport() async throws {
+    func softwarePolicyOmitsExternalBufferConfigurations() async throws {
         let window = try ExternalBufferFakeManagedWindow()
         let storage = WaylandGraphicsWindowBackingStorage(
             window: window,
             runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
             configuration: WaylandGraphicsConfiguration(
-                fallbackPolicy: .forceSoftware
+                presentationPolicy: .software
             )
         )
         let lease = try await storage.nextFrame()
@@ -346,7 +350,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
                 capabilities: gpuCapableSurfaceCapabilities(),
                 reason: .forcedSoftware
             ),
-            configuration: WaylandGraphicsConfiguration(backingPreference: .software)
+            configuration: WaylandGraphicsConfiguration(presentationPolicy: .software)
         )
         let lease = try await storage.nextFrame()
         let schedule = WaylandGraphicsFrameSchedule(
@@ -500,8 +504,7 @@ struct ExternalImportTransactionTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .preferExplicit
             )
         )
@@ -541,8 +544,7 @@ struct ExternalBufferSyncTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .implicitOnly
             )
         )
@@ -578,8 +580,7 @@ struct ExternalBufferSyncTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .preferExplicit
             )
         )
@@ -643,8 +644,7 @@ struct ExternalBufferSyncTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .preferExplicit
             )
         )
@@ -693,8 +693,7 @@ struct ExternalBufferSyncTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .preferExplicit
             )
         )
@@ -1001,8 +1000,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .implicitOnly
             )
         )
@@ -1164,8 +1162,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 metadataPolicy: .preferAvailable
             )
         )
@@ -1536,8 +1533,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .preferExplicit
             )
         )
@@ -1714,8 +1710,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             let storage = externalBufferStorage(
                 window: window,
                 configuration: WaylandGraphicsConfiguration(
-                    presentationMode: .externalGPU,
-                    fallbackPolicy: .requireGPU,
+                    presentationPolicy: .externalGPU(fallback: .unavailable),
                     synchronizationPolicy: .preferExplicit
                 )
             )
@@ -1800,8 +1795,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .preferExplicit
             )
         )
@@ -1840,8 +1834,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(
             window: window,
             configuration: WaylandGraphicsConfiguration(
-                presentationMode: .externalGPU,
-                fallbackPolicy: .requireGPU,
+                presentationPolicy: .externalGPU(fallback: .unavailable),
                 synchronizationPolicy: .preferExplicit
             )
         )
@@ -2285,8 +2278,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 private func externalBufferStorage(
     window: ExternalBufferFakeManagedWindow,
     configuration: WaylandGraphicsConfiguration = WaylandGraphicsConfiguration(
-        presentationMode: .externalGPU,
-        fallbackPolicy: .requireGPU
+        presentationPolicy: .externalGPU(fallback: .unavailable)
     )
 ) -> WaylandGraphicsWindowBackingStorage {
     WaylandGraphicsWindowBackingStorage(
@@ -2348,8 +2340,7 @@ private func explicitReleaseSubmissionFixture(
     let storage = externalBufferStorage(
         window: window,
         configuration: WaylandGraphicsConfiguration(
-            presentationMode: .externalGPU,
-            fallbackPolicy: .requireGPU,
+            presentationPolicy: .externalGPU(fallback: .unavailable),
             synchronizationPolicy: .preferExplicit
         )
     )
@@ -2394,8 +2385,7 @@ private func pendingReleaseAuthorityLossFixture(
     let storage = externalBufferStorage(
         window: window,
         configuration: WaylandGraphicsConfiguration(
-            presentationMode: .externalGPU,
-            fallbackPolicy: .requireGPU,
+            presentationPolicy: .externalGPU(fallback: .unavailable),
             synchronizationPolicy: .preferExplicit
         )
     )

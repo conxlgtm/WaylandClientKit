@@ -280,17 +280,15 @@ Intentionally public:
 - `WaylandGraphicsFramePacingAvailability`
 - `WaylandGraphicsColorMetadataAvailability`
 - `WaylandGraphicsSurfaceCapabilities`
-- `WaylandGraphicsFallbackPolicy`
-- `WaylandGraphicsFallbackReason`
-- `WaylandGraphicsUnavailableReason`
+- `WaylandGraphicsPresentationPolicy`
+- `WaylandGraphicsFallbackDisposition`
+- `WaylandGraphicsReason`
 - `WaylandGraphicsBackingDecision`
 - `WaylandGraphicsRuntimeStatus`
 - `WaylandGraphicsPacingStatus`
 - `WaylandGraphicsMetadataStatus`
 - `WaylandGraphicsRuntimePath`
 - `WaylandGraphicsConfiguration`
-- `WaylandGraphicsBackingKind`
-- `WaylandGraphicsPresentationMode`
 - `WaylandGraphicsSynchronizationPolicy`
 - `WaylandGraphicsPacingPolicy`
 - `WaylandGraphicsFrameSchedule`
@@ -350,8 +348,14 @@ Current preview contract:
 - The product reports renderer-neutral graphics capabilities, projected and
   observed runtime-path facts, software fallback decisions, and required-GPU
   unavailability.
-- `WaylandGraphicsBackingKind` lets callers request software backing or
-  managed GPU backing without exposing raw buffer, device, EGL, or sync handles.
+- `WaylandGraphicsPresentationPolicy` is the sole source of truth for software,
+  managed GPU, or external GPU presentation and its fallback disposition.
+  Contradictory mode/fallback combinations and the former lossy mutable backing
+  projection are not public. This is an intentional source break in the preview
+  product.
+- `WaylandGraphicsReason` is shared by fallback and failed runtime statuses;
+  their status case records the disposition without a duplicate reason enum or
+  duplicate mapping switch.
 - The managed preview submission path can create a window backing, lease a
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
@@ -402,8 +406,8 @@ Current preview contract:
   per-frame caller-visible preview scheduling inputs. `implicitOnly` avoids
   explicit sync objects, `preferExplicit` falls back to implicit sync with a
   runtime reason only before explicit sync is installed or active on the
-  surface, `requireExplicit` fails instead of silently falling back, including
-  configurations that request software backing or forced software fallback.
+  surface, and `requireExplicit` fails instead of silently falling back. A
+  software presentation policy cannot request explicit synchronization.
   `fifo` and `commitTiming` apply submit constraints on managed GPU
   and software/fallback commits when advertised, FIFO commits prime with
   `set_barrier` before later commits wait and re-prime. Missing pacing

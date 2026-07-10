@@ -1148,9 +1148,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         contract frameContract: WaylandGraphicsFrameContract,
         configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
     ) throws -> WaylandGraphicsExternalBufferConfiguration {
-        guard configuration.presentationMode == .externalGPU,
-            configuration.fallbackPolicy != .forceSoftware
-        else {
+        guard case .externalGPU = configuration.presentationPolicy else {
             throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
         }
         guard frameContract.windowID == window.id else {
@@ -1993,7 +1991,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             return .backingClosed
         }
         if let committedFailure = error as? CommittedManagedGPUFrameFailure {
-            return .unavailable(WaylandGraphicsUnavailableReason(committedFailure.failure))
+            return .unavailable(WaylandGraphicsReason(committedFailure.failure))
         }
         if let graphicsError = error as? WaylandGraphicsError {
             return graphicsError
@@ -2047,7 +2045,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             return
         }
 
-        let failure = WaylandGraphicsUnavailableReason.explicitSyncReleaseFailed
+        let failure = WaylandGraphicsReason.explicitSyncReleaseFailed
         backingRuntimePath = Self.runtimePath(
             Self.runtimePath(backingRuntimePath, externalBufferFailure: failure),
             explicitSync: .failed(failure)
@@ -2300,9 +2298,7 @@ extension WaylandGraphicsWindowBackingStorage {
         guard managedGPUBacking != nil else {
             return false
         }
-        guard configuration.presentationMode == .managedGPU,
-            configuration.fallbackPolicy != .forceSoftware
-        else {
+        guard case .managedGPU = configuration.presentationPolicy else {
             return false
         }
         guard case .fallback = backingRuntimePath.backing else {
@@ -2313,8 +2309,13 @@ extension WaylandGraphicsWindowBackingStorage {
     }
 
     private var shouldAttemptExternalBufferPresentation: Bool {
-        configuration.presentationMode == .externalGPU
-            && configuration.fallbackPolicy != .forceSoftware
+        guard case .externalGPU = configuration.presentationPolicy else {
+            return false
+        }
+        guard case .fallback = backingRuntimePath.backing else {
+            return true
+        }
+        return false
     }
 
     private func handleManagedGPUFailure(
@@ -2322,31 +2323,31 @@ extension WaylandGraphicsWindowBackingStorage {
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) throws {
         if error.committedFrameWasPresented {
-            let reason = WaylandGraphicsUnavailableReason(error.failure)
+            let reason = WaylandGraphicsReason(error.failure)
             updateBackingRuntimeStatus(.failed(reason))
             throw CommittedManagedGPUFrameFailure(error)
         }
 
         guard effectiveConfiguration.synchronizationPolicy != .requireExplicit else {
-            let reason = WaylandGraphicsUnavailableReason(error.failure)
+            let reason = WaylandGraphicsReason(error.failure)
             updateBackingRuntimeStatus(.failed(reason))
             throw WaylandGraphicsError.unavailable(reason)
         }
 
-        switch configuration.fallbackPolicy {
-        case .preferGPUFallbackToSoftware:
-            let reason = WaylandGraphicsFallbackReason(error.fallbackReason)
+        switch configuration.presentationPolicy {
+        case .managedGPU(fallback: .software):
+            let reason = WaylandGraphicsReason(error.fallbackReason)
             updateBackingRuntimeStatus(.fallback(reason))
             backingRuntimePath = Self.runtimePath(
                 backingRuntimePath,
                 fallbackExplicitSyncIfNeeded: reason
             )
-        case .requireGPU:
-            let reason = WaylandGraphicsUnavailableReason(error.failure)
+        case .managedGPU(fallback: .unavailable):
+            let reason = WaylandGraphicsReason(error.failure)
             updateBackingRuntimeStatus(.failed(reason))
             throw WaylandGraphicsError.unavailable(reason)
-        case .forceSoftware:
-            updateBackingRuntimeStatus(.fallback(.forcedSoftware))
+        case .software, .externalGPU:
+            preconditionFailure("managed GPU failure without a managed GPU policy")
         }
     }
 
@@ -2386,9 +2387,7 @@ extension WaylandGraphicsWindowBackingStorage {
         guard backingRuntimePath.capabilities.dmabuf.isAvailable else {
             throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
         }
-        guard effectiveConfiguration.presentationMode == .externalGPU,
-            effectiveConfiguration.fallbackPolicy != .forceSoftware
-        else {
+        guard case .externalGPU = effectiveConfiguration.presentationPolicy else {
             throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
         }
         guard externalBuffer.generation == currentSurfaceGeneration else {
@@ -2723,12 +2722,22 @@ extension WaylandGraphicsWindowBackingStorage {
         _ error: GraphicsPreviewSurfaceFeedbackError
     ) throws {
         _ = error
-        let unavailableReason = WaylandGraphicsUnavailableReason.surfaceFeedbackUnavailable
-        backingRuntimePath = Self.runtimePath(
-            Self.runtimePath(backingRuntimePath, backingUnavailable: unavailableReason),
-            surfaceFeedback: .failed(unavailableReason)
-        )
-        throw WaylandGraphicsError.unavailable(unavailableReason)
+        let reason = WaylandGraphicsReason.surfaceFeedbackUnavailable
+        switch configuration.presentationPolicy {
+        case .externalGPU(fallback: .software):
+            backingRuntimePath = Self.runtimePath(
+                Self.runtimePath(backingRuntimePath, backing: .fallback(reason)),
+                surfaceFeedback: .failed(reason)
+            )
+        case .externalGPU(fallback: .unavailable):
+            backingRuntimePath = Self.runtimePath(
+                Self.runtimePath(backingRuntimePath, backingUnavailable: reason),
+                surfaceFeedback: .failed(reason)
+            )
+            throw WaylandGraphicsError.unavailable(reason)
+        case .software, .managedGPU:
+            preconditionFailure("external feedback failure without an external GPU policy")
+        }
     }
 
     private func nextExternalBufferSlotID() throws -> GBMBufferPoolSlotID {
@@ -2797,17 +2806,17 @@ extension WaylandGraphicsWindowBackingStorage {
         if let presenterError = error as? GPUWindowPresenterError {
             if let committed = presenterError.committedFrameFailure {
                 return WaylandGraphicsError.unavailable(
-                    WaylandGraphicsUnavailableReason(committed)
+                    WaylandGraphicsReason(committed)
                 )
             }
             switch presenterError {
             case .submitConstraints(let error):
                 return WaylandGraphicsError.unavailable(
-                    WaylandGraphicsUnavailableReason(GPUBackingFailure(error))
+                    WaylandGraphicsReason(GPUBackingFailure(error))
                 )
             case .metadata(let error):
                 return WaylandGraphicsError.unavailable(
-                    WaylandGraphicsUnavailableReason(
+                    WaylandGraphicsReason(
                         GPUBackingFailure.metadataRequiredButUnavailable(error)
                     )
                 )
@@ -2829,30 +2838,34 @@ extension WaylandGraphicsWindowBackingStorage {
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) throws {
         let shouldReject =
-            switch effectiveConfiguration.presentationMode {
+            switch effectiveConfiguration.presentationPolicy {
             case .software:
                 false
-            case .externalGPU:
+            case .externalGPU(fallback: .unavailable):
                 true
-            case .managedGPU:
-                if effectiveConfiguration.fallbackPolicy == .requireGPU {
-                    true
+            case .externalGPU(fallback: .software):
+                if case .fallback = backingRuntimePath.backing {
+                    false
                 } else {
-                    switch effectiveConfiguration.synchronizationPolicy {
-                    case .implicitOnly:
-                        false
-                    case .preferExplicit:
-                        Self.explicitSyncBlocksSoftwareFallback(
-                            backingRuntimePath.explicitSync
-                        )
-                    case .requireExplicit:
-                        true
-                    }
+                    true
+                }
+            case .managedGPU(fallback: .unavailable):
+                true
+            case .managedGPU(fallback: .software):
+                switch effectiveConfiguration.synchronizationPolicy {
+                case .implicitOnly:
+                    false
+                case .preferExplicit:
+                    Self.explicitSyncBlocksSoftwareFallback(
+                        backingRuntimePath.explicitSync
+                    )
+                case .requireExplicit:
+                    true
                 }
             }
 
         guard !shouldReject else {
-            let reason = WaylandGraphicsUnavailableReason.managedGPUSubmissionUnavailable
+            let reason = WaylandGraphicsReason.managedGPUSubmissionUnavailable
             backingRuntimePath = Self.runtimePath(backingRuntimePath, backingUnavailable: reason)
             throw WaylandGraphicsError.unavailable(reason)
         }

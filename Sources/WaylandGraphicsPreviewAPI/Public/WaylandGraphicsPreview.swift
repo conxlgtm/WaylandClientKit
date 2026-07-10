@@ -169,29 +169,28 @@ extension WaylandGraphicsProtocolAvailability {
     }
 }
 
-/// Policy for choosing between GPU backing and software fallback.
-public enum WaylandGraphicsFallbackPolicy: Equatable, Sendable {
-    case preferGPUFallbackToSoftware
-    case requireGPU
-    case forceSoftware
-
+extension WaylandGraphicsPresentationPolicy {
     public func decide(
         capabilities: WaylandGraphicsSurfaceCapabilities
     ) -> WaylandGraphicsBackingDecision {
         switch self {
-        case .forceSoftware:
+        case .software:
             return .software(.forcedSoftware)
-        case .preferGPUFallbackToSoftware where !capabilities.dmabuf.isAvailable:
-            return .software(.dmabufUnavailable)
-        case .requireGPU where !capabilities.dmabuf.isAvailable:
-            return .unavailable(.dmabufUnavailable)
-        case .preferGPUFallbackToSoftware, .requireGPU:
-            return .gpu(
-                WaylandGraphicsRuntimePath.projected(
-                    capabilities: capabilities,
-                    policy: self
+        case .managedGPU(let fallback), .externalGPU(let fallback):
+            guard !capabilities.dmabuf.isAvailable else {
+                return .gpu(
+                    WaylandGraphicsRuntimePath.projected(
+                        capabilities: capabilities,
+                        policy: self
+                    )
                 )
-            )
+            }
+            switch fallback {
+            case .software:
+                return .software(.dmabufUnavailable)
+            case .unavailable:
+                return .unavailable(.dmabufUnavailable)
+            }
         }
     }
 
@@ -200,43 +199,9 @@ public enum WaylandGraphicsFallbackPolicy: Equatable, Sendable {
     }
 }
 
-/// Reasons a graphics preview path can select software fallback.
-public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
+/// Reason a graphics preview path fell back or became unavailable.
+public enum WaylandGraphicsReason: Equatable, Sendable {
     case forcedSoftware
-    case dmabufUnavailable
-    case invalidExternalBufferDescriptor
-    case externalBufferImportFailed
-    case externalSynchronizationUnavailable
-    case managedGPUSubmissionUnavailable
-    case noCompatibleFormat
-    case noRenderNode
-    case gbmUnavailable
-    case eglUnavailable
-    case explicitSyncRequiredButUnavailable
-    case explicitSyncSetupFailed
-    case explicitSyncSubmissionFailed
-    case explicitSyncReleaseFailed
-    case metadataRequiredButUnavailable
-    case contentTypeUnavailable
-    case alphaModifierUnavailable
-    case colorRepresentationUnavailable
-    case colorRepresentationSupportPending
-    case colorManagementUnavailable
-    case invalidColorDescription
-    case presentationHintUnavailable
-    case presentationFeedbackUnavailable
-    case compositorRejectedBuffer
-    case surfaceFeedbackUnavailable
-    case gbmAllocationFailed
-    case fifoUnavailable
-    case commitTimingUnavailable
-    case commitTimingRejected
-    case commitFailed
-    case presentationTrackingFailed
-}
-
-/// Reasons GPU backing can be unavailable.
-public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case dmabufUnavailable
     case invalidExternalBufferDescriptor
     case externalBufferImportFailed
@@ -272,8 +237,8 @@ public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
 /// Renderer-neutral backing decision for a graphics-capable surface.
 public enum WaylandGraphicsBackingDecision: Equatable, Sendable {
     case gpu(WaylandGraphicsRuntimePath)
-    case software(WaylandGraphicsFallbackReason)
-    case unavailable(WaylandGraphicsUnavailableReason)
+    case software(WaylandGraphicsReason)
+    case unavailable(WaylandGraphicsReason)
 }
 
 /// Runtime status for one graphics path component.
@@ -283,8 +248,8 @@ public enum WaylandGraphicsRuntimeStatus: Equatable, Sendable {
     case advertised
     case configured
     case active
-    case failed(WaylandGraphicsUnavailableReason)
-    case fallback(WaylandGraphicsFallbackReason)
+    case failed(WaylandGraphicsReason)
+    case fallback(WaylandGraphicsReason)
 }
 
 /// Runtime status for frame pacing paths.
@@ -339,7 +304,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
     public let pacing: WaylandGraphicsPacingStatus
     public let metadata: WaylandGraphicsMetadataStatus
     public let presentationFeedback: WaylandGraphicsRuntimeStatus
-    public var fallback: WaylandGraphicsFallbackReason? {
+    public var fallback: WaylandGraphicsReason? {
         guard case .fallback(let reason) = backing else {
             return nil
         }
@@ -379,7 +344,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
 
     public static func projected(
         capabilities: WaylandCapabilities,
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
+        policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)
     ) -> Self {
         projected(
             capabilities: WaylandGraphicsSurfaceCapabilities(capabilities: capabilities),
@@ -389,7 +354,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
 
     public static func projected(
         capabilities: WaylandGraphicsSurfaceCapabilities,
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
+        policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)
     ) -> Self {
         let fallback = fallbackReason(
             capabilities: capabilities,
@@ -437,7 +402,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
 
     public static func softwareFallback(
         capabilities: WaylandGraphicsSurfaceCapabilities,
-        reason: WaylandGraphicsFallbackReason
+        reason: WaylandGraphicsReason
     ) -> Self {
         Self(
             capabilities: capabilities,
@@ -473,7 +438,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
 
     public static func unavailable(
         capabilities: WaylandGraphicsSurfaceCapabilities,
-        reason: WaylandGraphicsUnavailableReason
+        reason: WaylandGraphicsReason
     ) -> Self {
         Self(
             capabilities: capabilities,
@@ -509,8 +474,8 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
 
     private static func protocolStatus(
         _ availability: WaylandGraphicsProtocolAvailability,
-        fallback: WaylandGraphicsFallbackReason? = nil,
-        unavailable: WaylandGraphicsUnavailableReason? = nil
+        fallback: WaylandGraphicsReason? = nil,
+        unavailable: WaylandGraphicsReason? = nil
     ) -> WaylandGraphicsRuntimeStatus {
         if let unavailable {
             return .failed(unavailable)
@@ -529,8 +494,8 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
     }
 
     private static func backingStatus(
-        fallback: WaylandGraphicsFallbackReason?,
-        unavailable: WaylandGraphicsUnavailableReason?
+        fallback: WaylandGraphicsReason?,
+        unavailable: WaylandGraphicsReason?
     ) -> WaylandGraphicsRuntimeStatus {
         if let unavailable {
             return .failed(unavailable)
@@ -543,26 +508,35 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
 
     private static func fallbackReason(
         capabilities: WaylandGraphicsSurfaceCapabilities,
-        policy: WaylandGraphicsFallbackPolicy
-    ) -> WaylandGraphicsFallbackReason? {
-        switch policy {
-        case .forceSoftware:
+        policy: WaylandGraphicsPresentationPolicy
+    ) -> WaylandGraphicsReason? {
+        if policy == .software {
             return .forcedSoftware
-        case .preferGPUFallbackToSoftware where !capabilities.dmabuf.isAvailable:
+        }
+        guard !capabilities.dmabuf.isAvailable else {
+            return nil
+        }
+        switch policy {
+        case .software:
+            return .forcedSoftware
+        case .managedGPU(fallback: .software), .externalGPU(fallback: .software):
             return .dmabufUnavailable
-        case .preferGPUFallbackToSoftware, .requireGPU:
+        case .managedGPU, .externalGPU:
             return nil
         }
     }
 
     private static func unavailableReason(
         capabilities: WaylandGraphicsSurfaceCapabilities,
-        policy: WaylandGraphicsFallbackPolicy
-    ) -> WaylandGraphicsUnavailableReason? {
+        policy: WaylandGraphicsPresentationPolicy
+    ) -> WaylandGraphicsReason? {
+        guard !capabilities.dmabuf.isAvailable else {
+            return nil
+        }
         switch policy {
-        case .requireGPU where !capabilities.dmabuf.isAvailable:
+        case .managedGPU(fallback: .unavailable), .externalGPU(fallback: .unavailable):
             return .dmabufUnavailable
-        case .preferGPUFallbackToSoftware, .requireGPU, .forceSoftware:
+        case .software, .managedGPU, .externalGPU:
             return nil
         }
     }

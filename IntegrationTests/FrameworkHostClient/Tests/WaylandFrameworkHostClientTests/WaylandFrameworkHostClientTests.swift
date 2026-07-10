@@ -34,7 +34,7 @@ struct WaylandFrameworkHostClientTests {
             )
         )
         let graphicsConfiguration = WaylandGraphicsConfiguration(
-            fallbackPolicy: .forceSoftware,
+            presentationPolicy: .software,
             synchronizationPolicy: .implicitOnly,
             pacingPolicy: .none,
             metadataPolicy: .preferAvailable,
@@ -46,7 +46,7 @@ struct WaylandFrameworkHostClientTests {
         #expect(displayConfiguration.eventStreams == streams)
         #expect(windowConfiguration.initialSize.width.rawValue == 128)
         #expect(popupConfiguration.positioner.size.width.rawValue == 64)
-        #expect(graphicsConfiguration.fallbackPolicy == .forceSoftware)
+        #expect(graphicsConfiguration.presentationPolicy == .software)
         #expect(metadata.damage == .fullFrame)
     }
 
@@ -152,8 +152,10 @@ struct WaylandFrameworkHostClientTests {
 
             _ = try await display.capabilities()
             _ = try await display.graphicsSurfaceCapabilities()
-            _ = try await display.graphicsRuntimePath(policy: .forceSoftware)
-            _ = try await display.graphicsBackingDecision(policy: .requireGPU)
+            _ = try await display.graphicsRuntimePath(policy: .software)
+            _ = try await display.graphicsBackingDecision(
+                policy: .managedGPU(fallback: .unavailable)
+            )
 
             try await window.requestRedraw()
             if try await window.needsRedraw {

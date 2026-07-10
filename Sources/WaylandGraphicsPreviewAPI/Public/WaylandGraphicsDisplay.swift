@@ -11,7 +11,7 @@ extension WaylandDisplay {
 
     /// Returns a projected graphics runtime path without creating GPU resources.
     public func graphicsRuntimePath(
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
+        policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)
     ) throws -> WaylandGraphicsRuntimePath {
         try WaylandGraphicsRuntimePath.projected(
             capabilities: graphicsSurfaceCapabilities(),
@@ -21,7 +21,7 @@ extension WaylandDisplay {
 
     /// Returns the projected graphics backing decision without creating GPU resources.
     public func graphicsBackingDecision(
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
+        policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)
     ) throws -> WaylandGraphicsBackingDecision {
         try policy.decide(capabilities: graphicsSurfaceCapabilities())
     }
@@ -57,33 +57,25 @@ extension WaylandDisplay {
     ) throws -> WaylandGraphicsRuntimePath {
         try configuration.validateManagedPreviewSupport(capabilities: capabilities)
 
-        switch configuration.presentationMode {
+        switch configuration.presentationPolicy {
         case .software:
             return .softwareFallback(capabilities: capabilities, reason: .forcedSoftware)
-        case .managedGPU:
-            break
-        case .externalGPU:
-            guard configuration.fallbackPolicy != .forceSoftware else {
-                throw WaylandGraphicsError.unavailable(
-                    .managedGPUSubmissionUnavailable
+        case .managedGPU(let fallback), .externalGPU(let fallback):
+            guard !capabilities.dmabuf.isAvailable else {
+                return .projected(
+                    capabilities: capabilities,
+                    policy: configuration.presentationPolicy
                 )
             }
-            guard capabilities.dmabuf.isAvailable else {
+            switch fallback {
+            case .software:
+                return .softwareFallback(
+                    capabilities: capabilities,
+                    reason: .dmabufUnavailable
+                )
+            case .unavailable:
                 throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
             }
-        }
-
-        switch configuration.fallbackPolicy {
-        case .forceSoftware:
-            return .softwareFallback(capabilities: capabilities, reason: .forcedSoftware)
-        case .preferGPUFallbackToSoftware where !capabilities.dmabuf.isAvailable:
-            return .softwareFallback(capabilities: capabilities, reason: .dmabufUnavailable)
-        case .requireGPU where !capabilities.dmabuf.isAvailable:
-            throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
-        case .preferGPUFallbackToSoftware:
-            return .projected(capabilities: capabilities, policy: .preferGPUFallbackToSoftware)
-        case .requireGPU:
-            return .projected(capabilities: capabilities, policy: .requireGPU)
         }
     }
 
@@ -91,9 +83,7 @@ extension WaylandDisplay {
         runtimePath: WaylandGraphicsRuntimePath,
         configuration: WaylandGraphicsConfiguration
     ) -> Bool {
-        guard configuration.presentationMode == .managedGPU,
-            configuration.fallbackPolicy != .forceSoftware
-        else {
+        guard case .managedGPU = configuration.presentationPolicy else {
             return false
         }
 

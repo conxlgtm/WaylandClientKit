@@ -141,9 +141,9 @@ swift run wck protocols verify-generated
 ```
 
 The cheap gate handles fast static checks. The required pull-request gate adds
-the semantic public API baseline, strict build, unit tests, and all external
-integration packages. Full checks add DocC, sanitizers, release builds, and
-live/headless smoke paths.
+the semantic public API baseline, strict build, unit tests, all external
+integration packages, and an expected-failure graphics policy client. Full
+checks add DocC, sanitizers, release builds, and live/headless smoke paths.
 
 See [Tooling](docs/tooling.md) and [Protocol Generation](docs/generation.md) for
 details.

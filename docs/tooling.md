@@ -80,8 +80,10 @@ signal and does not prove that the library products compile.
 
 `swift run wck ci required` verifies the compiler-derived public API baseline,
 performs the strict-concurrency build, runs unit tests, and builds and tests all
-four external integration packages. Pull requests must pass the
-`check / required` status before merge.
+four external integration packages. It also builds an expected-failure graphics
+client and verifies that the removed split presentation/fallback initializer is
+rejected, so contradictory graphics configurations cannot return unnoticed.
+Pull requests must pass the `check / required` status before merge.
 
 `swift run wck ci check` adds documentation and DocC verification to the cheap
 and required gates. Scheduled and manually dispatched full workflows also run

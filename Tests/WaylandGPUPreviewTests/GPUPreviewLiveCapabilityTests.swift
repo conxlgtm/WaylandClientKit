@@ -40,12 +40,13 @@ struct GPUPreviewLiveCapabilityTests {
             let runtimePath = WaylandGraphicsRuntimePath.projected(
                 capabilities: capabilities
             )
-            let decision = WaylandGraphicsFallbackPolicy
-                .preferGPUFallbackToSoftware
+            let decision =
+                WaylandGraphicsPresentationPolicy
+                .managedGPU(fallback: .software)
                 .decide(capabilities: capabilities)
             let forcedSoftwarePath = WaylandGraphicsRuntimePath.projected(
                 capabilities: capabilities,
-                policy: .forceSoftware
+                policy: .software
             )
 
             #expect(runtimePath.capabilities == capabilities)
@@ -86,7 +87,7 @@ struct GPUPreviewLiveCapabilityTests {
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: try graphicsPreviewTestWindowConfiguration(),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    presentationPolicy: .software
                 )
             )
             let lease = try await backing.nextFrame()
@@ -108,7 +109,7 @@ struct GPUPreviewLiveCapabilityTests {
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: try graphicsPreviewTestWindowConfiguration(),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    presentationPolicy: .software
                 )
             )
 
@@ -128,7 +129,7 @@ struct GPUPreviewLiveCapabilityTests {
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: try graphicsPreviewTestWindowConfiguration(),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    presentationPolicy: .software
                 )
             )
 
@@ -148,7 +149,7 @@ struct GPUPreviewLiveCapabilityTests {
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: try graphicsPreviewTestWindowConfiguration(),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    presentationPolicy: .software
                 )
             )
             let lease = try await backing.nextFrame()
@@ -169,7 +170,7 @@ struct GPUPreviewLiveCapabilityTests {
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: try graphicsPreviewTestWindowConfiguration(),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    presentationPolicy: .software
                 )
             )
             let lease = try await backing.nextFrame()
@@ -192,7 +193,7 @@ struct GPUPreviewLiveCapabilityTests {
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: try graphicsPreviewTestWindowConfiguration(),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    presentationPolicy: .software
                 )
             )
             let failedLease = try await backing.nextFrame()
@@ -219,7 +220,7 @@ struct GPUPreviewLiveCapabilityTests {
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: try graphicsPreviewTestWindowConfiguration(),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    presentationPolicy: .software
                 )
             )
 

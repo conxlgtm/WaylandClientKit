@@ -16,17 +16,17 @@ and set the next barrier.
 
 ## Policies
 
-- `WaylandGraphicsFallbackPolicy.preferGPUFallbackToSoftware` attempts managed
-  GPU clear-frame presentation when requested and falls back to software with a typed
-  ``WaylandGraphicsFallbackReason``.
-- `WaylandGraphicsFallbackPolicy.requireGPU` attempts the requested GPU
-  presentation path and throws a typed unavailable/failure reason instead of
-  falling back.
-- `WaylandGraphicsFallbackPolicy.forceSoftware` never attempts managed GPU.
+- `WaylandGraphicsPresentationPolicy.managedGPU(fallback: .software)` attempts
+  managed GPU clear-frame presentation and falls back with a typed
+  ``WaylandGraphicsReason``.
+- A managed or external GPU policy with `fallback: .unavailable` throws a typed
+  unavailable/failure reason instead of falling back.
+- `WaylandGraphicsPresentationPolicy.software` never attempts GPU presentation.
 
-`WaylandGraphicsPresentationMode.externalGPU` is reserved for renderer-owned
-external-buffer presentation. Normal clear/software submissions in that mode do
-not silently become software submissions.
+`WaylandGraphicsPresentationPolicy.externalGPU(fallback:)` is reserved for
+renderer-owned external-buffer presentation. Normal clear/software submissions
+do not become software submissions unless the external path has actually
+entered its requested software fallback.
 
 Use ``WaylandGraphicsFrameResult/backing`` and
 ``WaylandGraphicsRuntimePath/fallback`` to tell whether a submitted frame used
@@ -34,7 +34,8 @@ fallback.
 
 ## Reasons
 
-Fallback can describe missing dmabuf, missing surface feedback, no compatible
+``WaylandGraphicsReason`` describes both fallback and unavailable outcomes. It
+can report missing dmabuf, missing surface feedback, no compatible
 format, no render node, GBM/EGL setup failure, dmabuf import or compositor
 commit failure, missing explicit sync, unsupported pacing, metadata or
 presentation-feedback requirements, or forced software.
