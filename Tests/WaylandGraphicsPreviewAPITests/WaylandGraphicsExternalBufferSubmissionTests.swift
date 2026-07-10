@@ -369,6 +369,133 @@ struct WaylandGraphicsExternalBufferPreflightTests {
 }
 
 @Suite
+struct ExternalSoftwareFallbackLifecycleTests {
+    @Test
+    func externalGPUSoftwareFallbackInvalidatesRegisteredBuffers() async throws {
+        let destroyRecorder = ExternalBufferDestroyRecorder()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            importHooks: ExternalImportTestHooks(destroyRecorder: destroyRecorder)
+        )
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationPolicy: .externalGPU(fallback: .software)
+            )
+        )
+        let externalLease = try await storage.nextFrame()
+        let configurationID = try #require(
+            externalLease.contract.recommendedExternalConfigurationID
+        )
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: externalLease,
+            descriptor: try testExternalDescriptor()
+        )
+        await externalLease.cancel()
+
+        await window.setSurfaceFeedbackSynchronization(nil)
+        let fallbackLease = try await storage.nextFrame()
+        let runtimePath = await storage.runtimePathSnapshotForTesting()
+
+        #expect(fallbackLease.contract.generation != externalLease.contract.generation)
+        #expect(fallbackLease.contract.externalBufferConfigurations.isEmpty)
+        #expect(runtimePath.backing == .fallback(.surfaceFeedbackUnavailable))
+        #expect(runtimePath.surfaceFeedback == .failed(.surfaceFeedbackUnavailable))
+        #expect(runtimePath.capabilities.dmabufFeedback == nil)
+        #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+        #expect(destroyRecorder.count == 1)
+
+        do {
+            _ = try await fallbackLease.reserveExternalBuffer(buffer)
+            Issue.record("expected invalidated external buffer rejection")
+        } catch let WaylandGraphicsError.externalBufferUnavailable(id, state) {
+            #expect(id == buffer.id)
+            #expect(state == .unregistered)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        do {
+            _ = try await storage.registerExternalBuffer(
+                try testExternalDescriptor(),
+                contract: externalLease.contract,
+                configurationID: configurationID
+            )
+            Issue.record("expected stale external contract rejection")
+        } catch WaylandGraphicsError.staleFrameContract {
+            #expect(await window.importRequests == 1)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        await fallbackLease.cancel()
+        try await storage.closeForTesting()
+        #expect(destroyRecorder.count == 1)
+    }
+
+    @Test
+    func externalGPUSoftwareFallbackQuarantinesSubmittedBufferUntilRelease() async throws {
+        let destroyRecorder = ExternalBufferDestroyRecorder()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            importHooks: ExternalImportTestHooks(destroyRecorder: destroyRecorder)
+        )
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationPolicy: .externalGPU(fallback: .software)
+            )
+        )
+        let externalLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: externalLease,
+            descriptor: try testExternalDescriptor()
+        )
+        let renderLease = try await externalLease.reserveExternalBuffer(buffer)
+        let receipt = try await renderLease.submit()
+
+        await window.setSurfaceFeedbackSynchronization(nil)
+        let fallbackLease = try await storage.nextFrame()
+
+        #expect(fallbackLease.contract.generation != externalLease.contract.generation)
+        #expect(fallbackLease.contract.externalBufferConfigurations.isEmpty)
+        #expect(await storage.externalBufferLifecycleSnapshotForTesting().retiring == 1)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+        #expect(destroyRecorder.count == .zero)
+
+        do {
+            _ = try await fallbackLease.reserveExternalBuffer(buffer)
+            Issue.record("expected submitted external buffer rejection after fallback")
+        } catch WaylandGraphicsError.staleFrameContract {
+            _ = ()
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await receipt.waitForRelease() == .released)
+        for _ in 0..<10 {
+            if await storage.externalBufferLifecycleSnapshotForTesting().total == 0 {
+                break
+            }
+            await Task.yield()
+        }
+
+        #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+        #expect(destroyRecorder.count == 1)
+
+        await fallbackLease.cancel()
+        try await storage.closeForTesting()
+        #expect(destroyRecorder.count == 1)
+    }
+}
+
+@Suite
 struct ExternalImportTransactionTests {
     @Test
     func bufferImportFailureUsesSubmissionPreparationStage() async throws {
@@ -2022,7 +2149,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private(set) var preparePresentationRequests = 0
     private var importedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
     private var removedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
-    private let surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
+    private var surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
     private let includeDistinctDuplicateSurfaceFeedback: Bool
     private let presentationHook: (@Sendable () async -> Void)?
     private let importHooks: ExternalImportTestHooks
@@ -2054,6 +2181,12 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 
     func setGeometry(_ geometry: SurfaceGeometry) {
         geometryValue = geometry
+    }
+
+    func setSurfaceFeedbackSynchronization(
+        _ synchronization: SurfaceSynchronizationCapability?
+    ) {
+        surfaceFeedbackSynchronization = synchronization
     }
 
     var isClosed: Bool {

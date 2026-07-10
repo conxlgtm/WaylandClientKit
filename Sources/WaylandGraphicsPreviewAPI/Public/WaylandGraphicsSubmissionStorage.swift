@@ -894,6 +894,9 @@ package actor WaylandGraphicsWindowBackingStorage {
     private func externalBufferConfigurationFacts()
         -> [ExternalBufferConfigurationFact]
     {
+        guard shouldAttemptExternalBufferPresentation else {
+            return []
+        }
         guard let feedback = backingRuntimePath.capabilities.dmabufFeedback else {
             return []
         }
@@ -956,6 +959,16 @@ package actor WaylandGraphicsWindowBackingStorage {
                 generation: generation
             )
         }
+    }
+
+    private func invalidateExternalBufferGeneration() async {
+        currentSurfaceGeneration = WaylandGraphicsSurfaceGeneration(
+            rawValue: currentSurfaceGeneration.rawValue + 1
+        )
+        lastContractGeometry = nil
+        lastContractConfigurationFacts = nil
+        lastContractSynchronization = nil
+        await retireStaleAvailableExternalBuffers()
     }
 
     private func retireStaleAvailableExternalBuffers() async {
@@ -1924,7 +1937,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                     surfaceFeedback: .active
                 )
             } catch let error as GraphicsPreviewSurfaceFeedbackError {
-                try handleExternalSurfaceFeedbackFailure(error)
+                try await handleExternalSurfaceFeedbackFailure(error)
             }
             return geometry
         }
@@ -2720,15 +2733,25 @@ extension WaylandGraphicsWindowBackingStorage {
 
     private func handleExternalSurfaceFeedbackFailure(
         _ error: GraphicsPreviewSurfaceFeedbackError
-    ) throws {
+    ) async throws {
         _ = error
         let reason = WaylandGraphicsReason.surfaceFeedbackUnavailable
         switch configuration.presentationPolicy {
         case .externalGPU(fallback: .software):
+            let capabilities = backingRuntimePath.capabilities
+            let capabilitiesWithoutFeedback = WaylandGraphicsSurfaceCapabilities(
+                dmabuf: capabilities.dmabuf,
+                explicitSync: capabilities.explicitSync,
+                framePacing: capabilities.framePacing,
+                colorMetadata: capabilities.colorMetadata,
+                presentationFeedback: capabilities.presentationFeedback
+            )
             backingRuntimePath = Self.runtimePath(
                 Self.runtimePath(backingRuntimePath, backing: .fallback(reason)),
+                capabilities: capabilitiesWithoutFeedback,
                 surfaceFeedback: .failed(reason)
             )
+            await invalidateExternalBufferGeneration()
         case .externalGPU(fallback: .unavailable):
             backingRuntimePath = Self.runtimePath(
                 Self.runtimePath(backingRuntimePath, backingUnavailable: reason),
