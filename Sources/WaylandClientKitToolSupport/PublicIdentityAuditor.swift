@@ -139,32 +139,38 @@ public struct PublicIdentityAuditor {
     }
 
     private func discoverDeclarations() throws -> [String: IdentityDeclaration] {
-        let root = repository.url("Sources/WaylandClient/Public")
+        let roots = [
+            repository.url("Sources/WaylandClient/Public"),
+            repository.url("Sources/WaylandGraphicsPreviewAPI/Public"),
+        ]
         let declarationPattern =
             #"\bpublic\s+struct\s+([A-Za-z_][A-Za-z0-9_]*(?:ID|Identity|Token|Serial))\b"#
         let expression = try NSRegularExpression(pattern: declarationPattern)
         var declarations: [String: IdentityDeclaration] = [:]
-        for url in try fileSystem.walk(root, includingDirectories: false)
-        where url.pathExtension == "swift" {
-            let source = try fileSystem.readText(url)
-            let range = NSRange(source.startIndex..<source.endIndex, in: source)
-            for match in expression.matches(in: source, range: range) {
-                guard
-                    let nameRange = Range(match.range(at: 1), in: source),
-                    let declarationRange = Range(match.range(at: 0), in: source),
-                    let openingBrace = source[declarationRange.upperBound...].firstIndex(of: "{"),
-                    let closingBrace = matchingClosingBrace(in: source, opening: openingBrace)
-                else {
-                    throw ToolError("Malformed public identity declaration in \(url.path)")
+        for root in roots {
+            for url in try fileSystem.walk(root, includingDirectories: false)
+            where url.pathExtension == "swift" {
+                let source = try fileSystem.readText(url)
+                let range = NSRange(source.startIndex..<source.endIndex, in: source)
+                for match in expression.matches(in: source, range: range) {
+                    guard
+                        let nameRange = Range(match.range(at: 1), in: source),
+                        let declarationRange = Range(match.range(at: 0), in: source),
+                        let openingBrace = source[declarationRange.upperBound...].firstIndex(
+                            of: "{"),
+                        let closingBrace = matchingClosingBrace(in: source, opening: openingBrace)
+                    else {
+                        throw ToolError("Malformed public identity declaration in \(url.path)")
+                    }
+                    let name = String(source[nameRange])
+                    guard declarations[name] == nil else {
+                        throw ToolError("Duplicate public identity declaration: \(name)")
+                    }
+                    declarations[name] = IdentityDeclaration(
+                        body: String(source[openingBrace...closingBrace]),
+                        source: repository.relativePath(url)
+                    )
                 }
-                let name = String(source[nameRange])
-                guard declarations[name] == nil else {
-                    throw ToolError("Duplicate public identity declaration: \(name)")
-                }
-                declarations[name] = IdentityDeclaration(
-                    body: String(source[openingBrace...closingBrace]),
-                    source: repository.relativePath(url)
-                )
             }
         }
         return declarations

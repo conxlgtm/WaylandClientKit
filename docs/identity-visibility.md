@@ -35,6 +35,11 @@ Run `swift run wck identity verify --update` after reviewing an intentional iden
 | `TabletToolID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Input/TabletInputDomainTypes.swift` |
 | `ToplevelDragID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/DataTransfer/DragSource.swift` |
 | `TouchID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Input/TouchID.swift` |
+| `WaylandGraphicsExternalBufferID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift` |
+| `WaylandGraphicsExternalConfigurationID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift` |
+| `WaylandGraphicsExternalPresentationFeedbackIdentity` | public projection | `package` | `submissionID` | `public` | `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift` |
+| `WaylandGraphicsExternalSubmissionID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift` |
+| `WaylandGraphicsExternalSyncTimelineID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift` |
 | `WaylandProtocolObjectID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Errors/DisplayError.swift` |
 | `WindowDialogID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/DesktopIntegration/DesktopIntegrationDomainTypes.swift` |
 | `WindowID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Input/InputIdentity.swift` |

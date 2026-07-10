@@ -224,7 +224,7 @@ public struct WaylandGraphicsExternalBufferID:
     Sendable,
     CustomStringConvertible
 {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
     package init(rawValue bufferRawValue: UInt64) {
         rawValue = bufferRawValue
@@ -241,7 +241,7 @@ public struct WaylandGraphicsExternalSubmissionID:
     Sendable,
     CustomStringConvertible
 {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
     package init(rawValue submissionRawValue: UInt64) {
         rawValue = submissionRawValue
@@ -258,7 +258,7 @@ public struct WaylandGraphicsExternalSyncTimelineID:
     Sendable,
     CustomStringConvertible
 {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
     package init(rawValue timelineRawValue: UInt64) {
         rawValue = timelineRawValue

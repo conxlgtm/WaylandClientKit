@@ -365,6 +365,9 @@ Current preview contract:
 - `WaylandGraphicsReason` is shared by fallback and failed runtime statuses;
   their status case records the disposition without a duplicate reason enum or
   duplicate mapping switch.
+- External configuration, buffer, submission, and synchronization timeline IDs
+  are issued by WCK. Callers may compare and retain the typed values, but their
+  constructors and raw values remain package-only.
 - The managed preview submission path can create a window backing, lease a
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame

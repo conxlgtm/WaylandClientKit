@@ -11,9 +11,16 @@ struct PublicIdentityAuditorTests {
         let source = root.appendingPathComponent(
             "Sources/WaylandClient/Public/FixtureID.swift"
         )
+        let previewSource = root.appendingPathComponent(
+            "Sources/WaylandGraphicsPreviewAPI/Public/PreviewFixtureID.swift"
+        )
         let manifest = root.appendingPathComponent("docs/identity-categories.json")
         try FileManager.default.createDirectory(
             at: source.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: previewSource.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         try FileManager.default.createDirectory(
@@ -25,6 +32,7 @@ struct PublicIdentityAuditorTests {
             atomically: true,
             encoding: .utf8
         )
+        try previewFixtureSource.write(to: previewSource, atomically: true, encoding: .utf8)
         try fixtureManifest.write(to: manifest, atomically: true, encoding: .utf8)
         let auditor = PublicIdentityAuditor(repository: Repository(root: root))
 
@@ -35,6 +43,7 @@ struct PublicIdentityAuditorTests {
             encoding: .utf8
         )
         #expect(report.contains("| `FixtureID` | client identity | `package` |"))
+        #expect(report.contains("| `PreviewFixtureID` | client identity | `package` |"))
 
         try fixtureSource(constructor: "public").write(
             to: source,
@@ -56,6 +65,13 @@ struct PublicIdentityAuditorTests {
               "constructor": "package",
               "storage": "rawValue",
               "storageVisibility": "package"
+            },
+            {
+              "type": "PreviewFixtureID",
+              "category": "client identity",
+              "constructor": "package",
+              "storage": "rawValue",
+              "storageVisibility": "package"
             }
           ]
         }
@@ -68,6 +84,18 @@ struct PublicIdentityAuditorTests {
             package let rawValue: UInt64
 
             \(constructor) init(rawValue: UInt64) {
+                self.rawValue = rawValue
+            }
+        }
+        """
+    }
+
+    private var previewFixtureSource: String {
+        """
+        public struct PreviewFixtureID {
+            package let rawValue: UInt64
+
+            package init(rawValue: UInt64) {
                 self.rawValue = rawValue
             }
         }

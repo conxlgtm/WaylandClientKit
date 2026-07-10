@@ -30,6 +30,11 @@
     { "type": "ToplevelDragID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
     { "type": "TouchID", "category": "raw protocol identity", "constructor": "public", "storage": "rawValue", "storageVisibility": "public" },
     { "type": "WaylandProtocolObjectID", "category": "raw protocol identity", "constructor": "public", "storage": "rawValue", "storageVisibility": "public" },
+    { "type": "WaylandGraphicsExternalBufferID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
+    { "type": "WaylandGraphicsExternalConfigurationID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
+    { "type": "WaylandGraphicsExternalPresentationFeedbackIdentity", "category": "public projection", "constructor": "package", "storage": "submissionID", "storageVisibility": "public" },
+    { "type": "WaylandGraphicsExternalSubmissionID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
+    { "type": "WaylandGraphicsExternalSyncTimelineID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
     { "type": "WindowDialogID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
     { "type": "WindowID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" }
   ]
