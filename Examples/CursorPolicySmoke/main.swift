@@ -16,6 +16,7 @@ enum CursorPolicySmoke {
         )
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.CursorPolicySmoke",
             cursorConfiguration: cursorConfiguration
         ) { display in
             try await run(

@@ -48,7 +48,6 @@ framework-owned.
 let window = try await display.createTopLevelWindow(
     configuration: WindowConfiguration(
         title: "Document",
-        appID: "org.example.App",
         initialWidth: 800,
         initialHeight: 600
     )

@@ -8,7 +8,9 @@ enum ColorManagementSmoke {
     static func main() async throws {
         _ = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
-        try await WaylandDisplay.withConnection { display in
+        try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.ColorManagementSmoke"
+        ) { display in
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: WindowConfiguration(
                     title: "WaylandClientKit Color Management Smoke",

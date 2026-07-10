@@ -13,7 +13,9 @@ enum GPUPreviewSmokeClient {
             let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
             let synchronizationPolicy = try requestedSynchronizationPolicy(options.synchronization)
             let pacingPolicy = try requestedPacingPolicy(options.pacing)
-            report = try await WaylandDisplay.withConnection { display in
+            report = try await WaylandDisplay.withConnection(
+                applicationID: "org.waylandclientkit.GPUPreviewSmokeClient"
+            ) { display in
                 var report = GPUPreviewSmokeReport()
                 report.synchronizationPolicy = synchronizationPolicy
                 report.pacingPolicy = pacingPolicy

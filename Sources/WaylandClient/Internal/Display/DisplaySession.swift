@@ -6,6 +6,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
 
     package let connection: RawDisplayConnection
+    package let applicationID: NonEmptyWaylandString
     private let inputCoordinator: SessionInputCoordinator
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
     package let activationManager: ActivationManager
@@ -23,6 +24,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     package init(
         connection rawConnection: RawDisplayConnection,
+        applicationID displayApplicationID: NonEmptyWaylandString,
         cursorConfiguration: CursorConfiguration = .init(),
         inputPipelineConfiguration: InputPipelineConfiguration = .init(),
         keyboardInterpretationConfiguration: KeyboardInterpretationConfiguration = .init(),
@@ -48,6 +50,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         )
 
         connection = rawConnection
+        applicationID = displayApplicationID
         self.inputCoordinator = inputCoordinator
         dataTransferGlobalProvider = rawConnection
         activationManager = ActivationManager(connection: rawConnection)
@@ -97,6 +100,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         message: "Use a synchronous owner-thread Wayland loop."
     )
     package static func connect(
+        applicationID: NonEmptyWaylandString,
         cursorConfiguration: CursorConfiguration = .init(),
         discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds
     ) throws -> DisplaySession {
@@ -104,6 +108,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         try connection.completeInitialDiscovery(timeoutMilliseconds: discoveryTimeoutMilliseconds)
         return try DisplaySession(
             connection: connection,
+            applicationID: applicationID,
             cursorConfiguration: cursorConfiguration
         )
     }
@@ -353,6 +358,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         let window = try TopLevelWindow(
             id: windowID,
             connection: connection,
+            applicationID: applicationID,
             configuration: windowConfiguration,
             failureSink: failureSink
         ) { [weak self] timeoutMilliseconds in

@@ -29,6 +29,7 @@ enum GraphicsPreviewManagedGPUClear {
 
     private static func run(options: ExampleRunOptions) async throws -> ManagedGPUClearReport {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GraphicsPreviewManagedGPUClear",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 16,

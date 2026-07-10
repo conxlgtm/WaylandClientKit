@@ -12,6 +12,10 @@ presentation feedback, output topology, output-management preview facts,
 compositor session-management capability, diagnostics, and capability
 reporting.
 
+The display configuration requires an application ID. WaylandClientKit uses
+that identity for every window unless a window explicitly supplies an override.
+Window titles and sizes have defaults; production application identity does not.
+
 GPU allocation and presentation experiments live in package-internal preview
 targets.
 
@@ -22,6 +26,7 @@ targets.
 - <doc:DisplayLifecycle>
 - <doc:OutputTopology>
 - ``WaylandDisplay``
+- ``DisplayConfiguration``
 - ``WaylandDisplayError``
 - ``WaylandCapabilities``
 - ``ProtocolAvailability``

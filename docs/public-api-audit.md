@@ -601,6 +601,9 @@ Notes:
   compositor-specific preview requests and never run from the default smoke
   path. There is no general display-settings framework API.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
+- `DisplayConfiguration` and the convenience `WaylandDisplay.withConnection`
+  overload require an application ID. `WindowConfiguration.default` has a plain
+  title and no demo identity; a per-window app ID is only an explicit override.
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
   default waits. Callers must opt into longer waits by passing an explicit timeout.

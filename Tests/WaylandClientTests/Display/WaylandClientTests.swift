@@ -50,9 +50,25 @@ struct WaylandClientTests {
     @Test
     func windowConfigurationDefaultsToServerSideDecorationPreference() throws {
         #expect(WindowConfiguration.default.decorationPreference == .preferServerSide)
+        #expect(WindowConfiguration.default.title.value == "Window")
+        #expect(WindowConfiguration.default.appID == nil)
         #expect(
             try WindowConfiguration().decorationPreference == .preferServerSide
         )
+    }
+
+    @Test
+    func displayConfigurationRequiresAValidApplicationID() throws {
+        let configuration = try DisplayConfiguration(applicationID: "org.example.App")
+        #expect(configuration.applicationID.value == "org.example.App")
+
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                .emptyString(field: "NonEmptyWaylandString")
+            )
+        ) {
+            _ = try DisplayConfiguration(applicationID: "")
+        }
     }
 
     @Test

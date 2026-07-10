@@ -65,7 +65,9 @@ import WaylandClient
 @main
 struct TinyWaylandClient {
     static func main() async throws {
-        try await WaylandDisplay.withConnection { display in
+        try await WaylandDisplay.withConnection(
+            applicationID: "org.example.MyApp"
+        ) { display in
             let window = try await display.createTopLevelWindow()
 
             try await window.show { frame in
@@ -96,7 +98,8 @@ struct TinyWaylandClient {
 }
 ```
 
-`WaylandDisplay.withConnection` opens the display, discovers advertised
+`WaylandDisplay.withConnection` requires the application's desktop identity,
+opens the display, discovers advertised
 capabilities, starts the owner-thread event loop, runs your async body, and
 closes the display even if the body throws.
 

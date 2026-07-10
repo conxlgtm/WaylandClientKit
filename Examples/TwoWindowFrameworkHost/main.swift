@@ -8,6 +8,7 @@ enum TwoWindowFrameworkHost {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.TwoWindowFrameworkHost",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 128,
                 inputEventCapacity: 128,

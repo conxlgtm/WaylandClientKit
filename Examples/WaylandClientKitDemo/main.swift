@@ -4,7 +4,8 @@ import WaylandClient
 @main
 enum WaylandClientKitDemo {
     static func main() async throws {
-        try await WaylandDisplay.withConnection { display in
+        try await WaylandDisplay.withConnection(applicationID: "org.waylandclientkit.Demo") {
+            display in
             let window = try await display.createTopLevelWindow()
             var demoState = DemoState()
 

@@ -18,24 +18,26 @@ public enum WindowDecorationMode: Equatable, Sendable {
 
 public struct WindowConfiguration: Equatable, Sendable {
     public var title: WaylandString
-    public var appID: NonEmptyWaylandString
+    public var appID: NonEmptyWaylandString?
     public var initialSize: PositiveLogicalSize
     public var bufferCount: PositiveInt
     public var closeRequestPolicy: CloseRequestPolicy
     public var decorationPreference: WindowDecorationPreference
 
     public static let `default` = WindowConfiguration(
-        title: WaylandString(unchecked: "WaylandClientKit Demo"),
-        appID: NonEmptyWaylandString(unchecked: "wayland-client-kit-demo"),
+        title: WaylandString(unchecked: "Window"),
+        appID: nil,
         initialSize: .default,
         bufferCount: PositiveInt(unchecked: 3),
         closeRequestPolicy: .requestOnly,
         decorationPreference: .preferServerSide
     )
 
+    // The optional app ID is an explicit per-window override beside the title.
+    // swiftlint:disable function_default_parameter_at_end
     public init(
         title windowTitle: WaylandString,
-        appID applicationID: NonEmptyWaylandString,
+        appID applicationID: NonEmptyWaylandString? = nil,
         initialSize size: PositiveLogicalSize,
         bufferCount count: PositiveInt,
         closeRequestPolicy policy: CloseRequestPolicy = .requestOnly,
@@ -48,10 +50,11 @@ public struct WindowConfiguration: Equatable, Sendable {
         closeRequestPolicy = policy
         decorationPreference = preference
     }
+    // swiftlint:enable function_default_parameter_at_end
 
     public init(
-        title windowTitle: String = "WaylandClientKit Demo",
-        appID applicationID: String = "wayland-client-kit-demo",
+        title windowTitle: String = "Window",
+        appID applicationID: String? = nil,
         initialWidth width: Int32 = 640,
         initialHeight height: Int32 = 480,
         bufferCount count: Int = 3,
@@ -74,16 +77,17 @@ public struct WindowConfiguration: Equatable, Sendable {
             throw ClientError.invalidWindowConfiguration(.interiorNUL(field: "title"))
         }
 
-        guard !applicationID.isEmpty else {
-            throw ClientError.invalidWindowConfiguration(.emptyString(field: "appID"))
-        }
-
-        guard !applicationID.contains("\0") else {
-            throw ClientError.invalidWindowConfiguration(.interiorNUL(field: "appID"))
+        if let applicationID {
+            guard !applicationID.isEmpty else {
+                throw ClientError.invalidWindowConfiguration(.emptyString(field: "appID"))
+            }
+            guard !applicationID.contains("\0") else {
+                throw ClientError.invalidWindowConfiguration(.interiorNUL(field: "appID"))
+            }
         }
 
         title = WaylandString(unchecked: windowTitle)
-        appID = NonEmptyWaylandString(unchecked: applicationID)
+        appID = applicationID.map(NonEmptyWaylandString.init(unchecked:))
         initialSize = PositiveLogicalSize(
             width: PositiveInt32(unchecked: width),
             height: PositiveInt32(unchecked: height)

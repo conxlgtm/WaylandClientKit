@@ -75,6 +75,7 @@ package final class TopLevelWindow {
     package init(
         id windowID: WindowID,
         connection rawConnection: RawDisplayConnection,
+        applicationID displayApplicationID: NonEmptyWaylandString,
         configuration windowConfiguration: WindowConfiguration = .default,
         failureSink windowFailureSink: any WindowFailureSink = DefaultWindowFailureSink(),
         initialConfigurePump pumpEvents: ((Int32) throws -> Void)? = nil
@@ -99,7 +100,7 @@ package final class TopLevelWindow {
             id: windowID,
             fallbackSize: windowConfiguration.initialSize,
             title: windowConfiguration.title,
-            appID: windowConfiguration.appID
+            appID: windowConfiguration.appID ?? displayApplicationID
         )
 
         configureState.setSurfaceConfigureHandler { [weak self] in
@@ -152,7 +153,7 @@ package final class TopLevelWindow {
         let newTopLevel = try newXDGSurface.getTopLevel()
 
         newTopLevel.setTitle(configuration.title.value)
-        newTopLevel.setAppID(configuration.appID.value)
+        newTopLevel.setAppID(model.appID.value)
 
         let newXDGSurfaceOwner = XDGSurfaceOwner(
             configureState: configureState,

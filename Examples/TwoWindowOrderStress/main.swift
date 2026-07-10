@@ -10,6 +10,7 @@ enum TwoWindowOrderStress {
         let reversed = arguments.contains("--reversed")
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.TwoWindowOrderStress",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 128,
                 inputEventCapacity: 4_096,

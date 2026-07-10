@@ -90,7 +90,9 @@ import WaylandClient
 @main
 struct TinyWaylandClient {
     static func main() async throws {
-        try await WaylandDisplay.withConnection { display in
+        try await WaylandDisplay.withConnection(
+            applicationID: "org.example.MyApp"
+        ) { display in
             let window = try await display.createTopLevelWindow()
 
             try await window.show { frame in

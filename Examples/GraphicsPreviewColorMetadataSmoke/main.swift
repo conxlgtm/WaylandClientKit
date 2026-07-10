@@ -11,7 +11,9 @@ enum GraphicsPreviewColorMetadataSmoke {
         let pacing = try requestedPacingRequest(options.pacing)
         let metadata = try requestedMetadata(options)
 
-        try await WaylandDisplay.withConnection { display in
+        try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GraphicsPreviewColorMetadataSmoke"
+        ) { display in
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: WindowConfiguration(
                     title: "WaylandClientKit Color Metadata Smoke",

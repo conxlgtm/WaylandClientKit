@@ -5,6 +5,7 @@ import WaylandClient
 enum XDGActivationSmoke {
     static func main() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.XDGActivationSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 16,
                 inputEventCapacity: 16,

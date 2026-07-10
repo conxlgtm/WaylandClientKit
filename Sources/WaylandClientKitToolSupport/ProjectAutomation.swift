@@ -426,6 +426,7 @@ public struct SwiftCommandResolver {
             "IntegrationTests/FrameworkHostClient/Package.swift",
             "IntegrationTests/TinyUIPrototype/Package.swift",
             "IntegrationTests/InvalidManagedIdentityClient/Package.swift",
+            "IntegrationTests/InvalidApplicationIdentityClient/Package.swift",
         ]
         let recursive = [
             "Plugins",
@@ -437,6 +438,7 @@ public struct SwiftCommandResolver {
             "IntegrationTests/FrameworkHostClient/Tests",
             "IntegrationTests/TinyUIPrototype/Tests",
             "IntegrationTests/InvalidManagedIdentityClient/Sources",
+            "IntegrationTests/InvalidApplicationIdentityClient/Sources",
         ]
         let base =
             mode == "format"

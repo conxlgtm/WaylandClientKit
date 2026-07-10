@@ -5,6 +5,7 @@ import WaylandClient
 enum FrameworkHostSmoke {
     static func main() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.FrameworkHostSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 64,

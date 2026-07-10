@@ -17,6 +17,7 @@ enum OutputManagementSmoke {
         _ = try ExampleRunOptions.parse(commonArguments[...])
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.OutputManagementSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 16,

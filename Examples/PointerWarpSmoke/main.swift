@@ -6,6 +6,7 @@ enum PointerWarpSmoke {
     static func main() async throws {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.PointerWarpSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 128,

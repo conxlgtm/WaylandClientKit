@@ -1009,6 +1009,35 @@ private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) t
     }
 }
 
+private func verifyMissingApplicationIdentityIsRejected(context: ToolContext) throws {
+    let packagePath = context.repository.url(
+        "IntegrationTests/InvalidApplicationIdentityClient"
+    ).path
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "waylandclientkit-invalid-application-identity"
+    )
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+
+    let result = try context.swift.runSwift(
+        [
+            "build", "--disable-index-store", "--package-path", packagePath,
+            "--scratch-path", scratch.path,
+        ],
+        repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context),
+        requireSuccess: false
+    )
+    guard result.exitCode != 0 else {
+        throw ToolError("display configuration without an application ID unexpectedly compiled")
+    }
+    let diagnostics = result.stdout + result.stderr
+    guard diagnostics.contains("applicationID"), diagnostics.contains("missing argument") else {
+        throw ToolError(
+            "invalid application identity client failed before the required argument was checked"
+        )
+    }
+}
+
 private func runSmokeLive(context: ToolContext) throws {
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
@@ -1218,6 +1247,7 @@ private func runRequired(context: ToolContext) throws {
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
     try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
     try verifyManagedIdentityConstructionIsRejected(context: context)
+    try verifyMissingApplicationIdentityIsRejected(context: context)
 }
 
 private func runCheckBase(context: ToolContext) throws {
