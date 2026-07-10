@@ -11,8 +11,6 @@ enum OutputManagementSmoke {
                 "--list",
                 "--test-only",
                 "--test-current",
-                "--apply",
-                "--apply-current",
             ]
             .contains($0)
         }
@@ -45,19 +43,11 @@ enum OutputManagementSmoke {
             }
             log("operation: list pass")
 
-            let proposal = OutputConfigurationProposal(current: snapshot)
             if flags.contains("--test-only") || flags.contains("--test-current") {
-                try await display.testOutputConfiguration(proposal)
+                try await display.testCurrentOutputConfigurationForSmoke()
                 log("operation: test-current pass")
             } else {
                 log("operation: test-current skip")
-            }
-
-            if flags.contains("--apply") || flags.contains("--apply-current") {
-                try await display.applyOutputConfiguration(proposal)
-                log("operation: apply-current pass")
-            } else {
-                log("operation: apply-current skipped-by-default")
             }
             log("cleanup: pass")
         }

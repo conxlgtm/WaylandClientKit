@@ -162,7 +162,6 @@ Intentionally public:
 - `OutputManagementMode`
 - `OutputManagementHead`
 - `OutputManagementSnapshot`
-- `OutputConfigurationProposal`
 - `CompositorSessionID`
 - `CompositorSessionReason`
 - `CompositorSessionEvent`
@@ -180,7 +179,7 @@ Current user-facing contract:
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
   pointer, pointer lock/confine, pointer warp, tablet input facts, cursor
   requests, text-input sessions and events, foreign toplevel facts,
-  output-management preview facts/current proposals, compositor session preview
+  output-management preview facts, compositor session preview
   facts, diagnostics, and terminal display errors are the current product
   surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
@@ -204,6 +203,10 @@ Current user-facing contract:
 - Window sizes are logical surface sizes. `SurfaceGeometry` records the
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.
+- Output management is read-only public API. The former proposal, test, and
+  apply operations were removed because their only meaningful input was a
+  snapshot serial and they could not express a requested configuration change.
+  A package-only current-state test remains for protocol smoke coverage.
 - Regular clipboard means `wl_data_device_manager` selection offers and sources.
 - `WaylandDisplay.capabilities()` reports currently advertised compositor support
   for regular clipboard, drag-and-drop, drag action negotiation, primary

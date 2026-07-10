@@ -79,7 +79,7 @@ example or manual probe has been run:
 | toplevel drag | `ToplevelDragSmoke` capability and live button-serial attach/start result |
 | pointer gestures | `PointerGesturesSmoke` subscription and typed gesture events when hardware provides them |
 | foreign toplevel list | `ForeignToplevelListSmoke` capability and read-only add/update/remove facts |
-| output-management preview | `OutputManagementSmoke` capability, head/mode facts, explicit current test/apply, no monitor mutation by default |
+| output-management preview | `OutputManagementSmoke` capability, head/mode facts, and package-only current-state test; no monitor mutation |
 | system bell | `SystemBellSmoke` display/window ring operations |
 | activation | `XDGActivationSmoke` token request and activate request |
 | pointer lock/confine | `PointerCaptureSmoke` lock/confine lifecycle |

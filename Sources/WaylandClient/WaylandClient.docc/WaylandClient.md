@@ -48,7 +48,6 @@ targets.
 - ``OutputSnapshot``
 - ``OutputID``
 - ``OutputManagementSnapshot``
-- ``OutputConfigurationProposal``
 - ``SurfaceRegion``
 - ``SurfaceDamageRegion``
 - ``PositivePixelSize``

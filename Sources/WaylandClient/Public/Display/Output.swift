@@ -417,11 +417,3 @@ public struct OutputManagementSnapshot: Equatable, Sendable {
         serial = snapshotSerial
     }
 }
-
-public struct OutputConfigurationProposal: Equatable, Sendable {
-    public let snapshot: OutputManagementSnapshot
-
-    public init(current snapshot: OutputManagementSnapshot) {
-        self.snapshot = snapshot
-    }
-}

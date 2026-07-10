@@ -20,9 +20,6 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case invalidCompositorSessionID
     case outputManagementUnavailable
     case outputManagementIncomplete
-    case staleOutputConfiguration
-    case outputConfigurationFailed
-    case outputConfigurationCancelled
     case foreignDragSource(DragSourceIdentity)
     case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)
     case unknownToplevelDrag(ToplevelDragID)
@@ -89,12 +86,6 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "wlr-output-management protocol is unavailable"
         case .outputManagementIncomplete:
             "wlr-output-management done or finished lifecycle was incomplete"
-        case .staleOutputConfiguration:
-            "output configuration proposal is stale"
-        case .outputConfigurationFailed:
-            "output configuration request failed"
-        case .outputConfigurationCancelled:
-            "output configuration request was cancelled"
         case .foreignDragSource(let sourceID):
             "drag source belongs to another display: \(sourceID)"
         case .dragSourceSeatMismatch(let sourceID, let expected, let actual):

@@ -183,7 +183,6 @@ struct WaylandDisplayPublicAPISurfaceTests {
             serialNumber: nil
         )
         let outputSnapshot = OutputManagementSnapshot(heads: [outputHead], serial: 7)
-        let proposal = OutputConfigurationProposal(current: outputSnapshot)
         let sessionID = try CompositorSessionID("session-1")
         let sessionSnapshot = CompositorSessionEventSnapshot(
             events: [.created(sessionID), .restored, .replaced]
@@ -191,15 +190,11 @@ struct WaylandDisplayPublicAPISurfaceTests {
 
         #expect(foreignList.toplevels == [foreignSnapshot])
         #expect(outputSnapshot.heads.first?.modes == [outputMode])
-        #expect(proposal.snapshot.serial == 7)
         #expect(sessionSnapshot.events.count == 3)
 
         func usePreviewProtocolAPI(display: WaylandDisplay) async throws {
             _ = try await display.foreignToplevelListSnapshot()
-            let snapshot = try await display.outputManagementSnapshot()
-            let current = OutputConfigurationProposal(current: snapshot)
-            try await display.testOutputConfiguration(current)
-            try await display.applyOutputConfiguration(current)
+            _ = try await display.outputManagementSnapshot()
             _ = try await display.compositorSessionEvents(
                 reason: .launch,
                 existingID: sessionID
