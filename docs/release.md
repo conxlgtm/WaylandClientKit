@@ -65,13 +65,14 @@ parallel execution disabled so sanitizer output is not polluted by unrelated
 test-runner and runtime parallel initialization reports, project data-race
 reports inside tests should remain unsuppressed.
 
-The hosted TSan job runs directly on the Ubuntu 22.04 runner. The Swift 6.3.2
-TSan suite passes in the same container locally, but the Ubuntu 24.04 hosted
-runner's kernel/container combination exits after linking without starting the
-test process or emitting a sanitizer report. The selected runner supplies
-Swift 6.3.2 without that container boundary. A small instrumented runtime probe
-runs before the package suite so a future runner regression fails before the
-long sanitizer build.
+The hosted TSan job runs the Swift 6.3.2 Noble container on an Ubuntu 22.04
+host. The same container passes locally, but the Ubuntu 24.04 hosted runner's
+kernel/container combination exits after linking without starting the test
+process or emitting a sanitizer report. Keeping the Noble container avoids the
+older host headers while the selected host supplies the compatible kernel. The
+container uses an unconfined seccomp profile because Swift TSan disables ASLR
+at startup. A small instrumented runtime probe runs before the package suite so
+a future runner regression fails before the long sanitizer build.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and

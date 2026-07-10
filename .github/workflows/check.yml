@@ -175,12 +175,17 @@ jobs:
   sanitizer-tsan:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-22.04
+    container:
+      image: swift:6.3.2-noble
+      # Swift TSan disables ASLR at startup. Docker's default seccomp profile
+      # blocks that operation and the test binary exits before running tests.
+      options: --security-opt seccomp=unconfined
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install sanitizer dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          apt-get update
+          apt-get install -y \
             clang \
             coreutils \
             git \
