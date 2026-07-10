@@ -70,8 +70,12 @@ public struct DocCVerifier {
         try verifyCatalogExists()
         var failures: [String] = []
         for product in Self.publicProducts {
-            let graph = try requireSymbolGraph(for: product)
-            let symbols = try symbolTitles(from: graph, moduleName: product.moduleName)
+            _ = try requireSymbolGraph(for: product)
+            let symbols = try findSymbolGraphs(for: product.moduleName).reduce(
+                into: Set([product.moduleName])
+            ) { titles, graph in
+                titles.formUnion(try symbolTitles(from: graph, moduleName: product.moduleName))
+            }
             let catalog = repository.url(product.catalogPath)
             failures.append(
                 contentsOf: try symbolLinkFailures(
@@ -160,7 +164,10 @@ public struct DocCVerifier {
     }
 
     public func publicProductSymbolGraphs() throws -> [URL] {
-        try Self.publicProducts.map { try requireSymbolGraph(for: $0) }
+        try Self.publicProducts.flatMap { product in
+            _ = try requireSymbolGraph(for: product)
+            return try findSymbolGraphs(for: product.moduleName)
+        }
     }
 
     private func requireSymbolGraph(for product: Product) throws -> URL {
@@ -168,7 +175,11 @@ public struct DocCVerifier {
     }
 
     private func requireSymbolGraph(for moduleName: String) throws -> URL {
-        guard let graph = try findSymbolGraphs(for: moduleName).first else {
+        let primaryName = "\(moduleName).symbols.json"
+        guard
+            let graph = try findSymbolGraphs(for: moduleName)
+                .first(where: { $0.lastPathComponent == primaryName })
+        else {
             throw ToolError(
                 "Missing \(moduleName) symbol graph under \(buildRoot.path)/*/symbolgraph",
                 exitCode: ToolExitCode.data
@@ -214,7 +225,15 @@ public struct DocCVerifier {
 
     private func findSymbolGraphs(for moduleName: String) throws -> [URL] {
         try fileSystem.walk(buildRoot, includingDirectories: false)
-            .filter { $0.path.hasSuffix("/symbolgraph/\(moduleName).symbols.json") }
+            .filter { graph in
+                guard graph.deletingLastPathComponent().lastPathComponent == "symbolgraph" else {
+                    return false
+                }
+                let name = graph.lastPathComponent
+                return name == "\(moduleName).symbols.json"
+                    || (name.hasPrefix("\(moduleName)@") && name.hasSuffix(".symbols.json"))
+            }
+            .sorted { $0.path < $1.path }
     }
 
     private static func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> ToolError {

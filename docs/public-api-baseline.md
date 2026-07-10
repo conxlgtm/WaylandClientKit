@@ -6015,6 +6015,10 @@ s:13WaylandClient9SeatEventO7removedyA2CmF	memberOf	s:13WaylandClient9SeatEventO
 ### Symbols
 
 ```text
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE06createD13WindowBacking19windowConfiguration08graphicsJ0AD0adgH0VAA0gJ0V_AD0adJ0VtKF	swift.method	WaylandDisplay.createGraphicsWindowBacking(windowConfiguration:graphicsConfiguration:)	func createGraphicsWindowBacking(windowConfiguration: WindowConfiguration = .default, graphicsConfiguration: WaylandGraphicsConfiguration = .default) throws -> WaylandGraphicsWindowBacking	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE23graphicsBackingDecision6policyAD0adgH0OAD0aD18PresentationPolicyO_tKF	swift.method	WaylandDisplay.graphicsBackingDecision(policy:)	func graphicsBackingDecision(policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)) throws -> WaylandGraphicsBackingDecision	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE19graphicsRuntimePath6policyAD0adgH0VAD0aD18PresentationPolicyO_tKF	swift.method	WaylandDisplay.graphicsRuntimePath(policy:)	func graphicsRuntimePath(policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)) throws -> WaylandGraphicsRuntimePath	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE27graphicsSurfaceCapabilitiesAD0adgH0VyKF	swift.method	WaylandDisplay.graphicsSurfaceCapabilities()	func graphicsSurfaceCapabilities() throws -> WaylandGraphicsSurfaceCapabilities	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:22WaylandGraphicsPreview0aB13AlphaModifierV	swift.struct	WaylandGraphicsAlphaModifier	struct WaylandGraphicsAlphaModifier	-
 s:22WaylandGraphicsPreview0aB13AlphaModifierV8rawValueACs6UInt32V_tcfc	swift.init	WaylandGraphicsAlphaModifier.init(rawValue:)	init(rawValue alphaMultiplierRawValue: UInt32)	-
 s:22WaylandGraphicsPreview0aB13AlphaModifierV6opaqueACvpZ	swift.type.property	WaylandGraphicsAlphaModifier.opaque	static let opaque: WaylandGraphicsAlphaModifier	-
@@ -6399,6 +6403,10 @@ s:22WaylandGraphicsPreview0aB9XRGBColorV3reds5UInt8Vvp	swift.property	WaylandGra
 ### Relationships
 
 ```text
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE06createD13WindowBacking19windowConfiguration08graphicsJ0AD0adgH0VAA0gJ0V_AD0adJ0VtKF	memberOf	s:13WaylandClient0A7DisplayC	WaylandClient.WaylandDisplay
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE19graphicsRuntimePath6policyAD0adgH0VAD0aD18PresentationPolicyO_tKF	memberOf	s:13WaylandClient0A7DisplayC	WaylandClient.WaylandDisplay
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE23graphicsBackingDecision6policyAD0adgH0OAD0aD18PresentationPolicyO_tKF	memberOf	s:13WaylandClient0A7DisplayC	WaylandClient.WaylandDisplay
+s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE27graphicsSurfaceCapabilitiesAD0adgH0VyKF	memberOf	s:13WaylandClient0A7DisplayC	WaylandClient.WaylandDisplay
 s:22WaylandGraphicsPreview0aB10ClearFrameV	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB10ClearFrameV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB10ClearFrameV	conformsTo	s:s8SendableP	Swift.Sendable

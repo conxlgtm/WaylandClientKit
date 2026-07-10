@@ -98,6 +98,8 @@ struct DocCVerifierProductTests {
             "WaylandClient.symbols.json")
         let previewGraph = symbolGraphRoot.appendingPathComponent(
             "WaylandGraphicsPreview.symbols.json")
+        let previewExtensionGraph = symbolGraphRoot.appendingPathComponent(
+            "WaylandGraphicsPreview@WaylandClient.symbols.json")
         let unrelatedGraph = symbolGraphRoot.appendingPathComponent(
             "WaylandInternal.symbols.json")
         try #"{"symbols":[{"names":{"title":"StaleClient"}}]}"#.write(
@@ -110,6 +112,11 @@ struct DocCVerifierProductTests {
             atomically: true,
             encoding: .utf8
         )
+        try #"{"symbols":[{"names":{"title":"StaleExtension"}}]}"#.write(
+            to: previewExtensionGraph,
+            atomically: true,
+            encoding: .utf8
+        )
         try #"{"symbols":[]}"#.write(to: unrelatedGraph, atomically: true, encoding: .utf8)
 
         let verifier = DocCVerifier(repository: Repository(root: root), buildRoot: scratch)
@@ -117,7 +124,42 @@ struct DocCVerifierProductTests {
 
         #expect(!FileManager.default.fileExists(atPath: clientGraph.path))
         #expect(!FileManager.default.fileExists(atPath: previewGraph.path))
+        #expect(!FileManager.default.fileExists(atPath: previewExtensionGraph.path))
         #expect(FileManager.default.fileExists(atPath: unrelatedGraph.path))
+    }
+
+    @Test
+    func doccVerifierReturnsPublicExtensionSymbolGraphs() throws {
+        let root = try temporaryRepository()
+        let scratch = root.appendingPathComponent(".scratch")
+        let symbolGraphRoot = scratch.appendingPathComponent("debug/symbolgraph")
+        try FileManager.default.createDirectory(
+            at: symbolGraphRoot,
+            withIntermediateDirectories: true
+        )
+        for name in [
+            "WaylandClient.symbols.json",
+            "WaylandGraphicsPreview.symbols.json",
+            "WaylandGraphicsPreview@WaylandClient.symbols.json",
+            "WaylandGraphicsPreviewInternals.symbols.json",
+        ] {
+            try #"{"symbols":[]}"#.write(
+                to: symbolGraphRoot.appendingPathComponent(name),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
+
+        let verifier = DocCVerifier(repository: Repository(root: root), buildRoot: scratch)
+        let names = try verifier.publicProductSymbolGraphs().map(\.lastPathComponent)
+
+        #expect(
+            names == [
+                "WaylandClient.symbols.json",
+                "WaylandGraphicsPreview.symbols.json",
+                "WaylandGraphicsPreview@WaylandClient.symbols.json",
+            ]
+        )
     }
 
     private func temporaryRepository() throws -> URL {

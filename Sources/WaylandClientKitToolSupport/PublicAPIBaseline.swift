@@ -8,7 +8,14 @@ public struct SemanticPublicAPIBaseline {
     }
 
     public func render(symbolGraphs: [URL]) throws -> String {
-        let modules = try symbolGraphs.map(loadModule).sorted { $0.name < $1.name }
+        let fragments = try symbolGraphs.map(loadModule)
+        let modules = Dictionary(grouping: fragments, by: \.name).map { name, fragments in
+            ModuleRecord(
+                name: name,
+                symbols: fragments.flatMap(\.symbols).sorted(),
+                relationships: fragments.flatMap(\.relationships).sorted()
+            )
+        }.sorted { $0.name < $1.name }
         return modules.map(render).joined(separator: "\n")
     }
 

@@ -38,6 +38,31 @@ struct PublicAPIBaselineTests {
         #expect(changedReport.contains("value: String"))
     }
 
+    @Test
+    func mergesExtensionGraphsIntoTheirDeclaringModule() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("waylandclientkit-api-extension-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let primary = root.appendingPathComponent("Fixture.symbols.json")
+        let companion = root.appendingPathComponent("Fixture@Other.symbols.json")
+        try semanticSymbolGraph(function: "primary", moduleName: "Fixture").write(
+            to: primary,
+            atomically: true,
+            encoding: .utf8
+        )
+        try semanticSymbolGraph(function: "extensionEntryPoint", moduleName: "Fixture").write(
+            to: companion,
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let report = try SemanticPublicAPIBaseline().render(symbolGraphs: [primary, companion])
+
+        #expect(report.components(separatedBy: "## `Fixture`").count == 2)
+        #expect(report.contains("primary()"))
+        #expect(report.contains("extensionEntryPoint()"))
+    }
+
     private func semanticSymbolGraph(parameterType: String, line: Int) -> String {
         """
         {
@@ -59,6 +84,26 @@ struct PublicAPIBaselineTests {
                 "uri": "file:///tmp/Fixture.swift",
                 "position": { "line": \(line), "character": 0 }
               }
+            }
+          ],
+          "relationships": []
+        }
+        """
+    }
+
+    private func semanticSymbolGraph(function: String, moduleName: String) -> String {
+        """
+        {
+          "module": { "name": "\(moduleName)" },
+          "symbols": [
+            {
+              "kind": { "identifier": "swift.func" },
+              "identifier": { "precise": "s:\(moduleName).\(function)" },
+              "pathComponents": ["\(function)()"],
+              "declarationFragments": [
+                { "spelling": "func \(function)()" }
+              ],
+              "accessLevel": "public"
             }
           ],
           "relationships": []
