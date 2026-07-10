@@ -475,6 +475,10 @@ Notes:
 - `WindowPresentationEvents` is a public async sequence for presentation
   feedback requested through a managed window. A discarded result is distinct
   from a presented result with timestamps and feedback flags.
+- Every public event sequence creates an independent broker subscription in
+  `makeAsyncIterator()`. Buffering begins at iterator creation; copied sequences
+  do not split one queue, and cancellation or overflow remains local to one
+  iterator.
 - `Window.decorationMode` reports the current effective xdg-decoration mode when
   the compositor supports `zxdg_decoration_manager_v1`. Mode absence is explicit
   as `.unavailable`.

@@ -104,20 +104,20 @@ public struct WindowPresentationEvents: AsyncSequence, Sendable {
     public typealias Failure = WaylandDisplayError
 
     private let windowID: WindowID
-    private let subscription: InternalEventSubscription<WindowPresentationEvent>
+    private let subscriptions: InternalEventSubscriptionFactory<WindowPresentationEvent>
 
     package init(
         windowID eventsWindowID: WindowID,
-        subscription eventSubscription: InternalEventSubscription<WindowPresentationEvent>
+        subscriptions eventSubscriptions: InternalEventSubscriptionFactory<WindowPresentationEvent>
     ) {
         windowID = eventsWindowID
-        subscription = eventSubscription
+        subscriptions = eventSubscriptions
     }
 
     public func makeAsyncIterator() -> WindowPresentationEventsIterator {
         WindowPresentationEventsIterator(
             windowID: windowID,
-            base: subscription.makeAsyncIterator()
+            base: subscriptions.makeAsyncIterator()
         )
     }
 }

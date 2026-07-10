@@ -23,10 +23,10 @@ struct DisplayEventHubTests {
         )
         let firstStream = hub.displayEvents()
         let secondStream = hub.displayEvents()
-
-        hub.publish(.windowClosed(WindowID(rawValue: 1)))
         var firstIterator = firstStream.makeAsyncIterator()
         var secondIterator = secondStream.makeAsyncIterator()
+
+        hub.publish(.windowClosed(WindowID(rawValue: 1)))
         await expectNext(.windowClosed(WindowID(rawValue: 1)), from: &secondIterator)
 
         hub.publish(.windowClosed(WindowID(rawValue: 2)))
@@ -41,11 +41,11 @@ struct DisplayEventHubTests {
             configuration: try EventStreamConfiguration(displayEventCapacity: 1)
         )
         let stream = hub.displayEvents()
+        var iterator = stream.makeAsyncIterator()
 
         hub.publish(.windowClosed(WindowID(rawValue: 1)))
         hub.publish(.windowClosed(WindowID(rawValue: 2)))
 
-        var iterator = stream.makeAsyncIterator()
         do {
             _ = try await iterator.next()
             Issue.record("Expected configured display event overflow")

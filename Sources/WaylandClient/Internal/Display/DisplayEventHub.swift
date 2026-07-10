@@ -62,30 +62,30 @@ final class DisplayEventHub: Sendable {
     }
 
     func displayEvents() -> DisplayEvents {
-        DisplayEvents(displayBroker.subscribe())
+        DisplayEvents(InternalEventSubscriptionFactory(displayBroker))
     }
 
     func inputEvents() -> InputEvents {
-        InputEvents(inputBroker.subscribe())
+        InputEvents(InternalEventSubscriptionFactory(inputBroker))
     }
 
     func dataTransferEvents() -> DataTransferEvents {
-        DataTransferEvents(dataTransferBroker.subscribe())
+        DataTransferEvents(InternalEventSubscriptionFactory(dataTransferBroker))
     }
 
     func textInputEvents() -> TextInputEvents {
-        TextInputEvents(textInputBroker.subscribe())
+        TextInputEvents(InternalEventSubscriptionFactory(textInputBroker))
     }
 
     func windowPresentationEvents(windowID: WindowID) -> WindowPresentationEvents {
         WindowPresentationEvents(
             windowID: windowID,
-            subscription: presentationBroker.subscribe()
+            subscriptions: InternalEventSubscriptionFactory(presentationBroker)
         )
     }
 
     func diagnostics() -> DisplayDiagnostics {
-        DisplayDiagnostics(diagnosticsBroker.subscribe())
+        DisplayDiagnostics(InternalEventSubscriptionFactory(diagnosticsBroker))
     }
 
     func publish(_ event: DisplayEvent) {
