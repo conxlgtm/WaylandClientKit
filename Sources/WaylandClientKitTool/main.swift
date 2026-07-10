@@ -886,13 +886,17 @@ private func runDoccSymbolLinks(context: ToolContext) throws {
 }
 
 private func runUnitTests(context: ToolContext) throws {
+    var arguments = [
+        "test", "--no-parallel",
+        "-Xswiftc", "-Xcc",
+        "-Xswiftc", "-Wno-macro-redefined",
+        "-Xswiftc", "-warnings-as-errors",
+    ]
+    if context.runner.environment["WAYLAND_CLIENT_KIT_UNIT_COVERAGE"] == "1" {
+        arguments.append("--enable-code-coverage")
+    }
     try context.swift.runSwift(
-        [
-            "test", "--no-parallel",
-            "-Xswiftc", "-Xcc",
-            "-Xswiftc", "-Wno-macro-redefined",
-            "-Xswiftc", "-warnings-as-errors",
-        ],
+        arguments,
         repository: context.repository,
         environment: try compilerFilterEnvironment(context: context)
     )
@@ -1082,8 +1086,16 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
             exitCode: ToolExitCode.environment)
     }
 
-    let filters = ["WindowControlPublicRequestTests", "WindowDragSourcePublicRequestTests"]
+    let filters = [
+        "WindowControlPublicRequestTests",
+        "WindowDragSourcePublicRequestTests",
+        "SubsurfacePublicRequestTests",
+        "DesktopIntegrationPublicRequestTests",
+    ]
     var arguments = ["test"]
+    if context.runner.environment["WAYLAND_CLIENT_KIT_HEADLESS_COVERAGE"] == "1" {
+        arguments.append("--enable-code-coverage")
+    }
     var environment = requestTestEnvironment()
     switch sanitizer {
     case .none:
@@ -1321,6 +1333,8 @@ private func requestTestEnvironment() -> [String: String] {
     [
         "WAYLAND_CLIENT_KIT_ENABLE_WINDOW_CONTROL_REQUEST_TESTS": "1",
         "WAYLAND_CLIENT_KIT_ENABLE_DND_SOURCE_REQUEST_TESTS": "1",
+        "WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS": "1",
+        "WAYLAND_CLIENT_KIT_ENABLE_DESKTOP_REQUEST_TESTS": "1",
     ]
 }
 

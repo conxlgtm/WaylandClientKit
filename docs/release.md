@@ -80,8 +80,10 @@ The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
 reflected in the audit and baseline before tagging.
 
-The headless request-path sanitizer targets run the window-control and
-source-side drag request tests under a private Weston compositor. They are the
+The headless request-path targets run window-control, source-side drag,
+subsurface, and desktop-integration request tests under a private Weston
+compositor. The unsanitized path is required on pull requests; sanitizer paths
+remain full-gate checks. They are the
 release gate for live request wrappers under sanitizers. GPU preview sanitizer
 smoke remains optional and compositor/hardware dependent, use
 `WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
