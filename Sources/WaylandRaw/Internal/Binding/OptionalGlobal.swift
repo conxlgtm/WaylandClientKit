@@ -41,6 +41,16 @@ package enum OptionalVersionedGlobal<Bound: RawDestroyableObject> {
     }
 }
 
+package func retireOptionalGlobal<Bound>(_ global: inout OptionalGlobal<Bound>) {
+    global.destroy()
+    global = .missing
+}
+
+package func retireOptionalGlobal<Bound>(_ global: inout OptionalVersionedGlobal<Bound>) {
+    global.destroy()
+    global = .missing
+}
+
 extension RawXDGDecorationManager: RawDestroyableObject {}
 extension RawXDGOutputManager: RawDestroyableObject {}
 extension RawViewporter: RawDestroyableObject {}

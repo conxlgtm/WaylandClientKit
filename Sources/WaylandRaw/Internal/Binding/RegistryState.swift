@@ -1,5 +1,7 @@
 package final class RegistryState {
     private var globalsByName: [UInt32: RawGlobalAdvertisement] = [:]
+    private var startupGlobalsByInterface: [String: RawGlobalAdvertisement] = [:]
+    private var hasFrozenStartupGlobals = false
     private var rejectedGlobalsStorage: [RawGlobalAdvertisementRejection] = []
 
     @discardableResult
@@ -34,7 +36,7 @@ package final class RegistryState {
         return true
     }
 
-    package func removeGlobal(name: UInt32) {
+    package func removeGlobal(name: UInt32) -> RawGlobalAdvertisement? {
         globalsByName.removeValue(forKey: name)
     }
 
@@ -52,5 +54,25 @@ package final class RegistryState {
 
     package func firstGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
         globalsByName.values.bestGlobal(named: interfaceName)
+    }
+
+    package func freezeStartupGlobals() {
+        guard !hasFrozenStartupGlobals else { return }
+
+        let interfaceNames = Set(globalsByName.values.map(\.interfaceName))
+        startupGlobalsByInterface = Dictionary(
+            uniqueKeysWithValues: interfaceNames.compactMap { interfaceName in
+                firstGlobal(named: interfaceName).map { (interfaceName, $0) }
+            }
+        )
+        hasFrozenStartupGlobals = true
+    }
+
+    package func startupGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
+        guard hasFrozenStartupGlobals else { return nil }
+        guard let startupGlobal = startupGlobalsByInterface[interfaceName] else { return nil }
+        guard globalsByName[startupGlobal.name] == startupGlobal else { return nil }
+
+        return startupGlobal
     }
 }

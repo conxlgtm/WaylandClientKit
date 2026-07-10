@@ -104,6 +104,7 @@ extension RawDisplayConnection {
                 )
             }
         }
+        freezeStartupGlobals()
     }
 
     @safe

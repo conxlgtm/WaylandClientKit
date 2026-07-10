@@ -74,10 +74,11 @@ package final class RawDisplayConnection {  // swiftlint:disable:this type_body_
                 )
             }
         }
-        registryListenerOwner.onGlobalRemoved = { [weak connection = self] name in
-            connection?.boundGlobals?.tabletSeatRegistry?.removeSeat(globalName: name)
-            connection?.boundGlobals?.seatRegistry.removeSeat(globalName: name)
-            connection?.boundGlobals?.outputRegistry.removeOutput(globalName: name)
+        registryListenerOwner.onGlobalRemoved = { [weak connection = self] global in
+            connection?.boundGlobals?.tabletSeatRegistry?.removeSeat(globalName: global.name)
+            connection?.boundGlobals?.seatRegistry.removeSeat(globalName: global.name)
+            connection?.boundGlobals?.outputRegistry.removeOutput(globalName: global.name)
+            connection?.boundGlobals?.invalidateOptionalGlobal(named: global.interfaceName)
         }
     }
 
@@ -445,7 +446,11 @@ extension RawDisplayConnection {
     }
 
     package func optionalGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
-        registryState.firstGlobal(named: interfaceName)
+        registryState.startupGlobal(named: interfaceName)
+    }
+
+    package func freezeStartupGlobals() {
+        registryState.freezeStartupGlobals()
     }
 
     @safe

@@ -37,7 +37,7 @@ directly from WaylandClientKit.
   `xdg_system_bell_v1`.
 
 Check ``WaylandDisplay/capabilities()`` first, but still handle request-time
-errors because optional globals can disappear and compositor policy can reject
+errors because startup globals can disappear and compositor policy can reject
 or ignore a request.
 
 ## Public APIs

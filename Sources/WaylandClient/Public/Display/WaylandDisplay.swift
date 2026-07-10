@@ -98,10 +98,10 @@ public actor WaylandDisplay {
         try requireCore().currentPointerCursor()
     }
 
-    /// Returns compositor protocol features discovered during connection setup.
+    /// Returns compositor protocol features usable from the connection-start snapshot.
     ///
-    /// This is a side-effect-free registry query. Request APIs still validate availability at
-    /// use time because Wayland globals may disappear after initial discovery.
+    /// Managers advertised after initial discovery require a new connection. Request APIs still
+    /// validate availability because a manager advertised at startup may later be removed.
     public func capabilities() throws -> WaylandCapabilities {
         try requireCore().capabilities()
     }

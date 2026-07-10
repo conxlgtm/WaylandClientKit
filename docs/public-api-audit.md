@@ -212,12 +212,14 @@ Current user-facing contract:
   one-roundtrip event snapshot was removed because it destroyed the session
   before later replacement events or surface attachment could be observed.
 - Regular clipboard means `wl_data_device_manager` selection offers and sources.
-- `WaylandDisplay.capabilities()` reports currently advertised compositor support
+- `WaylandDisplay.capabilities()` reports the connection-start set of compositor support
   for regular clipboard, drag-and-drop, drag action negotiation, primary
   selection, server-side decorations, xdg-output, viewporter, presentation time,
   fractional scaling, cursor-shape, xdg activation, relative pointer, pointer
   constraints, pointer warp, tablet input, compositor session management,
-  text-input, and linux-dmabuf without binding new protocol objects.
+  text-input, and linux-dmabuf without binding new protocol objects. Managers
+  advertised later require a new connection; removing a startup manager makes
+  the matching capability unavailable and retires any retained proxy.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop means `wl_data_device_manager` target offers and local sources,

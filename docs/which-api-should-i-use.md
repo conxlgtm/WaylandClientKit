@@ -39,6 +39,6 @@ tasks to public APIs and examples.
 | Request preview frame scheduling | `WaylandGraphicsFrameSchedule` | explicit sync, FIFO, commit timing, or presentation protocols as requested | [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift) |
 | Report color metadata facts | `WaylandGraphicsFrameMetadata`, color runtime path facts | color metadata protocols where advertised | [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 
-Capability checks are advisory. Wayland globals can disappear or compositor
-policy can reject a request after discovery. Public request APIs validate again
-at use time and report typed errors or diagnostics.
+Capabilities describe the connection-start snapshot. A startup global can
+disappear, and compositor policy can reject a request after discovery. Public
+request APIs validate again at use time and report typed errors or diagnostics.

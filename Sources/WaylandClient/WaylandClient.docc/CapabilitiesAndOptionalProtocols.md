@@ -1,7 +1,10 @@
 # Capabilities And Optional Protocols
 
-``WaylandCapabilities`` is a registry-discovery snapshot. It reports whether the
-compositor advertised optional protocols and which version WaylandClientKit will use.
+``WaylandCapabilities`` is a connection-start usability snapshot. It reports
+which optional protocols were advertised during initial discovery and which
+version WaylandClientKit bound or can bind. A manager advertised later is not
+reported or used; reconnect to discover it. If a startup manager is removed,
+its capability becomes unavailable and requests fail without reusing its proxy.
 
 Registry advertisement is not always the same as runtime usability. For example,
 linux-dmabuf may be advertised while a specific surface, device, or modifier set
@@ -9,7 +12,7 @@ is not usable for a particular GPU path. Surface-scoped and runtime-path facts
 remain internal until their public shape is proven.
 
 Applications should branch on ``ProtocolAvailability`` and handle unavailable
-features with typed public errors. For example,
+features with typed public errors even after a positive capability result. For example,
 ``WaylandCapabilities/xdgActivation`` can be available while a compositor still
 declines a later activation request according to focus policy.
 
