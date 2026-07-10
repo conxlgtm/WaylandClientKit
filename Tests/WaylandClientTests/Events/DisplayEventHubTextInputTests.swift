@@ -34,6 +34,7 @@ struct DisplayEventHubTextInputTests {
             )
         )
         let stream = hub.textInputEvents()
+        var textIterator = stream.makeAsyncIterator()
         var inputIterator = hub.inputEvents().makeAsyncIterator()
 
         hub.publishTextInput(
@@ -51,7 +52,6 @@ struct DisplayEventHubTextInputTests {
             )
         )
 
-        var textIterator = stream.makeAsyncIterator()
         await expectTextInputOverflow(from: &textIterator, capacity: 1)
         do {
             let inputEvent = try await inputIterator.next()
