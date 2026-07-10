@@ -7,10 +7,9 @@ policy. This document describes that boundary.
 WaylandClientKit reports compositor session-management advertisement through
 `WaylandCapabilities.compositorSessionManagement`. The upstream protocol is
 `xdg_session_manager_v1` from the staging XDG Session Management protocol.
-WaylandClientKit exposes narrow preview event facts through
-`WaylandDisplay.compositorSessionEvents(reason:existingID:)`. Frameworks can
-build useful local session restoration today with app-owned state and public
-WaylandClientKit facts.
+WaylandClientKit does not expose a short-lived event snapshot for this persistent
+protocol. Frameworks can build useful local session restoration today with
+app-owned state and public WaylandClientKit facts.
 
 ## Ownership Boundary
 
@@ -22,7 +21,7 @@ WaylandClientKit owns:
 - current surface geometry, scale, output membership, and decoration mode facts
 - activation token requests and activation requests through `xdg_activation_v1`
 - typed capability reporting for optional compositor protocols
-- compositor session-management capability reporting and preview protocol events
+- compositor session-management capability reporting
 
 Frameworks own:
 
@@ -118,16 +117,15 @@ preview protocol facts. The current implementation has:
 - upstream phase and naming understood
 - public capability reporting through `WaylandCapabilities`
 - package-internal raw wrappers for lifecycle handling
-- a public preview event snapshot for created/restored/replaced facts
-- `CompositorSessionSmoke`, which prints capability and logs event facts when
-  the protocol is advertised
+- `CompositorSessionSmoke`, which reports capability without creating a
+  short-lived session
 
-Before this grows beyond narrow preview events, the project needs:
+Before a session API becomes public, the project needs:
 
 - compositor advertisement evidence in `docs/compositor-matrix.md`
-- at least one smoke or example path proving lifecycle behavior
-- a framework usage shape that does not confuse local scene restoration with
-  compositor session protocol events
+- at least one smoke or example path proving durable lifecycle behavior
+- a move-only or otherwise durable owner with explicit destruction, an event
+  stream, session ID ownership, and surface attachment operations
 
 The protocol status should be recorded as evidence, not assumed from the
 presence of generated wrappers.

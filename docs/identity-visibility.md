@@ -10,7 +10,6 @@ Run `swift run wck identity verify --update` after reviewing an intentional iden
 | `ActivationToken` | opaque protocol token | `public` | `value` | `public` | `Sources/WaylandClient/Public/Activation/ActivationDomainTypes.swift` |
 | `ClipboardOfferIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/DataTransfer/DataTransferDomainTypes.swift` |
 | `ClipboardSourceIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/DataTransfer/DataTransferDomainTypes.swift` |
-| `CompositorSessionID` | opaque protocol token | `public` | `value` | `public` | `Sources/WaylandClient/Public/Session/CompositorSessionDomainTypes.swift` |
 | `DiagnosticID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Display/DisplayEvent.swift` |
 | `DragOfferIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/DataTransfer/DragAndDropDomainTypes.swift` |
 | `DragSourceIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/DataTransfer/DragSource.swift` |

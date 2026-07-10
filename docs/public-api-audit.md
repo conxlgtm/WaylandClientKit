@@ -163,10 +163,6 @@ Intentionally public:
 - `OutputManagementMode`
 - `OutputManagementHead`
 - `OutputManagementSnapshot`
-- `CompositorSessionID`
-- `CompositorSessionReason`
-- `CompositorSessionEvent`
-- `CompositorSessionEventSnapshot`
 - `ClientError`
 
 Current user-facing contract:
@@ -180,8 +176,8 @@ Current user-facing contract:
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
   pointer, pointer lock/confine, pointer warp, tablet input facts, cursor
   requests, text-input sessions and events, foreign toplevel facts,
-  output-management preview facts, compositor session preview
-  facts, diagnostics, and terminal display errors are the current product
+  output-management preview facts, compositor session capability,
+  diagnostics, and terminal display errors are the current product
   surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
@@ -212,6 +208,9 @@ Current user-facing contract:
   apply operations were removed because their only meaningful input was a
   snapshot serial and they could not express a requested configuration change.
   A package-only current-state test remains for protocol smoke coverage.
+- Compositor session management is capability-only public API. The former
+  one-roundtrip event snapshot was removed because it destroyed the session
+  before later replacement events or surface attachment could be observed.
 - Regular clipboard means `wl_data_device_manager` selection offers and sources.
 - `WaylandDisplay.capabilities()` reports currently advertised compositor support
   for regular clipboard, drag-and-drop, drag action negotiation, primary
@@ -232,10 +231,10 @@ Current user-facing contract:
   hints that compositors may ignore. Preedit, delete, commit, action, language,
   preedit-hint, and done events are typed public facts.
 - Compositor session management means `xdg_session_manager_v1` advertisement
-  reporting through `WaylandCapabilities.compositorSessionManagement` plus
-  narrow preview created/restored/replaced event facts. Compositor session IDs
-  are protocol identities, not framework scene or document identities. Local
-  restore policy remains framework-owned.
+  reporting through `WaylandCapabilities.compositorSessionManagement`. Raw
+  lifecycle objects stay package-internal until a durable public owner can
+  observe later events and attach surfaces. Local restore policy remains
+  framework-owned.
 - Relative pointer and pointer constraints mean
   `zwp_relative_pointer_manager_v1` and `zwp_pointer_constraints_v1`.
   WaylandClientKit exposes capability facts, relative motion events, typed

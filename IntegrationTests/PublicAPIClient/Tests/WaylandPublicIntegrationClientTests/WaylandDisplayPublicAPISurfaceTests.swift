@@ -152,13 +152,6 @@ struct WaylandDisplayPublicAPISurfaceTests {
 
     @Test
     func previewProtocolTypesAndDisplayMethodsCompileForExternalClients() throws {
-        let sessionID = try CompositorSessionID("session-1")
-        let sessionSnapshot = CompositorSessionEventSnapshot(
-            events: [.created(sessionID), .restored, .replaced]
-        )
-
-        #expect(sessionSnapshot.events.count == 3)
-
         func inspectForeignToplevels(_ snapshot: ForeignToplevelListSnapshot) -> Int {
             snapshot.toplevels.count + snapshot.events.count
         }
@@ -171,10 +164,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
         func usePreviewProtocolAPI(display: WaylandDisplay) async throws {
             _ = try await display.foreignToplevelListSnapshot()
             _ = try await display.outputManagementSnapshot()
-            _ = try await display.compositorSessionEvents(
-                reason: .launch,
-                existingID: sessionID
-            )
+            _ = try await display.capabilities().compositorSessionManagement
         }
 
         _ = inspectForeignToplevels

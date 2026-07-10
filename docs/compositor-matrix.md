@@ -87,7 +87,7 @@ example or manual probe has been run:
 | pointer warp | `PointerWarpSmoke` capability and request result |
 | tablet input | `TabletInputSmoke` capability, bind-seat, and tablet event summary |
 | text input | `TextInputSmoke` capability and commit summary |
-| compositor session management | `CompositorSessionSmoke` capability and event summary |
+| compositor session management | `CompositorSessionSmoke` capability summary |
 | data transfer | `DataTransferSmoke` clipboard/primary/drag summary |
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | output topology | `OutputTopologySmoke` output snapshot and window output membership report |
@@ -165,9 +165,9 @@ rerun reported `requested backing: managedGPU`, `actual backing: managedGPU`,
 WaylandClientKit supports local framework-owned state through public restoration
 snapshots and `SessionStateSmoke`. It also reports staging
 `xdg_session_manager_v1` advertisement through
-`WaylandCapabilities.compositorSessionManagement` and exposes narrow preview
-created/restored/replaced event facts. Framework scene/document restore policy
-remains separate.
+`WaylandCapabilities.compositorSessionManagement`. Raw lifecycle wrappers stay
+package-internal until a durable public session owner can observe later events
+and attach surfaces. Framework scene/document restore policy remains separate.
 
 KDE/KWin live session evidence on 2026-06-09:
 `SessionStateSmoke --auto-close --print-summary --duration-seconds 3` passed.
@@ -177,7 +177,7 @@ before exit, and closed with `remainingWindows=0`.
 
 | Protocol | Upstream phase | Vendored XML | Public API | Evidence needed before broader API |
 | -------- | -------------- | ------------ | ---------- | -------------------------- |
-| `xdg_session_manager_v1` | staging | vendored/generated from wayland-protocols 1.48 | capability plus preview `WaylandDisplay.compositorSessionEvents` facts | compositor advertisement rows, real lifecycle smoke behavior, and a framework usage shape that does not confuse compositor session events with local scene restoration |
+| `xdg_session_manager_v1` | staging | vendored/generated from wayland-protocols 1.48 | capability only; raw wrappers remain package-internal | compositor advertisement rows, a durable session owner, real lifecycle smoke behavior, and surface attachment coverage |
 
 ## Framework Host Evidence
 

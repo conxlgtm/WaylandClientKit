@@ -140,8 +140,9 @@ Audit invariant:
 - Listener storage is cancelled before the corresponding raw proxy is destroyed.
 - Output-management head and mode destroy paths are version-gated: v3+ uses the
   protocol `release` request and older bindings fall back to local proxy destroy.
-- Session-management preview events remain protocol facts. Scene/document
-  identity and local restore policy stay framework-owned.
+- Session-management wrappers remain package-internal until a durable owner can
+  observe lifetime events and attach surfaces. Scene/document identity and local
+  restore policy stay framework-owned.
 
 Tests:
 

@@ -4,7 +4,6 @@
     { "type": "ActivationToken", "category": "opaque protocol token", "constructor": "public", "storage": "value", "storageVisibility": "public" },
     { "type": "ClipboardOfferIdentity", "category": "public projection", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
     { "type": "ClipboardSourceIdentity", "category": "public projection", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
-    { "type": "CompositorSessionID", "category": "opaque protocol token", "constructor": "public", "storage": "value", "storageVisibility": "public" },
     { "type": "DiagnosticID", "category": "client identity", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
     { "type": "DragOfferIdentity", "category": "public projection", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },
     { "type": "DragSourceIdentity", "category": "public projection", "constructor": "package", "storage": "rawValue", "storageVisibility": "package" },

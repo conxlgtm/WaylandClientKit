@@ -20,6 +20,7 @@ protocol. Applications should treat these as optional input features and keep a
 fallback for compositors that do not support them or decline a later request.
 
 ``WaylandCapabilities/compositorSessionManagement`` reports staging
-`xdg_session_manager_v1` advertisement. Public preview session events are
-protocol facts only. Scene, document, and local restore policy remain framework
-owned.
+`xdg_session_manager_v1` advertisement. No public session handle is exposed
+until the library can keep the protocol object alive, observe later replacement,
+and attach restored or new surfaces. Scene, document, and local restore policy
+remain framework owned.
