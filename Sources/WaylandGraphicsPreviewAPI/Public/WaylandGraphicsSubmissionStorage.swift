@@ -2845,29 +2845,39 @@ extension WaylandGraphicsWindowBackingStorage {
                 true
             case .externalGPU(fallback: .software):
                 if case .fallback = backingRuntimePath.backing {
-                    false
+                    softwareFallbackViolatesSynchronizationPolicy(
+                        effectiveConfiguration.synchronizationPolicy
+                    )
                 } else {
                     true
                 }
             case .managedGPU(fallback: .unavailable):
                 true
             case .managedGPU(fallback: .software):
-                switch effectiveConfiguration.synchronizationPolicy {
-                case .implicitOnly:
-                    false
-                case .preferExplicit:
-                    Self.explicitSyncBlocksSoftwareFallback(
-                        backingRuntimePath.explicitSync
-                    )
-                case .requireExplicit:
-                    true
-                }
+                softwareFallbackViolatesSynchronizationPolicy(
+                    effectiveConfiguration.synchronizationPolicy
+                )
             }
 
         guard !shouldReject else {
             let reason = WaylandGraphicsReason.managedGPUSubmissionUnavailable
             backingRuntimePath = Self.runtimePath(backingRuntimePath, backingUnavailable: reason)
             throw WaylandGraphicsError.unavailable(reason)
+        }
+    }
+
+    private func softwareFallbackViolatesSynchronizationPolicy(
+        _ synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
+    ) -> Bool {
+        switch synchronizationPolicy {
+        case .implicitOnly:
+            false
+        case .preferExplicit:
+            Self.explicitSyncBlocksSoftwareFallback(
+                backingRuntimePath.explicitSync
+            )
+        case .requireExplicit:
+            true
         }
     }
 
