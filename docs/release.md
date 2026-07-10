@@ -58,12 +58,13 @@ an environment limitation rather than a test failure. To attempt the
 LeakSanitizer path explicitly, run `swift run wck test asan` without setting
 `ASAN_OPTIONS=detect_leaks=0`. The TSan target uses
 `safety/tsan-suppressions.txt` only for known Swift runtime
-metadata-cache and Swift Testing event graph reports. It also disables TSan's
-deadlock detector because Swift runtime metadata initialization currently
-produces lock-order false positives. The target runs Swift Testing with
-parallel execution disabled so sanitizer output is not polluted by unrelated
-test-runner and runtime parallel initialization reports, project data-race
-reports inside tests should remain unsuppressed.
+metadata-cache, Swift Testing event graph, and libdispatch continuation
+allocator reports. It also disables TSan's deadlock detector because Swift
+runtime metadata initialization currently produces lock-order false positives.
+The target runs Swift Testing with parallel execution disabled so sanitizer
+output is not polluted by unrelated test-runner and runtime parallel
+initialization reports, project data-race reports inside tests should remain
+unsuppressed.
 
 The hosted TSan job runs the Swift 6.3.2 Noble container on an Ubuntu 22.04
 host. The container uses an unconfined seccomp profile so `setarch` can give
