@@ -13,11 +13,11 @@ is called.
 
 ```swift
 let configuration = WaylandGraphicsConfiguration(
-    backingPreference: .managedGPU,
+    presentationPolicy: .managedGPU(fallback: .software),
     presentationFeedbackPolicy: .requestWhenAvailable
 )
 let backing = try await display.createGraphicsWindowBacking(
-    configuration: configuration
+    graphicsConfiguration: configuration
 )
 ```
 

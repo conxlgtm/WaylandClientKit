@@ -134,14 +134,16 @@ Common commands:
 
 ```bash
 swift run wck ci cheap
+swift run wck ci required
 swift run wck ci check
 swift run wck examples build
 swift run wck protocols verify-generated
 ```
 
-Checks cover protocol generation, shim verification, public API baselines, DocC,
-import boundaries, unsafe-token allowlists, examples, unit tests, integration
-tests, sanitizer runs, and live/headless smoke paths.
+The cheap gate handles fast static checks. The required pull-request gate adds
+the semantic public API baseline, strict build, unit tests, all external
+integration packages, and an expected-failure graphics policy client. Full
+checks add DocC, sanitizers, release builds, and live/headless smoke paths.
 
 See [Tooling](docs/tooling.md) and [Protocol Generation](docs/generation.md) for
 details.

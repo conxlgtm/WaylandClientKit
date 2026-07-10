@@ -22,14 +22,17 @@ reaches a terminal release result.
 
 Use ``WaylandGraphicsConfiguration`` to request:
 
-- `WaylandGraphicsPresentationMode.software` for software-only backing.
-- `WaylandGraphicsPresentationMode.managedGPU` for managed GPU clear-frame
-  attempts.
-- `WaylandGraphicsPresentationMode.externalGPU` for renderer-owned external
-  buffers.
+- `WaylandGraphicsPresentationPolicy.software` for software-only backing.
+- `WaylandGraphicsPresentationPolicy.managedGPU(fallback:)` for managed GPU
+  clear-frame attempts.
+- `WaylandGraphicsPresentationPolicy.externalGPU(fallback:)` for renderer-owned
+  external buffers.
 
-Use ``WaylandGraphicsFallbackPolicy`` to choose whether GPU failures may fall
-back to software or must throw a typed ``WaylandGraphicsError``.
+The associated ``WaylandGraphicsFallbackDisposition`` chooses whether a GPU
+failure may fall back to software or must throw a typed
+``WaylandGraphicsError``. Because presentation and fallback are one policy,
+software cannot carry a GPU requirement and a GPU path cannot be forced to
+software before it is attempted.
 
 ## Current External Buffer Scope
 

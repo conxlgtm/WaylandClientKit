@@ -49,6 +49,57 @@ struct WaylandGraphicsExplicitSubmissionPolicyTests {
             Issue.record("unexpected error: \(error)")
         }
     }
+
+    @Test
+    func requireExplicitRejectsExternalSoftwareFallbackSubmission() async throws {
+        let window = try ExplicitPolicyFakeManagedWindow()
+        let storage = externalFallbackStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        do {
+            _ = try await lease.submitSoftware { _ in
+                _ = ()
+            }
+            Issue.record("expected external software fallback rejection")
+        } catch WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable) {
+            #expect(await window.operations().isEmpty)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func requireExplicitRejectsExternalClearFrameFallback() async throws {
+        let window = try ExplicitPolicyFakeManagedWindow()
+        let storage = externalFallbackStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        do {
+            _ = try await lease.submit(.clearColor(.black))
+            Issue.record("expected external clear-frame fallback rejection")
+        } catch WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable) {
+            #expect(await window.operations().isEmpty)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    private func externalFallbackStorage(
+        window: ExplicitPolicyFakeManagedWindow
+    ) -> WaylandGraphicsWindowBackingStorage {
+        let capabilities = gpuCapableSurfaceCapabilities()
+        return WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: capabilities,
+                reason: .surfaceFeedbackUnavailable
+            ),
+            configuration: WaylandGraphicsConfiguration(
+                presentationPolicy: .externalGPU(fallback: .software),
+                synchronizationPolicy: .requireExplicit
+            )
+        )
+    }
 }
 
 private actor ExplicitPolicyFakeManagedWindow: WaylandGraphicsManagedWindow {

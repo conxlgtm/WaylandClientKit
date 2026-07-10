@@ -481,7 +481,11 @@ struct API: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            context.diagnostics.info(try PublicAPIAuditor(context: context).dump())
+            context.diagnostics.info(
+                try PublicAPIAuditor(context: context).dump(
+                    environment: compilerFilterEnvironment(context: context)
+                )
+            )
         }
     }
 
@@ -490,7 +494,11 @@ struct API: ParsableCommand {
         @Flag(name: .long) var update = false
         @Flag(name: .long) var verbose = false
         func run() throws {
-            try PublicAPIAuditor(context: context()).verify(update: update)
+            let context = try context()
+            try PublicAPIAuditor(context: context).verify(
+                update: update,
+                environment: compilerFilterEnvironment(context: context)
+            )
         }
     }
 }
@@ -580,15 +588,7 @@ struct Test: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "tsan")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            let suppressions = context.repository.url("safety/tsan-suppressions.txt")
-            var env: [String: String] = [:]
-            env["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
-                suppressions: suppressions,
-                inherited: context.runner.environment)
-            try context.swift.runSwift(
-                ["test", "--sanitize=thread", "--no-parallel"], repository: context.repository,
-                environment: try compilerFilterEnvironment(context: context, base: env))
+            try runThreadSanitizerTests(context: context())
         }
     }
 
@@ -733,7 +733,10 @@ struct Smoke: ParsableCommand {
 struct CI: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ci",
-        subcommands: [Cheap.self, CheckBase.self, Check.self, Release.self, FoundationCheck.self]
+        subcommands: [
+            Cheap.self, Required.self, CheckBase.self, Check.self, Release.self,
+            FoundationCheck.self,
+        ]
     )
 
     struct Cheap: ToolCommand {
@@ -741,6 +744,14 @@ struct CI: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             try runCheap(context: context())
+        }
+    }
+
+    struct Required: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "required")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            try runRequired(context: context())
         }
     }
 
@@ -835,6 +846,7 @@ private func runDoccVerify(context: ToolContext) throws {
             "--skip-synthesized-members",
         ],
         repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context),
         requireSuccess: false
     )
     try verifier.requirePublicProductSymbolGraphs(
@@ -911,6 +923,31 @@ private func currentExecutableURL(context: ToolContext) throws -> URL {
         runner: context.runner)
 }
 
+private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) throws {
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "waylandclientkit-invalid-graphics-policy")
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+    let result = try context.swift.runSwift(
+        [
+            "build", "--disable-index-store", "--package-path",
+            context.repository.url("IntegrationTests/InvalidGraphicsPolicyClient").path,
+            "--scratch-path", scratch.path,
+        ],
+        repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context),
+        requireSuccess: false
+    )
+    guard result.exitCode != 0 else {
+        throw ToolError("invalid graphics policy client unexpectedly compiled")
+    }
+    let diagnostics = result.stdout + result.stderr
+    guard diagnostics.contains("presentationMode"), diagnostics.contains("fallbackPolicy") else {
+        throw ToolError(
+            "invalid graphics policy client failed before the contradictory policy was checked"
+        )
+    }
+}
+
 private func runSmokeLive(context: ToolContext) throws {
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
@@ -955,29 +992,112 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
             exitCode: ToolExitCode.environment)
     }
 
+    let filters = ["WindowControlPublicRequestTests", "WindowDragSourcePublicRequestTests"]
     var arguments = ["test"]
     var environment = requestTestEnvironment()
     switch sanitizer {
     case .none:
         break
     case .thread:
-        let suppressions = context.repository.url("safety/tsan-suppressions.txt")
-        arguments.append(contentsOf: ["--sanitize=thread", "--no-parallel"])
-        environment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
-            suppressions: suppressions,
-            inherited: context.runner.environment)
+        try runThreadSanitizerTests(
+            context: context,
+            baseEnvironment: environment,
+            filters: filters
+        )
+        return
     case .address:
         arguments.append(contentsOf: ["--sanitize=address", "--no-parallel"])
         environment["ASAN_OPTIONS"] = "detect_leaks=0"
     }
 
-    for filter in ["WindowControlPublicRequestTests", "WindowDragSourcePublicRequestTests"] {
+    for filter in filters {
         try context.swift.runSwift(
             arguments + ["--filter", filter],
             repository: context.repository,
             environment: try compilerFilterEnvironment(context: context, base: environment)
         )
     }
+}
+
+private func runThreadSanitizerTests(
+    context: ToolContext,
+    baseEnvironment: [String: String] = [:],
+    filters: [String] = []
+) throws {
+    let suppressions = context.repository.url("safety/tsan-suppressions.txt")
+    var sanitizerEnvironment = baseEnvironment
+    sanitizerEnvironment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
+        suppressions: suppressions,
+        inherited: context.runner.environment
+    )
+    let environment = try compilerFilterEnvironment(
+        context: context,
+        base: sanitizerEnvironment
+    )
+
+    #if os(Linux)
+        try context.swift.runSwift(
+            ["build", "--build-tests", "--sanitize=thread", "--jobs", "2"],
+            repository: context.repository,
+            environment: environment
+        )
+        let binPathResult = try context.swift.runSwift(
+            ["build", "--show-bin-path"],
+            repository: context.repository,
+            environment: environment
+        )
+        let binPath = binPathResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !binPath.isEmpty else {
+            throw ToolError(
+                "SwiftPM did not report a test binary path",
+                exitCode: ToolExitCode.data
+            )
+        }
+        let testExecutable = URL(fileURLWithPath: binPath)
+            .appendingPathComponent("WaylandClientKitPackageTests.xctest")
+        let runtimeEnvironment = context.swift.swiftRuntimeEnvironment(environment)
+
+        func runTestBundle(filter: String?) throws {
+            var arguments = ["--sanitize=thread", "--no-parallel"]
+            if let filter {
+                arguments.append(contentsOf: ["--filter", filter])
+            }
+            arguments.append(contentsOf: ["--testing-library", "swift-testing"])
+            try context.runner.run(
+                testExecutable.path,
+                arguments,
+                workingDirectory: context.repository.root,
+                environment: runtimeEnvironment
+            )
+        }
+
+        if filters.isEmpty {
+            try runTestBundle(filter: nil)
+        } else {
+            for filter in filters {
+                try runTestBundle(filter: filter)
+            }
+        }
+    #else
+        var arguments = ["test", "--sanitize=thread", "--jobs", "2", "--no-parallel"]
+        if filters.isEmpty {
+            try context.swift.runSwift(
+                arguments,
+                repository: context.repository,
+                environment: environment
+            )
+        } else {
+            for filter in filters {
+                arguments.append(contentsOf: ["--filter", filter])
+                try context.swift.runSwift(
+                    arguments,
+                    repository: context.repository,
+                    environment: environment
+                )
+                arguments.removeLast(2)
+            }
+        }
+    #endif
 }
 
 private func runHeadlessWck(context: ToolContext, arguments: [String]) throws {
@@ -1007,16 +1127,16 @@ private func runCheap(context: ToolContext) throws {
     try ProtocolTooling(repository: context.repository, diagnostics: context.diagnostics)
         .validateManifest()
     try VerificationChecks(context: context).verifyShims()
-    try PublicAPIAuditor(context: context).verify(update: false)
     try VerificationChecks(context: context).verifyTargetImports()
     try VerificationChecks(context: context).verifyToolDependencyBoundaries()
     try VerificationChecks(context: context).verifyUnsafeAllowlist()
 }
 
-private func runCheckBase(context: ToolContext) throws {
-    try runCheap(context: context)
-    try runDocsVerify(context: context)
-    try runDoccVerify(context: context)
+private func runRequired(context: ToolContext) throws {
+    try PublicAPIAuditor(context: context).verify(
+        update: false,
+        environment: compilerFilterEnvironment(context: context)
+    )
     try context.swift.runSwift(
         [
             "build", "--disable-index-store", "-Xswiftc", "-strict-concurrency=complete",
@@ -1031,6 +1151,14 @@ private func runCheckBase(context: ToolContext) throws {
     try runIntegrationPackage(
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
+    try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
+}
+
+private func runCheckBase(context: ToolContext) throws {
+    try runCheap(context: context)
+    try runDocsVerify(context: context)
+    try runDoccVerify(context: context)
+    try runRequired(context: context)
 }
 
 private func runCheck(context: ToolContext) throws {

@@ -23,6 +23,9 @@ review expectations.
 
 - Public API changes in vended products require `docs/public-api-baseline.md`
   and `docs/public-api-audit.md` to agree.
+- The public API baseline is generated from compiler symbol graphs. It tracks
+  public signatures, availability, generic constraints, and relationships, but
+  deliberately ignores source locations and formatting.
 - Preview API changes are still baseline tracked. Do not bypass review because
   a product is preview.
 - Public `WaylandClient` must not expose raw Wayland, GBM, EGL, DRM, dmabuf,

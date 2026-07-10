@@ -177,10 +177,15 @@ package final class RawLinuxDmabufBuffer: @unchecked Sendable {
         }
     }
 
-    package init(testingPointer bufferPointer: OpaquePointer) {
+    package init(
+        testingPointer bufferPointer: OpaquePointer,
+        onDestroy: @escaping @Sendable () -> Void = {
+            // Test buffers have no protocol resource by default.
+        }
+    ) {
         releaseOwner = BufferReleaseOwner()
         proxy = RawOwnedProxy(pointer: bufferPointer) { _ in
-            // Test buffers are fake proxies and have no protocol resource to destroy.
+            onDestroy()
         }
     }
 

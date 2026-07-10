@@ -39,7 +39,7 @@ extension WaylandGraphicsWindowBackingStorage {
 
     package static func runtimePath(
         _ runtimePath: WaylandGraphicsRuntimePath,
-        backingUnavailable reason: WaylandGraphicsUnavailableReason
+        backingUnavailable reason: WaylandGraphicsReason
     ) -> WaylandGraphicsRuntimePath {
         Self.runtimePath(runtimePath, backing: .failed(reason))
     }
@@ -152,7 +152,7 @@ extension WaylandGraphicsWindowBackingStorage {
 
     package static func runtimePath(
         _ runtimePath: WaylandGraphicsRuntimePath,
-        externalBufferFailure reason: WaylandGraphicsUnavailableReason
+        externalBufferFailure reason: WaylandGraphicsReason
     ) -> WaylandGraphicsRuntimePath {
         WaylandGraphicsRuntimePath(
             capabilities: runtimePath.capabilities,
@@ -173,7 +173,7 @@ extension WaylandGraphicsWindowBackingStorage {
 
     package static func runtimePath(
         _ runtimePath: WaylandGraphicsRuntimePath,
-        fallbackExplicitSyncIfNeeded reason: WaylandGraphicsFallbackReason
+        fallbackExplicitSyncIfNeeded reason: WaylandGraphicsReason
     ) -> WaylandGraphicsRuntimePath {
         switch reason {
         case .explicitSyncSetupFailed, .explicitSyncSubmissionFailed:
@@ -237,7 +237,7 @@ extension WaylandGraphicsWindowBackingStorage {
         activeConstraint: Bool
     ) -> WaylandGraphicsRuntimeStatus {
         if selection.fallbackReason == fallbackReason {
-            return .fallback(WaylandGraphicsFallbackReason(fallbackReason))
+            return .fallback(WaylandGraphicsReason(fallbackReason))
         }
         return activeConstraint ? .active : current
     }

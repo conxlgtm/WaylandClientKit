@@ -45,7 +45,7 @@ enum GraphicsPreviewManagedGPUClear {
         on display: WaylandDisplay,
         options: ExampleRunOptions
     ) async throws -> ManagedGPUClearReport {
-        let backingPreference = requestedBackingPreference()
+        let presentationPolicy = requestedPresentationPolicy()
         let synchronizationPolicy = try requestedSynchronizationPolicy(options.synchronization)
         let pacingPolicy = try requestedPacingPolicy(options.pacing)
         let metadataPolicy = try requestedMetadataPolicy(options.metadata)
@@ -62,7 +62,7 @@ enum GraphicsPreviewManagedGPUClear {
                 decorationPreference: .preferClientSide
             ),
             graphicsConfiguration: WaylandGraphicsConfiguration(
-                backingPreference: backingPreference,
+                presentationPolicy: presentationPolicy,
                 synchronizationPolicy: synchronizationPolicy,
                 pacingPolicy: pacingPolicy,
                 metadataPolicy: metadataPolicy,
@@ -79,7 +79,7 @@ enum GraphicsPreviewManagedGPUClear {
             "display capability xdgDecoration="
                 + "\(displayAvailability(displayCapabilities.xdgDecoration))"
         )
-        log("requested backing preference=\(backingDescription(backingPreference))")
+        log("requested presentation policy=\(presentationPolicyDescription(presentationPolicy))")
         log("synchronization policy requested=\(synchronizationDescription(synchronizationPolicy))")
         log("pacing requested=\(pacingDescription(pacingPolicy))")
         log("metadata policy requested=\(metadataPolicyDescription(metadataPolicy))")
@@ -99,7 +99,7 @@ enum GraphicsPreviewManagedGPUClear {
             return ManagedGPUClearReport(
                 capabilities: capabilities,
                 runtimePath: runtimePath,
-                requestedBackingPreference: backingPreference,
+                requestedPresentationPolicy: presentationPolicy,
                 synchronizationPolicy: synchronizationPolicy,
                 pacingPolicy: pacingPolicy,
                 metadataPolicy: metadataPolicy,
@@ -145,7 +145,7 @@ enum GraphicsPreviewManagedGPUClear {
 
         return await state.report(
             capabilities: capabilities,
-            requestedBackingPreference: backingPreference,
+            requestedPresentationPolicy: presentationPolicy,
             synchronizationPolicy: synchronizationPolicy,
             pacingPolicy: pacingPolicy,
             metadataPolicy: metadataPolicy,
@@ -341,12 +341,14 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
-    nonisolated private static func requestedBackingPreference() -> WaylandGraphicsBackingKind {
+    nonisolated private static func requestedPresentationPolicy()
+        -> WaylandGraphicsPresentationPolicy
+    {
         switch ProcessInfo.processInfo.environment["WCK_GRAPHICS_PREVIEW_BACKING"]?.lowercased() {
         case "software", "shm":
             .software
         default:
-            .managedGPU
+            .managedGPU(fallback: .software)
         }
     }
 
@@ -440,12 +442,18 @@ enum GraphicsPreviewManagedGPUClear {
         value?.lowercased().replacingOccurrences(of: "_", with: "-")
     }
 
-    nonisolated fileprivate static func backingDescription(
-        _ backing: WaylandGraphicsBackingKind
+    nonisolated fileprivate static func presentationPolicyDescription(
+        _ policy: WaylandGraphicsPresentationPolicy
     ) -> String {
-        switch backing {
-        case .managedGPU:
-            "managedGPU"
+        switch policy {
+        case .managedGPU(fallback: .software):
+            "managedGPU(fallback: software)"
+        case .managedGPU(fallback: .unavailable):
+            "managedGPU(fallback: unavailable)"
+        case .externalGPU(fallback: .software):
+            "externalGPU(fallback: software)"
+        case .externalGPU(fallback: .unavailable):
+            "externalGPU(fallback: unavailable)"
         case .software:
             "software"
         }
@@ -727,7 +735,7 @@ private struct ManagedGPUClearReport: Sendable {
     var capabilities: WaylandGraphicsSurfaceCapabilities?
     var runtimePath: WaylandGraphicsRuntimePath?
     var frameResults: [WaylandGraphicsFrameResult]
-    var requestedBackingPreference: WaylandGraphicsBackingKind
+    var requestedPresentationPolicy: WaylandGraphicsPresentationPolicy
     var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
     var pacingPolicy: WaylandGraphicsPacingPolicy
     var metadataPolicy: WaylandGraphicsMetadataPolicy
@@ -739,8 +747,8 @@ private struct ManagedGPUClearReport: Sendable {
         capabilities reportedCapabilities: WaylandGraphicsSurfaceCapabilities? = nil,
         runtimePath reportedRuntimePath: WaylandGraphicsRuntimePath? = nil,
         frameResults reportedFrameResults: [WaylandGraphicsFrameResult] = [],
-        requestedBackingPreference reportedBackingPreference: WaylandGraphicsBackingKind =
-            .managedGPU,
+        requestedPresentationPolicy reportedPresentationPolicy:
+            WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software),
         synchronizationPolicy reportedSynchronizationPolicy:
             WaylandGraphicsSynchronizationPolicy = .implicitOnly,
         pacingPolicy reportedPacingPolicy: WaylandGraphicsPacingPolicy = .none,
@@ -752,7 +760,7 @@ private struct ManagedGPUClearReport: Sendable {
         capabilities = reportedCapabilities
         runtimePath = reportedRuntimePath
         frameResults = reportedFrameResults
-        requestedBackingPreference = reportedBackingPreference
+        requestedPresentationPolicy = reportedPresentationPolicy
         synchronizationPolicy = reportedSynchronizationPolicy
         pacingPolicy = reportedPacingPolicy
         metadataPolicy = reportedMetadataPolicy
@@ -787,7 +795,7 @@ private actor ManagedGPUClearRunState {
 
     func report(
         capabilities: WaylandGraphicsSurfaceCapabilities,
-        requestedBackingPreference: WaylandGraphicsBackingKind,
+        requestedPresentationPolicy: WaylandGraphicsPresentationPolicy,
         synchronizationPolicy: WaylandGraphicsSynchronizationPolicy,
         pacingPolicy: WaylandGraphicsPacingPolicy,
         metadataPolicy: WaylandGraphicsMetadataPolicy,
@@ -797,7 +805,7 @@ private actor ManagedGPUClearRunState {
         ManagedGPUClearReport(
             capabilities: capabilities,
             frameResults: frameResults,
-            requestedBackingPreference: requestedBackingPreference,
+            requestedPresentationPolicy: requestedPresentationPolicy,
             synchronizationPolicy: synchronizationPolicy,
             pacingPolicy: pacingPolicy,
             metadataPolicy: metadataPolicy,
@@ -876,7 +884,7 @@ private struct ManagedGPUClearReportFormatter {
             "metadata color representation: \(status(runtimePath.metadata.colorRepresentation))",
             "metadata color management: \(status(runtimePath.metadata.colorManagement))",
             "presentation feedback: \(availability(capabilities.presentationFeedback)), runtime \(status(runtimePath.presentationFeedback))",
-            "requested backing: \(GraphicsPreviewManagedGPUClear.backingDescription(report.requestedBackingPreference))",
+            "requested presentation policy: \(GraphicsPreviewManagedGPUClear.presentationPolicyDescription(report.requestedPresentationPolicy))",
             "actual backing: \(actualBacking(runtimePath))",
             "runtime dmabuf: \(status(runtimePath.dmabuf))",
             "frame operation: \(frameOperation)",

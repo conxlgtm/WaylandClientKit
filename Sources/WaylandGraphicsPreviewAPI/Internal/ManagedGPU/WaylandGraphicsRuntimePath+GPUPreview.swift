@@ -57,9 +57,9 @@ extension WaylandGraphicsRuntimePath {
         case .active:
             .active
         case .fallback(let reason):
-            .fallback(WaylandGraphicsFallbackReason(reason))
+            .fallback(WaylandGraphicsReason(reason))
         case .failed(let failure):
-            .failed(WaylandGraphicsUnavailableReason(failure))
+            .failed(WaylandGraphicsReason(failure))
         }
     }
 
@@ -77,9 +77,9 @@ extension WaylandGraphicsRuntimePath {
         case .explicitActive:
             return .active
         case .explicitFallback(let reason):
-            return .fallback(WaylandGraphicsFallbackReason(reason))
+            return .fallback(WaylandGraphicsReason(reason))
         case .explicitFailed(let reason):
-            return .failed(WaylandGraphicsUnavailableReason(reason))
+            return .failed(WaylandGraphicsReason(reason))
         }
     }
 
@@ -138,7 +138,7 @@ extension WaylandGraphicsRuntimePath {
         capabilities: WaylandGraphicsSurfaceCapabilities
     ) -> WaylandGraphicsPacingStatus {
         let fallback = WaylandGraphicsRuntimeStatus.fallback(
-            WaylandGraphicsFallbackReason(reason)
+            WaylandGraphicsReason(reason)
         )
         switch reason {
         case .fifoUnavailable:
@@ -161,7 +161,7 @@ extension WaylandGraphicsRuntimePath {
         capabilities: WaylandGraphicsSurfaceCapabilities
     ) -> WaylandGraphicsPacingStatus {
         let failed = WaylandGraphicsRuntimeStatus.failed(
-            WaylandGraphicsUnavailableReason(reason)
+            WaylandGraphicsReason(reason)
         )
         switch reason {
         case .fifoUnavailable:
@@ -204,68 +204,11 @@ extension WaylandGraphicsRuntimePath {
     }
 }
 
-extension WaylandGraphicsFallbackReason {
+extension WaylandGraphicsReason {
     package init(_ reason: GPUFallbackReason) {
         self = Self(GPURuntimePathReason(reason))
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
-    package init(_ reason: GPURuntimePathReason) {
-        switch reason {
-        case .policyForcedSHM:
-            self = .forcedSoftware
-        case .dmabufUnavailable:
-            self = .dmabufUnavailable
-        case .surfaceFeedbackUnavailable:
-            self = .surfaceFeedbackUnavailable
-        case .noCompatibleFormat:
-            self = .noCompatibleFormat
-        case .noRenderNode:
-            self = .noRenderNode
-        case .gbmUnavailable:
-            self = .gbmUnavailable
-        case .gbmAllocationFailed:
-            self = .gbmAllocationFailed
-        case .eglUnavailable:
-            self = .eglUnavailable
-        case .explicitSynchronizationUnavailable,
-            .explicitSynchronizationNotConfigured:
-            self = .explicitSyncRequiredButUnavailable
-        case .explicitSynchronizationSetupFailed:
-            self = .explicitSyncSetupFailed
-        case .explicitSynchronizationSubmissionFailed:
-            self = .explicitSyncSubmissionFailed
-        case .explicitSynchronizationReleaseFailed:
-            self = .explicitSyncReleaseFailed
-        case .contentTypeUnavailable:
-            self = .contentTypeUnavailable
-        case .alphaModifierUnavailable:
-            self = .alphaModifierUnavailable
-        case .colorRepresentationUnavailable:
-            self = .colorRepresentationUnavailable
-        case .colorRepresentationSupportPending:
-            self = .colorRepresentationSupportPending
-        case .colorManagementUnavailable:
-            self = .colorManagementUnavailable
-        case .presentationHintUnavailable:
-            self = .presentationHintUnavailable
-        case .compositorRejectedBuffer:
-            self = .compositorRejectedBuffer
-        case .fifoUnavailable:
-            self = .fifoUnavailable
-        case .commitTimingUnavailable:
-            self = .commitTimingUnavailable
-        case .commitTimingRejected:
-            self = .commitTimingRejected
-        case .commitFailed:
-            self = .commitFailed
-        case .presentationTrackingFailed:
-            self = .presentationTrackingFailed
-        }
-    }
-}
-
-extension WaylandGraphicsUnavailableReason {
     package init(_ failure: GPUBackingFailure) {
         self = Self(GPURuntimePathReason(failure))
     }
@@ -274,7 +217,7 @@ extension WaylandGraphicsUnavailableReason {
     package init(_ reason: GPURuntimePathReason) {
         switch reason {
         case .policyForcedSHM:
-            self = .managedGPUSubmissionUnavailable
+            self = .forcedSoftware
         case .dmabufUnavailable:
             self = .dmabufUnavailable
         case .surfaceFeedbackUnavailable:

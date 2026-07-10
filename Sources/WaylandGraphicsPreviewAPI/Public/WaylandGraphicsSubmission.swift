@@ -7,19 +7,8 @@ import WaylandRaw
 // swiftlint:disable file_length
 
 public struct WaylandGraphicsConfiguration: Equatable, Sendable {
-    public var presentationMode: WaylandGraphicsPresentationMode
-    public var fallbackPolicy: WaylandGraphicsFallbackPolicy
-    public var backingPreference: WaylandGraphicsBackingKind {
-        get {
-            presentationMode.backingPreference
-        }
-        set {
-            presentationMode = WaylandGraphicsPresentationMode(
-                backingPreference: newValue,
-                fallbackPolicy: fallbackPolicy
-            )
-        }
-    }
+    /// Selects the presentation path and what happens if its GPU path is unavailable.
+    public var presentationPolicy: WaylandGraphicsPresentationPolicy
     public var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
     public var pacingPolicy: WaylandGraphicsPacingPolicy
     public var metadataPolicy: WaylandGraphicsMetadataPolicy
@@ -28,34 +17,8 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
     public static let `default` = WaylandGraphicsConfiguration()
 
     public init(
-        fallbackPolicy backingFallbackPolicy: WaylandGraphicsFallbackPolicy =
-            .preferGPUFallbackToSoftware,
-        backingPreference preferredBacking: WaylandGraphicsBackingKind = .managedGPU,
-        synchronizationPolicy frameSynchronizationPolicy:
-            WaylandGraphicsSynchronizationPolicy = .implicitOnly,
-        pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none,
-        metadataPolicy frameMetadataPolicy: WaylandGraphicsMetadataPolicy = .none,
-        presentationFeedbackPolicy framePresentationFeedbackPolicy:
-            WaylandGraphicsPresentationFeedbackPolicy = .none,
-        presentationMode requestedPresentationMode: WaylandGraphicsPresentationMode? = nil
-    ) {
-        presentationMode =
-            requestedPresentationMode
-            ?? WaylandGraphicsPresentationMode(
-                backingPreference: preferredBacking,
-                fallbackPolicy: backingFallbackPolicy
-            )
-        fallbackPolicy = backingFallbackPolicy
-        synchronizationPolicy = frameSynchronizationPolicy
-        pacingPolicy = framePacingPolicy
-        metadataPolicy = frameMetadataPolicy
-        presentationFeedbackPolicy = framePresentationFeedbackPolicy
-    }
-
-    public init(
-        presentationMode requestedPresentationMode: WaylandGraphicsPresentationMode,
-        fallbackPolicy backingFallbackPolicy: WaylandGraphicsFallbackPolicy =
-            .preferGPUFallbackToSoftware,
+        presentationPolicy requestedPresentationPolicy:
+            WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software),
         synchronizationPolicy frameSynchronizationPolicy:
             WaylandGraphicsSynchronizationPolicy = .implicitOnly,
         pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none,
@@ -63,15 +26,11 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
         presentationFeedbackPolicy framePresentationFeedbackPolicy:
             WaylandGraphicsPresentationFeedbackPolicy = .none
     ) {
-        self.init(
-            fallbackPolicy: backingFallbackPolicy,
-            backingPreference: requestedPresentationMode.backingPreference,
-            synchronizationPolicy: frameSynchronizationPolicy,
-            pacingPolicy: framePacingPolicy,
-            metadataPolicy: frameMetadataPolicy,
-            presentationFeedbackPolicy: framePresentationFeedbackPolicy,
-            presentationMode: requestedPresentationMode
-        )
+        presentationPolicy = requestedPresentationPolicy
+        synchronizationPolicy = frameSynchronizationPolicy
+        pacingPolicy = framePacingPolicy
+        metadataPolicy = frameMetadataPolicy
+        presentationFeedbackPolicy = framePresentationFeedbackPolicy
     }
 }
 
@@ -88,9 +47,7 @@ extension WaylandGraphicsConfiguration {
                     .explicitSyncRequiredButUnavailable
                 )
             }
-            guard presentationMode != .software,
-                fallbackPolicy != .forceSoftware
-            else {
+            guard presentationPolicy.isGPU else {
                 throw WaylandGraphicsError.unavailable(
                     .managedGPUSubmissionUnavailable
                 )
@@ -140,35 +97,40 @@ extension WaylandGraphicsConfiguration {
     }
 }
 
-public enum WaylandGraphicsBackingKind: Equatable, Sendable {
+/// The outcome requested when a selected GPU presentation path cannot continue.
+public enum WaylandGraphicsFallbackDisposition: Equatable, Sendable {
+    /// Continue through the software presentation path when it is safe to do so.
     case software
-    case managedGPU
+    /// Report a typed unavailable error instead of presenting through software.
+    case unavailable
 }
 
-public enum WaylandGraphicsPresentationMode: Equatable, Sendable {
+/// The authoritative presentation and fallback policy for a graphics backing.
+public enum WaylandGraphicsPresentationPolicy: Equatable, Sendable {
+    /// Use software presentation without attempting a GPU path.
     case software
-    case managedGPU
-    case externalGPU
+    /// Attempt package-managed GPU presentation.
+    case managedGPU(fallback: WaylandGraphicsFallbackDisposition)
+    /// Present renderer-owned external GPU buffers.
+    case externalGPU(fallback: WaylandGraphicsFallbackDisposition)
 }
 
-extension WaylandGraphicsPresentationMode {
-    init(
-        backingPreference: WaylandGraphicsBackingKind,
-        fallbackPolicy _: WaylandGraphicsFallbackPolicy
-    ) {
-        if backingPreference == .software {
-            self = .software
-        } else {
-            self = .managedGPU
+extension WaylandGraphicsPresentationPolicy {
+    package var isGPU: Bool {
+        switch self {
+        case .software:
+            false
+        case .managedGPU, .externalGPU:
+            true
         }
     }
 
-    var backingPreference: WaylandGraphicsBackingKind {
+    package var fallbackDisposition: WaylandGraphicsFallbackDisposition? {
         switch self {
         case .software:
-            .software
-        case .managedGPU, .externalGPU:
-            .managedGPU
+            nil
+        case .managedGPU(let fallback), .externalGPU(let fallback):
+            fallback
         }
     }
 }
@@ -1228,7 +1190,7 @@ public enum WaylandGraphicsExternalReleaseResult: Equatable, Sendable {
     ///
     /// Do not reuse or destroy the renderer allocation from this result alone.
     /// Close and await the owning backing before destroying the allocation.
-    case failed(WaylandGraphicsUnavailableReason)
+    case failed(WaylandGraphicsReason)
 }
 
 // swiftlint:disable:next type_name
@@ -1271,7 +1233,11 @@ public enum WaylandGraphicsExternalPresentationFeedbackResult:
     case retired(WaylandGraphicsExternalRetirementReason)
 }
 
-package actor WaylandGraphicsExternalReleaseState {
+// SAFETY: Receipt result and waiter access is protected by lock. Continuations
+// are resumed after unlocking so resumed work cannot re-enter locked state.
+@safe
+package final class WaylandGraphicsExternalReleaseState: @unchecked Sendable {
+    private let lock = NSLock()
     private var result: WaylandGraphicsExternalReleaseResult?
     private var waiters: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>] = []
 
@@ -1280,21 +1246,31 @@ package actor WaylandGraphicsExternalReleaseState {
     }
 
     package func wait() async -> WaylandGraphicsExternalReleaseResult {
-        if let result {
-            return result
-        }
-
         return await withCheckedContinuation { continuation in
-            waiters.append(continuation)
+            lock.lock()
+            if let result {
+                lock.unlock()
+                continuation.resume(returning: result)
+            } else {
+                waiters.append(continuation)
+                lock.unlock()
+            }
         }
     }
 
     package func finish(_ terminalResult: WaylandGraphicsExternalReleaseResult) {
-        guard result == nil else { return }
+        let continuations: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>]
+        lock.lock()
+        guard result == nil else {
+            lock.unlock()
+            return
+        }
 
         result = terminalResult
-        let continuations = waiters
+        continuations = waiters
         waiters.removeAll()
+        lock.unlock()
+
         for continuation in continuations {
             continuation.resume(returning: terminalResult)
         }
@@ -1482,8 +1458,8 @@ public enum WaylandGraphicsSubmissionFailure: Equatable, Sendable {
 }
 
 public enum WaylandGraphicsError: Error, Equatable, Sendable {
-    case unavailable(WaylandGraphicsUnavailableReason)
-    case fallbackRequired(WaylandGraphicsFallbackReason)
+    case unavailable(WaylandGraphicsReason)
+    case fallbackRequired(WaylandGraphicsReason)
     case windowClosed
     case backingClosed
     case frameLeaseActive

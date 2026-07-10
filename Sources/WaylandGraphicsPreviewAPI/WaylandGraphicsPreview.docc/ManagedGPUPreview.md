@@ -61,7 +61,7 @@ remain protocol metadata facts rather than renderer color policy.
 
 Unsupported or unavailable requirements are reported as typed
 `WaylandGraphicsError` values or fallback reasons according to
-`WaylandGraphicsFallbackPolicy`.
+``WaylandGraphicsPresentationPolicy``.
 
 ## Evidence
 

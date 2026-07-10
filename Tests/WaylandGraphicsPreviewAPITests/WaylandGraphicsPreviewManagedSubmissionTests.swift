@@ -285,10 +285,11 @@ struct WaylandGraphicsPreviewRuntimeTests {
     }
 
     @Test
-    func requireGPUProjectsAdvertisedPathBeforeSubmission() throws {
+    func unavailableFallbackProjectsAdvertisedPathBeforeSubmission() throws {
         let path = try WaylandDisplay.managedPreviewRuntimePath(
             capabilities: gpuCapableSurfaceCapabilities(),
-            configuration: WaylandGraphicsConfiguration(fallbackPolicy: .requireGPU)
+            configuration: WaylandGraphicsConfiguration(
+                presentationPolicy: .managedGPU(fallback: .unavailable))
         )
 
         #expect(path.backing == .advertised)

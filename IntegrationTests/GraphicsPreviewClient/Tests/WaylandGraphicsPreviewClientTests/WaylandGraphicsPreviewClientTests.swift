@@ -33,9 +33,11 @@ struct WaylandGraphicsPreviewClientTests {
         )
         let path = WaylandGraphicsRuntimePath.projected(
             capabilities: capabilities,
-            policy: .preferGPUFallbackToSoftware
+            policy: .managedGPU(fallback: .software)
         )
-        let decision = WaylandGraphicsFallbackPolicy.requireGPU.decide(
+        let decision = WaylandGraphicsPresentationPolicy.managedGPU(
+            fallback: .unavailable
+        ).decide(
             capabilities: capabilities
         )
 
@@ -47,8 +49,10 @@ struct WaylandGraphicsPreviewClientTests {
     func displayGraphicsPreviewMethodsAreAvailableToExternalClients() async throws {
         func acceptsDisplay(_ display: WaylandDisplay) async throws {
             _ = try await display.graphicsSurfaceCapabilities()
-            _ = try await display.graphicsRuntimePath(policy: .forceSoftware)
-            _ = try await display.graphicsBackingDecision(policy: .requireGPU)
+            _ = try await display.graphicsRuntimePath(policy: .software)
+            _ = try await display.graphicsBackingDecision(
+                policy: .managedGPU(fallback: .unavailable)
+            )
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: WindowConfiguration(
                     title: "Graphics Preview Client",
@@ -57,8 +61,7 @@ struct WaylandGraphicsPreviewClientTests {
                     initialHeight: 16
                 ),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware,
-                    backingPreference: .software
+                    presentationPolicy: .software
                 )
             )
             _ = backing.window
@@ -78,8 +81,7 @@ struct WaylandGraphicsPreviewClientTests {
     @Test
     func managedPreviewSubmissionTypesCompileForExternalClients() throws {
         let configuration = WaylandGraphicsConfiguration(
-            fallbackPolicy: .preferGPUFallbackToSoftware,
-            backingPreference: .managedGPU,
+            presentationPolicy: .managedGPU(fallback: .software),
             synchronizationPolicy: .preferExplicit,
             pacingPolicy: .preferFIFO,
             metadataPolicy: .preferAvailable,
@@ -123,12 +125,11 @@ struct WaylandGraphicsPreviewClientTests {
             pacingPolicy: .preferFIFO
         )
 
-        #expect(configuration.presentationMode == .managedGPU)
-        #expect(configuration.backingPreference == .managedGPU)
+        #expect(configuration.presentationPolicy == .managedGPU(fallback: .software))
         #expect(configuration.synchronizationPolicy == .preferExplicit)
         #expect(configuration.presentationFeedbackPolicy == .requestWhenAvailable)
-        #expect(WaylandGraphicsFallbackReason.surfaceFeedbackUnavailable != .dmabufUnavailable)
-        #expect(WaylandGraphicsUnavailableReason.gbmAllocationFailed != .gbmUnavailable)
+        #expect(WaylandGraphicsReason.surfaceFeedbackUnavailable != .dmabufUnavailable)
+        #expect(WaylandGraphicsReason.gbmAllocationFailed != .gbmUnavailable)
         #expect(metadata.contentType == .video)
         #expect(metadata.alpha == .opaque)
         #expect(metadata.damage == .fullFrame)
@@ -170,17 +171,14 @@ struct WaylandGraphicsPreviewClientTests {
     @Test
     func externalGPUPresentationConfigurationCompilesForExternalClients() {
         let configuration = WaylandGraphicsConfiguration(
-            presentationMode: .externalGPU,
-            fallbackPolicy: .requireGPU,
+            presentationPolicy: .externalGPU(fallback: .unavailable),
             synchronizationPolicy: .preferExplicit,
             pacingPolicy: .preferFIFO,
             metadataPolicy: .preferAvailable,
             presentationFeedbackPolicy: .requestWhenAvailable
         )
 
-        #expect(configuration.presentationMode == .externalGPU)
-        #expect(configuration.backingPreference == .managedGPU)
-        #expect(configuration.fallbackPolicy == .requireGPU)
+        #expect(configuration.presentationPolicy == .externalGPU(fallback: .unavailable))
     }
 
     @Test
@@ -253,6 +251,6 @@ private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {
                 linuxDmabuf: .unavailable
             )
         ),
-        policy: .forceSoftware
+        policy: .software
     )
 }

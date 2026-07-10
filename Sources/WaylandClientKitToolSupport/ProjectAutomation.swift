@@ -858,52 +858,51 @@ public struct PublicAPIAuditor {
         self.context = context
     }
 
-    public func dump() throws -> String {
-        var output = """
-            # WaylandClientKit Public API Report
-
-            Generated from tracked Swift sources.
-
-            ## Products
-
-            """
-        let package = try context.swift.runSwift(
-            ["package", "describe", "--type", "json"], repository: context.repository)
-        if let data = package.stdout.data(using: .utf8),
-            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let products = object["products"] as? [[String: Any]]
-        {
-            for product in products {
-                if let name = product["name"] as? String {
-                    output += "- \(name)\n"
-                }
-            }
-        }
-        output += "\n"
-        output += try declarationsSection(
-            title: "WaylandClient Public Declarations", rootPath: "Sources/WaylandClient")
-        output += try declarationsSection(
-            title: "WaylandGraphicsPreview Public Declarations",
-            rootPath: "Sources/WaylandGraphicsPreviewAPI")
-        output += try nonProductDeclarations()
-        return output
+    public func dump(environment: [String: String] = [:]) throws -> String {
+        let verifier = DocCVerifier(
+            repository: context.repository,
+            buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+            fileSystem: context.fileSystem,
+            diagnostics: context.diagnostics
+        )
+        try verifier.removePublicProductSymbolGraphs()
+        let result = try context.swift.runSwift(
+            [
+                "package", "dump-symbol-graph", "--minimum-access-level", "public",
+                "--skip-synthesized-members",
+            ],
+            repository: context.repository,
+            environment: environment,
+            requireSuccess: false
+        )
+        try verifier.requirePublicProductSymbolGraphs(
+            afterDump: result,
+            allowingNonProductFailures: true
+        )
+        let report = try SemanticPublicAPIBaseline(fileSystem: context.fileSystem).render(
+            symbolGraphs: verifier.publicProductSymbolGraphs()
+        )
+        return "# WaylandClientKit Semantic Public API Report\n\n\(report)"
     }
 
-    public func verify(update: Bool) throws {
+    public func verify(update: Bool, environment: [String: String] = [:]) throws {
         let baseline = context.repository.url("docs/public-api-baseline.md")
-        let report = try dump()
-        let extracted = extractBaseline(from: report)
+        let report = try dump(environment: environment)
+        let reportBody = report.split(separator: "\n", omittingEmptySubsequences: false)
+            .dropFirst(2)
+            .joined(separator: "\n")
         let baselineText = """
             # WaylandClientKit Public API Baseline
 
-            This baseline records the public declarations exported by vended library
-            products. Preview products are included so source-breaking preview API drift is
-            visible and reviewed.
+            This baseline records compiler-emitted public symbols and relationships for
+            vended library products. Source locations and formatting are excluded, while
+            continuation-line signature changes remain visible. Preview products are
+            included so source-breaking preview API drift is reviewed.
 
             Run `swift run wck api verify --update` only after reviewing and updating
             `docs/public-api-audit.md` for the API contract change.
 
-            \(extracted)
+            \(reportBody)
             """
         if update {
             try context.fileSystem.writeText(baselineText, to: baseline)
@@ -922,118 +921,6 @@ public struct PublicAPIAuditor {
                 exitCode: ToolExitCode.data)
         }
         context.diagnostics.success("public API baseline is current")
-    }
-
-    private func declarationsSection(title: String, rootPath: String) throws -> String {
-        var output = "## \(title)\n\n"
-        let files = try context.fileSystem.walk(
-            context.repository.url(rootPath), includingDirectories: false
-        )
-        .filter { $0.pathExtension == "swift" }
-        for file in files {
-            let declarations = try publicDeclarations(in: file)
-            guard !declarations.isEmpty else { continue }
-            output += "### `\(context.repository.relativePath(file))`\n\n"
-            for declaration in declarations {
-                output += "- L\(declaration.line): `\(declaration.text)`\n"
-            }
-            output += "\n"
-        }
-        return output
-    }
-
-    private func nonProductDeclarations() throws -> String {
-        var output = "## Non-Product Target Public Declarations\n\n"
-        output += "These declarations are not part of a vended library product "
-        output += "unless the package manifest changes.\n\n"
-        let excluded = ["Sources/WaylandClient/", "Sources/WaylandGraphicsPreviewAPI/"]
-        let files = try context.fileSystem.walk(
-            context.repository.url("Sources"), includingDirectories: false
-        )
-        .filter { $0.pathExtension == "swift" }
-        .filter { file in
-            let relative = context.repository.relativePath(file)
-            return !excluded.contains { relative.hasPrefix($0) }
-        }
-        for file in files {
-            let declarations = try publicDeclarations(in: file)
-            guard !declarations.isEmpty else { continue }
-            output += "### `\(context.repository.relativePath(file))`\n\n"
-            for declaration in declarations {
-                output += "- L\(declaration.line): `\(declaration.text)`\n"
-            }
-            output += "\n"
-        }
-        return output
-    }
-
-    private func publicDeclarations(in file: URL) throws -> [(line: Int, text: String)] {
-        let lines = try context.fileSystem.readText(file).split(
-            separator: "\n", omittingEmptySubsequences: false
-        ).map(String.init)
-        var result: [(Int, String)] = []
-        var enumDepth = 0
-        var inPublicEnum = false
-        var enumSeenBody = false
-
-        for (index, line) in lines.enumerated() {
-            if line.range(
-                of: #"^\s*([A-Za-z_][A-Za-z0-9_]*\s+)*public\s+"#, options: .regularExpression)
-                != nil
-            {
-                result.append((index + 1, line))
-            }
-
-            let startsPublicEnum =
-                line.range(
-                    of: #"^\s*([A-Za-z_][A-Za-z0-9_]*\s+)*public\s+(indirect\s+)?enum\s+"#,
-                    options: .regularExpression) != nil
-            if startsPublicEnum {
-                inPublicEnum = true
-                enumDepth = 0
-                enumSeenBody = false
-            } else if inPublicEnum,
-                enumSeenBody,
-                enumDepth == 1,
-                line.range(of: #"^\s*case\s+"#, options: .regularExpression) != nil
-            {
-                result.append((index + 1, line))
-            }
-
-            if inPublicEnum {
-                for character in line {
-                    if character == "{" {
-                        enumDepth += 1
-                        enumSeenBody = true
-                    } else if character == "}" {
-                        enumDepth -= 1
-                    }
-                }
-                if enumSeenBody, enumDepth <= 0 {
-                    inPublicEnum = false
-                }
-            }
-        }
-        return result
-    }
-
-    private func extractBaseline(from report: String) -> String {
-        let lines = report.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        var output: [String] = []
-        var include = false
-        for line in lines {
-            if line == "## WaylandClient Public Declarations"
-                || line == "## WaylandGraphicsPreview Public Declarations"
-            {
-                include = true
-            } else if line == "## Non-Product Target Public Declarations" {
-                include = false
-            }
-            if include {
-                output.append(line)
-            }
-        }
-        return output.joined(separator: "\n")
     }
 }
 

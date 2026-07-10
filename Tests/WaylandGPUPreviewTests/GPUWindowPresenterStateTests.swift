@@ -855,7 +855,7 @@ struct GPUWindowRuntimePathFailureTests {
                 .fallbackReason == .presentationTrackingFailed
         )
         #expect(
-            WaylandGraphicsFallbackReason(
+            WaylandGraphicsReason(
                 ManagedGPUPreviewBackingError.setup(.commitFailed).fallbackReason
             ) == .commitFailed
         )
@@ -2161,7 +2161,7 @@ struct ManagedGPUPreviewExplicitFallbackTests {
 
 private func explicitSyncFallbackReason(
     for failure: GPUBackingFailure
-) -> WaylandGraphicsFallbackReason {
+) -> WaylandGraphicsReason {
     switch failure {
     case .explicitSyncSetupFailed:
         .explicitSyncSetupFailed

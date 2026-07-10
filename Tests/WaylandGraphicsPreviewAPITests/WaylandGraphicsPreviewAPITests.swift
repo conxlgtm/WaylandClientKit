@@ -36,7 +36,7 @@ struct WaylandGraphicsPreviewAPITests {
     }
 
     @Test
-    func fallbackPolicyDistinguishesSoftwareFallbackAndRequiredGPUFailure() {
+    func presentationPolicyDistinguishesFallbackAndUnavailableGPU() {
         let capabilities = WaylandGraphicsSurfaceCapabilities(
             dmabuf: .unavailable,
             explicitSync: .unavailable,
@@ -46,17 +46,17 @@ struct WaylandGraphicsPreviewAPITests {
         )
 
         #expect(
-            WaylandGraphicsFallbackPolicy.preferGPUFallbackToSoftware.decide(
+            WaylandGraphicsPresentationPolicy.managedGPU(fallback: .software).decide(
                 capabilities: capabilities
             ) == .software(.dmabufUnavailable)
         )
         #expect(
-            WaylandGraphicsFallbackPolicy.requireGPU.decide(
+            WaylandGraphicsPresentationPolicy.managedGPU(fallback: .unavailable).decide(
                 capabilities: capabilities
             ) == .unavailable(.dmabufUnavailable)
         )
         #expect(
-            WaylandGraphicsFallbackPolicy.forceSoftware.decide(
+            WaylandGraphicsPresentationPolicy.software.decide(
                 capabilities: capabilities
             ) == .software(.forcedSoftware)
         )
@@ -138,7 +138,7 @@ struct WaylandGraphicsPreviewAPITests {
 
         let path = WaylandGraphicsRuntimePath.projected(
             capabilities: capabilities,
-            policy: .preferGPUFallbackToSoftware
+            policy: .managedGPU(fallback: .software)
         )
 
         #expect(path.backing == .fallback(.dmabufUnavailable))
@@ -148,10 +148,10 @@ struct WaylandGraphicsPreviewAPITests {
     }
 
     @Test
-    func forceSoftwareProjectedRuntimePathReportsSoftwareFallback() {
+    func softwarePolicyProjectedRuntimePathReportsSoftwareSelection() {
         let path = WaylandGraphicsRuntimePath.projected(
             capabilities: gpuCapableSurfaceCapabilities(),
-            policy: .forceSoftware
+            policy: .software
         )
 
         #expect(path.backing == .fallback(.forcedSoftware))
@@ -164,14 +164,14 @@ struct WaylandGraphicsPreviewAPITests {
     }
 
     @Test
-    func forceSoftwareDecisionAndProjectedPathAgree() {
+    func softwarePolicyDecisionAndProjectedPathAgree() {
         let capabilities = gpuCapableSurfaceCapabilities()
-        let decision = WaylandGraphicsFallbackPolicy.forceSoftware.decide(
+        let decision = WaylandGraphicsPresentationPolicy.software.decide(
             capabilities: capabilities
         )
         let path = WaylandGraphicsRuntimePath.projected(
             capabilities: capabilities,
-            policy: .forceSoftware
+            policy: .software
         )
 
         #expect(decision == .software(.forcedSoftware))
@@ -201,8 +201,7 @@ struct WaylandGraphicsPreviewAPITests {
     func managedPreviewConfigurationDefaultsAreConservative() {
         let configuration = WaylandGraphicsConfiguration.default
 
-        #expect(configuration.presentationMode == .managedGPU)
-        #expect(configuration.fallbackPolicy == .preferGPUFallbackToSoftware)
+        #expect(configuration.presentationPolicy == .managedGPU(fallback: .software))
         #expect(configuration.synchronizationPolicy == .implicitOnly)
         #expect(configuration.pacingPolicy == .none)
         #expect(configuration.metadataPolicy == .none)

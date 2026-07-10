@@ -31,8 +31,8 @@ value types.
 ### Configuration
 
 - ``WaylandGraphicsConfiguration``
-- ``WaylandGraphicsBackingKind``
-- ``WaylandGraphicsFallbackPolicy``
+- ``WaylandGraphicsPresentationPolicy``
+- ``WaylandGraphicsFallbackDisposition``
 - ``WaylandGraphicsSynchronizationPolicy``
 - ``WaylandGraphicsPacingPolicy``
 - ``WaylandGraphicsMetadataPolicy``
@@ -92,8 +92,7 @@ value types.
 - ``WaylandGraphicsColorMetadataAvailability``
 - ``WaylandGraphicsPacingStatus``
 - ``WaylandGraphicsMetadataStatus``
-- ``WaylandGraphicsFallbackReason``
-- ``WaylandGraphicsUnavailableReason``
+- ``WaylandGraphicsReason``
 - ``WaylandGraphicsBackingDecision``
 
 ### Errors

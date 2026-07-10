@@ -32,7 +32,7 @@ struct WaylandTinyUIPrototypeTests {
                     initialHeight: 100
                 ),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware,
+                    presentationPolicy: .software,
                     presentationFeedbackPolicy: .requestWhenAvailable
                 )
             )
