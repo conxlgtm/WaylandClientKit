@@ -65,10 +65,13 @@ parallel execution disabled so sanitizer output is not polluted by unrelated
 test-runner and runtime parallel initialization reports, project data-race
 reports inside tests should remain unsuppressed.
 
-The hosted TSan job runs its Swift container with an unconfined seccomp profile.
-Swift's Linux TSan runtime disables address-space randomization during startup;
-Docker's default seccomp profile blocks that operation and terminates the test
-binary before any test can run. This exception is limited to the TSan job.
+The hosted TSan job runs directly on the Ubuntu 22.04 runner. The Swift 6.3.2
+TSan suite passes in the same container locally, but the Ubuntu 24.04 hosted
+runner's kernel/container combination exits after linking without starting the
+test process or emitting a sanitizer report. The selected runner supplies
+Swift 6.3.2 without that container boundary. A small instrumented runtime probe
+runs before the package suite so a future runner regression fails before the
+long sanitizer build.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
