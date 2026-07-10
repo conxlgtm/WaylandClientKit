@@ -213,10 +213,14 @@ jobs:
           setarch "$(uname -m)" -R "$probe_directory/probe"
       - name: ThreadSanitizer tests
         run: setarch "$(uname -m)" -R swift run wck test tsan
+        env:
+          TSAN_OPTIONS: verbosity=1:log_path=stderr
       - name: Headless request-path ThreadSanitizer tests
         run: |
           setarch "$(uname -m)" -R \
             swift run wck smoke headless -- wck test request-paths-tsan
+        env:
+          TSAN_OPTIONS: verbosity=1:log_path=stderr
 
   sanitizer-asan:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}

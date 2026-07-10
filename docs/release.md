@@ -67,11 +67,13 @@ reports inside tests should remain unsuppressed.
 
 The hosted TSan job runs the Swift 6.3.2 Noble container on an Ubuntu 22.04
 host. The container uses an unconfined seccomp profile so `setarch` can give
-each sanitizer process a fixed address layout before Swift starts. This avoids
-the runtime ASLR re-exec path, which can exit after linking without starting the
-large test bundle on hosted runners. TSan compilation is limited to two jobs to
-bound peak memory. A small instrumented runtime probe runs before the package
-suite so a future runner regression fails before the long sanitizer build.
+each sanitizer process a fixed address layout before Swift starts. The TSan
+command builds the package test bundle, then runs that bundle directly instead
+of relying on SwiftPM's combined build-and-run launcher, which can exit after
+linking without starting the large test bundle on hosted runners. Compilation
+is limited to two jobs to bound peak memory. A small instrumented runtime probe
+runs before the package suite so a future runner regression fails before the
+long sanitizer build.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and

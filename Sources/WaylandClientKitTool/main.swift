@@ -588,16 +588,7 @@ struct Test: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "tsan")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            let suppressions = context.repository.url("safety/tsan-suppressions.txt")
-            var env: [String: String] = [:]
-            env["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
-                suppressions: suppressions,
-                inherited: context.runner.environment)
-            try context.swift.runSwift(
-                ["test", "--sanitize=thread", "--jobs", "2", "--no-parallel"],
-                repository: context.repository,
-                environment: try compilerFilterEnvironment(context: context, base: env))
+            try runThreadSanitizerTests(context: context())
         }
     }
 
@@ -1001,29 +992,112 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
             exitCode: ToolExitCode.environment)
     }
 
+    let filters = ["WindowControlPublicRequestTests", "WindowDragSourcePublicRequestTests"]
     var arguments = ["test"]
     var environment = requestTestEnvironment()
     switch sanitizer {
     case .none:
         break
     case .thread:
-        let suppressions = context.repository.url("safety/tsan-suppressions.txt")
-        arguments.append(contentsOf: ["--sanitize=thread", "--jobs", "2", "--no-parallel"])
-        environment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
-            suppressions: suppressions,
-            inherited: context.runner.environment)
+        try runThreadSanitizerTests(
+            context: context,
+            baseEnvironment: environment,
+            filters: filters
+        )
+        return
     case .address:
         arguments.append(contentsOf: ["--sanitize=address", "--no-parallel"])
         environment["ASAN_OPTIONS"] = "detect_leaks=0"
     }
 
-    for filter in ["WindowControlPublicRequestTests", "WindowDragSourcePublicRequestTests"] {
+    for filter in filters {
         try context.swift.runSwift(
             arguments + ["--filter", filter],
             repository: context.repository,
             environment: try compilerFilterEnvironment(context: context, base: environment)
         )
     }
+}
+
+private func runThreadSanitizerTests(
+    context: ToolContext,
+    baseEnvironment: [String: String] = [:],
+    filters: [String] = []
+) throws {
+    let suppressions = context.repository.url("safety/tsan-suppressions.txt")
+    var sanitizerEnvironment = baseEnvironment
+    sanitizerEnvironment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
+        suppressions: suppressions,
+        inherited: context.runner.environment
+    )
+    let environment = try compilerFilterEnvironment(
+        context: context,
+        base: sanitizerEnvironment
+    )
+
+    #if os(Linux)
+        try context.swift.runSwift(
+            ["build", "--build-tests", "--sanitize=thread", "--jobs", "2"],
+            repository: context.repository,
+            environment: environment
+        )
+        let binPathResult = try context.swift.runSwift(
+            ["build", "--show-bin-path"],
+            repository: context.repository,
+            environment: environment
+        )
+        let binPath = binPathResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !binPath.isEmpty else {
+            throw ToolError(
+                "SwiftPM did not report a test binary path",
+                exitCode: ToolExitCode.data
+            )
+        }
+        let testExecutable = URL(fileURLWithPath: binPath)
+            .appendingPathComponent("WaylandClientKitPackageTests.xctest")
+        let runtimeEnvironment = context.swift.swiftRuntimeEnvironment(environment)
+
+        func runTestBundle(filter: String?) throws {
+            var arguments = ["--sanitize=thread", "--no-parallel"]
+            if let filter {
+                arguments.append(contentsOf: ["--filter", filter])
+            }
+            arguments.append(contentsOf: ["--testing-library", "swift-testing"])
+            try context.runner.run(
+                testExecutable.path,
+                arguments,
+                workingDirectory: context.repository.root,
+                environment: runtimeEnvironment
+            )
+        }
+
+        if filters.isEmpty {
+            try runTestBundle(filter: nil)
+        } else {
+            for filter in filters {
+                try runTestBundle(filter: filter)
+            }
+        }
+    #else
+        var arguments = ["test", "--sanitize=thread", "--jobs", "2", "--no-parallel"]
+        if filters.isEmpty {
+            try context.swift.runSwift(
+                arguments,
+                repository: context.repository,
+                environment: environment
+            )
+        } else {
+            for filter in filters {
+                arguments.append(contentsOf: ["--filter", filter])
+                try context.swift.runSwift(
+                    arguments,
+                    repository: context.repository,
+                    environment: environment
+                )
+                arguments.removeLast(2)
+            }
+        }
+    #endif
 }
 
 private func runHeadlessWck(context: ToolContext, arguments: [String]) throws {
