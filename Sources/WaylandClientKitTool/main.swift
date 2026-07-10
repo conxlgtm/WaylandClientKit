@@ -60,6 +60,7 @@ struct Wck: ParsableCommand {
             Lint.self,
             Docs.self,
             API.self,
+            Identity.self,
             Imports.self,
             Shims.self,
             Safety.self,
@@ -499,6 +500,25 @@ struct API: ParsableCommand {
                 update: update,
                 environment: compilerFilterEnvironment(context: context)
             )
+        }
+    }
+}
+
+struct Identity: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "identity", subcommands: [Verify.self]
+    )
+
+    struct Verify: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "verify")
+        @Flag(name: .long) var update = false
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            let context = try context()
+            try PublicIdentityAuditor(
+                repository: context.repository,
+                fileSystem: context.fileSystem
+            ).verify(update: update)
         }
     }
 }
@@ -948,6 +968,47 @@ private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) t
     }
 }
 
+private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) throws {
+    let packagePath = context.repository.url(
+        "IntegrationTests/InvalidManagedIdentityClient"
+    ).path
+    let targets = [
+        ("DiagnosticIDClient", "DiagnosticID"),
+        ("ForeignToplevelIDClient", "ForeignToplevelID"),
+        ("OutputHeadIDClient", "OutputManagementHeadID"),
+        ("OutputModeIDClient", "OutputManagementModeID"),
+        ("PointerConstraintIDClient", "PointerConstraintID"),
+        ("PointerGestureIDClient", "PointerGestureSubscriptionID"),
+        ("PresentationIdentityClient", "SurfacePresentationIdentity"),
+        ("RelativePointerIDClient", "RelativePointerSubscriptionID"),
+    ]
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "waylandclientkit-invalid-managed-identities"
+    )
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+
+    for (target, typeName) in targets {
+        let result = try context.swift.runSwift(
+            [
+                "build", "--disable-index-store", "--package-path", packagePath,
+                "--scratch-path", scratch.path, "--target", target,
+            ],
+            repository: context.repository,
+            environment: try compilerFilterEnvironment(context: context),
+            requireSuccess: false
+        )
+        guard result.exitCode != 0 else {
+            throw ToolError("managed identity client unexpectedly constructed \(typeName)")
+        }
+        let diagnostics = result.stdout + result.stderr
+        guard diagnostics.contains(typeName), diagnostics.contains("inaccessible") else {
+            throw ToolError(
+                "managed identity client failed before \(typeName) visibility was checked"
+            )
+        }
+    }
+}
+
 private func runSmokeLive(context: ToolContext) throws {
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
@@ -1121,6 +1182,10 @@ private func runLiveWaylandReleaseChecks(context: ToolContext) throws {
 
 private func runCheap(context: ToolContext) throws {
     try runLint(context: context)
+    try PublicIdentityAuditor(
+        repository: context.repository,
+        fileSystem: context.fileSystem
+    ).verify(update: false)
     try ProtocolTooling(
         repository: context.repository, runner: context.runner, diagnostics: context.diagnostics
     ).verifyGenerated()
@@ -1152,6 +1217,7 @@ private func runRequired(context: ToolContext) throws {
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
     try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
+    try verifyManagedIdentityConstructionIsRejected(context: context)
 }
 
 private func runCheckBase(context: ToolContext) throws {

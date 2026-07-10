@@ -302,8 +302,6 @@ s:13WaylandClient018DataTransferSourceD5EventV6source8mimeTypeAcA0cd10Diagnostic
 s:13WaylandClient018DataTransferSourceD5EventV8mimeTypeAA8MIMETypeVvp	swift.property	DataTransferSourceTransferEvent.mimeType	let mimeType: MIMEType	-
 s:13WaylandClient018DataTransferSourceD5EventV6sourceAA0cd10DiagnosticE0Ovp	swift.property	DataTransferSourceTransferEvent.source	let source: DataTransferDiagnosticSource	-
 s:13WaylandClient12DiagnosticIDV	swift.struct	DiagnosticID	struct DiagnosticID	-
-s:13WaylandClient12DiagnosticIDV8rawValueACs6UInt64V_tcfc	swift.init	DiagnosticID.init(rawValue:)	init(rawValue diagnosticRawValue: UInt64)	-
-s:13WaylandClient12DiagnosticIDV8rawValues6UInt64Vvp	swift.property	DiagnosticID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient18DiagnosticSeverityO	swift.enum	DiagnosticSeverity	enum DiagnosticSeverity	-
 s:13WaylandClient18DiagnosticSeverityO8degradedyA2CmF	swift.enum.case	DiagnosticSeverity.degraded	case degraded	-
 s:13WaylandClient18DiagnosticSeverityO5erroryA2CmF	swift.enum.case	DiagnosticSeverity.error	case error	-
@@ -563,7 +561,6 @@ s:13WaylandClient20ForeignToplevelEventO7removedyAcA0cD2IDVcACmF	swift.enum.case
 s:13WaylandClient20ForeignToplevelEventO7updatedyAcA0cD8SnapshotVcACmF	swift.enum.case	ForeignToplevelEvent.updated(_:)	case updated(ForeignToplevelSnapshot)	-
 s:13WaylandClient17ForeignToplevelIDV	swift.struct	ForeignToplevelID	struct ForeignToplevelID	-
 s:13WaylandClient17ForeignToplevelIDV11descriptionSSvp	swift.property	ForeignToplevelID.description	var description: String { get }	-
-s:13WaylandClient17ForeignToplevelIDV8rawValueACs6UInt64V_tcfc	swift.init	ForeignToplevelID.init(rawValue:)	init(rawValue toplevelRawValue: UInt64)	-
 s:13WaylandClient27ForeignToplevelListSnapshotV	swift.struct	ForeignToplevelListSnapshot	struct ForeignToplevelListSnapshot	-
 s:13WaylandClient27ForeignToplevelListSnapshotV6eventsSayAA0cD5EventOGvp	swift.property	ForeignToplevelListSnapshot.events	let events: [ForeignToplevelEvent]	-
 s:13WaylandClient27ForeignToplevelListSnapshotV9toplevels6eventsACSayAA0cdF0VG_SayAA0cD5EventOGtcfc	swift.init	ForeignToplevelListSnapshot.init(toplevels:events:)	init(toplevels snapshotToplevels: [ForeignToplevelSnapshot], events snapshotEvents: [ForeignToplevelEvent])	-
@@ -1037,7 +1034,6 @@ s:13WaylandClient20OutputManagementHeadV12serialNumberSSSgvp	swift.property	Outp
 s:13WaylandClient20OutputManagementHeadV9transformAA0C9TransformOSgvp	swift.property	OutputManagementHead.transform	let transform: OutputTransform?	-
 s:13WaylandClient22OutputManagementHeadIDV	swift.struct	OutputManagementHeadID	struct OutputManagementHeadID	-
 s:13WaylandClient22OutputManagementHeadIDV11descriptionSSvp	swift.property	OutputManagementHeadID.description	var description: String { get }	-
-s:13WaylandClient22OutputManagementHeadIDV8rawValueACs6UInt64V_tcfc	swift.init	OutputManagementHeadID.init(rawValue:)	init(rawValue headRawValue: UInt64)	-
 s:13WaylandClient20OutputManagementModeV	swift.struct	OutputManagementMode	struct OutputManagementMode	-
 s:13WaylandClient20OutputManagementModeV2idAA0cdE2IDVvp	swift.property	OutputManagementMode.id	let id: OutputManagementModeID	-
 s:13WaylandClient20OutputManagementModeV2id4size7refresh11isPreferred0I7CurrentAcA0cdE2IDV_AA17PositivePixelSizeVSgAA0C11RefreshRateOS2btcfc	swift.init	OutputManagementMode.init(id:size:refresh:isPreferred:isCurrent:)	init(id modeID: OutputManagementModeID, size modeSize: PositivePixelSize?, refresh modeRefresh: OutputRefreshRate, isPreferred modeIsPreferred: Bool, isCurrent modeIsCurrent: Bool)	-
@@ -1047,7 +1043,6 @@ s:13WaylandClient20OutputManagementModeV7refreshAA0C11RefreshRateOvp	swift.prope
 s:13WaylandClient20OutputManagementModeV4sizeAA17PositivePixelSizeVSgvp	swift.property	OutputManagementMode.size	let size: PositivePixelSize?	-
 s:13WaylandClient22OutputManagementModeIDV	swift.struct	OutputManagementModeID	struct OutputManagementModeID	-
 s:13WaylandClient22OutputManagementModeIDV11descriptionSSvp	swift.property	OutputManagementModeID.description	var description: String { get }	-
-s:13WaylandClient22OutputManagementModeIDV8rawValueACs6UInt64V_tcfc	swift.init	OutputManagementModeID.init(rawValue:)	init(rawValue modeRawValue: UInt64)	-
 s:13WaylandClient24OutputManagementSnapshotV	swift.struct	OutputManagementSnapshot	struct OutputManagementSnapshot	-
 s:13WaylandClient24OutputManagementSnapshotV5headsSayAA0cD4HeadVGvp	swift.property	OutputManagementSnapshot.heads	let heads: [OutputManagementHead]	-
 s:13WaylandClient24OutputManagementSnapshotV5heads6serialACSayAA0cD4HeadVG_s6UInt32Vtcfc	swift.init	OutputManagementSnapshot.init(heads:serial:)	init(heads snapshotHeads: [OutputManagementHead], serial snapshotSerial: UInt32)	-
@@ -1187,9 +1182,7 @@ s:13WaylandClient17PointerConstraintV4hash4intoys6HasherVz_tF	swift.method	Point
 s:13WaylandClient17PointerConstraintV2idAA0cD2IDVvp	swift.property	PointerConstraint.id	let id: PointerConstraintID	-
 s:13WaylandClient19PointerConstraintIDV	swift.struct	PointerConstraintID	struct PointerConstraintID	-
 s:13WaylandClient19PointerConstraintIDV11descriptionSSvp	swift.property	PointerConstraintID.description	var description: String { get }	-
-s:13WaylandClient19PointerConstraintIDV8rawValue4kindACs6UInt64V_AA0cD4KindOtcfc	swift.init	PointerConstraintID.init(rawValue:kind:)	init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind)	-
 s:13WaylandClient19PointerConstraintIDV4kindAA0cD4KindOvp	swift.property	PointerConstraintID.kind	let kind: PointerConstraintKind	-
-s:13WaylandClient19PointerConstraintIDV8rawValues6UInt64Vvp	swift.property	PointerConstraintID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient21PointerConstraintKindO	swift.enum	PointerConstraintKind	enum PointerConstraintKind	-
 s:13WaylandClient21PointerConstraintKindO8confinedyA2CmF	swift.enum.case	PointerConstraintKind.confined	case confined	-
 s:13WaylandClient21PointerConstraintKindO6lockedyA2CmF	swift.enum.case	PointerConstraintKind.locked	case locked	-
@@ -1273,8 +1266,6 @@ s:13WaylandClient26PointerGestureSubscriptionV6seatIDAA04SeatG0Vvp	swift.propert
 s:13WaylandClient26PointerGestureSubscriptionV7versions6UInt32Vvp	swift.property	PointerGestureSubscription.version	let version: UInt32	-
 s:13WaylandClient28PointerGestureSubscriptionIDV	swift.struct	PointerGestureSubscriptionID	struct PointerGestureSubscriptionID	-
 s:13WaylandClient28PointerGestureSubscriptionIDV11descriptionSSvp	swift.property	PointerGestureSubscriptionID.description	var description: String { get }	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValueACs6UInt64V_tcfc	swift.init	PointerGestureSubscriptionID.init(rawValue:)	init(rawValue subscriptionRawValue: UInt64)	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValues6UInt64Vvp	swift.property	PointerGestureSubscriptionID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient23PointerHoldGestureEventO	swift.enum	PointerHoldGestureEvent	enum PointerHoldGestureEvent	-
 s:13WaylandClient23PointerHoldGestureEventO5beginyAcA11InputSerialV_AA0A21TimestampMillisecondsVs6UInt32VtcACmF	swift.enum.case	PointerHoldGestureEvent.begin(serial:time:fingers:)	case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)	-
 s:13WaylandClient23PointerHoldGestureEventO6cancelyAcA11InputSerialV_AA0A21TimestampMillisecondsVtcACmF	swift.enum.case	PointerHoldGestureEvent.cancel(serial:time:)	case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)	-
@@ -1489,8 +1480,6 @@ s:13WaylandClient27RelativePointerSubscriptionV4hash4intoys6HasherVz_tF	swift.me
 s:13WaylandClient27RelativePointerSubscriptionV2idAA0cdE2IDVvp	swift.property	RelativePointerSubscription.id	let id: RelativePointerSubscriptionID	-
 s:13WaylandClient29RelativePointerSubscriptionIDV	swift.struct	RelativePointerSubscriptionID	struct RelativePointerSubscriptionID	-
 s:13WaylandClient29RelativePointerSubscriptionIDV11descriptionSSvp	swift.property	RelativePointerSubscriptionID.description	var description: String { get }	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValueACs6UInt64V_tcfc	swift.init	RelativePointerSubscriptionID.init(rawValue:)	init(rawValue subscriptionRawValue: UInt64)	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValues6UInt64Vvp	swift.property	RelativePointerSubscriptionID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient16SeatCapabilitiesV	swift.struct	SeatCapabilities	struct SeatCapabilities	-
 s:13WaylandClient16SeatCapabilitiesV11descriptionSSvp	swift.property	SeatCapabilities.description	var description: String { get }	-
 s:13WaylandClient16SeatCapabilitiesV11hasKeyboardSbvp	swift.property	SeatCapabilities.hasKeyboard	var hasKeyboard: Bool { get }	-
@@ -1625,8 +1614,6 @@ s:13WaylandClient27SurfacePresentationFeedbackO9presentedyAcA0dE0VcACmF	swift.en
 s:13WaylandClient27SurfacePresentationFeedbackO7surfaceAA0cD8IdentityVvp	swift.property	SurfacePresentationFeedback.surface	var surface: SurfacePresentationIdentity { get }	-
 s:13WaylandClient27SurfacePresentationIdentityV	swift.struct	SurfacePresentationIdentity	struct SurfacePresentationIdentity	-
 s:13WaylandClient27SurfacePresentationIdentityV11descriptionSSvp	swift.property	SurfacePresentationIdentity.description	var description: String { get }	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValueACs6UInt64V_tcfc	swift.init	SurfacePresentationIdentity.init(rawValue:)	init(rawValue identityRawValue: UInt64)	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValues6UInt64Vvp	swift.property	SurfacePresentationIdentity.rawValue	let rawValue: UInt64	-
 s:13WaylandClient13SurfaceRegionV	swift.struct	SurfaceRegion	struct SurfaceRegion	-
 s:13WaylandClient13SurfaceRegionVyACSayAA11LogicalRectVGcfc	swift.init	SurfaceRegion.init(_:)	init(_ regionRectangles: [LogicalRect])	-
 s:13WaylandClient13SurfaceRegionV10rectanglesACSayAA11LogicalRectVG_tcfc	swift.init	SurfaceRegion.init(rectangles:)	init(rectangles regionRectangles: [LogicalRect])	-
@@ -2907,8 +2894,6 @@ s:13WaylandClient12DiagnosticIDV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient12DiagnosticIDV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient12DiagnosticIDV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient12DiagnosticIDV	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient12DiagnosticIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient12DiagnosticIDV	-
-s:13WaylandClient12DiagnosticIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient12DiagnosticIDV	-
 s:13WaylandClient12DisplayEventO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient12DisplayEventO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient12DisplayEventO	conformsTo	s:s8SendableP	Swift.Sendable
@@ -3763,7 +3748,6 @@ s:13WaylandClient17ForeignToplevelIDV	conformsTo	s:s16SendableMetatypeP	Swift.Se
 s:13WaylandClient17ForeignToplevelIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient17ForeignToplevelIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient17ForeignToplevelIDV11descriptionSSvp	memberOf	s:13WaylandClient17ForeignToplevelIDV	-
-s:13WaylandClient17ForeignToplevelIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient17ForeignToplevelIDV	-
 s:13WaylandClient17KeyboardModifiersV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient17KeyboardModifiersV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient17KeyboardModifiersV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4154,8 +4138,6 @@ s:13WaylandClient19PointerConstraintIDV	conformsTo	s:s23CustomStringConvertibleP
 s:13WaylandClient19PointerConstraintIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient19PointerConstraintIDV11descriptionSSvp	memberOf	s:13WaylandClient19PointerConstraintIDV	-
 s:13WaylandClient19PointerConstraintIDV4kindAA0cD4KindOvp	memberOf	s:13WaylandClient19PointerConstraintIDV	-
-s:13WaylandClient19PointerConstraintIDV8rawValue4kindACs6UInt64V_AA0cD4KindOtcfc	memberOf	s:13WaylandClient19PointerConstraintIDV	-
-s:13WaylandClient19PointerConstraintIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient19PointerConstraintIDV	-
 s:13WaylandClient19PointerGestureEventO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient19PointerGestureEventO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient19PointerGestureEventO	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4707,14 +4689,12 @@ s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:s16SendableMetatypeP	Swi
 s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient22OutputManagementHeadIDV11descriptionSSvp	memberOf	s:13WaylandClient22OutputManagementHeadIDV	-
-s:13WaylandClient22OutputManagementHeadIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient22OutputManagementHeadIDV	-
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient22OutputManagementModeIDV11descriptionSSvp	memberOf	s:13WaylandClient22OutputManagementModeIDV	-
-s:13WaylandClient22OutputManagementModeIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient22OutputManagementModeIDV	-
 s:13WaylandClient22PrimarySelectionSourceV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient22PrimarySelectionSourceV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient22PrimarySelectionSourceV	conformsTo	s:s12IdentifiableP	Swift.Identifiable
@@ -5467,8 +5447,6 @@ s:13WaylandClient27SurfacePresentationIdentityV	conformsTo	s:s16SendableMetatype
 s:13WaylandClient27SurfacePresentationIdentityV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient27SurfacePresentationIdentityV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient27SurfacePresentationIdentityV11descriptionSSvp	memberOf	s:13WaylandClient27SurfacePresentationIdentityV	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient27SurfacePresentationIdentityV	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient27SurfacePresentationIdentityV	-
 s:13WaylandClient27WindowOutputMembershipEventV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient27WindowOutputMembershipEventV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient27WindowOutputMembershipEventV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -5542,8 +5520,6 @@ s:13WaylandClient28PointerGestureSubscriptionIDV	conformsTo	s:s16SendableMetatyp
 s:13WaylandClient28PointerGestureSubscriptionIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient28PointerGestureSubscriptionIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient28PointerGestureSubscriptionIDV11descriptionSSvp	memberOf	s:13WaylandClient28PointerGestureSubscriptionIDV	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient28PointerGestureSubscriptionIDV	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient28PointerGestureSubscriptionIDV	-
 s:13WaylandClient28TextInputDiagnosticOperationO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient28TextInputDiagnosticOperationO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient28TextInputDiagnosticOperationO	conformsTo	s:s8SendableP	Swift.Sendable
@@ -5585,8 +5561,6 @@ s:13WaylandClient29RelativePointerSubscriptionIDV	conformsTo	s:s16SendableMetaty
 s:13WaylandClient29RelativePointerSubscriptionIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient29RelativePointerSubscriptionIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient29RelativePointerSubscriptionIDV11descriptionSSvp	memberOf	s:13WaylandClient29RelativePointerSubscriptionIDV	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient29RelativePointerSubscriptionIDV	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient29RelativePointerSubscriptionIDV	-
 s:13WaylandClient29SubsurfacePresentationFailureV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient29SubsurfacePresentationFailureV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient29SubsurfacePresentationFailureV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible

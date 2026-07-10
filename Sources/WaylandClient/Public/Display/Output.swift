@@ -320,7 +320,7 @@ public struct OutputManagementHeadID:
 {
     package let rawValue: UInt64
 
-    public init(rawValue headRawValue: UInt64) {
+    package init(rawValue headRawValue: UInt64) {
         rawValue = headRawValue
     }
 
@@ -337,7 +337,7 @@ public struct OutputManagementModeID:
 {
     package let rawValue: UInt64
 
-    public init(rawValue modeRawValue: UInt64) {
+    package init(rawValue modeRawValue: UInt64) {
         rawValue = modeRawValue
     }
 

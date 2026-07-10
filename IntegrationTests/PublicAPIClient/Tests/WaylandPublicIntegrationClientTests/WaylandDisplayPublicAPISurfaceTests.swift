@@ -152,45 +152,21 @@ struct WaylandDisplayPublicAPISurfaceTests {
 
     @Test
     func previewProtocolTypesAndDisplayMethodsCompileForExternalClients() throws {
-        let foreignSnapshot = ForeignToplevelSnapshot(
-            id: ForeignToplevelID(rawValue: 1),
-            protocolIdentifier: "foreign-1",
-            title: nil,
-            appID: nil
-        )
-        let foreignList = ForeignToplevelListSnapshot(
-            toplevels: [foreignSnapshot],
-            events: [.added(foreignSnapshot), .removed(foreignSnapshot.id)]
-        )
-        let outputMode = OutputManagementMode(
-            id: OutputManagementModeID(rawValue: 1),
-            size: try PositivePixelSize(width: 1_920, height: 1_080),
-            refresh: .milliHertz(try PositiveInt32(60_000)),
-            isPreferred: true,
-            isCurrent: true
-        )
-        let outputHead = OutputManagementHead(
-            id: OutputManagementHeadID(rawValue: 1),
-            name: "HDMI-A-1",
-            description: "Display",
-            modes: [outputMode],
-            enabled: true,
-            position: .zero,
-            scale: .one,
-            transform: .normal,
-            make: nil,
-            model: nil,
-            serialNumber: nil
-        )
-        let outputSnapshot = OutputManagementSnapshot(heads: [outputHead], serial: 7)
         let sessionID = try CompositorSessionID("session-1")
         let sessionSnapshot = CompositorSessionEventSnapshot(
             events: [.created(sessionID), .restored, .replaced]
         )
 
-        #expect(foreignList.toplevels == [foreignSnapshot])
-        #expect(outputSnapshot.heads.first?.modes == [outputMode])
         #expect(sessionSnapshot.events.count == 3)
+
+        func inspectForeignToplevels(_ snapshot: ForeignToplevelListSnapshot) -> Int {
+            snapshot.toplevels.count + snapshot.events.count
+        }
+        func inspectOutputManagement(_ snapshot: OutputManagementSnapshot) -> Int {
+            snapshot.heads.reduce(0) { count, head in
+                count + head.modes.count
+            }
+        }
 
         func usePreviewProtocolAPI(display: WaylandDisplay) async throws {
             _ = try await display.foreignToplevelListSnapshot()
@@ -201,6 +177,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
             )
         }
 
+        _ = inspectForeignToplevels
+        _ = inspectOutputManagement
         _ = usePreviewProtocolAPI
     }
 
@@ -256,22 +234,21 @@ struct WaylandDisplayPublicAPISurfaceTests {
 struct WaylandPresentationAPISurfaceTests {
     @Test
     func presentationFeedbackTypesCompileForExternalClients() throws {
-        let identity = SurfacePresentationIdentity(rawValue: 9)
-        let feedback = PresentationFeedback(
-            surface: identity,
-            timestamp: PresentationTimestamp(seconds: 12, nanoseconds: 345),
-            refreshNanoseconds: 16_666_667,
-            sequence: PresentationSequence(value: 99),
-            flags: [.vsync, .hardwareClock],
-            synchronizedOutput: OutputID(rawValue: 3)
-        )
-        let event = SurfacePresentationFeedback.presented(feedback)
+        let timestamp = PresentationTimestamp(seconds: 12, nanoseconds: 345)
+        let sequence = PresentationSequence(value: 99)
+        let flags: PresentationFeedbackFlags = [.vsync, .hardwareClock]
+        #expect(timestamp.seconds == 12)
+        #expect(sequence.value == 99)
+        #expect(flags.contains(.vsync))
 
-        #expect(identity.description == "presentation-9")
-        #expect(feedback.surface == identity)
-        #expect(feedback.flags.contains(.vsync))
-        #expect(event == .presented(feedback))
-        #expect(SurfacePresentationFeedback.discarded(identity) == .discarded(identity))
+        func inspectFeedback(_ feedback: PresentationFeedback) -> SurfacePresentationIdentity {
+            feedback.surface
+        }
+        func inspectEvent(_ event: SurfacePresentationFeedback) -> SurfacePresentationIdentity {
+            event.surface
+        }
+        _ = inspectFeedback
+        _ = inspectEvent
 
         func usePresentationFeedbackAPI(window: Window) async throws {
             let events = window.presentationEvents

@@ -11,7 +11,8 @@ Compatibility tiers and required review process are defined in
 The minimal DocC catalog for this boundary lives in
 `Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
 Identity taxonomy, raw-value visibility, and display-owned handle semantics are
-tracked in [`identity-model.md`](identity-model.md).
+tracked in [`identity-model.md`](identity-model.md) and the generated
+[`identity-visibility.md`](identity-visibility.md) table.
 
 ## Products
 
@@ -184,6 +185,10 @@ Current user-facing contract:
   surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
+- Managed identities are returned by the library and cannot be fabricated by
+  external clients. Registry names, protocol serials, touch IDs, protocol object
+  IDs, and opaque protocol tokens remain publicly constructible because callers
+  may need to round-trip those compositor facts.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
   protocol values are intentionally preserved when useful to clients.
 - Interpreted keyboard events expose local keyboard text through

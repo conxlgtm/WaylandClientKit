@@ -102,9 +102,9 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
 public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,
     CustomStringConvertible
 {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
-    public init(rawValue subscriptionRawValue: UInt64) {
+    package init(rawValue subscriptionRawValue: UInt64) {
         rawValue = subscriptionRawValue
     }
 
@@ -117,9 +117,9 @@ public struct PointerGestureSubscriptionID: Equatable, Hashable, Sendable,
     CustomStringConvertible,
     UInt64WaylandEntityID
 {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
-    public init(rawValue subscriptionRawValue: UInt64) {
+    package init(rawValue subscriptionRawValue: UInt64) {
         rawValue = subscriptionRawValue
     }
 

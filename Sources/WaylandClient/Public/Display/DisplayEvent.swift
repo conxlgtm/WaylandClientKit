@@ -40,9 +40,9 @@ public enum DiagnosticSeverity: Equatable, Sendable {
 }
 
 public struct DiagnosticID: Equatable, Hashable, Sendable {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
-    public init(rawValue diagnosticRawValue: UInt64) {
+    package init(rawValue diagnosticRawValue: UInt64) {
         rawValue = diagnosticRawValue
     }
 }
