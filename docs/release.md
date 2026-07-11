@@ -42,7 +42,7 @@ Where the environment supports Swift sanitizers, also run:
 
 ```bash
 swift run wck test tsan
-ASAN_OPTIONS=detect_leaks=0 swift run wck test asan
+swift run wck test asan
 swift run wck smoke headless -- wck test request-paths
 swift run wck smoke headless -- wck test request-paths-tsan
 swift run wck smoke headless -- wck test request-paths-asan
@@ -51,12 +51,11 @@ swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
-with `detect_leaks=0` is the required ASan gate. LeakSanitizer remains a
-separate informational check because it can exit with a ptrace-related fatal
-error even after the Swift test process reports passing tests, record that as
-an environment limitation rather than a test failure. To attempt the
-LeakSanitizer path explicitly, run `swift run wck test asan` without setting
-`ASAN_OPTIONS=detect_leaks=0`. The TSan target uses
+runs with `detect_leaks=0` in both unit and headless request paths. This gate
+proves address safety, not process-exit leak freedom. LeakSanitizer remains a
+separate informational check because Swift and XCTest runtime allocations vary
+by host. To attempt it explicitly, override `ASAN_OPTIONS` and run
+`swift test --sanitize=address --no-parallel`. The TSan target uses
 `safety/tsan-suppressions.txt` only for known Swift runtime
 metadata-cache, Swift Testing event graph, and libdispatch continuation
 allocator reports. It also disables TSan's deadlock detector because Swift

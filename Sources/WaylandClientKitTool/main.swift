@@ -617,9 +617,10 @@ struct Test: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            try context.swift.runSwift(
-                ["test", "--sanitize=address", "--no-parallel"], repository: context.repository,
-                environment: try compilerFilterEnvironment(context: context))
+            try runSwiftTests(
+                context: context,
+                command: SwiftTestCommand(sanitizer: .address)
+            )
         }
     }
 
@@ -886,27 +887,91 @@ private func runDoccSymbolLinks(context: ToolContext) throws {
 }
 
 private func runUnitTests(context: ToolContext) throws {
-    var arguments = [
-        "test", "--no-parallel",
-        "-Xswiftc", "-Xcc",
-        "-Xswiftc", "-Wno-macro-redefined",
-        "-Xswiftc", "-warnings-as-errors",
-    ]
-    if context.runner.environment["WAYLAND_CLIENT_KIT_UNIT_COVERAGE"] == "1" {
-        arguments.append("--enable-code-coverage")
-    }
-    try context.swift.runSwift(
-        arguments,
-        repository: context.repository,
-        environment: try compilerFilterEnvironment(context: context)
+    try runSwiftTests(
+        context: context,
+        command: SwiftTestCommand(
+            coverage: context.runner.environment["WAYLAND_CLIENT_KIT_UNIT_COVERAGE"] == "1"
+        )
     )
 }
 
 private func runReleaseTests(context: ToolContext) throws {
+    try runSwiftTests(
+        context: context,
+        command: SwiftTestCommand(configuration: "release")
+    )
+}
+
+private enum SwiftTestSanitizer: Equatable {
+    case none
+    case address
+    case thread
+}
+
+private struct SwiftTestCommand {
+    var configuration: String?
+    var sanitizer: SwiftTestSanitizer = .none
+    var coverage = false
+    var jobs: Int?
+    var filters: [String] = []
+    var buildTestsOnly = false
+
+    func arguments() -> [String] {
+        var result = [buildTestsOnly ? "build" : "test"]
+        if buildTestsOnly {
+            result.append("--build-tests")
+        } else {
+            result.append("--no-parallel")
+        }
+        if let configuration {
+            result.append(contentsOf: ["-c", configuration])
+        }
+        switch sanitizer {
+        case .none:
+            break
+        case .address:
+            result.append("--sanitize=address")
+        case .thread:
+            result.append("--sanitize=thread")
+        }
+        if coverage {
+            result.append("--enable-code-coverage")
+        }
+        if let jobs {
+            result.append(contentsOf: ["--jobs", String(jobs)])
+        }
+        result.append(contentsOf: [
+            "-Xswiftc", "-Xcc",
+            "-Xswiftc", "-Wno-macro-redefined",
+            "-Xswiftc", "-warnings-as-errors",
+        ])
+        for filter in filters {
+            result.append(contentsOf: ["--filter", filter])
+        }
+        return result
+    }
+
+    func environment(context: ToolContext, base: [String: String] = [:]) throws
+        -> [String: String]
+    {
+        var result = base
+        if sanitizer == .address {
+            result["ASAN_OPTIONS"] = "detect_leaks=0"
+        }
+        return try compilerFilterEnvironment(context: context, base: result)
+    }
+}
+
+private func runSwiftTests(
+    context: ToolContext,
+    command: SwiftTestCommand,
+    baseEnvironment: [String: String] = [:]
+) throws {
     try context.swift.runSwift(
-        ["test", "-c", "release", "--no-parallel"],
+        command.arguments(),
         repository: context.repository,
-        environment: try compilerFilterEnvironment(context: context))
+        environment: try command.environment(context: context, base: baseEnvironment)
+    )
 }
 
 private func runIntegrationPackage(
@@ -1073,7 +1138,7 @@ private func runSmokeIntegration(context: ToolContext) throws {
     try runRequestPathTests(context: context, sanitizer: .none)
 }
 
-private enum RequestPathSanitizer {
+private enum RequestPathSanitizer: Equatable {
     case none
     case thread
     case address
@@ -1092,11 +1157,7 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
         "SubsurfacePublicRequestTests",
         "DesktopIntegrationPublicRequestTests",
     ]
-    var arguments = ["test"]
-    if context.runner.environment["WAYLAND_CLIENT_KIT_HEADLESS_COVERAGE"] == "1" {
-        arguments.append("--enable-code-coverage")
-    }
-    var environment = requestTestEnvironment()
+    let environment = requestTestEnvironment()
     switch sanitizer {
     case .none:
         break
@@ -1108,15 +1169,19 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
         )
         return
     case .address:
-        arguments.append(contentsOf: ["--sanitize=address", "--no-parallel"])
-        environment["ASAN_OPTIONS"] = "detect_leaks=0"
+        break
     }
 
     for filter in filters {
-        try context.swift.runSwift(
-            arguments + ["--filter", filter],
-            repository: context.repository,
-            environment: try compilerFilterEnvironment(context: context, base: environment)
+        try runSwiftTests(
+            context: context,
+            command: SwiftTestCommand(
+                sanitizer: sanitizer == .address ? .address : .none,
+                coverage: context.runner.environment["WAYLAND_CLIENT_KIT_HEADLESS_COVERAGE"]
+                    == "1",
+                filters: [filter]
+            ),
+            baseEnvironment: environment
         )
     }
 }
@@ -1138,10 +1203,14 @@ private func runThreadSanitizerTests(
     )
 
     #if os(Linux)
-        try context.swift.runSwift(
-            ["build", "--build-tests", "--sanitize=thread", "--jobs", "2"],
-            repository: context.repository,
-            environment: environment
+        try runSwiftTests(
+            context: context,
+            command: SwiftTestCommand(
+                sanitizer: .thread,
+                jobs: 2,
+                buildTestsOnly: true
+            ),
+            baseEnvironment: sanitizerEnvironment
         )
         let binPathResult = try context.swift.runSwift(
             ["build", "--show-bin-path"],
@@ -1181,22 +1250,23 @@ private func runThreadSanitizerTests(
             }
         }
     #else
-        var arguments = ["test", "--sanitize=thread", "--jobs", "2", "--no-parallel"]
         if filters.isEmpty {
-            try context.swift.runSwift(
-                arguments,
-                repository: context.repository,
-                environment: environment
+            try runSwiftTests(
+                context: context,
+                command: SwiftTestCommand(sanitizer: .thread, jobs: 2),
+                baseEnvironment: sanitizerEnvironment
             )
         } else {
             for filter in filters {
-                arguments.append(contentsOf: ["--filter", filter])
-                try context.swift.runSwift(
-                    arguments,
-                    repository: context.repository,
-                    environment: environment
+                try runSwiftTests(
+                    context: context,
+                    command: SwiftTestCommand(
+                        sanitizer: .thread,
+                        jobs: 2,
+                        filters: [filter]
+                    ),
+                    baseEnvironment: sanitizerEnvironment
                 )
-                arguments.removeLast(2)
             }
         }
     #endif

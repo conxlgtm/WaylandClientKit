@@ -217,6 +217,21 @@ struct ToolingConvergenceTests {
     }
 
     @Test
+    func testModesShareCompilerAndSanitizerPolicy() throws {
+        let source = try String(
+            contentsOf: repositoryRoot()
+                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
+            encoding: .utf8
+        )
+
+        #expect(source.contains("private struct SwiftTestCommand"))
+        #expect(source.contains(#"result["ASAN_OPTIONS"] = "detect_leaks=0""#))
+        #expect(source.contains(#""-Xswiftc", "-Wno-macro-redefined""#))
+        #expect(source.contains("command: SwiftTestCommand(configuration: \"release\")"))
+        #expect(source.contains("command: SwiftTestCommand(sanitizer: .address)"))
+    }
+
+    @Test
     func doccSymbolGraphDumpUsesCompilerFilter() throws {
         let source = try String(
             contentsOf: repositoryRoot()
