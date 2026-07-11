@@ -119,6 +119,19 @@ struct RegistryStateTests {
         #expect(state.firstGlobal(named: "wp_presentation")?.name == 8)
         #expect(state.startupGlobal(named: "wp_presentation") == nil)
     }
+
+    @Test
+    func sameNameReaddedGlobalDoesNotReuseStartupBinding() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+        state.freezeStartupGlobals()
+        _ = state.removeGlobal(name: 4)
+
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+
+        #expect(state.firstGlobal(named: "wp_presentation")?.name == 4)
+        #expect(state.startupGlobal(named: "wp_presentation") == nil)
+    }
     @Test
     func recordGlobalOverwritesPreviousEntry() {
         let state = RegistryState()
