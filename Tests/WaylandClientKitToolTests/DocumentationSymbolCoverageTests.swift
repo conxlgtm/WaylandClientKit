@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import WaylandClientKitToolSupport
 
 struct DocumentationSymbolCoverageTests {
@@ -36,7 +37,8 @@ struct DocumentationSymbolCoverageTests {
     }
 
     private static func graph(documented: Bool) -> String {
-        let comment = documented
+        let comment =
+            documented
             ? #", "docComment":{"lines":[{"text":"A public type."}]}"#
             : ""
         return """

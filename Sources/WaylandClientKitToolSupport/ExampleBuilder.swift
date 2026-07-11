@@ -59,12 +59,13 @@ public struct ExampleBuilder {
             "example live execution is skipped by this build gate; examples are build-checked only")
         for configuration in configurations {
             for target in Self.targets {
-                let packageArguments = Self.rootPackageTargets.contains(target)
+                let packageArguments =
+                    Self.rootPackageTargets.contains(target)
                     ? []
                     : ["--package-path", "Examples"]
                 try context.swift.runSwift(
                     [
-                        "build",
+                        "build"
                     ] + packageArguments + [
                         "--disable-index-store",
                         "-c",

@@ -2723,9 +2723,11 @@ extension WaylandGraphicsWindowBackingStorage {
     private func pollExternalExplicitReleases() async -> Bool {
         for (submissionID, pending) in pendingExternalExplicitReleases {
             do {
-                guard try pending.releaseTimeline.releasePointIsSignaled(
-                    pending.syncState.releasePoint.point
-                ) else {
+                guard
+                    try pending.releaseTimeline.releasePointIsSignaled(
+                        pending.syncState.releasePoint.point
+                    )
+                else {
                     continue
                 }
                 pendingExternalExplicitReleases.removeValue(forKey: submissionID)

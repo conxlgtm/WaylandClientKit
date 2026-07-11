@@ -61,9 +61,10 @@ public struct DocumentationSymbolCoverageVerifier {
                 && Self.eligibleKinds.contains(symbol.kind.identifier)
             {
                 totals[graph.module.name, default: (0, 0)].eligible += 1
-                let hasAbstract = symbol.docComment?.lines.contains {
-                    !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                } ?? false
+                let hasAbstract =
+                    symbol.docComment?.lines.contains {
+                        !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    } ?? false
                 if hasAbstract {
                     totals[graph.module.name, default: (0, 0)].documented += 1
                 }
