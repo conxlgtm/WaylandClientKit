@@ -29,7 +29,10 @@ review expectations.
 - Preview API changes are still baseline tracked. Do not bypass review because
   a product is preview.
 - Public `WaylandClient` must not expose raw Wayland, GBM, EGL, DRM, dmabuf,
-  syncobj, file descriptor, or unsafe implementation handles.
+  syncobj, borrowed file descriptor integers, reusable descriptor accessors,
+  or unsafe implementation handles. A narrow ownership-transfer value may
+  adopt or release an owned descriptor when its consuming and close behavior
+  is documented; it must not provide reusable borrowed access.
 - `WaylandGraphicsPreview` must remain renderer-neutral. It may expose narrow,
   move-only, consuming graphics interop values backed by dma-buf or DRM syncobj
   file descriptors. These values must not expose raw Wayland objects, pointers,
