@@ -1765,6 +1765,46 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func concurrentExplicitReceiptsShareOnePollTask() async throws {
+        let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            surfaceFeedbackSynchronization: .explicitAvailable(version: 1)
+        )
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                presentationPolicy: .externalGPU(fallback: .unavailable),
+                synchronizationPolicy: .preferExplicit
+            )
+        )
+        await storage.useFakeExternalReleaseTimelineForTesting(backend)
+        let registrationLease = try await storage.nextFrame()
+        let firstBuffer = try await registerTestExternalBuffer(
+            storage: storage, lease: registrationLease, descriptor: try testExternalDescriptor())
+        let secondBuffer = try await registerTestExternalBuffer(
+            storage: storage, lease: registrationLease, descriptor: try testExternalDescriptor())
+        let acquireTimeline = try await storage.importExternalSyncTimeline(
+            testOwnedFileDescriptor())
+        let firstRenderLease = try await registrationLease.reserveExternalBuffer(firstBuffer)
+        let firstReceipt = try await firstRenderLease.submit(
+            acquireSynchronization: .drmSyncobj(try acquireTimeline.point(1)))
+        let secondLease = try await storage.nextFrame()
+        let secondRenderLease = try await secondLease.reserveExternalBuffer(secondBuffer)
+        let secondReceipt = try await secondRenderLease.submit(
+            acquireSynchronization: .drmSyncobj(try acquireTimeline.point(2)))
+
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 2)
+        #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 1)
+
+        backend.signal(1)
+        #expect(await firstReceipt.waitForRelease() == .released)
+        #expect(await secondReceipt.waitForRelease() == .released)
+        #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 0)
+        await storage.closeForTesting()
+    }
+
+    @Test
     func explicitReleaseFailureRetiresBackingAndPoisonsSlot() async throws {
         let backend = ExternalReleaseTimelineTestBackend(defaultState: .pending)
         let fixture = try await explicitReleaseSubmissionFixture(backend: backend)
