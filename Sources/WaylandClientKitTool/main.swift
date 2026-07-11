@@ -726,7 +726,10 @@ struct Smoke: ParsableCommand {
                 ]
             )
             try context.swift.runSwift(
-                ["run", "--disable-index-store", "GPUPreviewSmokeClient"],
+                [
+                    "run", "--package-path", "Examples", "--disable-index-store",
+                    "GPUPreviewSmokeClient",
+                ],
                 repository: context.repository)
         }
     }
