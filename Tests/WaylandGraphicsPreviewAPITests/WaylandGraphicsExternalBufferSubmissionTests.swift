@@ -179,7 +179,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -206,7 +206,7 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         )
 
         await lease.cancel()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -238,8 +238,8 @@ struct WaylandGraphicsExternalBufferPreflightTests {
         }
 
         await foreignLease.cancel()
-        try await firstStorage.closeForTesting()
-        try await secondStorage.closeForTesting()
+        await firstStorage.closeForTesting()
+        await secondStorage.closeForTesting()
     }
 
     @Test
@@ -431,7 +431,7 @@ struct ExternalSoftwareFallbackLifecycleTests {
         }
 
         await fallbackLease.cancel()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         #expect(destroyRecorder.count == 1)
     }
 
@@ -490,7 +490,7 @@ struct ExternalSoftwareFallbackLifecycleTests {
         #expect(destroyRecorder.count == 1)
 
         await fallbackLease.cancel()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         #expect(destroyRecorder.count == 1)
     }
 }
@@ -523,7 +523,7 @@ struct ExternalImportTransactionTests {
         }
 
         await lease.cancel()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test(.timeLimit(.minutes(1)))
@@ -552,7 +552,7 @@ struct ExternalImportTransactionTests {
             )
         }
         await barrier.waitUntilSuspended()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         await barrier.resume()
 
         do {
@@ -617,7 +617,7 @@ struct ExternalImportTransactionTests {
         #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test(.timeLimit(.minutes(1)))
@@ -643,7 +643,7 @@ struct ExternalImportTransactionTests {
         await barrier.waitUntilSuspended()
         let importedIdentities = await window.importedSynchronizationTimelineIdentities()
         #expect(importedIdentities.count == 1)
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         await barrier.resume()
 
         do {
@@ -698,7 +698,7 @@ struct ExternalBufferSyncTests {
             )
         }
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -734,7 +734,7 @@ struct ExternalBufferSyncTests {
             )
         }
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -797,8 +797,8 @@ struct ExternalBufferSyncTests {
         let importedIdentities = await window.importedSynchronizationTimelineIdentities()
         #expect(importedIdentities.count == 3)
 
-        try await storage.closeForTesting()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
+        await storage.closeForTesting()
 
         #expect(await storage.importedExternalSyncTimelineIDsForTesting().isEmpty)
         #expect(
@@ -841,7 +841,7 @@ struct ExternalBufferSyncTests {
             )
         }
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 }
 
@@ -894,7 +894,7 @@ struct ExternalBufferPresentationFeedbackTests {
                 .pendingReceipts == 0
         )
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -926,7 +926,7 @@ struct ExternalBufferPresentationFeedbackTests {
                 .pendingReceipts == 0
         )
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -948,7 +948,7 @@ struct ExternalBufferPresentationFeedbackTests {
                 .pendingReceipts == 0
         )
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -965,7 +965,7 @@ struct ExternalBufferPresentationFeedbackTests {
         let identity = try #require(submitted.receipt.presentationFeedbackIdentity)
 
         async let feedback = submitted.receipt.waitForPresentationFeedback()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         await window.emitPresentedFeedback(identity.surfacePresentationID)
 
         #expect(await feedback == .retired(.backingClosed))
@@ -1008,7 +1008,7 @@ struct ExternalBufferPresentationFeedbackTests {
         await window.emitImportedBufferRelease(at: 0)
         #expect(await submitted.receipt.waitForRelease() == .released)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 }
 
@@ -1023,7 +1023,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             await storage.closeBecauseWindowClosed()
         }
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
 
         #expect(try await window.isClosed)
         #expect(await window.closeRequests == 1)
@@ -1044,7 +1044,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await window.preparePresentationRequests == 1)
         #expect(await window.importRequests == 1)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1066,7 +1066,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(secondLease.runtimePath.bufferLifecycle == .active)
         await secondLease.cancel()
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1116,7 +1116,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0, 1])
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1173,7 +1173,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 0)
         #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 0)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1209,7 +1209,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await window.importRequests == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1230,7 +1230,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         await window.emitImportedBufferRelease(at: 0)
 
         #expect(await release.value == .retired(.backingClosed))
@@ -1267,7 +1267,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let storage = externalBufferStorage(window: window)
         let lease = try await storage.nextFrame()
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
 
         do {
             _ = try await registerTestExternalBuffer(
@@ -1330,7 +1330,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
                 == [.straight]
         )
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1360,7 +1360,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(receipt.frameResult.runtimePath.backing == .active)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1403,7 +1403,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await window.importRequests == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1428,7 +1428,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         _ = try await secondLease.reserveExternalBuffer(buffer)
         await secondLease.cancel()
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1453,7 +1453,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         }
         await lease.cancel()
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1480,7 +1480,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         _ = try await secondLease.reserveExternalBuffer(buffer)
         await secondLease.cancel()
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1508,7 +1508,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         await firstRenderLease.cancel()
         _ = try await secondRenderLease.submit()
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1539,7 +1539,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         await window.emitImportedBufferRelease(at: 0)
         #expect(await receipt.waitForRelease() == .released)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1572,7 +1572,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             Issue.record("unexpected error: \(error)")
         }
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1609,7 +1609,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         try await storage.unregisterExternalBuffer(buffer)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1643,7 +1643,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             Issue.record("unexpected error: \(error)")
         }
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1702,7 +1702,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1761,7 +1761,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalBufferLifecycleSnapshotForTesting().releaseTimelines == 0)
         #expect(backend.destroyCount() == 1)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     @Test
@@ -1818,7 +1818,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         #expect(await window.closeRequests == 1)
         #expect(backend.destroyCount() == 1)
         #expect(await window.removedSynchronizationTimelineIdentities().count == 2)
@@ -1906,7 +1906,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(backend.destroyCount() == 2)
         #expect(await window.removedSynchronizationTimelineIdentities().count == 3)
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         #expect(await window.closeRequests == 1)
         #expect(backend.destroyCount() == 2)
         #expect(await window.removedSynchronizationTimelineIdentities().count == 3)
@@ -1943,7 +1943,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         )
 
         async let release = receipt.waitForRelease()
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
         backend.signal(1)
 
         #expect(await release == .retired(.backingClosed))
@@ -2011,7 +2011,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         }
         await secondLease.cancel()
 
-        try await storage.closeForTesting()
+        await storage.closeForTesting()
     }
 
     private func expectExternalBufferUnavailable(

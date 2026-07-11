@@ -2975,8 +2975,8 @@ extension WaylandGraphicsWindowBackingStorage {
         )
     }
 
-    package func closeForTesting() async throws {
-        try await close()
+    package func closeForTesting() async {
+        await close()
     }
 
     package func externalBufferSubmittedSlotRawValuesForTesting() -> [Int] {
