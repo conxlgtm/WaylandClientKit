@@ -3,6 +3,7 @@ public enum ClientError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidWindowState(InvalidWindowState)
     case display(DisplayOperationError)
     case invalidWindowConfiguration(WindowConfigurationError)
+    case domainValue(DomainValueError)
     case cursor(PointerCursorError)
     case window(WindowID, WindowError)
 
@@ -16,6 +17,8 @@ public enum ClientError: Error, Equatable, Sendable, CustomStringConvertible {
             "Display failed: \(error.description)"
         case .invalidWindowConfiguration(let error):
             "Invalid window configuration: \(error.description)"
+        case .domainValue(let error):
+            "Invalid domain value: \(error.description)"
         case .cursor(let error):
             "Cursor failed: \(error.description)"
         case .window(let windowID, let error):

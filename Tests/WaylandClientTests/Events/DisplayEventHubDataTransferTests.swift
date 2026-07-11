@@ -153,7 +153,8 @@ struct DisplayEventHubDataTransferTests {
     @Test
     func dataTransferSubscriberOverflowUsesConfiguredCapacity() async throws {
         let hub = DisplayEventHub(
-            configuration: try EventStreamConfiguration(dataTransferEventCapacity: 1)
+            configuration: EventStreamConfiguration(
+                dataTransferEventCapacity: try PositiveInt(1))
         )
         let stream = hub.dataTransferEvents()
         var iterator = stream.makeAsyncIterator()

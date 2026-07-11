@@ -105,6 +105,10 @@ package final class PopupConfigureState {
         } catch let error as ClientError {
             recordError(error)
             return .failed(error)
+        } catch let error as DomainValueError {
+            let clientError = ClientError.domainValue(error)
+            recordError(clientError)
+            return .failed(clientError)
         } catch {
             let clientError = ClientError.invalidWindowState(
                 .unexpectedPopupConfigureError(String(describing: error))

@@ -69,23 +69,19 @@ struct SurfaceGeometryTests {  // swiftlint:disable:this type_body_length
     @Test
     func surfaceScaleRejectsInvalidRationalValues() {
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                .nonPositiveScaleNumerator(0)
-            )
+            throws: DomainValueError.nonPositiveScaleNumerator(0)
         ) {
             _ = try SurfaceScale(numerator: 0, denominator: 120)
         }
 
         #expect(
-            throws: ClientError.invalidWindowConfiguration(.zeroScaleDenominator)
+            throws: DomainValueError.zeroScaleDenominator
         ) {
             _ = try SurfaceScale(numerator: 120, denominator: 0)
         }
 
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                .scaleNumeratorTooLarge(UInt32(Int32.max) + 1)
-            )
+            throws: DomainValueError.scaleNumeratorTooLarge(UInt32(Int32.max) + 1)
         ) {
             _ = try SurfaceScale(numerator: UInt32(Int32.max) + 1, denominator: 1)
         }

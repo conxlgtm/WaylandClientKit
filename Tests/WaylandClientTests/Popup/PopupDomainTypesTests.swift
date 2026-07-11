@@ -8,12 +8,12 @@ struct PopupDomainTypesTests {
     @Test
     func logicalRectRejectsNonPositiveSize() {
         #expect(
-            throws: ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: 0))
+            throws: DomainValueError.nonPositiveInt32(0)
         ) {
             _ = try LogicalRect(x: 0, y: 0, width: 0, height: 10)
         }
         #expect(
-            throws: ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: -1))
+            throws: DomainValueError.nonPositiveInt32(-1)
         ) {
             _ = try LogicalRect(x: 0, y: 0, width: 10, height: -1)
         }
@@ -147,10 +147,10 @@ struct PopupDomainTypesTests {
         )
         #expect(
             state.handleSurfaceConfigure(serial: 1)
-                == .failed(.invalidWindowConfiguration(.nonPositiveInt32(value: 0)))
+                == .failed(.domainValue(.nonPositiveInt32(0)))
         )
         #expect(!state.hasReceivedInitialConfigure)
-        #expect(throws: ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: 0))) {
+        #expect(throws: ClientError.domainValue(.nonPositiveInt32(0))) {
             try state.throwPendingErrorIfAny()
         }
         #expect(!state.hasReceivedInitialConfigure)

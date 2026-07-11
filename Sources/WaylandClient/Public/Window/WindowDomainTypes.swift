@@ -5,7 +5,7 @@ public struct WaylandString: Equatable, Sendable, CustomStringConvertible {
 
     public init(_ string: String) throws {
         guard !string.contains("\0") else {
-            throw ClientError.invalidWindowConfiguration(.interiorNUL(field: "WaylandString"))
+            throw DomainValueError.interiorNUL(type: "WaylandString")
         }
 
         value = string
@@ -26,15 +26,11 @@ public struct NonEmptyWaylandString: Equatable, Sendable, CustomStringConvertibl
 
     public init(_ string: String) throws {
         guard !string.isEmpty else {
-            throw ClientError.invalidWindowConfiguration(
-                .emptyString(field: "NonEmptyWaylandString")
-            )
+            throw DomainValueError.emptyString(type: "NonEmptyWaylandString")
         }
 
         guard !string.contains("\0") else {
-            throw ClientError.invalidWindowConfiguration(
-                .interiorNUL(field: "NonEmptyWaylandString")
-            )
+            throw DomainValueError.interiorNUL(type: "NonEmptyWaylandString")
         }
 
         value = string
@@ -56,7 +52,7 @@ public struct PositiveInt32: Equatable, Comparable, Sendable, CustomStringConver
 
     public init(_ value: Int32) throws {
         guard value > 0 else {
-            throw ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: value))
+            throw DomainValueError.nonPositiveInt32(value)
         }
 
         rawValue = value
@@ -81,7 +77,7 @@ public struct PositiveInt: Equatable, Comparable, Sendable, CustomStringConverti
 
     public init(_ value: Int) throws {
         guard value > 0 else {
-            throw ClientError.invalidWindowConfiguration(.nonPositiveInt(value: value))
+            throw DomainValueError.nonPositiveInt(value)
         }
 
         rawValue = value
@@ -99,6 +95,15 @@ public struct PositiveInt: Equatable, Comparable, Sendable, CustomStringConverti
     public static func < (lhs: Self, rhs: Self) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
+
+    public static let defaultDisplayEventCapacity = PositiveInt(unchecked: 256)
+    public static let defaultInputEventCapacity = PositiveInt(unchecked: 1_024)
+    public static let defaultTextInputEventCapacity = PositiveInt(unchecked: 512)
+    public static let defaultDataTransferEventCapacity = PositiveInt(unchecked: 256)
+    public static let defaultPresentationEventCapacity = PositiveInt(unchecked: 256)
+    public static let defaultRawInputQueueCapacity = PositiveInt(unchecked: 4_096)
+    public static let defaultPendingInputEventCapacity = PositiveInt(unchecked: 2_048)
+    public static let defaultDiagnosticsCapacity = PositiveInt(unchecked: 128)
 }
 
 public struct PositiveLogicalSize: Equatable, Sendable, CustomStringConvertible {
@@ -159,19 +164,15 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
         throws
     {
         guard scaleNumerator > 0 else {
-            throw ClientError.invalidWindowConfiguration(
-                .nonPositiveScaleNumerator(scaleNumerator)
-            )
+            throw DomainValueError.nonPositiveScaleNumerator(scaleNumerator)
         }
 
         guard scaleNumerator <= UInt32(Int32.max) else {
-            throw ClientError.invalidWindowConfiguration(
-                .scaleNumeratorTooLarge(scaleNumerator)
-            )
+            throw DomainValueError.scaleNumeratorTooLarge(scaleNumerator)
         }
 
         guard scaleDenominator > 0 else {
-            throw ClientError.invalidWindowConfiguration(.zeroScaleDenominator)
+            throw DomainValueError.zeroScaleDenominator
         }
 
         numerator = scaleNumerator
@@ -283,7 +284,7 @@ public struct Milliseconds: Equatable, Comparable, Sendable, CustomStringConvert
 
     public init(_ value: Int32) throws {
         guard value >= 0 else {
-            throw ClientError.invalidWindowConfiguration(.negativeMilliseconds(value: value))
+            throw DomainValueError.negativeMilliseconds(value)
         }
 
         rawValue = value

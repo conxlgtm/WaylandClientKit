@@ -45,7 +45,8 @@ struct DisplayEventHubPresentationTests {
     @Test
     func presentationSubscriberOverflowUsesConfiguredCapacity() async throws {
         let hub = DisplayEventHub(
-            configuration: try EventStreamConfiguration(presentationEventCapacity: 1)
+            configuration: EventStreamConfiguration(
+                presentationEventCapacity: try PositiveInt(1))
         )
         let windowID = WindowID(rawValue: 4)
         var iterator = hub.windowPresentationEvents(windowID: windowID).makeAsyncIterator()

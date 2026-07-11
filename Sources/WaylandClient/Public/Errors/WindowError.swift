@@ -22,14 +22,8 @@ public enum WindowConfigurationError: Equatable, Sendable, CustomStringConvertib
     case nonPositiveInitialWidth(Int32)
     case nonPositiveInitialHeight(Int32)
     case nonPositiveBufferCount(Int)
-    case negativeMilliseconds(value: Int32)
     case emptyString(field: String)
     case interiorNUL(field: String)
-    case nonPositiveInt32(value: Int32)
-    case nonPositiveInt(value: Int)
-    case nonPositiveScaleNumerator(UInt32)
-    case scaleNumeratorTooLarge(UInt32)
-    case zeroScaleDenominator
 
     public var description: String {
         switch self {
@@ -39,22 +33,10 @@ public enum WindowConfigurationError: Equatable, Sendable, CustomStringConvertib
             "initialHeight must be greater than zero, got \(value)"
         case .nonPositiveBufferCount(let value):
             "bufferCount must be greater than zero, got \(value)"
-        case .negativeMilliseconds(let value):
-            "milliseconds must be greater than or equal to zero, got \(value)"
         case .emptyString(let field):
             "\(field) must not be empty"
         case .interiorNUL(let field):
             "\(field) must not contain embedded NUL bytes"
-        case .nonPositiveInt32(let value):
-            "expected positive Int32, got \(value)"
-        case .nonPositiveInt(let value):
-            "expected positive Int, got \(value)"
-        case .nonPositiveScaleNumerator(let value):
-            "scale numerator must be greater than zero, got \(value)"
-        case .scaleNumeratorTooLarge(let value):
-            "scale numerator is too large, got \(value)"
-        case .zeroScaleDenominator:
-            "scale denominator must be greater than zero"
         }
     }
 }

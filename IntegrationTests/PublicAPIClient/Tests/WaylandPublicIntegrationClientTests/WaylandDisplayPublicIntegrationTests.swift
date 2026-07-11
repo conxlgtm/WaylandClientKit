@@ -130,10 +130,10 @@ func withPublicConnection(
         applicationID: "org.waylandclientkit.PublicIntegration",
         cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
         discoveryTimeoutMilliseconds: publicIntegrationTimeoutMilliseconds,
-        eventStreamConfiguration: try EventStreamConfiguration(
-            displayEventCapacity: 64,
-            inputEventCapacity: 64,
-            dataTransferEventCapacity: 64
+        eventStreamConfiguration: EventStreamConfiguration(
+            displayEventCapacity: try PositiveInt(64),
+            inputEventCapacity: try PositiveInt(64),
+            dataTransferEventCapacity: try PositiveInt(64)
         ),
         body
     )

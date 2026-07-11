@@ -266,11 +266,7 @@ private func expectGraphicsError(
 }
 
 private func closeBackingForTesting(_ backing: WaylandGraphicsWindowBacking) async {
-    do {
-        await backing.close()
-    } catch {
-        Issue.record("Failed to close graphics backing during test hook: \(error)")
-    }
+    await backing.close()
 }
 
 private enum GPUPreviewLiveEnvironment {

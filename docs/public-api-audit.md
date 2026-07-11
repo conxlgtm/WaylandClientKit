@@ -181,6 +181,12 @@ Current user-facing contract:
   surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
+- Event, input, diagnostic, and window buffer capacities use the same
+  `PositiveInt` domain value. Configurations expose one typed initializer, and
+  input motion coalescing is represented only by `InputMotionCoalescing`.
+- Reusable strings, positive integers, scales, and millisecond values throw
+  `DomainValueError`; window-specific validation remains at the
+  `WindowConfiguration` boundary.
 - Managed identities are returned by the library and cannot be fabricated by
   external clients. Registry names, protocol serials, touch IDs, protocol object
   IDs, and opaque protocol tokens remain publicly constructible because callers

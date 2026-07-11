@@ -28,9 +28,9 @@ struct DisplayEventHubTextInputTests {
     @Test
     func textInputCapacityIsConfiguredIndependentlyFromInputCapacity() async throws {
         let hub = DisplayEventHub(
-            configuration: try EventStreamConfiguration(
-                inputEventCapacity: 4,
-                textInputEventCapacity: 1
+            configuration: EventStreamConfiguration(
+                inputEventCapacity: try PositiveInt(4),
+                textInputEventCapacity: try PositiveInt(1)
             )
         )
         let stream = hub.textInputEvents()
