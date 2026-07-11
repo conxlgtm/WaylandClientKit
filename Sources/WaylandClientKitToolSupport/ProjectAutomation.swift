@@ -892,6 +892,17 @@ public struct PublicAPIAuditor {
     public func verify(update: Bool, environment: [String: String] = [:]) throws {
         let baseline = context.repository.url("docs/public-api-baseline.md")
         let report = try dump(environment: environment)
+        let symbolGraphs = try DocCVerifier(
+            repository: context.repository,
+            buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+            fileSystem: context.fileSystem,
+            diagnostics: context.diagnostics
+        ).publicProductSymbolGraphs()
+        try DocumentationSymbolCoverageVerifier(fileSystem: context.fileSystem).verify(
+            symbolGraphs: symbolGraphs,
+            baseline: context.repository.url("docs/documentation-symbol-coverage.json"),
+            update: update
+        )
         let reportBody = report.split(separator: "\n", omittingEmptySubsequences: false)
             .dropFirst(2)
             .joined(separator: "\n")

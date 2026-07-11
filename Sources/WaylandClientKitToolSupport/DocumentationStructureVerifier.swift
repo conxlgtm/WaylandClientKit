@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DocumentationCoverageVerifier {
+public struct DocumentationStructureVerifier {
     public struct RequiredPhrase: Sendable {
         public let path: String
         public let phrase: String
@@ -19,6 +19,7 @@ public struct DocumentationCoverageVerifier {
         "docs/compatibility-policy.md",
         "docs/compositor-matrix.md",
         "docs/documentation-map.md",
+        "docs/documentation-symbol-coverage.json",
         "docs/generation.md",
         "docs/getting-started.md",
         "docs/live-wayland-testing.md",

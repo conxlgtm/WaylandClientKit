@@ -827,7 +827,7 @@ private func ignoreCleanupError(_ operation: () throws -> Void) {
 }
 
 private func runDocsVerify(context: ToolContext) throws {
-    try DocumentationCoverageVerifier(
+    try DocumentationStructureVerifier(
         repository: context.repository,
         fileSystem: context.fileSystem
     ).verify()

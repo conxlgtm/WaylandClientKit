@@ -153,7 +153,7 @@ struct ToolingConvergenceTests {
         try writeRequiredDocumentation(root: root, missing: "docs/getting-started.md")
 
         do {
-            try DocumentationCoverageVerifier(repository: Repository(root: root)).verify()
+            try DocumentationStructureVerifier(repository: Repository(root: root)).verify()
             Issue.record("expected documentation coverage to fail")
         } catch let error as ToolError {
             #expect(
@@ -170,7 +170,7 @@ struct ToolingConvergenceTests {
             omittedPhrase: "docs/which-api-should-i-use.md")
 
         do {
-            try DocumentationCoverageVerifier(repository: Repository(root: root)).verify()
+            try DocumentationStructureVerifier(repository: Repository(root: root)).verify()
             Issue.record("expected documentation coverage to require README API chooser link")
         } catch let error as ToolError {
             #expect(error.message.contains("README.md"))
@@ -299,9 +299,9 @@ extension ToolingConvergenceTests {
         omittedPhrase: String? = nil
     ) throws {
         let phraseMap = Dictionary(
-            grouping: DocumentationCoverageVerifier.requiredPhrases,
+            grouping: DocumentationStructureVerifier.requiredPhrases,
             by: \.path)
-        for path in DocumentationCoverageVerifier.requiredFiles where path != missingPath {
+        for path in DocumentationStructureVerifier.requiredFiles where path != missingPath {
             let url = root.appendingPathComponent(path)
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(),
