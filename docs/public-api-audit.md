@@ -185,6 +185,9 @@ Current user-facing contract:
   external clients. Registry names, protocol serials, touch IDs, protocol object
   IDs, and opaque protocol tokens remain publicly constructible because callers
   may need to round-trip those compositor facts.
+- Self-only operations on dialogs, inhibitors, and toplevel drags use the display
+  stored by the handle. Cross-display errors are reserved for operations that
+  accept a second handle or an externally supplied display or seat.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
   protocol values are intentionally preserved when useful to clients.
 - Interpreted keyboard events expose local keyboard text through

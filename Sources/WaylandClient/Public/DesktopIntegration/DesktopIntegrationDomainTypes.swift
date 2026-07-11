@@ -154,31 +154,15 @@ public struct WindowDialog: Sendable, Hashable, Identifiable {
         ownership = DisplayOwnedIdentity(id: dialogID, display: owningDisplay)
     }
 
-    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
-        ownership.isOwned(by: owningDisplay)
-    }
-
     public func setModal() async throws {
-        guard isOwned(by: display) else {
-            throw ClientError.display(.foreignWindowDialog(id))
-        }
-
         try await display.setWindowDialogModal(id, modal: true)
     }
 
     public func unsetModal() async throws {
-        guard isOwned(by: display) else {
-            throw ClientError.display(.foreignWindowDialog(id))
-        }
-
         try await display.setWindowDialogModal(id, modal: false)
     }
 
     public func destroy() async throws {
-        guard isOwned(by: display) else {
-            throw ClientError.display(.foreignWindowDialog(id))
-        }
-
         try await display.destroyWindowDialog(id)
     }
 
@@ -220,15 +204,7 @@ public struct IdleInhibitor: Sendable, Hashable, Identifiable {
         ownership = DisplayOwnedIdentity(id: inhibitorID, display: owningDisplay)
     }
 
-    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
-        ownership.isOwned(by: owningDisplay)
-    }
-
     public func destroy() async throws {
-        guard isOwned(by: display) else {
-            throw ClientError.display(.foreignIdleInhibitor(id))
-        }
-
         try await display.destroyIdleInhibitor(id)
     }
 
@@ -279,15 +255,7 @@ public struct KeyboardShortcutsInhibitor: Sendable, Hashable, Identifiable {
         ownership = DisplayOwnedIdentity(id: inhibitorID, display: owningDisplay)
     }
 
-    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
-        ownership.isOwned(by: owningDisplay)
-    }
-
     public func destroy() async throws {
-        guard isOwned(by: display) else {
-            throw ClientError.display(.foreignKeyboardShortcutsInhibitor(id))
-        }
-
         try await display.destroyKeyboardShortcutsInhibitor(id)
     }
 
