@@ -108,118 +108,50 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
 extension WaylandSystemOperation {
     package init(_ rawOperation: RawSystemOperation) {
         switch rawOperation {
-        case .validateArgument, .installListener:
-            self = Self.namedOperation(rawOperation)
-        case .createSharedMemoryFile, .resizeSharedMemoryFile, .mapSharedMemory, .createBuffer:
-            self = Self.sharedMemoryOperation(rawOperation)
-        case .connectDisplay, .readMonotonicClock, .pollEventLoop:
-            self = Self.runtimeOperation(rawOperation)
-        case .displayFlush, .displayReadEvents, .displayDispatchPending,
-            .displayPrepareRead, .displayError:
-            self = Self.displayOperation(rawOperation)
-        case .keymapFstat, .keymapMmap, .mapDmabufFormatTable:
-            self = Self.keymapOperation(rawOperation)
-        case .createPipe, .readFileDescriptor, .writeFileDescriptor, .duplicateFileDescriptor,
-            .closeFileDescriptor:
-            self = Self.fileDescriptorOperation(rawOperation)
-        }
-    }
-
-    private static func namedOperation(
-        _ rawOperation: RawSystemOperation
-    ) -> WaylandSystemOperation {
-        switch rawOperation {
         case .validateArgument(let name):
-            .validateArgument(name)
+            self = .validateArgument(name)
         case .installListener(let name):
-            .installListener(name)
-        default:
-            preconditionFailure("operation is not name-bearing")
-        }
-    }
-
-    private static func sharedMemoryOperation(
-        _ rawOperation: RawSystemOperation
-    ) -> WaylandSystemOperation {
-        switch rawOperation {
+            self = .installListener(name)
         case .createSharedMemoryFile:
-            .createSharedMemoryFile
+            self = .createSharedMemoryFile
         case .resizeSharedMemoryFile:
-            .resizeSharedMemoryFile
+            self = .resizeSharedMemoryFile
         case .mapSharedMemory:
-            .mapSharedMemory
+            self = .mapSharedMemory
         case .createBuffer:
-            .createBuffer
-        default:
-            preconditionFailure("operation is not shared-memory related")
-        }
-    }
-
-    private static func runtimeOperation(
-        _ rawOperation: RawSystemOperation
-    ) -> WaylandSystemOperation {
-        switch rawOperation {
+            self = .createBuffer
         case .connectDisplay:
-            .connectDisplay
+            self = .connectDisplay
         case .readMonotonicClock:
-            .readMonotonicClock
+            self = .readMonotonicClock
         case .pollEventLoop:
-            .pollEventLoop
-        default:
-            preconditionFailure("operation is not runtime related")
-        }
-    }
-
-    private static func displayOperation(
-        _ rawOperation: RawSystemOperation
-    ) -> WaylandSystemOperation {
-        switch rawOperation {
+            self = .pollEventLoop
         case .displayFlush:
-            .displayFlush
+            self = .displayFlush
         case .displayReadEvents:
-            .displayReadEvents
+            self = .displayReadEvents
         case .displayDispatchPending:
-            .displayDispatchPending
+            self = .displayDispatchPending
         case .displayPrepareRead:
-            .displayPrepareRead
+            self = .displayPrepareRead
         case .displayError:
-            .displayError
-        default:
-            preconditionFailure("operation is not display related")
-        }
-    }
-
-    private static func keymapOperation(
-        _ rawOperation: RawSystemOperation
-    ) -> WaylandSystemOperation {
-        switch rawOperation {
+            self = .displayError
         case .keymapFstat:
-            .keymapFstat
+            self = .keymapFstat
         case .keymapMmap:
-            .keymapMmap
+            self = .keymapMmap
         case .mapDmabufFormatTable:
-            .mapDmabufFormatTable
-        default:
-            preconditionFailure("operation is not keymap related")
-        }
-    }
-
-    private static func fileDescriptorOperation(
-        _ rawOperation: RawSystemOperation
-    ) -> WaylandSystemOperation {
-        switch rawOperation {
+            self = .mapDmabufFormatTable
         case .createPipe:
-            .createPipe
+            self = .createPipe
         case .readFileDescriptor:
-            .readFileDescriptor
+            self = .readFileDescriptor
         case .writeFileDescriptor:
-            .writeFileDescriptor
+            self = .writeFileDescriptor
         case .duplicateFileDescriptor:
-            .duplicateFileDescriptor
+            self = .duplicateFileDescriptor
         case .closeFileDescriptor:
-            .closeFileDescriptor
-        default:
-            preconditionFailure("operation is not file-descriptor related")
+            self = .closeFileDescriptor
         }
     }
 }
