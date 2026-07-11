@@ -11,7 +11,8 @@ Compatibility tiers and required review process are defined in
 The minimal DocC catalog for this boundary lives in
 `Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
 Identity taxonomy, raw-value visibility, and display-owned handle semantics are
-tracked in [`identity-model.md`](identity-model.md).
+tracked in [`identity-model.md`](identity-model.md) and the generated
+[`identity-visibility.md`](identity-visibility.md) table.
 
 ## Products
 
@@ -162,11 +163,6 @@ Intentionally public:
 - `OutputManagementMode`
 - `OutputManagementHead`
 - `OutputManagementSnapshot`
-- `OutputConfigurationProposal`
-- `CompositorSessionID`
-- `CompositorSessionReason`
-- `CompositorSessionEvent`
-- `CompositorSessionEventSnapshot`
 - `ClientError`
 
 Current user-facing contract:
@@ -180,11 +176,15 @@ Current user-facing contract:
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
   pointer, pointer lock/confine, pointer warp, tablet input facts, cursor
   requests, text-input sessions and events, foreign toplevel facts,
-  output-management preview facts/current proposals, compositor session preview
-  facts, diagnostics, and terminal display errors are the current product
+  output-management preview facts, compositor session capability,
+  diagnostics, and terminal display errors are the current product
   surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
+- Managed identities are returned by the library and cannot be fabricated by
+  external clients. Registry names, protocol serials, touch IDs, protocol object
+  IDs, and opaque protocol tokens remain publicly constructible because callers
+  may need to round-trip those compositor facts.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
   protocol values are intentionally preserved when useful to clients.
 - Interpreted keyboard events expose local keyboard text through
@@ -204,13 +204,22 @@ Current user-facing contract:
 - Window sizes are logical surface sizes. `SurfaceGeometry` records the
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.
+- Output management is read-only public API. The former proposal, test, and
+  apply operations were removed because their only meaningful input was a
+  snapshot serial and they could not express a requested configuration change.
+  A package-only current-state test remains for protocol smoke coverage.
+- Compositor session management is capability-only public API. The former
+  one-roundtrip event snapshot was removed because it destroyed the session
+  before later replacement events or surface attachment could be observed.
 - Regular clipboard means `wl_data_device_manager` selection offers and sources.
-- `WaylandDisplay.capabilities()` reports currently advertised compositor support
+- `WaylandDisplay.capabilities()` reports the connection-start set of compositor support
   for regular clipboard, drag-and-drop, drag action negotiation, primary
   selection, server-side decorations, xdg-output, viewporter, presentation time,
   fractional scaling, cursor-shape, xdg activation, relative pointer, pointer
   constraints, pointer warp, tablet input, compositor session management,
-  text-input, and linux-dmabuf without binding new protocol objects.
+  text-input, and linux-dmabuf without binding new protocol objects. Managers
+  advertised later require a new connection; removing a startup manager makes
+  the matching capability unavailable and retires any retained proxy.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop means `wl_data_device_manager` target offers and local sources,
@@ -224,10 +233,10 @@ Current user-facing contract:
   hints that compositors may ignore. Preedit, delete, commit, action, language,
   preedit-hint, and done events are typed public facts.
 - Compositor session management means `xdg_session_manager_v1` advertisement
-  reporting through `WaylandCapabilities.compositorSessionManagement` plus
-  narrow preview created/restored/replaced event facts. Compositor session IDs
-  are protocol identities, not framework scene or document identities. Local
-  restore policy remains framework-owned.
+  reporting through `WaylandCapabilities.compositorSessionManagement`. Raw
+  lifecycle objects stay package-internal until a durable public owner can
+  observe later events and attach surfaces. Local restore policy remains
+  framework-owned.
 - Relative pointer and pointer constraints mean
   `zwp_relative_pointer_manager_v1` and `zwp_pointer_constraints_v1`.
   WaylandClientKit exposes capability facts, relative motion events, typed
@@ -356,6 +365,9 @@ Current preview contract:
 - `WaylandGraphicsReason` is shared by fallback and failed runtime statuses;
   their status case records the disposition without a duplicate reason enum or
   duplicate mapping switch.
+- External configuration, buffer, submission, and synchronization timeline IDs
+  are issued by WCK. Callers may compare and retain the typed values, but their
+  constructors and raw values remain package-only.
 - The managed preview submission path can create a window backing, lease a
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
@@ -466,6 +478,10 @@ Notes:
 - `WindowPresentationEvents` is a public async sequence for presentation
   feedback requested through a managed window. A discarded result is distinct
   from a presented result with timestamps and feedback flags.
+- Every public event sequence creates an independent broker subscription in
+  `makeAsyncIterator()`. Buffering begins at iterator creation; copied sequences
+  do not split one queue, and cancellation or overflow remains local to one
+  iterator.
 - `Window.decorationMode` reports the current effective xdg-decoration mode when
   the compositor supports `zxdg_decoration_manager_v1`. Mode absence is explicit
   as `.unavailable`.
@@ -588,6 +604,9 @@ Notes:
   compositor-specific preview requests and never run from the default smoke
   path. There is no general display-settings framework API.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
+- `DisplayConfiguration` and the convenience `WaylandDisplay.withConnection`
+  overload require an application ID. `WindowConfiguration.default` has a plain
+  title and no demo identity; a per-window app ID is only an explicit override.
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
   default waits. Callers must opt into longer waits by passing an explicit timeout.

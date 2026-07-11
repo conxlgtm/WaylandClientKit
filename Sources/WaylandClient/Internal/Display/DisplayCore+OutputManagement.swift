@@ -1,5 +1,11 @@
 import WaylandRaw
 
+enum OutputManagementSmokeError: Error, Equatable {
+    case failed
+    case cancelled
+    case missingResult
+}
+
 extension DisplayCore {
     func outputManagementSnapshot(
         timeoutMilliseconds: Int32
@@ -21,28 +27,12 @@ extension DisplayCore {
         }
     }
 
-    func testOutputConfiguration(
-        _ proposal: OutputConfigurationProposal,
+    func testCurrentOutputConfigurationForSmoke(
         timeoutMilliseconds: Int32
     ) throws {
         try withFatalFailureFinalization {
-            try runCurrentOutputConfiguration(
-                proposal,
-                timeoutMilliseconds: timeoutMilliseconds,
-                apply: false
-            )
-        }
-    }
-
-    func applyOutputConfiguration(
-        _ proposal: OutputConfigurationProposal,
-        timeoutMilliseconds: Int32
-    ) throws {
-        try withFatalFailureFinalization {
-            try runCurrentOutputConfiguration(
-                proposal,
-                timeoutMilliseconds: timeoutMilliseconds,
-                apply: true
+            try runCurrentOutputConfigurationSmokeTest(
+                timeoutMilliseconds: timeoutMilliseconds
             )
         }
     }
@@ -77,10 +67,8 @@ extension DisplayCore {
         return id
     }
 
-    private func runCurrentOutputConfiguration(
-        _ proposal: OutputConfigurationProposal,
-        timeoutMilliseconds: Int32,
-        apply shouldApply: Bool
+    private func runCurrentOutputConfigurationSmokeTest(
+        timeoutMilliseconds: Int32
     ) throws {
         let session = try requireSession()
         let collection = try collectOutputManagement(
@@ -88,11 +76,6 @@ extension DisplayCore {
             timeoutMilliseconds: timeoutMilliseconds
         )
         defer { collection.destroy() }
-
-        try Self.validateOutputConfigurationProposal(
-            proposal,
-            against: collection.snapshot
-        )
 
         var result: RawWlrOutputConfigurationEvent?
         let configuration = try collection.manager.createConfiguration(
@@ -103,11 +86,7 @@ extension DisplayCore {
         defer { configuration.destroy() }
 
         try collection.configureCurrentState(on: configuration)
-        if shouldApply {
-            configuration.apply()
-        } else {
-            configuration.test()
-        }
+        configuration.test()
         try session.connection.completeInitialDiscovery(
             timeoutMilliseconds: timeoutMilliseconds
         )
@@ -116,33 +95,24 @@ extension DisplayCore {
             connection: session.connection,
             timeoutMilliseconds: timeoutMilliseconds
         )
-        let resultError = Self.outputManagementConfigurationError(for: result)
+        let resultError = Self.outputManagementSmokeError(for: result)
         if let resultError {
             throw resultError
         }
     }
 
-    static func outputManagementConfigurationError(
+    static func outputManagementSmokeError(
         for result: RawWlrOutputConfigurationEvent?
-    ) -> ClientError? {
+    ) -> OutputManagementSmokeError? {
         switch result {
         case .succeeded:
             nil
         case .failed:
-            ClientError.display(.outputConfigurationFailed)
+            .failed
         case .cancelled:
-            ClientError.display(.outputConfigurationCancelled)
+            .cancelled
         case nil:
-            ClientError.display(.outputConfigurationFailed)
-        }
-    }
-
-    static func validateOutputConfigurationProposal(
-        _ proposal: OutputConfigurationProposal,
-        against snapshot: OutputManagementSnapshot
-    ) throws {
-        guard snapshot.serial == proposal.snapshot.serial else {
-            throw ClientError.display(.staleOutputConfiguration)
+            .missingResult
         }
     }
 

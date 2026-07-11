@@ -202,20 +202,6 @@ struct OutputManagementPreviewTests {
         #expect(changedMode.id != firstMode.id)
     }
 
-    @Test
-    func staleConfigurationProposalIsRejectedBeforeRequests() throws {
-        let firstSnapshot = OutputManagementSnapshot(heads: [], serial: 11)
-        let secondSnapshot = OutputManagementSnapshot(heads: [], serial: 12)
-        let proposal = OutputConfigurationProposal(current: firstSnapshot)
-
-        #expect(throws: ClientError.display(.staleOutputConfiguration)) {
-            try DisplayCore.validateOutputConfigurationProposal(
-                proposal,
-                against: secondSnapshot
-            )
-        }
-    }
-
     #if SWL_ENABLE_TESTING
         @Test
         func currentStateConfigurationMapsEnabledHeadRequests() async throws {
@@ -264,19 +250,16 @@ struct OutputManagementPreviewTests {
     #endif
 
     @Test
-    func configurationResultMappingIsTyped() {
-        #expect(DisplayCore.outputManagementConfigurationError(for: .succeeded) == nil)
+    func smokeConfigurationResultMappingIsTyped() {
+        #expect(DisplayCore.outputManagementSmokeError(for: .succeeded) == nil)
         #expect(
-            DisplayCore.outputManagementConfigurationError(for: .failed)
-                == ClientError.display(.outputConfigurationFailed)
+            DisplayCore.outputManagementSmokeError(for: .failed) == .failed
         )
         #expect(
-            DisplayCore.outputManagementConfigurationError(for: .cancelled)
-                == ClientError.display(.outputConfigurationCancelled)
+            DisplayCore.outputManagementSmokeError(for: .cancelled) == .cancelled
         )
         #expect(
-            DisplayCore.outputManagementConfigurationError(for: nil)
-                == ClientError.display(.outputConfigurationFailed)
+            DisplayCore.outputManagementSmokeError(for: nil) == .missingResult
         )
     }
 }

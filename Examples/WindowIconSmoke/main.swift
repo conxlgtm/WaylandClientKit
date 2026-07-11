@@ -8,6 +8,7 @@ enum WindowIconSmoke {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.WindowIconSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 32,
                 inputEventCapacity: 16,

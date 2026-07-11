@@ -58,25 +58,26 @@ struct WaylandDisplayPublicInputAPITests {
         #expect(region.rectangles.count == 1)
         #expect(motion.delta.dx == 1.5)
         #expect(PointerCaptureError.unavailable(.relativePointer).description.contains("relative"))
-        let constraintID = PointerConstraintID(rawValue: 7, kind: .locked)
-        let lifecycleEvents: [PointerEvent] = [
-            .constraintLifecycle(.activated(constraintID)),
-            .constraintLifecycle(.inactivePersistent(constraintID)),
-            .constraintLifecycle(.defunctOneShot(constraintID)),
-        ]
-        let lifecycleNames = lifecycleEvents.map { event in
-            switch event {
-            case .constraintLifecycle(.activated):
-                "activated"
-            case .constraintLifecycle(.inactivePersistent):
-                "inactivePersistent"
-            case .constraintLifecycle(.defunctOneShot):
-                "defunctOneShot"
-            default:
-                "other"
+        func lifecycleNames(for constraintID: PointerConstraintID) -> [String] {
+            let lifecycleEvents: [PointerEvent] = [
+                .constraintLifecycle(.activated(constraintID)),
+                .constraintLifecycle(.inactivePersistent(constraintID)),
+                .constraintLifecycle(.defunctOneShot(constraintID)),
+            ]
+            return lifecycleEvents.map { event in
+                switch event {
+                case .constraintLifecycle(.activated):
+                    "activated"
+                case .constraintLifecycle(.inactivePersistent):
+                    "inactivePersistent"
+                case .constraintLifecycle(.defunctOneShot):
+                    "defunctOneShot"
+                default:
+                    "other"
+                }
             }
         }
-        #expect(lifecycleNames == ["activated", "inactivePersistent", "defunctOneShot"])
+        _ = lifecycleNames
 
         func usePointerCaptureAPI(display: WaylandDisplay, window: Window, seatID: SeatID)
             async throws
@@ -101,6 +102,20 @@ struct WaylandDisplayPublicInputAPITests {
         }
 
         _ = usePointerCaptureAPI
+    }
+
+    @Test
+    func protocolFactIdentitiesRemainConstructible() {
+        let seatID = SeatID(rawValue: 7)
+        let outputID = OutputID(rawValue: 8)
+        let serial = InputSerial(rawValue: 9)
+        let touchID = TouchID(rawValue: 10)
+        let objectID = WaylandProtocolObjectID(rawValue: 11)
+        #expect(seatID.rawValue == 7)
+        #expect(outputID.rawValue == 8)
+        #expect(serial.rawValue == 9)
+        #expect(touchID.rawValue == 10)
+        #expect(objectID.rawValue == 11)
     }
 
     @Test

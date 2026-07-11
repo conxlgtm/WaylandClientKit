@@ -353,6 +353,7 @@
         _ body: @Sendable (WaylandDisplay, Window) async throws -> Void
     ) async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.WindowControlTests",
             cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
             discoveryTimeoutMilliseconds: 5_000
         ) { display in

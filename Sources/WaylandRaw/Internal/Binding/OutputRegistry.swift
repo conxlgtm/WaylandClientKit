@@ -5,7 +5,7 @@ package final class OutputRegistry {
     @safe private let registry: OpaquePointer
     private let proxyAdoption: RawProxyAdoptionContext
     private let invariantFailureSink: RawInvariantFailureSink?
-    private let xdgOutputManager: OptionalXDGOutputManager
+    private var xdgOutputManager: OptionalXDGOutputManager
     private var outputsByID: [RawOutputID: RawOutput] = [:]
     private var xdgOutputsByID: [RawOutputID: RawXDGOutput] = [:]
     private var pendingEvents: [RawOutputEvent] = []
@@ -71,6 +71,14 @@ package final class OutputRegistry {
         }
         xdgOutputsByID.removeAll()
         outputsByID.removeAll()
+    }
+
+    package func invalidateXDGOutputManager() {
+        for xdgOutput in xdgOutputsByID.values {
+            xdgOutput.destroy()
+        }
+        xdgOutputsByID.removeAll()
+        xdgOutputManager = .missing
     }
 
     private func bindOutput(_ global: RawGlobalAdvertisement) throws {

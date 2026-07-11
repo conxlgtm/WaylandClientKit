@@ -54,7 +54,7 @@ jobs:
       - name: Cheap check
         run: swift run wck ci cheap
 
-  required:
+  required-product:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'cheap' }}
     runs-on: ubuntu-latest
     container:
@@ -78,6 +78,60 @@ jobs:
             wayland-protocols
       - name: Required build and tests
         run: swift run wck ci required
+        env:
+          WAYLAND_CLIENT_KIT_UNIT_COVERAGE: '1'
+      - name: Unit coverage summary
+        run: swift run wck coverage summarize >> "$GITHUB_STEP_SUMMARY"
+
+  headless-request-path:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'cheap' }}
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.2-noble
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install headless test dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            coreutils \
+            git \
+            libdrm-dev \
+            libegl-dev \
+            libgbm-dev \
+            libgles-dev \
+            libwayland-bin \
+            libwayland-dev \
+            libxkbcommon-dev \
+            pkg-config \
+            wayland-protocols \
+            weston
+      - name: Connection, window, buffer, input, and teardown smoke
+        run: swift run wck smoke headless -- wck smoke live
+      - name: Public headless integration paths
+        run: swift run wck smoke headless -- wck smoke integration
+      - name: Headless request paths with coverage
+        run: swift run wck smoke headless -- wck test request-paths
+        env:
+          WAYLAND_CLIENT_KIT_HEADLESS_COVERAGE: '1'
+      - name: Headless coverage summary
+        run: swift run wck coverage summarize >> "$GITHUB_STEP_SUMMARY"
+
+  required:
+    if: ${{ always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'cheap') }}
+    needs:
+      - required-product
+      - headless-request-path
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require product and headless paths
+        env:
+          PRODUCT_RESULT: ${{ needs.required-product.result }}
+          HEADLESS_RESULT: ${{ needs.headless-request-path.result }}
+        run: |
+          test "$PRODUCT_RESULT" = success
+          test "$HEADLESS_RESULT" = success
 
   check:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}

@@ -384,21 +384,41 @@ public struct DiagnosticsConfiguration: Equatable, Sendable {
 }
 
 public struct DisplayConfiguration: Equatable, Sendable {
+    public var applicationID: NonEmptyWaylandString
     public var eventStreams: EventStreamConfiguration
     public var inputPipeline: InputPipelineConfiguration
     public var keyboardInterpretation: KeyboardInterpretationConfiguration
     public var diagnostics: DiagnosticsConfiguration
 
     public init(
+        applicationID displayApplicationID: NonEmptyWaylandString,
         eventStreams streamConfiguration: EventStreamConfiguration = .init(),
         inputPipeline inputConfiguration: InputPipelineConfiguration = .init(),
         keyboardInterpretation keyboardInterpretationConfiguration:
             KeyboardInterpretationConfiguration = .init(),
         diagnostics diagnosticsConfiguration: DiagnosticsConfiguration = .init()
     ) {
+        applicationID = displayApplicationID
         eventStreams = streamConfiguration
         inputPipeline = inputConfiguration
         keyboardInterpretation = keyboardInterpretationConfiguration
         diagnostics = diagnosticsConfiguration
+    }
+
+    public init(
+        applicationID displayApplicationID: String,
+        eventStreams streamConfiguration: EventStreamConfiguration = .init(),
+        inputPipeline inputConfiguration: InputPipelineConfiguration = .init(),
+        keyboardInterpretation keyboardInterpretationConfiguration:
+            KeyboardInterpretationConfiguration = .init(),
+        diagnostics diagnosticsConfiguration: DiagnosticsConfiguration = .init()
+    ) throws {
+        try self.init(
+            applicationID: NonEmptyWaylandString(displayApplicationID),
+            eventStreams: streamConfiguration,
+            inputPipeline: inputConfiguration,
+            keyboardInterpretation: keyboardInterpretationConfiguration,
+            diagnostics: diagnosticsConfiguration
+        )
     }
 }

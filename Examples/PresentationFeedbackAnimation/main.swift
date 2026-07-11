@@ -24,6 +24,7 @@ enum PresentationFeedbackAnimation {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.PresentationFeedbackAnimation",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 16,

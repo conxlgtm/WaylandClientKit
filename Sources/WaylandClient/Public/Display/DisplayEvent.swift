@@ -40,9 +40,9 @@ public enum DiagnosticSeverity: Equatable, Sendable {
 }
 
 public struct DiagnosticID: Equatable, Hashable, Sendable {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
-    public init(rawValue diagnosticRawValue: UInt64) {
+    package init(rawValue diagnosticRawValue: UInt64) {
         rawValue = diagnosticRawValue
     }
 }
@@ -120,6 +120,19 @@ package struct InternalEventSubscription<Element: Sendable>: Sendable {
 }
 
 @safe
+package struct InternalEventSubscriptionFactory<Element: Sendable>: Sendable {
+    private let broker: TypedEventBroker<Element>
+
+    init(_ eventBroker: TypedEventBroker<Element>) {
+        broker = eventBroker
+    }
+
+    package func makeAsyncIterator() -> InternalEventSubscriptionIterator<Element> {
+        broker.subscribe().makeAsyncIterator()
+    }
+}
+
+@safe
 package struct InternalEventSubscriptionIterator<Element: Sendable>: AsyncIteratorProtocol {
     package typealias Failure = WaylandDisplayError
 
@@ -145,14 +158,14 @@ public struct DisplayEvents: AsyncSequence, Sendable {
     public typealias Element = DisplayEvent
     public typealias Failure = WaylandDisplayError
 
-    private let subscription: InternalEventSubscription<DisplayEvent>
+    private let subscriptions: InternalEventSubscriptionFactory<DisplayEvent>
 
-    package init(_ eventSubscription: InternalEventSubscription<DisplayEvent>) {
-        subscription = eventSubscription
+    package init(_ eventSubscriptions: InternalEventSubscriptionFactory<DisplayEvent>) {
+        subscriptions = eventSubscriptions
     }
 
     public func makeAsyncIterator() -> DisplayEventsIterator {
-        DisplayEventsIterator(base: subscription.makeAsyncIterator())
+        DisplayEventsIterator(base: subscriptions.makeAsyncIterator())
     }
 }
 
@@ -183,14 +196,14 @@ public struct InputEvents: AsyncSequence, Sendable {
     public typealias Element = InputEvent
     public typealias Failure = WaylandDisplayError
 
-    private let subscription: InternalEventSubscription<InputEvent>
+    private let subscriptions: InternalEventSubscriptionFactory<InputEvent>
 
-    package init(_ eventSubscription: InternalEventSubscription<InputEvent>) {
-        subscription = eventSubscription
+    package init(_ eventSubscriptions: InternalEventSubscriptionFactory<InputEvent>) {
+        subscriptions = eventSubscriptions
     }
 
     public func makeAsyncIterator() -> InputEventsIterator {
-        InputEventsIterator(base: subscription.makeAsyncIterator())
+        InputEventsIterator(base: subscriptions.makeAsyncIterator())
     }
 }
 
@@ -221,14 +234,14 @@ public struct DataTransferEvents: AsyncSequence, Sendable {
     public typealias Element = DataTransferEvent
     public typealias Failure = WaylandDisplayError
 
-    private let subscription: InternalEventSubscription<DataTransferEvent>
+    private let subscriptions: InternalEventSubscriptionFactory<DataTransferEvent>
 
-    package init(_ eventSubscription: InternalEventSubscription<DataTransferEvent>) {
-        subscription = eventSubscription
+    package init(_ eventSubscriptions: InternalEventSubscriptionFactory<DataTransferEvent>) {
+        subscriptions = eventSubscriptions
     }
 
     public func makeAsyncIterator() -> DataTransferEventsIterator {
-        DataTransferEventsIterator(base: subscription.makeAsyncIterator())
+        DataTransferEventsIterator(base: subscriptions.makeAsyncIterator())
     }
 }
 
@@ -259,14 +272,14 @@ public struct TextInputEvents: AsyncSequence, Sendable {
     public typealias Element = TextInputEvent
     public typealias Failure = WaylandDisplayError
 
-    private let subscription: InternalEventSubscription<TextInputEvent>
+    private let subscriptions: InternalEventSubscriptionFactory<TextInputEvent>
 
-    package init(_ eventSubscription: InternalEventSubscription<TextInputEvent>) {
-        subscription = eventSubscription
+    package init(_ eventSubscriptions: InternalEventSubscriptionFactory<TextInputEvent>) {
+        subscriptions = eventSubscriptions
     }
 
     public func makeAsyncIterator() -> TextInputEventsIterator {
-        TextInputEventsIterator(base: subscription.makeAsyncIterator())
+        TextInputEventsIterator(base: subscriptions.makeAsyncIterator())
     }
 }
 
@@ -297,14 +310,14 @@ public struct DisplayDiagnostics: AsyncSequence, Sendable {
     public typealias Element = DisplayDiagnostic
     public typealias Failure = WaylandDisplayError
 
-    private let subscription: InternalEventSubscription<DisplayDiagnostic>
+    private let subscriptions: InternalEventSubscriptionFactory<DisplayDiagnostic>
 
-    package init(_ eventSubscription: InternalEventSubscription<DisplayDiagnostic>) {
-        subscription = eventSubscription
+    package init(_ eventSubscriptions: InternalEventSubscriptionFactory<DisplayDiagnostic>) {
+        subscriptions = eventSubscriptions
     }
 
     public func makeAsyncIterator() -> DisplayDiagnosticsIterator {
-        DisplayDiagnosticsIterator(base: subscription.makeAsyncIterator())
+        DisplayDiagnosticsIterator(base: subscriptions.makeAsyncIterator())
     }
 }
 

@@ -5,7 +5,7 @@ as raising a managed window after app launch or an external command.
 
 Activation is optional and policy-controlled by the compositor. Check
 ``WaylandCapabilities/xdgActivation`` first, but still handle unavailable
-activation errors at request time because globals can disappear.
+activation errors at request time because a startup global can disappear.
 
 Request tokens through ``WaylandDisplay/requestActivationToken(_:timeoutMilliseconds:)``
 or ``Window/requestActivationToken(appID:serialContext:timeoutMilliseconds:)``.

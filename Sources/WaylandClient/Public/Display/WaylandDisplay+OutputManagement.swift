@@ -7,22 +7,10 @@ extension WaylandDisplay {
         )
     }
 
-    public func testOutputConfiguration(
-        _ proposal: OutputConfigurationProposal,
+    package func testCurrentOutputConfigurationForSmoke(
         timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds
     ) throws {
-        try requireCore().testOutputConfiguration(
-            proposal,
-            timeoutMilliseconds: timeoutMilliseconds
-        )
-    }
-
-    public func applyOutputConfiguration(
-        _ proposal: OutputConfigurationProposal,
-        timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds
-    ) throws {
-        try requireCore().applyOutputConfiguration(
-            proposal,
+        try requireCore().testCurrentOutputConfigurationForSmoke(
             timeoutMilliseconds: timeoutMilliseconds
         )
     }

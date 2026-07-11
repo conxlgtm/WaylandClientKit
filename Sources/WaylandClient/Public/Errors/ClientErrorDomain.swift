@@ -16,13 +16,8 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case xdgToplevelDragUnavailable
     case foreignToplevelListUnavailable
     case foreignToplevelListIncomplete
-    case compositorSessionManagementUnavailable
-    case invalidCompositorSessionID
     case outputManagementUnavailable
     case outputManagementIncomplete
-    case staleOutputConfiguration
-    case outputConfigurationFailed
-    case outputConfigurationCancelled
     case foreignDragSource(DragSourceIdentity)
     case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)
     case unknownToplevelDrag(ToplevelDragID)
@@ -81,20 +76,10 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "ext-foreign-toplevel-list protocol is unavailable"
         case .foreignToplevelListIncomplete:
             "ext-foreign-toplevel-list finished event was not observed"
-        case .compositorSessionManagementUnavailable:
-            "xdg-session-management protocol is unavailable"
-        case .invalidCompositorSessionID:
-            "compositor session ID must not be empty or contain NUL bytes"
         case .outputManagementUnavailable:
             "wlr-output-management protocol is unavailable"
         case .outputManagementIncomplete:
             "wlr-output-management done or finished lifecycle was incomplete"
-        case .staleOutputConfiguration:
-            "output configuration proposal is stale"
-        case .outputConfigurationFailed:
-            "output configuration request failed"
-        case .outputConfigurationCancelled:
-            "output configuration request was cancelled"
         case .foreignDragSource(let sourceID):
             "drag source belongs to another display: \(sourceID)"
         case .dragSourceSeatMismatch(let sourceID, let expected, let actual):

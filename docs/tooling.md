@@ -10,7 +10,8 @@ then be wrapped only where that improves ergonomics.
 
 `swift run wck ...` owns maintainer workflows: bootstrap checks, formatting,
 linting, protocol generation and verification, DocC verification, public API
-verification, shim checks, unsafe-token checks, example builds, smoke tests,
+verification, identity visibility verification, shim checks, unsafe-token checks,
+example builds, smoke tests,
 coverage summaries, compositor evidence summaries, and CI/release gates.
 
 ### SwiftPM Plugins
@@ -75,7 +76,7 @@ tool-only targets.
 ## CI Gates
 
 `swift run wck ci cheap` runs formatting, lint, generated-file, manifest, shim,
-dependency-boundary, import-boundary, and unsafe-token checks. It is a fast
+dependency-boundary, import-boundary, public identity visibility, and unsafe-token checks. It is a fast
 signal and does not prove that the library products compile.
 
 `swift run wck ci required` verifies the compiler-derived public API baseline,

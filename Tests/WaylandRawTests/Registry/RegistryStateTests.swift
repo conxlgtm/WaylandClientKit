@@ -18,8 +18,9 @@ struct RegistryStateTests {
     func removesGlobal() {
         let state = RegistryState()
         state.recordGlobal(name: 4, interfaceName: "wl_compositor", version: 6)
-        state.removeGlobal(name: 4)
+        let removed = state.removeGlobal(name: 4)
         #expect(state.firstGlobal(named: "wl_compositor") == nil)
+        #expect(removed?.name == 4)
     }
     @Test
     func snapshotReturnsSortedByName() {
@@ -65,8 +66,71 @@ struct RegistryStateTests {
     @Test
     func removeNonExistentNameIsHarmless() {
         let state = RegistryState()
-        state.removeGlobal(name: 99)
+        #expect(state.removeGlobal(name: 99) == nil)
         #expect(state.snapshot.isEmpty)
+    }
+
+    @Test
+    func startupGlobalsIgnoreLateAdvertisements() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+        state.freezeStartupGlobals()
+
+        state.recordGlobal(name: 5, interfaceName: "xdg_activation_v1", version: 1)
+
+        #expect(state.startupGlobal(named: "wp_presentation")?.name == 4)
+        #expect(state.startupGlobal(named: "xdg_activation_v1") == nil)
+    }
+
+    @Test
+    func removedStartupGlobalBecomesUnavailable() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+        state.freezeStartupGlobals()
+
+        let removed = state.removeGlobal(name: 4)
+
+        #expect(state.startupGlobal(named: "wp_presentation") == nil)
+        #expect(removed.map(state.wasSelectedAtStartup) == true)
+    }
+
+    @Test
+    func removedDuplicateDoesNotMatchSelectedStartupGlobal() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+        state.recordGlobal(name: 8, interfaceName: "wp_presentation", version: 2)
+        state.freezeStartupGlobals()
+
+        let removed = state.removeGlobal(name: 4)
+
+        #expect(state.startupGlobal(named: "wp_presentation")?.name == 8)
+        #expect(removed.map(state.wasSelectedAtStartup) == false)
+    }
+
+    @Test
+    func readdedGlobalDoesNotReuseStartupBinding() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+        state.freezeStartupGlobals()
+        _ = state.removeGlobal(name: 4)
+
+        state.recordGlobal(name: 8, interfaceName: "wp_presentation", version: 2)
+
+        #expect(state.firstGlobal(named: "wp_presentation")?.name == 8)
+        #expect(state.startupGlobal(named: "wp_presentation") == nil)
+    }
+
+    @Test
+    func sameNameReaddedGlobalDoesNotReuseStartupBinding() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+        state.freezeStartupGlobals()
+        _ = state.removeGlobal(name: 4)
+
+        state.recordGlobal(name: 4, interfaceName: "wp_presentation", version: 1)
+
+        #expect(state.firstGlobal(named: "wp_presentation")?.name == 4)
+        #expect(state.startupGlobal(named: "wp_presentation") == nil)
     }
     @Test
     func recordGlobalOverwritesPreviousEntry() {

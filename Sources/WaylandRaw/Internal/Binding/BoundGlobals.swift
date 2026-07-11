@@ -55,32 +55,32 @@ package enum XDGOutputManagerBindingDecision: Equatable, Sendable {
     case bind(version: RawVersion)
 }
 
-package struct OptionalGlobals {
-    package let xdgDecorationManager: OptionalXDGDecorationManager
-    package let xdgOutputManager: OptionalXDGOutputManager
-    package let viewporter: OptionalViewporter
-    package let presentation: OptionalPresentation
-    package let fractionalScaleManager: OptionalFractionalScaleManager
-    package let cursorShapeManager: OptionalCursorShapeManager
-    package let xdgToplevelIconManager: OptionalXDGToplevelIconManager
-    package let xdgActivation: OptionalXDGActivation
-    package let compositorSessionManager: OptionalCompositorSessionManager
-    package let pointerWarp: OptionalPointerWarp
-    package let tabletManager: OptionalTabletManager
-    package let relativePointerManager: OptionalRelativePointerManager
-    package let pointerConstraints: OptionalPointerConstraints
-    package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
-    package let fifoManager: OptionalFifoManager
-    package let commitTimingManager: OptionalCommitTimingManager
-    package let contentTypeManager: OptionalContentTypeManager
-    package let alphaModifierManager: OptionalAlphaModifierManager
-    package let tearingControlManager: OptionalTearingControlManager
-    package let colorRepresentationManager: OptionalColorRepresentationManager
-    package let colorManager: OptionalColorManager
-    package let dataDeviceManager: OptionalDataDeviceManager
-    package let primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
-    package let textInputManager: OptionalTextInputManager
-    package let linuxDmabuf: OptionalLinuxDmabuf
+package final class OptionalGlobals {
+    package private(set) var xdgDecorationManager: OptionalXDGDecorationManager
+    package private(set) var xdgOutputManager: OptionalXDGOutputManager
+    package private(set) var viewporter: OptionalViewporter
+    package private(set) var presentation: OptionalPresentation
+    package private(set) var fractionalScaleManager: OptionalFractionalScaleManager
+    package private(set) var cursorShapeManager: OptionalCursorShapeManager
+    package private(set) var xdgToplevelIconManager: OptionalXDGToplevelIconManager
+    package private(set) var xdgActivation: OptionalXDGActivation
+    package private(set) var compositorSessionManager: OptionalCompositorSessionManager
+    package private(set) var pointerWarp: OptionalPointerWarp
+    package private(set) var tabletManager: OptionalTabletManager
+    package private(set) var relativePointerManager: OptionalRelativePointerManager
+    package private(set) var pointerConstraints: OptionalPointerConstraints
+    package private(set) var linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
+    package private(set) var fifoManager: OptionalFifoManager
+    package private(set) var commitTimingManager: OptionalCommitTimingManager
+    package private(set) var contentTypeManager: OptionalContentTypeManager
+    package private(set) var alphaModifierManager: OptionalAlphaModifierManager
+    package private(set) var tearingControlManager: OptionalTearingControlManager
+    package private(set) var colorRepresentationManager: OptionalColorRepresentationManager
+    package private(set) var colorManager: OptionalColorManager
+    package private(set) var dataDeviceManager: OptionalDataDeviceManager
+    package private(set) var primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
+    package private(set) var textInputManager: OptionalTextInputManager
+    package private(set) var linuxDmabuf: OptionalLinuxDmabuf
 
     package init(
         xdgDecorationManager manager: OptionalXDGDecorationManager = .missing,
@@ -173,6 +173,40 @@ package struct OptionalGlobals {
         xdgDecorationManager.destroy()
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
+    package func invalidate(named interfaceName: String) {
+        switch interfaceName {
+        case "zxdg_decoration_manager_v1": retireOptionalGlobal(&xdgDecorationManager)
+        case "zxdg_output_manager_v1": retireOptionalGlobal(&xdgOutputManager)
+        case "wp_viewporter": retireOptionalGlobal(&viewporter)
+        case "wp_presentation": retireOptionalGlobal(&presentation)
+        case "wp_fractional_scale_manager_v1": retireOptionalGlobal(&fractionalScaleManager)
+        case "wp_cursor_shape_manager_v1": retireOptionalGlobal(&cursorShapeManager)
+        case "xdg_toplevel_icon_manager_v1": retireOptionalGlobal(&xdgToplevelIconManager)
+        case "xdg_activation_v1": retireOptionalGlobal(&xdgActivation)
+        case "xdg_session_manager_v1": retireOptionalGlobal(&compositorSessionManager)
+        case "wp_pointer_warp_v1": retireOptionalGlobal(&pointerWarp)
+        case "zwp_tablet_manager_v2": retireOptionalGlobal(&tabletManager)
+        case "zwp_relative_pointer_manager_v1": retireOptionalGlobal(&relativePointerManager)
+        case "zwp_pointer_constraints_v1": retireOptionalGlobal(&pointerConstraints)
+        case "wp_linux_drm_syncobj_manager_v1": retireOptionalGlobal(&linuxDrmSyncobjManager)
+        case "wp_fifo_manager_v1": retireOptionalGlobal(&fifoManager)
+        case "wp_commit_timing_manager_v1": retireOptionalGlobal(&commitTimingManager)
+        case "wp_content_type_manager_v1": retireOptionalGlobal(&contentTypeManager)
+        case "wp_alpha_modifier_v1": retireOptionalGlobal(&alphaModifierManager)
+        case "wp_tearing_control_manager_v1": retireOptionalGlobal(&tearingControlManager)
+        case "wp_color_representation_manager_v1":
+            retireOptionalGlobal(&colorRepresentationManager)
+        case "wp_color_manager_v1": retireOptionalGlobal(&colorManager)
+        case "wl_data_device_manager": retireOptionalGlobal(&dataDeviceManager)
+        case "zwp_primary_selection_device_manager_v1":
+            retireOptionalGlobal(&primarySelectionDeviceManager)
+        case "zwp_text_input_manager_v3": retireOptionalGlobal(&textInputManager)
+        case "zwp_linux_dmabuf_v1": retireOptionalGlobal(&linuxDmabuf)
+        default: break
+        }
+    }
+
     package var supportsFractionalScaling: Bool {
         switch (viewporter, fractionalScaleManager) {
         case (.bound, .bound):
@@ -190,7 +224,7 @@ package final class BoundGlobals {
     package let xdgWMBase: RawXDGWMBase
     package let extensions: OptionalGlobals
     package let seatRegistry: SeatRegistry
-    package let tabletSeatRegistry: TabletSeatRegistry?
+    package private(set) var tabletSeatRegistry: TabletSeatRegistry?
     package let outputRegistry: OutputRegistry
 
     private var isDestroyed = false
@@ -224,6 +258,17 @@ package final class BoundGlobals {
         xdgWMBase.destroy()
         sharedMemory.destroy()
         compositor.destroy()
+    }
+
+    package func invalidateOptionalGlobal(named interfaceName: String) {
+        if interfaceName == "zxdg_output_manager_v1" {
+            outputRegistry.invalidateXDGOutputManager()
+        }
+        if interfaceName == "zwp_tablet_manager_v2" {
+            tabletSeatRegistry?.destroy()
+            tabletSeatRegistry = nil
+        }
+        extensions.invalidate(named: interfaceName)
     }
 
     deinit {

@@ -72,7 +72,7 @@ Every public feature family should have one conceptual home:
 | Presentation feedback and animation | [Presentation Feedback And Frame Callbacks](../Sources/WaylandClient/WaylandClient.docc/PresentationFeedbackAndFrameCallbacks.md) |
 | Diagnostics and event overflow | [Diagnostics And Display Failures](../Sources/WaylandClient/WaylandClient.docc/DiagnosticsAndDisplayFailures.md), [Event Streams And Overflow](../Sources/WaylandClient/WaylandClient.docc/EventStreamsAndOverflow.md) |
 | Graphics preview | [Graphics Preview Overview](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md), [External Buffer Submission](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ExternalBufferSubmission.md), [Scheduling And Color Metadata](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/SchedulingAndColorMetadata.md) |
-| App/window restoration and compositor session facts | [Session Readiness](../Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md) |
+| App/window restoration and compositor session capability | [Session Readiness](../Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md) |
 
 If a new public API family is added, add or update its canonical conceptual doc
 first, then link examples and maintainer evidence from that doc.

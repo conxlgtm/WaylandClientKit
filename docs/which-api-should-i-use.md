@@ -30,15 +30,15 @@ tasks to public APIs and examples.
 | Drag detachable content as a toplevel | `Window.startToplevelDrag(source:seatID:serial:icon:offset:)` | `xdg_toplevel_drag_manager_v1`, data-device drag support, and a live button serial | [ToplevelDragSmoke](../Examples/ToplevelDragSmoke/main.swift) |
 | Request activation/focus handoff | `Window.requestActivationToken`, `Window.activate(using:)` | `xdg_activation_v1` and compositor policy | [XDGActivationSmoke](../Examples/XDGActivationSmoke/main.swift) |
 | Save framework-owned window restore facts | `Window.restorationSnapshot`, `WindowStateSnapshot`, `WindowRestorationSnapshot` | initial window configure must have happened | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) |
-| Inspect compositor session protocol facts | `WaylandDisplay.compositorSessionEvents(reason:existingID:)` | `xdg_session_manager_v1`, local restore remains framework-owned | [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
+| Inspect compositor session support | `WaylandDisplay.capabilities().compositorSessionManagement` | `xdg_session_manager_v1`, no public session handle yet | [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
 | Inspect read-only foreign toplevel facts | `WaylandDisplay.foreignToplevelListSnapshot()` | `ext_foreign_toplevel_list_v1`, titles/app IDs are optional and privacy-sensitive | [ForeignToplevelListSmoke](../Examples/ForeignToplevelListSmoke/main.swift) |
-| Inspect output-management facts or test current config | `WaylandDisplay.outputManagementSnapshot()`, `OutputConfigurationProposal(current:)`, `testOutputConfiguration(_:)` | `zwlr_output_manager_v1`, mutation is preview and explicit | [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
+| Inspect output-management facts | `WaylandDisplay.outputManagementSnapshot()` | `zwlr_output_manager_v1`, mutation is not public | [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
 | Time animation to real presentation | `Window.requestPresentationFeedback`, `Window.presentationEvents` | `wp_presentation` | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Inspect optional protocol support | `WaylandDisplay.capabilities()` | registry discovery | [Capabilities DocC](../Sources/WaylandClient/WaylandClient.docc/CapabilitiesAndOptionalProtocols.md) |
 | Try renderer-neutral GPU preview | `WaylandGraphicsPreview` values, `WaylandGraphicsWindowBacking`, frame leases | `zwp_linux_dmabuf_v1` plus surface-specific runtime setup | [Graphics preview docs](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md) |
 | Request preview frame scheduling | `WaylandGraphicsFrameSchedule` | explicit sync, FIFO, commit timing, or presentation protocols as requested | [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift) |
 | Report color metadata facts | `WaylandGraphicsFrameMetadata`, color runtime path facts | color metadata protocols where advertised | [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 
-Capability checks are advisory. Wayland globals can disappear or compositor
-policy can reject a request after discovery. Public request APIs validate again
-at use time and report typed errors or diagnostics.
+Capabilities describe the connection-start snapshot. A startup global can
+disappear, and compositor policy can reject a request after discovery. Public
+request APIs validate again at use time and report typed errors or diagnostics.

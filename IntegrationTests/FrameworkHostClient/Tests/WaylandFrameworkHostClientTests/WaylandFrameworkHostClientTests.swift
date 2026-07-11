@@ -14,7 +14,10 @@ struct WaylandFrameworkHostClientTests {
             dataTransferEventCapacity: 16,
             presentationEventCapacity: 16
         )
-        let displayConfiguration = DisplayConfiguration(eventStreams: streams)
+        let displayConfiguration = try DisplayConfiguration(
+            applicationID: "org.waylandclientkit.FrameworkHostIntegration",
+            eventStreams: streams
+        )
         let windowConfiguration = try WindowConfiguration(
             title: "Framework Host Client",
             appID: "framework-host-client",
@@ -123,6 +126,7 @@ struct WaylandFrameworkHostClientTests {
     )
     func liveHeadlessHostPathCreatesWindowAndQueriesGraphicsFacts() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.FrameworkHostIntegration",
             cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
             discoveryTimeoutMilliseconds: 5_000,
             eventStreamConfiguration: try EventStreamConfiguration(

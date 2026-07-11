@@ -156,6 +156,7 @@ struct DisplayEventHubDataTransferTests {
             configuration: try EventStreamConfiguration(dataTransferEventCapacity: 1)
         )
         let stream = hub.dataTransferEvents()
+        var iterator = stream.makeAsyncIterator()
 
         hub.publishDataTransfer(
             .clipboardSourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 1)))
@@ -164,7 +165,6 @@ struct DisplayEventHubDataTransferTests {
             .clipboardSourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 2)))
         )
 
-        var iterator = stream.makeAsyncIterator()
         do {
             _ = try await iterator.next()
             Issue.record("Expected configured data transfer event overflow")

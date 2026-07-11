@@ -8,6 +8,7 @@ enum OutputTopologySmoke {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.OutputTopologySmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 16,

@@ -102,6 +102,7 @@ struct WaylandDisplayPublicIntegrationTests {
     @Test
     func hiddenCursorRequestWithoutPointerFocusIsDeterministic() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.PublicIntegration",
             cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
             discoveryTimeoutMilliseconds: publicIntegrationTimeoutMilliseconds
         ) { display in
@@ -126,6 +127,7 @@ func withPublicConnection(
     _ body: @Sendable (WaylandDisplay) async throws -> Void
 ) async throws {
     try await WaylandDisplay.withConnection(
+        applicationID: "org.waylandclientkit.PublicIntegration",
         cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
         discoveryTimeoutMilliseconds: publicIntegrationTimeoutMilliseconds,
         eventStreamConfiguration: try EventStreamConfiguration(

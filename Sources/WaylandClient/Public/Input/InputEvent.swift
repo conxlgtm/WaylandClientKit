@@ -133,10 +133,10 @@ public enum PointerConstraintKind: Equatable, Hashable, Sendable {
 }
 
 public struct PointerConstraintID: Equatable, Hashable, Sendable, CustomStringConvertible {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
     public let kind: PointerConstraintKind
 
-    public init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind) {
+    package init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind) {
         rawValue = constraintRawValue
         kind = constraintKind
     }

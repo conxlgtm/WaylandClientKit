@@ -335,7 +335,7 @@ public struct ForeignToplevelID:
 {
     package let rawValue: UInt64
 
-    public init(rawValue toplevelRawValue: UInt64) {
+    package init(rawValue toplevelRawValue: UInt64) {
         rawValue = toplevelRawValue
     }
 

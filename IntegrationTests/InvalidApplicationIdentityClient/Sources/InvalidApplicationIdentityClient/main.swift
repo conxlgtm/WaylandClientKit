@@ -1,0 +1,3 @@
+import WaylandClient
+
+_ = DisplayConfiguration()

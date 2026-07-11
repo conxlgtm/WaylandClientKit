@@ -8,6 +8,7 @@ enum IdleInhibitSmoke {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.IdleInhibitSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 32,
                 inputEventCapacity: 16,

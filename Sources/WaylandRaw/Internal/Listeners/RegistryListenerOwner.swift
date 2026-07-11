@@ -6,7 +6,7 @@ final class RegistryListenerOwner {
     private let state: RegistryState
     private let invariantFailureSink: RawInvariantFailureSink
     var onGlobalAdvertised: ((RawGlobalAdvertisement) -> Void)?
-    var onGlobalRemoved: ((UInt32) -> Void)?
+    var onGlobalRemoved: ((RawGlobalAdvertisement) -> Void)?
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_registry_listener_callbacks(),
@@ -48,8 +48,8 @@ final class RegistryListenerOwner {
                 data,
                 message: "wl_registry global_remove fired without Swift state"
             ) { owner in
-                owner.state.removeGlobal(name: name)
-                owner.onGlobalRemoved?(name)
+                guard let removedGlobal = owner.state.removeGlobal(name: name) else { return }
+                owner.onGlobalRemoved?(removedGlobal)
             }
         }
     }

@@ -8,6 +8,7 @@ enum DialogSmoke {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.DialogSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 16,

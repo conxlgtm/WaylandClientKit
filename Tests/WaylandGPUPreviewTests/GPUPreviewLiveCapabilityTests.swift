@@ -17,6 +17,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func connectionReportsDmabufCapabilityForGpuPreview() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let capabilities = try await display.capabilities()
@@ -34,6 +35,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func liveGraphicsFactsProjectWithoutRequiringGpuHardware() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let capabilities = try await display.graphicsSurfaceCapabilities()
@@ -82,6 +84,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func managedPreviewBackingSubmitsClearFrameThroughSoftwareFallback() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let backing = try await display.createGraphicsWindowBacking(
@@ -104,6 +107,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func backingCloseMakesNextFrameThrowBackingClosed() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let backing = try await display.createGraphicsWindowBacking(
@@ -124,6 +128,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func closeDuringNextFrameReportsBackingClosed() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let backing = try await display.createGraphicsWindowBacking(
@@ -144,6 +149,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func backingCloseMakesActiveLeaseSubmitThrowBackingClosed() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let backing = try await display.createGraphicsWindowBacking(
@@ -165,6 +171,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func closeDuringSubmitReportsBackingClosed() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let backing = try await display.createGraphicsWindowBacking(
@@ -188,6 +195,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func submissionEffectFailureAllowsRetryWithTypedCause() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let backing = try await display.createGraphicsWindowBacking(
@@ -215,6 +223,7 @@ struct GPUPreviewLiveCapabilityTests {
     @Test
     func externallyClosedWindowMapsToWindowClosedWhenBackingIsOpen() async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GPUPreviewTests",
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let backing = try await display.createGraphicsWindowBacking(

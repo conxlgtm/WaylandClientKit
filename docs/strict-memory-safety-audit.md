@@ -140,8 +140,9 @@ Audit invariant:
 - Listener storage is cancelled before the corresponding raw proxy is destroyed.
 - Output-management head and mode destroy paths are version-gated: v3+ uses the
   protocol `release` request and older bindings fall back to local proxy destroy.
-- Session-management preview events remain protocol facts. Scene/document
-  identity and local restore policy stay framework-owned.
+- Session-management wrappers remain package-internal until a durable owner can
+  observe lifetime events and attach surfaces. Scene/document identity and local
+  restore policy stay framework-owned.
 
 Tests:
 
@@ -188,6 +189,16 @@ Tests:
   tablet, tool, pad, and pad-group protocol objects exactly once.
 - Shim verification covers the Swift-facing tablet listener and destroy helper
   declarations against their C implementations.
+
+## Managed Window Coordinators
+
+`TopLevelWindow` receives a coordinator factory and separates role lifecycle,
+software reservations, graphics constraints, presentation feedback, and
+desktop-integration access. Software reservations and presentation feedback use
+one close-aware resource ledger, so close-before-registration, reentrant close,
+double close, peer removal, and connection-failure cleanup share the same
+exactly-once retirement rule. Small fake resources test that rule without a
+compositor; the required Weston path covers the live adapters.
 
 ## Cursor And Drag Visual Surfaces
 

@@ -30,7 +30,7 @@ nonterminal runtime diagnostics, and fatal display failure.
 
 ## Scope Rules
 
-- Display-level capabilities describe registry advertisements and negotiated
+- Display-level capabilities describe connection-start registry advertisements and negotiated
   versions.
 - Seat-level availability belongs to seat managers and feature errors.
 - Surface-level facts belong in `SurfaceCapabilitySnapshot`.

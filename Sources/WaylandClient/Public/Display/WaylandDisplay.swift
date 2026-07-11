@@ -2,6 +2,7 @@ import Foundation
 import WaylandRaw
 import WaylandRuntime
 
+// swiftlint:disable:next type_body_length
 public actor WaylandDisplay {
     public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
     public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000
@@ -81,13 +82,17 @@ public actor WaylandDisplay {
     }
 
     public static func withConnection<ResultValue: Sendable>(
+        applicationID: String,
         cursorConfiguration: CursorConfiguration = .init(),
         discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds,
         eventStreamConfiguration: EventStreamConfiguration = .init(),
         _ body: @Sendable (WaylandDisplay) async throws -> ResultValue
     ) async throws -> ResultValue {
         try await withConnection(
-            configuration: DisplayConfiguration(eventStreams: eventStreamConfiguration),
+            configuration: try DisplayConfiguration(
+                applicationID: applicationID,
+                eventStreams: eventStreamConfiguration
+            ),
             cursorConfiguration: cursorConfiguration,
             discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds,
             body
@@ -98,10 +103,10 @@ public actor WaylandDisplay {
         try requireCore().currentPointerCursor()
     }
 
-    /// Returns compositor protocol features discovered during connection setup.
+    /// Returns compositor protocol features usable from the connection-start snapshot.
     ///
-    /// This is a side-effect-free registry query. Request APIs still validate availability at
-    /// use time because Wayland globals may disappear after initial discovery.
+    /// Managers advertised after initial discovery require a new connection. Request APIs still
+    /// validate availability because a manager advertised at startup may later be removed.
     public func capabilities() throws -> WaylandCapabilities {
         try requireCore().capabilities()
     }
@@ -282,6 +287,7 @@ public actor WaylandDisplay {
         try connection.completeInitialDiscovery(timeoutMilliseconds: discoveryTimeoutMilliseconds)
         let session = try DisplaySession(
             connection: connection,
+            applicationID: displayConfiguration.applicationID,
             cursorConfiguration: cursorConfiguration,
             inputPipelineConfiguration: displayConfiguration.inputPipeline,
             keyboardInterpretationConfiguration: displayConfiguration.keyboardInterpretation
@@ -370,7 +376,11 @@ extension WaylandDisplay {
         primarySelectionHandler makeHandler:
             @Sendable (DisplayEventHub) throws -> Handler
     ) async throws -> (display: WaylandDisplay, handler: Handler) {
-        let runtime = try WaylandDisplayRuntime(configuration: DisplayConfiguration())
+        let runtime = try WaylandDisplayRuntime(
+            configuration: DisplayConfiguration(
+                applicationID: NonEmptyWaylandString(unchecked: "test-harness")
+            )
+        )
         let handler = try makeHandler(runtime.eventHub)
         let display = WaylandDisplay(runtime: runtime)
         await display.installPrimarySelectionTestHarness(handler)

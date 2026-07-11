@@ -2,7 +2,9 @@ import WaylandClient
 
 package enum SmokeRunner {
     package static func run(configuration: SmokeConfiguration = .init()) throws -> SmokeResult {
-        let session = try DisplaySession.connect()
+        let session = try DisplaySession.connect(
+            applicationID: NonEmptyWaylandString(unchecked: "wayland-client-kit-smoke")
+        )
         let capabilities = session.capabilitiesOnOwnerThread()
         var runtimeFacts = runtimeFacts(capabilities: capabilities, session: session)
         for optionalProtocol in configuration.requestedOptionalProtocols {

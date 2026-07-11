@@ -299,10 +299,12 @@
         @Test
         func desktopIntegrationRejectsForeignWindow() async throws {
             try await WaylandDisplay.withConnection(
+                applicationID: "org.waylandclientkit.DesktopIntegrationTests",
                 cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
                 discoveryTimeoutMilliseconds: 5_000
             ) { firstDisplay in
                 try await WaylandDisplay.withConnection(
+                    applicationID: "org.waylandclientkit.DesktopIntegrationTests.Second",
                     cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
                     discoveryTimeoutMilliseconds: 5_000
                 ) { secondDisplay in
@@ -338,6 +340,7 @@
         _ body: @Sendable (WaylandDisplay, Window) async throws -> Void
     ) async throws {
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.DesktopIntegrationTests",
             cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
             discoveryTimeoutMilliseconds: 5_000
         ) { display in

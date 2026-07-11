@@ -31,7 +31,9 @@ enum GraphicsPreviewExternalBufferSmoke {
     private static func run() async throws {
         let options = try ExternalBufferSmokeOptions.parse(CommandLine.arguments.dropFirst())
 
-        try await WaylandDisplay.withConnection { display in
+        try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.GraphicsPreviewExternalBufferSmoke"
+        ) { display in
             let backing = try await display.createGraphicsWindowBacking(
                 windowConfiguration: WindowConfiguration(
                     title: "WaylandClientKit External Buffer Smoke",

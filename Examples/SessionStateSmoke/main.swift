@@ -14,6 +14,7 @@ enum SessionStateSmoke {
         let savedState = options.restore ? try loadState(from: stateFile) : nil
 
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.SessionStateSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 64,

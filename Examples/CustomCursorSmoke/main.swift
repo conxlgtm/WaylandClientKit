@@ -10,7 +10,9 @@ enum CustomCursorSmoke {
 
     static func main() async throws {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
-        try await WaylandDisplay.withConnection { display in
+        try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.CustomCursorSmoke"
+        ) { display in
             try await run(display: display, options: options)
         }
     }

@@ -16,9 +16,9 @@ package struct WindowModel: Equatable, Sendable {
     init(
         id windowID: WindowID,
         fallbackSize initialSize: PositiveLogicalSize,
-        title windowTitle: WaylandString = WaylandString(unchecked: "WaylandClientKit Demo"),
+        title windowTitle: WaylandString = WaylandString(unchecked: "Window"),
         appID applicationID: NonEmptyWaylandString =
-            NonEmptyWaylandString(unchecked: "wayland-client-kit-demo")
+            NonEmptyWaylandString(unchecked: "wayland-client-kit-internal")
     ) {
         id = windowID
         fallbackSize = initialSize

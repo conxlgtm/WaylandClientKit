@@ -113,21 +113,6 @@ s:13WaylandClient22ClipboardSourcePayloada	swift.typealias	ClipboardSourcePayloa
 s:13WaylandClient18CloseRequestPolicyO	swift.enum	CloseRequestPolicy	enum CloseRequestPolicy	-
 s:13WaylandClient18CloseRequestPolicyO04autoC0yA2CmF	swift.enum.case	CloseRequestPolicy.autoClose	case autoClose	-
 s:13WaylandClient18CloseRequestPolicyO11requestOnlyyA2CmF	swift.enum.case	CloseRequestPolicy.requestOnly	case requestOnly	-
-s:13WaylandClient22CompositorSessionEventO	swift.enum	CompositorSessionEvent	enum CompositorSessionEvent	-
-s:13WaylandClient22CompositorSessionEventO7createdyAcA0cD2IDVcACmF	swift.enum.case	CompositorSessionEvent.created(_:)	case created(CompositorSessionID)	-
-s:13WaylandClient22CompositorSessionEventO8replacedyA2CmF	swift.enum.case	CompositorSessionEvent.replaced	case replaced	-
-s:13WaylandClient22CompositorSessionEventO8restoredyA2CmF	swift.enum.case	CompositorSessionEvent.restored	case restored	-
-s:13WaylandClient30CompositorSessionEventSnapshotV	swift.struct	CompositorSessionEventSnapshot	struct CompositorSessionEventSnapshot	-
-s:13WaylandClient30CompositorSessionEventSnapshotV6eventsSayAA0cdE0OGvp	swift.property	CompositorSessionEventSnapshot.events	let events: [CompositorSessionEvent]	-
-s:13WaylandClient30CompositorSessionEventSnapshotV6eventsACSayAA0cdE0OG_tcfc	swift.init	CompositorSessionEventSnapshot.init(events:)	init(events sessionEvents: [CompositorSessionEvent])	-
-s:13WaylandClient19CompositorSessionIDV	swift.struct	CompositorSessionID	struct CompositorSessionID	-
-s:13WaylandClient19CompositorSessionIDV11descriptionSSvp	swift.property	CompositorSessionID.description	var description: String { get }	-
-s:13WaylandClient19CompositorSessionIDVyACSSKcfc	swift.init	CompositorSessionID.init(_:)	init(_ sessionID: String) throws	-
-s:13WaylandClient19CompositorSessionIDV5valueSSvp	swift.property	CompositorSessionID.value	let value: String	-
-s:13WaylandClient23CompositorSessionReasonO	swift.enum	CompositorSessionReason	enum CompositorSessionReason	-
-s:13WaylandClient23CompositorSessionReasonO6launchyA2CmF	swift.enum.case	CompositorSessionReason.launch	case launch	-
-s:13WaylandClient23CompositorSessionReasonO7recoveryA2CmF	swift.enum.case	CompositorSessionReason.recover	case recover	-
-s:13WaylandClient23CompositorSessionReasonO14sessionRestoreyA2CmF	swift.enum.case	CompositorSessionReason.sessionRestore	case sessionRestore	-
 s:13WaylandClient19CursorConfigurationV	swift.struct	CursorConfiguration	struct CursorConfiguration	-
 s:13WaylandClient19CursorConfigurationV08fallbackC0AA07PointerC0Vvp	swift.property	CursorConfiguration.fallbackCursor	var fallbackCursor: PointerCursor	-
 s:13WaylandClient19CursorConfigurationV9themeName4size11scalePolicy08fallbackC0ACSSSg_s5Int32VAA07Pointerc5ScaleI0OAA0lC0VtKcfc	swift.init	CursorConfiguration.init(themeName:size:scalePolicy:fallbackCursor:)	init(themeName cursorThemeName: String?, size cursorSize: Int32 = CursorSize.default.rawValue, scalePolicy cursorScalePolicy: PointerCursorScalePolicy = .fixed, fallbackCursor cursorFallback: PointerCursor = .defaultArrow) throws	-
@@ -302,8 +287,6 @@ s:13WaylandClient018DataTransferSourceD5EventV6source8mimeTypeAcA0cd10Diagnostic
 s:13WaylandClient018DataTransferSourceD5EventV8mimeTypeAA8MIMETypeVvp	swift.property	DataTransferSourceTransferEvent.mimeType	let mimeType: MIMEType	-
 s:13WaylandClient018DataTransferSourceD5EventV6sourceAA0cd10DiagnosticE0Ovp	swift.property	DataTransferSourceTransferEvent.source	let source: DataTransferDiagnosticSource	-
 s:13WaylandClient12DiagnosticIDV	swift.struct	DiagnosticID	struct DiagnosticID	-
-s:13WaylandClient12DiagnosticIDV8rawValueACs6UInt64V_tcfc	swift.init	DiagnosticID.init(rawValue:)	init(rawValue diagnosticRawValue: UInt64)	-
-s:13WaylandClient12DiagnosticIDV8rawValues6UInt64Vvp	swift.property	DiagnosticID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient18DiagnosticSeverityO	swift.enum	DiagnosticSeverity	enum DiagnosticSeverity	-
 s:13WaylandClient18DiagnosticSeverityO8degradedyA2CmF	swift.enum.case	DiagnosticSeverity.degraded	case degraded	-
 s:13WaylandClient18DiagnosticSeverityO5erroryA2CmF	swift.enum.case	DiagnosticSeverity.error	case error	-
@@ -319,9 +302,11 @@ s:13WaylandClient24DiagnosticsConfigurationV8capacityAA0C8CapacityVvp	swift.prop
 s:13WaylandClient24DiagnosticsConfigurationV8capacityACSi_tKcfc	swift.init	DiagnosticsConfiguration.init(capacity:)	init(capacity diagnosticsCapacity: Int) throws	-
 s:13WaylandClient24DiagnosticsConfigurationV8capacityAcA0C8CapacityV_tcfc	swift.init	DiagnosticsConfiguration.init(capacity:)	init(capacity diagnosticsCapacity: DiagnosticsCapacity = .default)	-
 s:13WaylandClient20DisplayConfigurationV	swift.struct	DisplayConfiguration	struct DisplayConfiguration	-
+s:13WaylandClient20DisplayConfigurationV13applicationIDAA08NonEmptyA6StringVvp	swift.property	DisplayConfiguration.applicationID	var applicationID: NonEmptyWaylandString	-
 s:13WaylandClient20DisplayConfigurationV11diagnosticsAA011DiagnosticsD0Vvp	swift.property	DisplayConfiguration.diagnostics	var diagnostics: DiagnosticsConfiguration	-
 s:13WaylandClient20DisplayConfigurationV12eventStreamsAA011EventStreamD0Vvp	swift.property	DisplayConfiguration.eventStreams	var eventStreams: EventStreamConfiguration	-
-s:13WaylandClient20DisplayConfigurationV12eventStreams13inputPipeline22keyboardInterpretation11diagnosticsAcA011EventStreamD0V_AA05InputhD0VAA08KeyboardjD0VAA011DiagnosticsD0Vtcfc	swift.init	DisplayConfiguration.init(eventStreams:inputPipeline:keyboardInterpretation:diagnostics:)	init(eventStreams streamConfiguration: EventStreamConfiguration = .init(), inputPipeline inputConfiguration: InputPipelineConfiguration = .init(), keyboardInterpretation keyboardInterpretationConfiguration: KeyboardInterpretationConfiguration = .init(), diagnostics diagnosticsConfiguration: DiagnosticsConfiguration = .init())	-
+s:13WaylandClient20DisplayConfigurationV13applicationID12eventStreams13inputPipeline22keyboardInterpretation11diagnosticsACSS_AA011EventStreamD0VAA05InputjD0VAA08KeyboardlD0VAA011DiagnosticsD0VtKcfc	swift.init	DisplayConfiguration.init(applicationID:eventStreams:inputPipeline:keyboardInterpretation:diagnostics:)	init(applicationID displayApplicationID: String, eventStreams streamConfiguration: EventStreamConfiguration = .init(), inputPipeline inputConfiguration: InputPipelineConfiguration = .init(), keyboardInterpretation keyboardInterpretationConfiguration: KeyboardInterpretationConfiguration = .init(), diagnostics diagnosticsConfiguration: DiagnosticsConfiguration = .init()) throws	-
+s:13WaylandClient20DisplayConfigurationV13applicationID12eventStreams13inputPipeline22keyboardInterpretation11diagnosticsAcA08NonEmptyA6StringV_AA011EventStreamD0VAA05InputjD0VAA08KeyboardlD0VAA011DiagnosticsD0Vtcfc	swift.init	DisplayConfiguration.init(applicationID:eventStreams:inputPipeline:keyboardInterpretation:diagnostics:)	init(applicationID displayApplicationID: NonEmptyWaylandString, eventStreams streamConfiguration: EventStreamConfiguration = .init(), inputPipeline inputConfiguration: InputPipelineConfiguration = .init(), keyboardInterpretation keyboardInterpretationConfiguration: KeyboardInterpretationConfiguration = .init(), diagnostics diagnosticsConfiguration: DiagnosticsConfiguration = .init())	-
 s:13WaylandClient20DisplayConfigurationV13inputPipelineAA05InputfD0Vvp	swift.property	DisplayConfiguration.inputPipeline	var inputPipeline: InputPipelineConfiguration	-
 s:13WaylandClient20DisplayConfigurationV22keyboardInterpretationAA08KeyboardfD0Vvp	swift.property	DisplayConfiguration.keyboardInterpretation	var keyboardInterpretation: KeyboardInterpretationConfiguration	-
 s:13WaylandClient25DisplayConfigurationErrorO	swift.enum	DisplayConfigurationError	enum DisplayConfigurationError	-
@@ -383,7 +368,6 @@ s:13WaylandClient21DisplayOperationErrorO	swift.enum	DisplayOperationError	enum 
 s:13WaylandClient21DisplayOperationErrorO6closedyA2CmF	swift.enum.case	DisplayOperationError.closed	case closed	-
 s:13WaylandClient21DisplayOperationErrorO11closedPopupyA2CmF	swift.enum.case	DisplayOperationError.closedPopup	case closedPopup	-
 s:13WaylandClient21DisplayOperationErrorO16closedSubsurfaceyA2CmF	swift.enum.case	DisplayOperationError.closedSubsurface	case closedSubsurface	-
-s:13WaylandClient21DisplayOperationErrorO38compositorSessionManagementUnavailableyA2CmF	swift.enum.case	DisplayOperationError.compositorSessionManagementUnavailable	case compositorSessionManagementUnavailable	-
 s:13WaylandClient21DisplayOperationErrorO11descriptionSSvp	swift.property	DisplayOperationError.description	var description: String { get }	-
 s:13WaylandClient21DisplayOperationErrorO19dialogAlreadyExistsyAcA8WindowIDVcACmF	swift.enum.case	DisplayOperationError.dialogAlreadyExists(_:)	case dialogAlreadyExists(WindowID)	-
 s:13WaylandClient21DisplayOperationErrorO22dragSourceSeatMismatchyAcA04DragG8IdentityV_AA0H2IDVAHtcACmF	swift.enum.case	DisplayOperationError.dragSourceSeatMismatch(_:expected:actual:)	case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)	-
@@ -398,19 +382,15 @@ s:13WaylandClient21DisplayOperationErrorO30foreignToplevelListUnavailableyA2CmF	
 s:13WaylandClient21DisplayOperationErrorO13foreignWindowyAcA0G2IDVcACmF	swift.enum.case	DisplayOperationError.foreignWindow(_:)	case foreignWindow(WindowID)	-
 s:13WaylandClient21DisplayOperationErrorO19foreignWindowDialogyAcA0gH2IDVcACmF	swift.enum.case	DisplayOperationError.foreignWindowDialog(_:)	case foreignWindowDialog(WindowDialogID)	-
 s:13WaylandClient21DisplayOperationErrorO22idleInhibitUnavailableyA2CmF	swift.enum.case	DisplayOperationError.idleInhibitUnavailable	case idleInhibitUnavailable	-
-s:13WaylandClient21DisplayOperationErrorO26invalidCompositorSessionIDyA2CmF	swift.enum.case	DisplayOperationError.invalidCompositorSessionID	case invalidCompositorSessionID	-
 s:13WaylandClient21DisplayOperationErrorO19invalidDialogParentyAcA8WindowIDV_AFtcACmF	swift.enum.case	DisplayOperationError.invalidDialogParent(child:parent:)	case invalidDialogParent(child: WindowID, parent: WindowID)	-
 s:13WaylandClient21DisplayOperationErrorO25invalidSubsurfaceStackingyAcA0ghE0OcACmF	swift.enum.case	DisplayOperationError.invalidSubsurfaceStacking(_:)	case invalidSubsurfaceStacking(SubsurfaceStackingError)	-
 s:13WaylandClient21DisplayOperationErrorO32invalidWindowIconImagePixelCountyACSi_SitcACmF	swift.enum.case	DisplayOperationError.invalidWindowIconImagePixelCount(expected:actual:)	case invalidWindowIconImagePixelCount(expected: Int, actual: Int)	-
 s:13WaylandClient21DisplayOperationErrorO33keyboardShortcutsAlreadyInhibitedyAcA8WindowIDV_AA04SeatK0VtcACmF	swift.enum.case	DisplayOperationError.keyboardShortcutsAlreadyInhibited(window:seat:)	case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)	-
 s:13WaylandClient21DisplayOperationErrorO35keyboardShortcutsInhibitUnavailableyA2CmF	swift.enum.case	DisplayOperationError.keyboardShortcutsInhibitUnavailable	case keyboardShortcutsInhibitUnavailable	-
 s:13WaylandClient21DisplayOperationErrorO24nonSquareWindowIconImageyACs5Int32V_AFtcACmF	swift.enum.case	DisplayOperationError.nonSquareWindowIconImage(width:height:)	case nonSquareWindowIconImage(width: Int32, height: Int32)	-
-s:13WaylandClient21DisplayOperationErrorO28outputConfigurationCancelledyA2CmF	swift.enum.case	DisplayOperationError.outputConfigurationCancelled	case outputConfigurationCancelled	-
-s:13WaylandClient21DisplayOperationErrorO25outputConfigurationFailedyA2CmF	swift.enum.case	DisplayOperationError.outputConfigurationFailed	case outputConfigurationFailed	-
 s:13WaylandClient21DisplayOperationErrorO26outputManagementIncompleteyA2CmF	swift.enum.case	DisplayOperationError.outputManagementIncomplete	case outputManagementIncomplete	-
 s:13WaylandClient21DisplayOperationErrorO27outputManagementUnavailableyA2CmF	swift.enum.case	DisplayOperationError.outputManagementUnavailable	case outputManagementUnavailable	-
 s:13WaylandClient21DisplayOperationErrorO27presentationTimeUnavailableyA2CmF	swift.enum.case	DisplayOperationError.presentationTimeUnavailable	case presentationTimeUnavailable	-
-s:13WaylandClient21DisplayOperationErrorO24staleOutputConfigurationyA2CmF	swift.enum.case	DisplayOperationError.staleOutputConfiguration	case staleOutputConfiguration	-
 s:13WaylandClient21DisplayOperationErrorO28subsurfacePresentationFailedyAcA010SubsurfaceG7FailureVcACmF	swift.enum.case	DisplayOperationError.subsurfacePresentationFailed(_:)	case subsurfacePresentationFailed(SubsurfacePresentationFailure)	-
 s:13WaylandClient21DisplayOperationErrorO21systemBellUnavailableyA2CmF	swift.enum.case	DisplayOperationError.systemBellUnavailable	case systemBellUnavailable	-
 s:13WaylandClient21DisplayOperationErrorO23toplevelDragStillActiveyAcA08ToplevelG2IDVcACmF	swift.enum.case	DisplayOperationError.toplevelDragStillActive(_:)	case toplevelDragStillActive(ToplevelDragID)	-
@@ -566,7 +546,6 @@ s:13WaylandClient20ForeignToplevelEventO7removedyAcA0cD2IDVcACmF	swift.enum.case
 s:13WaylandClient20ForeignToplevelEventO7updatedyAcA0cD8SnapshotVcACmF	swift.enum.case	ForeignToplevelEvent.updated(_:)	case updated(ForeignToplevelSnapshot)	-
 s:13WaylandClient17ForeignToplevelIDV	swift.struct	ForeignToplevelID	struct ForeignToplevelID	-
 s:13WaylandClient17ForeignToplevelIDV11descriptionSSvp	swift.property	ForeignToplevelID.description	var description: String { get }	-
-s:13WaylandClient17ForeignToplevelIDV8rawValueACs6UInt64V_tcfc	swift.init	ForeignToplevelID.init(rawValue:)	init(rawValue toplevelRawValue: UInt64)	-
 s:13WaylandClient27ForeignToplevelListSnapshotV	swift.struct	ForeignToplevelListSnapshot	struct ForeignToplevelListSnapshot	-
 s:13WaylandClient27ForeignToplevelListSnapshotV6eventsSayAA0cD5EventOGvp	swift.property	ForeignToplevelListSnapshot.events	let events: [ForeignToplevelEvent]	-
 s:13WaylandClient27ForeignToplevelListSnapshotV9toplevels6eventsACSayAA0cdF0VG_SayAA0cD5EventOGtcfc	swift.init	ForeignToplevelListSnapshot.init(toplevels:events:)	init(toplevels snapshotToplevels: [ForeignToplevelSnapshot], events snapshotEvents: [ForeignToplevelEvent])	-
@@ -1005,9 +984,6 @@ s:13WaylandClient08NonEmptyA6StringV	swift.struct	NonEmptyWaylandString	struct N
 s:13WaylandClient08NonEmptyA6StringV11descriptionSSvp	swift.property	NonEmptyWaylandString.description	var description: String { get }	-
 s:13WaylandClient08NonEmptyA6StringVyACSSKcfc	swift.init	NonEmptyWaylandString.init(_:)	init(_ string: String) throws	-
 s:13WaylandClient08NonEmptyA6StringV5valueSSvp	swift.property	NonEmptyWaylandString.value	let value: String	-
-s:13WaylandClient27OutputConfigurationProposalV	swift.struct	OutputConfigurationProposal	struct OutputConfigurationProposal	-
-s:13WaylandClient27OutputConfigurationProposalV7currentAcA0C18ManagementSnapshotV_tcfc	swift.init	OutputConfigurationProposal.init(current:)	init(current snapshot: OutputManagementSnapshot)	-
-s:13WaylandClient27OutputConfigurationProposalV8snapshotAA0C18ManagementSnapshotVvp	swift.property	OutputConfigurationProposal.snapshot	let snapshot: OutputManagementSnapshot	-
 s:13WaylandClient14OutputGeometryV	swift.struct	OutputGeometry	struct OutputGeometry	-
 s:13WaylandClient14OutputGeometryV1x1y24physicalWidthMillimeters0e6HeightG08subpixel4make5model9transformACs5Int32V_A3mA0C14SubpixelLayoutOSSSgApA0C9TransformOtcfc	swift.init	OutputGeometry.init(x:y:physicalWidthMillimeters:physicalHeightMillimeters:subpixel:make:model:transform:)	init(x geometryX: Int32, y geometryY: Int32, physicalWidthMillimeters geometryPhysicalWidthMillimeters: Int32, physicalHeightMillimeters geometryPhysicalHeightMillimeters: Int32, subpixel geometrySubpixel: OutputSubpixelLayout, make geometryMake: String?, model geometryModel: String?, transform geometryTransform: OutputTransform)	-
 s:13WaylandClient14OutputGeometryV4makeSSSgvp	swift.property	OutputGeometry.make	let make: String?	-
@@ -1043,7 +1019,6 @@ s:13WaylandClient20OutputManagementHeadV12serialNumberSSSgvp	swift.property	Outp
 s:13WaylandClient20OutputManagementHeadV9transformAA0C9TransformOSgvp	swift.property	OutputManagementHead.transform	let transform: OutputTransform?	-
 s:13WaylandClient22OutputManagementHeadIDV	swift.struct	OutputManagementHeadID	struct OutputManagementHeadID	-
 s:13WaylandClient22OutputManagementHeadIDV11descriptionSSvp	swift.property	OutputManagementHeadID.description	var description: String { get }	-
-s:13WaylandClient22OutputManagementHeadIDV8rawValueACs6UInt64V_tcfc	swift.init	OutputManagementHeadID.init(rawValue:)	init(rawValue headRawValue: UInt64)	-
 s:13WaylandClient20OutputManagementModeV	swift.struct	OutputManagementMode	struct OutputManagementMode	-
 s:13WaylandClient20OutputManagementModeV2idAA0cdE2IDVvp	swift.property	OutputManagementMode.id	let id: OutputManagementModeID	-
 s:13WaylandClient20OutputManagementModeV2id4size7refresh11isPreferred0I7CurrentAcA0cdE2IDV_AA17PositivePixelSizeVSgAA0C11RefreshRateOS2btcfc	swift.init	OutputManagementMode.init(id:size:refresh:isPreferred:isCurrent:)	init(id modeID: OutputManagementModeID, size modeSize: PositivePixelSize?, refresh modeRefresh: OutputRefreshRate, isPreferred modeIsPreferred: Bool, isCurrent modeIsCurrent: Bool)	-
@@ -1053,7 +1028,6 @@ s:13WaylandClient20OutputManagementModeV7refreshAA0C11RefreshRateOvp	swift.prope
 s:13WaylandClient20OutputManagementModeV4sizeAA17PositivePixelSizeVSgvp	swift.property	OutputManagementMode.size	let size: PositivePixelSize?	-
 s:13WaylandClient22OutputManagementModeIDV	swift.struct	OutputManagementModeID	struct OutputManagementModeID	-
 s:13WaylandClient22OutputManagementModeIDV11descriptionSSvp	swift.property	OutputManagementModeID.description	var description: String { get }	-
-s:13WaylandClient22OutputManagementModeIDV8rawValueACs6UInt64V_tcfc	swift.init	OutputManagementModeID.init(rawValue:)	init(rawValue modeRawValue: UInt64)	-
 s:13WaylandClient24OutputManagementSnapshotV	swift.struct	OutputManagementSnapshot	struct OutputManagementSnapshot	-
 s:13WaylandClient24OutputManagementSnapshotV5headsSayAA0cD4HeadVGvp	swift.property	OutputManagementSnapshot.heads	let heads: [OutputManagementHead]	-
 s:13WaylandClient24OutputManagementSnapshotV5heads6serialACSayAA0cD4HeadVG_s6UInt32Vtcfc	swift.init	OutputManagementSnapshot.init(heads:serial:)	init(heads snapshotHeads: [OutputManagementHead], serial snapshotSerial: UInt32)	-
@@ -1193,9 +1167,7 @@ s:13WaylandClient17PointerConstraintV4hash4intoys6HasherVz_tF	swift.method	Point
 s:13WaylandClient17PointerConstraintV2idAA0cD2IDVvp	swift.property	PointerConstraint.id	let id: PointerConstraintID	-
 s:13WaylandClient19PointerConstraintIDV	swift.struct	PointerConstraintID	struct PointerConstraintID	-
 s:13WaylandClient19PointerConstraintIDV11descriptionSSvp	swift.property	PointerConstraintID.description	var description: String { get }	-
-s:13WaylandClient19PointerConstraintIDV8rawValue4kindACs6UInt64V_AA0cD4KindOtcfc	swift.init	PointerConstraintID.init(rawValue:kind:)	init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind)	-
 s:13WaylandClient19PointerConstraintIDV4kindAA0cD4KindOvp	swift.property	PointerConstraintID.kind	let kind: PointerConstraintKind	-
-s:13WaylandClient19PointerConstraintIDV8rawValues6UInt64Vvp	swift.property	PointerConstraintID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient21PointerConstraintKindO	swift.enum	PointerConstraintKind	enum PointerConstraintKind	-
 s:13WaylandClient21PointerConstraintKindO8confinedyA2CmF	swift.enum.case	PointerConstraintKind.confined	case confined	-
 s:13WaylandClient21PointerConstraintKindO6lockedyA2CmF	swift.enum.case	PointerConstraintKind.locked	case locked	-
@@ -1279,8 +1251,6 @@ s:13WaylandClient26PointerGestureSubscriptionV6seatIDAA04SeatG0Vvp	swift.propert
 s:13WaylandClient26PointerGestureSubscriptionV7versions6UInt32Vvp	swift.property	PointerGestureSubscription.version	let version: UInt32	-
 s:13WaylandClient28PointerGestureSubscriptionIDV	swift.struct	PointerGestureSubscriptionID	struct PointerGestureSubscriptionID	-
 s:13WaylandClient28PointerGestureSubscriptionIDV11descriptionSSvp	swift.property	PointerGestureSubscriptionID.description	var description: String { get }	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValueACs6UInt64V_tcfc	swift.init	PointerGestureSubscriptionID.init(rawValue:)	init(rawValue subscriptionRawValue: UInt64)	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValues6UInt64Vvp	swift.property	PointerGestureSubscriptionID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient23PointerHoldGestureEventO	swift.enum	PointerHoldGestureEvent	enum PointerHoldGestureEvent	-
 s:13WaylandClient23PointerHoldGestureEventO5beginyAcA11InputSerialV_AA0A21TimestampMillisecondsVs6UInt32VtcACmF	swift.enum.case	PointerHoldGestureEvent.begin(serial:time:fingers:)	case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)	-
 s:13WaylandClient23PointerHoldGestureEventO6cancelyAcA11InputSerialV_AA0A21TimestampMillisecondsVtcACmF	swift.enum.case	PointerHoldGestureEvent.cancel(serial:time:)	case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)	-
@@ -1495,8 +1465,6 @@ s:13WaylandClient27RelativePointerSubscriptionV4hash4intoys6HasherVz_tF	swift.me
 s:13WaylandClient27RelativePointerSubscriptionV2idAA0cdE2IDVvp	swift.property	RelativePointerSubscription.id	let id: RelativePointerSubscriptionID	-
 s:13WaylandClient29RelativePointerSubscriptionIDV	swift.struct	RelativePointerSubscriptionID	struct RelativePointerSubscriptionID	-
 s:13WaylandClient29RelativePointerSubscriptionIDV11descriptionSSvp	swift.property	RelativePointerSubscriptionID.description	var description: String { get }	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValueACs6UInt64V_tcfc	swift.init	RelativePointerSubscriptionID.init(rawValue:)	init(rawValue subscriptionRawValue: UInt64)	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValues6UInt64Vvp	swift.property	RelativePointerSubscriptionID.rawValue	let rawValue: UInt64	-
 s:13WaylandClient16SeatCapabilitiesV	swift.struct	SeatCapabilities	struct SeatCapabilities	-
 s:13WaylandClient16SeatCapabilitiesV11descriptionSSvp	swift.property	SeatCapabilities.description	var description: String { get }	-
 s:13WaylandClient16SeatCapabilitiesV11hasKeyboardSbvp	swift.property	SeatCapabilities.hasKeyboard	var hasKeyboard: Bool { get }	-
@@ -1631,8 +1599,6 @@ s:13WaylandClient27SurfacePresentationFeedbackO9presentedyAcA0dE0VcACmF	swift.en
 s:13WaylandClient27SurfacePresentationFeedbackO7surfaceAA0cD8IdentityVvp	swift.property	SurfacePresentationFeedback.surface	var surface: SurfacePresentationIdentity { get }	-
 s:13WaylandClient27SurfacePresentationIdentityV	swift.struct	SurfacePresentationIdentity	struct SurfacePresentationIdentity	-
 s:13WaylandClient27SurfacePresentationIdentityV11descriptionSSvp	swift.property	SurfacePresentationIdentity.description	var description: String { get }	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValueACs6UInt64V_tcfc	swift.init	SurfacePresentationIdentity.init(rawValue:)	init(rawValue identityRawValue: UInt64)	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValues6UInt64Vvp	swift.property	SurfacePresentationIdentity.rawValue	let rawValue: UInt64	-
 s:13WaylandClient13SurfaceRegionV	swift.struct	SurfaceRegion	struct SurfaceRegion	-
 s:13WaylandClient13SurfaceRegionVyACSayAA11LogicalRectVGcfc	swift.init	SurfaceRegion.init(_:)	init(_ regionRectangles: [LogicalRect])	-
 s:13WaylandClient13SurfaceRegionV10rectanglesACSayAA11LogicalRectVG_tcfc	swift.init	SurfaceRegion.init(rectangles:)	init(rectangles regionRectangles: [LogicalRect])	-
@@ -2042,11 +2008,9 @@ s:13WaylandClient0A12CapabilitiesV15xdgToplevelDragAA20ProtocolAvailabilityOvp	s
 s:13WaylandClient0A12CapabilitiesV15xdgToplevelIconAA20ProtocolAvailabilityOvp	swift.property	WaylandCapabilities.xdgToplevelIcon	let xdgToplevelIcon: ProtocolAvailability	-
 s:13WaylandClient0A7DisplayC	swift.class	WaylandDisplay	actor WaylandDisplay	-
 s:13WaylandClient0A7DisplayC8activate6window5tokenyAA6WindowV_AA15ActivationTokenVtKF	swift.method	WaylandDisplay.activate(window:token:)	func activate(window: Window, token: ActivationToken) throws	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
-s:13WaylandClient0A7DisplayC24applyOutputConfiguration_19timeoutMillisecondsyAA0eF8ProposalV_s5Int32VtKF	swift.method	WaylandDisplay.applyOutputConfiguration(_:timeoutMilliseconds:)	func applyOutputConfiguration(_ proposal: OutputConfigurationProposal, timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds) throws	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC12capabilitiesAA0A12CapabilitiesVyKF	swift.method	WaylandDisplay.capabilities()	func capabilities() throws -> WaylandCapabilities	-
 s:13WaylandClient0A7DisplayC14clipboardOffer3forAA09ClipboardE0VSgAA6SeatIDV_tKF	swift.method	WaylandDisplay.clipboardOffer(for:)	func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer?	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC5closeyyYaF	swift.method	WaylandDisplay.close()	func close() async	-
-s:13WaylandClient0A7DisplayC23compositorSessionEvents6reason10existingID19timeoutMillisecondsAA010CompositorE13EventSnapshotVAA0lE6ReasonO_AA0leI0VSgs5Int32VtKF	swift.method	WaylandDisplay.compositorSessionEvents(reason:existingID:timeoutMilliseconds:)	func compositorSessionEvents(reason: CompositorSessionReason = .launch, existingID: CompositorSessionID? = nil, timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds) throws -> CompositorSessionEventSnapshot	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC14confinePointer6window6seatID6region8lifetimeAA0E10ConstraintVAA6WindowV_AA04SeatH0VAA0eK6RegionVSgAA0eK8LifetimeOtKF	swift.method	WaylandDisplay.confinePointer(window:seatID:region:lifetime:)	func confinePointer(window: Window, seatID: SeatID, region: PointerConstraintRegion? = nil, lifetime: PointerConstraintLifetime = .oneShot) throws -> PointerConstraint	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC20createTopLevelWindow13configurationAA0G0VAA0G13ConfigurationV_tKF	swift.method	WaylandDisplay.createTopLevelWindow(configuration:)	@discardableResult func createTopLevelWindow(configuration windowConfiguration: WindowConfiguration = .default) throws -> Window	-
 s:13WaylandClient0A7DisplayC20currentPointerCursorAA0eF0VyKF	swift.method	WaylandDisplay.currentPointerCursor()	func currentPointerCursor() throws -> PointerCursor	-
@@ -2078,12 +2042,11 @@ s:13WaylandClient0A7DisplayC18requestPointerWarp6window6seatID8position6serialyA
 s:13WaylandClient0A7DisplayC23requestPrimarySelection_6seatID6serialAA0eF6SourceVAA0efJ13ConfigurationV_AA04SeatH0VAA11InputSerialVtKF	swift.method	WaylandDisplay.requestPrimarySelection(_:seatID:serial:)	func requestPrimarySelection(_ configuration: PrimarySelectionSourceConfiguration, seatID: SeatID, serial: InputSerial) throws -> PrimarySelectionSource	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC14ringSystemBellyyKF	swift.method	WaylandDisplay.ringSystemBell()	func ringSystemBell() throws	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC16setPointerCursorySayAA0F13RequestResultOGAA0eF0VKF	swift.method	WaylandDisplay.setPointerCursor(_:)	@discardableResult func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult]	-
-s:13WaylandClient0A7DisplayC23testOutputConfiguration_19timeoutMillisecondsyAA0eF8ProposalV_s5Int32VtKF	swift.method	WaylandDisplay.testOutputConfiguration(_:timeoutMilliseconds:)	func testOutputConfiguration(_ proposal: OutputConfigurationProposal, timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds) throws	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC15textInputEventsAA04TexteF0Vvp	swift.property	WaylandDisplay.textInputEvents	nonisolated var textInputEvents: TextInputEvents { get }	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC16textInputSession3forAA04TexteF0VAA6SeatIDV_tKF	swift.method	WaylandDisplay.textInputSession(for:)	func textInputSession(for seatID: SeatID) throws -> TextInputSession	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC15unownedExecutorScevp	swift.property	WaylandDisplay.unownedExecutor	nonisolated var unownedExecutor: UnownedSerialExecutor { get }	-
+s:13WaylandClient0A7DisplayC14withConnection13applicationID19cursorConfiguration28discoveryTimeoutMilliseconds011eventStreamI0_xSS_AA06CursorI0Vs5Int32VAA05EventnI0VxACYaYbKYCXEtYaKs8SendableRzlFZ	swift.type.method	WaylandDisplay.withConnection(applicationID:cursorConfiguration:discoveryTimeoutMilliseconds:eventStreamConfiguration:_:)	static func withConnection<ResultValue>(applicationID: String, cursorConfiguration: CursorConfiguration = .init(), discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds, eventStreamConfiguration: EventStreamConfiguration = .init(), _ body: nonisolated(nonsending) @Sendable (WaylandDisplay) async throws -> ResultValue) async throws -> ResultValue where ResultValue : Sendable	{"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"ResultValue","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"ResultValue"}]}}
 s:13WaylandClient0A7DisplayC14withConnection13configuration19cursorConfiguration28discoveryTimeoutMilliseconds_xAA0cH0V_AA06CursorH0Vs5Int32VxACYaYbKYCXEtYaKs8SendableRzlFZ	swift.type.method	WaylandDisplay.withConnection(configuration:cursorConfiguration:discoveryTimeoutMilliseconds:_:)	static func withConnection<ResultValue>(configuration displayConfiguration: DisplayConfiguration, cursorConfiguration: CursorConfiguration = .init(), discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds, _ body: nonisolated(nonsending) @Sendable (WaylandDisplay) async throws -> ResultValue) async throws -> ResultValue where ResultValue : Sendable	{"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"ResultValue","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"ResultValue"}]}}
-s:13WaylandClient0A7DisplayC14withConnection19cursorConfiguration28discoveryTimeoutMilliseconds011eventStreamG0_xAA06CursorG0V_s5Int32VAA05EventlG0VxACYaYbKYCXEtYaKs8SendableRzlFZ	swift.type.method	WaylandDisplay.withConnection(cursorConfiguration:discoveryTimeoutMilliseconds:eventStreamConfiguration:_:)	static func withConnection<ResultValue>(cursorConfiguration: CursorConfiguration = .init(), discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds, eventStreamConfiguration: EventStreamConfiguration = .init(), _ body: nonisolated(nonsending) @Sendable (WaylandDisplay) async throws -> ResultValue) async throws -> ResultValue where ResultValue : Sendable	{"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"ResultValue","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"ResultValue"}]}}
 s:13WaylandClient0A12DisplayErrorO	swift.enum	WaylandDisplayError	enum WaylandDisplayError	-
 s:13WaylandClient0A12DisplayErrorO6closedyA2CmF	swift.enum.case	WaylandDisplayError.closed	case closed	-
 s:13WaylandClient0A12DisplayErrorO11descriptionSSvp	swift.property	WaylandDisplayError.description	var description: String { get }	-
@@ -2235,13 +2198,13 @@ s:13WaylandClient23WindowCallbackOperationO20presentationFeedbackyA2CmF	swift.en
 s:13WaylandClient23WindowCallbackOperationO19surfaceScaleChangedyA2CmF	swift.enum.case	WindowCallbackOperation.surfaceScaleChanged	case surfaceScaleChanged	-
 s:13WaylandClient23WindowCallbackOperationO19transientStateResetyA2CmF	swift.enum.case	WindowCallbackOperation.transientStateReset	case transientStateReset	-
 s:13WaylandClient19WindowConfigurationV	swift.struct	WindowConfiguration	struct WindowConfiguration	-
-s:13WaylandClient19WindowConfigurationV5appIDAA08NonEmptyA6StringVvp	swift.property	WindowConfiguration.appID	var appID: NonEmptyWaylandString	-
+s:13WaylandClient19WindowConfigurationV5appIDAA08NonEmptyA6StringVSgvp	swift.property	WindowConfiguration.appID	var appID: NonEmptyWaylandString?	-
 s:13WaylandClient19WindowConfigurationV11bufferCountAA11PositiveIntVvp	swift.property	WindowConfiguration.bufferCount	var bufferCount: PositiveInt	-
 s:13WaylandClient19WindowConfigurationV18closeRequestPolicyAA05ClosefG0Ovp	swift.property	WindowConfiguration.closeRequestPolicy	var closeRequestPolicy: CloseRequestPolicy	-
 s:13WaylandClient19WindowConfigurationV20decorationPreferenceAA0c10DecorationF0Ovp	swift.property	WindowConfiguration.decorationPreference	var decorationPreference: WindowDecorationPreference	-
 s:13WaylandClient19WindowConfigurationV7defaultACvpZ	swift.type.property	WindowConfiguration.default	static let `default`: WindowConfiguration	-
-s:13WaylandClient19WindowConfigurationV5title5appID11initialSize11bufferCount18closeRequestPolicy20decorationPreferenceAcA0A6StringV_AA08NonEmptyaQ0VAA015PositiveLogicalI0VAA0T3IntVAA05ClosemN0OAA0c10DecorationP0Otcfc	swift.init	WindowConfiguration.init(title:appID:initialSize:bufferCount:closeRequestPolicy:decorationPreference:)	init(title windowTitle: WaylandString, appID applicationID: NonEmptyWaylandString, initialSize size: PositiveLogicalSize, bufferCount count: PositiveInt, closeRequestPolicy policy: CloseRequestPolicy = .requestOnly, decorationPreference preference: WindowDecorationPreference = .preferServerSide)	-
-s:13WaylandClient19WindowConfigurationV5title5appID12initialWidth0H6Height11bufferCount18closeRequestPolicy20decorationPreferenceACSS_SSs5Int32VALSiAA05ClosenO0OAA0c10DecorationQ0OtKcfc	swift.init	WindowConfiguration.init(title:appID:initialWidth:initialHeight:bufferCount:closeRequestPolicy:decorationPreference:)	init(title windowTitle: String = "WaylandClientKit Demo", appID applicationID: String = "wayland-client-kit-demo", initialWidth width: Int32 = 640, initialHeight height: Int32 = 480, bufferCount count: Int = 3, closeRequestPolicy policy: CloseRequestPolicy = .requestOnly, decorationPreference preference: WindowDecorationPreference = .preferServerSide) throws	-
+s:13WaylandClient19WindowConfigurationV5title5appID11initialSize11bufferCount18closeRequestPolicy20decorationPreferenceAcA0A6StringV_AA08NonEmptyaQ0VSgAA015PositiveLogicalI0VAA0T3IntVAA05ClosemN0OAA0c10DecorationP0Otcfc	swift.init	WindowConfiguration.init(title:appID:initialSize:bufferCount:closeRequestPolicy:decorationPreference:)	init(title windowTitle: WaylandString, appID applicationID: NonEmptyWaylandString? = nil, initialSize size: PositiveLogicalSize, bufferCount count: PositiveInt, closeRequestPolicy policy: CloseRequestPolicy = .requestOnly, decorationPreference preference: WindowDecorationPreference = .preferServerSide)	-
+s:13WaylandClient19WindowConfigurationV5title5appID12initialWidth0H6Height11bufferCount18closeRequestPolicy20decorationPreferenceACSS_SSSgs5Int32VAMSiAA05ClosenO0OAA0c10DecorationQ0OtKcfc	swift.init	WindowConfiguration.init(title:appID:initialWidth:initialHeight:bufferCount:closeRequestPolicy:decorationPreference:)	init(title windowTitle: String = "Window", appID applicationID: String? = nil, initialWidth width: Int32 = 640, initialHeight height: Int32 = 480, bufferCount count: Int = 3, closeRequestPolicy policy: CloseRequestPolicy = .requestOnly, decorationPreference preference: WindowDecorationPreference = .preferServerSide) throws	-
 s:13WaylandClient19WindowConfigurationV11initialSizeAA015PositiveLogicalF0Vvp	swift.property	WindowConfiguration.initialSize	var initialSize: PositiveLogicalSize	-
 s:13WaylandClient19WindowConfigurationV5titleAA0A6StringVvp	swift.property	WindowConfiguration.title	var title: WaylandString	-
 s:13WaylandClient24WindowConfigurationErrorO	swift.enum	WindowConfigurationError	enum WindowConfigurationError	-
@@ -2658,8 +2621,8 @@ s:13WaylandClient0A7DisplayC14clipboardOffer3forAA09ClipboardE0VSgAA6SeatIDV_tKF
 s:13WaylandClient0A7DisplayC14confinePointer6window6seatID6region8lifetimeAA0E10ConstraintVAA6WindowV_AA04SeatH0VAA0eK6RegionVSgAA0eK8LifetimeOtKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC14outputTopologySayAA14OutputSnapshotVGyKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC14ringSystemBellyyKF	memberOf	s:13WaylandClient0A7DisplayC	-
+s:13WaylandClient0A7DisplayC14withConnection13applicationID19cursorConfiguration28discoveryTimeoutMilliseconds011eventStreamI0_xSS_AA06CursorI0Vs5Int32VAA05EventnI0VxACYaYbKYCXEtYaKs8SendableRzlFZ	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC14withConnection13configuration19cursorConfiguration28discoveryTimeoutMilliseconds_xAA0cH0V_AA06CursorH0Vs5Int32VxACYaYbKYCXEtYaKs8SendableRzlFZ	memberOf	s:13WaylandClient0A7DisplayC	-
-s:13WaylandClient0A7DisplayC14withConnection19cursorConfiguration28discoveryTimeoutMilliseconds011eventStreamG0_xAA06CursorG0V_s5Int32VAA05EventlG0VxACYaYbKYCXEtYaKs8SendableRzlFZ	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC15pointerGestures6seatIDAA26PointerGestureSubscriptionVAA04SeatG0V_tKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC15relativePointer6seatIDAA08RelativeE12SubscriptionVAA04SeatG0V_tKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC15textInputEventsAA04TexteF0Vvp	memberOf	s:13WaylandClient0A7DisplayC	-
@@ -2673,10 +2636,7 @@ s:13WaylandClient0A7DisplayC20currentPointerCursorAA0eF0VyKF	memberOf	s:13Waylan
 s:13WaylandClient0A7DisplayC21primarySelectionOffer3forAA07PrimaryeF0VSgAA6SeatIDV_tKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC21requestClearClipboard6seatID6serialyAA04SeatH0V_AA11InputSerialVtKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC22requestActivationToken_19timeoutMillisecondsAA0eF0VAA0eF7RequestV_s5Int32VtYaKF	memberOf	s:13WaylandClient0A7DisplayC	-
-s:13WaylandClient0A7DisplayC23compositorSessionEvents6reason10existingID19timeoutMillisecondsAA010CompositorE13EventSnapshotVAA0lE6ReasonO_AA0leI0VSgs5Int32VtKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC23requestPrimarySelection_6seatID6serialAA0eF6SourceVAA0efJ13ConfigurationV_AA04SeatH0VAA11InputSerialVtKF	memberOf	s:13WaylandClient0A7DisplayC	-
-s:13WaylandClient0A7DisplayC23testOutputConfiguration_19timeoutMillisecondsyAA0eF8ProposalV_s5Int32VtKF	memberOf	s:13WaylandClient0A7DisplayC	-
-s:13WaylandClient0A7DisplayC24applyOutputConfiguration_19timeoutMillisecondsyAA0eF8ProposalV_s5Int32VtKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC24destroyPointerConstraintyyAA0eF0VKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC24outputManagementSnapshot19timeoutMillisecondsAA06OutputeF0Vs5Int32V_tKF	memberOf	s:13WaylandClient0A7DisplayC	-
 s:13WaylandClient0A7DisplayC25requestClipboardSelection_6seatID6serialAA0E6SourceVAA0eJ13ConfigurationV_AA04SeatH0VAA11InputSerialVtKF	memberOf	s:13WaylandClient0A7DisplayC	-
@@ -2917,8 +2877,6 @@ s:13WaylandClient12DiagnosticIDV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient12DiagnosticIDV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient12DiagnosticIDV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient12DiagnosticIDV	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient12DiagnosticIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient12DiagnosticIDV	-
-s:13WaylandClient12DiagnosticIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient12DiagnosticIDV	-
 s:13WaylandClient12DisplayEventO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient12DisplayEventO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient12DisplayEventO	conformsTo	s:s8SendableP	Swift.Sendable
@@ -3773,7 +3731,6 @@ s:13WaylandClient17ForeignToplevelIDV	conformsTo	s:s16SendableMetatypeP	Swift.Se
 s:13WaylandClient17ForeignToplevelIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient17ForeignToplevelIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient17ForeignToplevelIDV11descriptionSSvp	memberOf	s:13WaylandClient17ForeignToplevelIDV	-
-s:13WaylandClient17ForeignToplevelIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient17ForeignToplevelIDV	-
 s:13WaylandClient17KeyboardModifiersV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient17KeyboardModifiersV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient17KeyboardModifiersV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4031,14 +3988,6 @@ s:13WaylandClient18WindowScaleFailureO	conformsTo	s:s23CustomStringConvertibleP	
 s:13WaylandClient18WindowScaleFailureO	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient18WindowScaleFailureO11descriptionSSvp	memberOf	s:13WaylandClient18WindowScaleFailureO	-
 s:13WaylandClient18WindowScaleFailureO17viewporterMissingyA2CmF	memberOf	s:13WaylandClient18WindowScaleFailureO	-
-s:13WaylandClient19CompositorSessionIDV	conformsTo	s:SH	Swift.Hashable
-s:13WaylandClient19CompositorSessionIDV	conformsTo	s:SQ	Swift.Equatable
-s:13WaylandClient19CompositorSessionIDV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:13WaylandClient19CompositorSessionIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
-s:13WaylandClient19CompositorSessionIDV	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient19CompositorSessionIDV11descriptionSSvp	memberOf	s:13WaylandClient19CompositorSessionIDV	-
-s:13WaylandClient19CompositorSessionIDV5valueSSvp	memberOf	s:13WaylandClient19CompositorSessionIDV	-
-s:13WaylandClient19CompositorSessionIDVyACSSKcfc	memberOf	s:13WaylandClient19CompositorSessionIDV	-
 s:13WaylandClient19CursorConfigurationV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient19CursorConfigurationV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient19CursorConfigurationV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4164,8 +4113,6 @@ s:13WaylandClient19PointerConstraintIDV	conformsTo	s:s23CustomStringConvertibleP
 s:13WaylandClient19PointerConstraintIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient19PointerConstraintIDV11descriptionSSvp	memberOf	s:13WaylandClient19PointerConstraintIDV	-
 s:13WaylandClient19PointerConstraintIDV4kindAA0cD4KindOvp	memberOf	s:13WaylandClient19PointerConstraintIDV	-
-s:13WaylandClient19PointerConstraintIDV8rawValue4kindACs6UInt64V_AA0cD4KindOtcfc	memberOf	s:13WaylandClient19PointerConstraintIDV	-
-s:13WaylandClient19PointerConstraintIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient19PointerConstraintIDV	-
 s:13WaylandClient19PointerGestureEventO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient19PointerGestureEventO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient19PointerGestureEventO	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4225,9 +4172,9 @@ s:13WaylandClient19WindowConfigurationV11bufferCountAA11PositiveIntVvp	memberOf	
 s:13WaylandClient19WindowConfigurationV11initialSizeAA015PositiveLogicalF0Vvp	memberOf	s:13WaylandClient19WindowConfigurationV	-
 s:13WaylandClient19WindowConfigurationV18closeRequestPolicyAA05ClosefG0Ovp	memberOf	s:13WaylandClient19WindowConfigurationV	-
 s:13WaylandClient19WindowConfigurationV20decorationPreferenceAA0c10DecorationF0Ovp	memberOf	s:13WaylandClient19WindowConfigurationV	-
-s:13WaylandClient19WindowConfigurationV5appIDAA08NonEmptyA6StringVvp	memberOf	s:13WaylandClient19WindowConfigurationV	-
-s:13WaylandClient19WindowConfigurationV5title5appID11initialSize11bufferCount18closeRequestPolicy20decorationPreferenceAcA0A6StringV_AA08NonEmptyaQ0VAA015PositiveLogicalI0VAA0T3IntVAA05ClosemN0OAA0c10DecorationP0Otcfc	memberOf	s:13WaylandClient19WindowConfigurationV	-
-s:13WaylandClient19WindowConfigurationV5title5appID12initialWidth0H6Height11bufferCount18closeRequestPolicy20decorationPreferenceACSS_SSs5Int32VALSiAA05ClosenO0OAA0c10DecorationQ0OtKcfc	memberOf	s:13WaylandClient19WindowConfigurationV	-
+s:13WaylandClient19WindowConfigurationV5appIDAA08NonEmptyA6StringVSgvp	memberOf	s:13WaylandClient19WindowConfigurationV	-
+s:13WaylandClient19WindowConfigurationV5title5appID11initialSize11bufferCount18closeRequestPolicy20decorationPreferenceAcA0A6StringV_AA08NonEmptyaQ0VSgAA015PositiveLogicalI0VAA0T3IntVAA05ClosemN0OAA0c10DecorationP0Otcfc	memberOf	s:13WaylandClient19WindowConfigurationV	-
+s:13WaylandClient19WindowConfigurationV5title5appID12initialWidth0H6Height11bufferCount18closeRequestPolicy20decorationPreferenceACSS_SSSgs5Int32VAMSiAA05ClosenO0OAA0c10DecorationQ0OtKcfc	memberOf	s:13WaylandClient19WindowConfigurationV	-
 s:13WaylandClient19WindowConfigurationV5titleAA0A6StringVvp	memberOf	s:13WaylandClient19WindowConfigurationV	-
 s:13WaylandClient19WindowConfigurationV7defaultACvpZ	memberOf	s:13WaylandClient19WindowConfigurationV	-
 s:13WaylandClient19WindowStateSnapshotV	conformsTo	s:SQ	Swift.Equatable
@@ -4247,8 +4194,10 @@ s:13WaylandClient20DisplayConfigurationV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient20DisplayConfigurationV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient20DisplayConfigurationV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient20DisplayConfigurationV11diagnosticsAA011DiagnosticsD0Vvp	memberOf	s:13WaylandClient20DisplayConfigurationV	-
-s:13WaylandClient20DisplayConfigurationV12eventStreams13inputPipeline22keyboardInterpretation11diagnosticsAcA011EventStreamD0V_AA05InputhD0VAA08KeyboardjD0VAA011DiagnosticsD0Vtcfc	memberOf	s:13WaylandClient20DisplayConfigurationV	-
 s:13WaylandClient20DisplayConfigurationV12eventStreamsAA011EventStreamD0Vvp	memberOf	s:13WaylandClient20DisplayConfigurationV	-
+s:13WaylandClient20DisplayConfigurationV13applicationID12eventStreams13inputPipeline22keyboardInterpretation11diagnosticsACSS_AA011EventStreamD0VAA05InputjD0VAA08KeyboardlD0VAA011DiagnosticsD0VtKcfc	memberOf	s:13WaylandClient20DisplayConfigurationV	-
+s:13WaylandClient20DisplayConfigurationV13applicationID12eventStreams13inputPipeline22keyboardInterpretation11diagnosticsAcA08NonEmptyA6StringV_AA011EventStreamD0VAA05InputjD0VAA08KeyboardlD0VAA011DiagnosticsD0Vtcfc	memberOf	s:13WaylandClient20DisplayConfigurationV	-
+s:13WaylandClient20DisplayConfigurationV13applicationIDAA08NonEmptyA6StringVvp	memberOf	s:13WaylandClient20DisplayConfigurationV	-
 s:13WaylandClient20DisplayConfigurationV13inputPipelineAA05InputfD0Vvp	memberOf	s:13WaylandClient20DisplayConfigurationV	-
 s:13WaylandClient20DisplayConfigurationV22keyboardInterpretationAA08KeyboardfD0Vvp	memberOf	s:13WaylandClient20DisplayConfigurationV	-
 s:13WaylandClient20ForeignToplevelEventO	conformsTo	s:SQ	Swift.Equatable
@@ -4454,17 +4403,13 @@ s:13WaylandClient21DisplayOperationErrorO22dragSourceSeatMismatchyAcA04DragG8Ide
 s:13WaylandClient21DisplayOperationErrorO22idleInhibitUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO23toplevelDragStillActiveyAcA08ToplevelG2IDVcACmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO24nonSquareWindowIconImageyACs5Int32V_AFtcACmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
-s:13WaylandClient21DisplayOperationErrorO24staleOutputConfigurationyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO25invalidSubsurfaceStackingyAcA0ghE0OcACmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
-s:13WaylandClient21DisplayOperationErrorO25outputConfigurationFailedyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO25windowIconNameContainsNULyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
-s:13WaylandClient21DisplayOperationErrorO26invalidCompositorSessionIDyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO26outputManagementIncompleteyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO26xdgToplevelDragUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO26xdgToplevelIconUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO27outputManagementUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO27presentationTimeUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
-s:13WaylandClient21DisplayOperationErrorO28outputConfigurationCancelledyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO28subsurfacePresentationFailedyAcA010SubsurfaceG7FailureVcACmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO29foreignToplevelListIncompleteyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO30foreignToplevelListUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
@@ -4473,7 +4418,6 @@ s:13WaylandClient21DisplayOperationErrorO33foreignKeyboardShortcutsInhibitoryAcA
 s:13WaylandClient21DisplayOperationErrorO33keyboardShortcutsAlreadyInhibitedyAcA8WindowIDV_AA04SeatK0VtcACmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO33unknownKeyboardShortcutsInhibitoryAcA0ghI2IDVcACmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO35keyboardShortcutsInhibitUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
-s:13WaylandClient21DisplayOperationErrorO38compositorSessionManagementUnavailableyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DisplayOperationErrorO6closedyA2CmF	memberOf	s:13WaylandClient21DisplayOperationErrorO	-
 s:13WaylandClient21DragOfferChangedEventV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient21DragOfferChangedEventV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -4681,12 +4625,6 @@ s:13WaylandClient22ClipboardOfferIdentityV	conformsTo	s:s16SendableMetatypeP	Swi
 s:13WaylandClient22ClipboardOfferIdentityV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient22ClipboardOfferIdentityV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient22ClipboardOfferIdentityV11descriptionSSvp	memberOf	s:13WaylandClient22ClipboardOfferIdentityV	-
-s:13WaylandClient22CompositorSessionEventO	conformsTo	s:SQ	Swift.Equatable
-s:13WaylandClient22CompositorSessionEventO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:13WaylandClient22CompositorSessionEventO	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient22CompositorSessionEventO7createdyAcA0cD2IDVcACmF	memberOf	s:13WaylandClient22CompositorSessionEventO	-
-s:13WaylandClient22CompositorSessionEventO8replacedyA2CmF	memberOf	s:13WaylandClient22CompositorSessionEventO	-
-s:13WaylandClient22CompositorSessionEventO8restoredyA2CmF	memberOf	s:13WaylandClient22CompositorSessionEventO	-
 s:13WaylandClient22DataTransferDiagnosticV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient22DataTransferDiagnosticV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient22DataTransferDiagnosticV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4720,14 +4658,12 @@ s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:s16SendableMetatypeP	Swi
 s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient22OutputManagementHeadIDV11descriptionSSvp	memberOf	s:13WaylandClient22OutputManagementHeadIDV	-
-s:13WaylandClient22OutputManagementHeadIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient22OutputManagementHeadIDV	-
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient22OutputManagementModeIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient22OutputManagementModeIDV11descriptionSSvp	memberOf	s:13WaylandClient22OutputManagementModeIDV	-
-s:13WaylandClient22OutputManagementModeIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient22OutputManagementModeIDV	-
 s:13WaylandClient22PrimarySelectionSourceV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient22PrimarySelectionSourceV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient22PrimarySelectionSourceV	conformsTo	s:s12IdentifiableP	Swift.Identifiable
@@ -4769,13 +4705,6 @@ s:13WaylandClient23ClipboardSourceIdentityV	conformsTo	s:s16SendableMetatypeP	Sw
 s:13WaylandClient23ClipboardSourceIdentityV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient23ClipboardSourceIdentityV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient23ClipboardSourceIdentityV11descriptionSSvp	memberOf	s:13WaylandClient23ClipboardSourceIdentityV	-
-s:13WaylandClient23CompositorSessionReasonO	conformsTo	s:SH	Swift.Hashable
-s:13WaylandClient23CompositorSessionReasonO	conformsTo	s:SQ	Swift.Equatable
-s:13WaylandClient23CompositorSessionReasonO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:13WaylandClient23CompositorSessionReasonO	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient23CompositorSessionReasonO14sessionRestoreyA2CmF	memberOf	s:13WaylandClient23CompositorSessionReasonO	-
-s:13WaylandClient23CompositorSessionReasonO6launchyA2CmF	memberOf	s:13WaylandClient23CompositorSessionReasonO	-
-s:13WaylandClient23CompositorSessionReasonO7recoveryA2CmF	memberOf	s:13WaylandClient23CompositorSessionReasonO	-
 s:13WaylandClient23DragSourceConfigurationV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient23DragSourceConfigurationV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient23DragSourceConfigurationV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -5441,11 +5370,6 @@ s:13WaylandClient27KeyboardKeyRepeatCapabilityO	conformsTo	s:s16SendableMetatype
 s:13WaylandClient27KeyboardKeyRepeatCapabilityO	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient27KeyboardKeyRepeatCapabilityO12nonRepeatingyA2CmF	memberOf	s:13WaylandClient27KeyboardKeyRepeatCapabilityO	-
 s:13WaylandClient27KeyboardKeyRepeatCapabilityO9repeatingyA2CmF	memberOf	s:13WaylandClient27KeyboardKeyRepeatCapabilityO	-
-s:13WaylandClient27OutputConfigurationProposalV	conformsTo	s:SQ	Swift.Equatable
-s:13WaylandClient27OutputConfigurationProposalV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:13WaylandClient27OutputConfigurationProposalV	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient27OutputConfigurationProposalV7currentAcA0C18ManagementSnapshotV_tcfc	memberOf	s:13WaylandClient27OutputConfigurationProposalV	-
-s:13WaylandClient27OutputConfigurationProposalV8snapshotAA0C18ManagementSnapshotVvp	memberOf	s:13WaylandClient27OutputConfigurationProposalV	-
 s:13WaylandClient27PointerCursorRequestFailureV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient27PointerCursorRequestFailureV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient27PointerCursorRequestFailureV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
@@ -5485,8 +5409,6 @@ s:13WaylandClient27SurfacePresentationIdentityV	conformsTo	s:s16SendableMetatype
 s:13WaylandClient27SurfacePresentationIdentityV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient27SurfacePresentationIdentityV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient27SurfacePresentationIdentityV11descriptionSSvp	memberOf	s:13WaylandClient27SurfacePresentationIdentityV	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient27SurfacePresentationIdentityV	-
-s:13WaylandClient27SurfacePresentationIdentityV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient27SurfacePresentationIdentityV	-
 s:13WaylandClient27WindowOutputMembershipEventV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient27WindowOutputMembershipEventV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient27WindowOutputMembershipEventV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -5560,8 +5482,6 @@ s:13WaylandClient28PointerGestureSubscriptionIDV	conformsTo	s:s16SendableMetatyp
 s:13WaylandClient28PointerGestureSubscriptionIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient28PointerGestureSubscriptionIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient28PointerGestureSubscriptionIDV11descriptionSSvp	memberOf	s:13WaylandClient28PointerGestureSubscriptionIDV	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient28PointerGestureSubscriptionIDV	-
-s:13WaylandClient28PointerGestureSubscriptionIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient28PointerGestureSubscriptionIDV	-
 s:13WaylandClient28TextInputDiagnosticOperationO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient28TextInputDiagnosticOperationO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient28TextInputDiagnosticOperationO	conformsTo	s:s8SendableP	Swift.Sendable
@@ -5603,8 +5523,6 @@ s:13WaylandClient29RelativePointerSubscriptionIDV	conformsTo	s:s16SendableMetaty
 s:13WaylandClient29RelativePointerSubscriptionIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient29RelativePointerSubscriptionIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient29RelativePointerSubscriptionIDV11descriptionSSvp	memberOf	s:13WaylandClient29RelativePointerSubscriptionIDV	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValueACs6UInt64V_tcfc	memberOf	s:13WaylandClient29RelativePointerSubscriptionIDV	-
-s:13WaylandClient29RelativePointerSubscriptionIDV8rawValues6UInt64Vvp	memberOf	s:13WaylandClient29RelativePointerSubscriptionIDV	-
 s:13WaylandClient29SubsurfacePresentationFailureV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient29SubsurfacePresentationFailureV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient29SubsurfacePresentationFailureV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
@@ -5620,11 +5538,6 @@ s:13WaylandClient29SubsurfaceSynchronizationModeO	conformsTo	s:s16SendableMetaty
 s:13WaylandClient29SubsurfaceSynchronizationModeO	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient29SubsurfaceSynchronizationModeO12synchronizedyA2CmF	memberOf	s:13WaylandClient29SubsurfaceSynchronizationModeO	-
 s:13WaylandClient29SubsurfaceSynchronizationModeO14desynchronizedyA2CmF	memberOf	s:13WaylandClient29SubsurfaceSynchronizationModeO	-
-s:13WaylandClient30CompositorSessionEventSnapshotV	conformsTo	s:SQ	Swift.Equatable
-s:13WaylandClient30CompositorSessionEventSnapshotV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:13WaylandClient30CompositorSessionEventSnapshotV	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient30CompositorSessionEventSnapshotV6eventsACSayAA0cdE0OG_tcfc	memberOf	s:13WaylandClient30CompositorSessionEventSnapshotV	-
-s:13WaylandClient30CompositorSessionEventSnapshotV6eventsSayAA0cdE0OGvp	memberOf	s:13WaylandClient30CompositorSessionEventSnapshotV	-
 s:13WaylandClient30PrimarySelectionSourceIdentityV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient30PrimarySelectionSourceIdentityV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient30PrimarySelectionSourceIdentityV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -6118,7 +6031,6 @@ s:22WaylandGraphicsPreview0aB24ExternalBufferDescriptorV8modifierAA0aB17DRMForma
 s:22WaylandGraphicsPreview0aB24ExternalBufferDescriptorV4size0A6Client17PositivePixelSizeVvp	swift.property	WaylandGraphicsExternalBufferDescriptor.size	let size: PositivePixelSize	-
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	swift.struct	WaylandGraphicsExternalBufferID	struct WaylandGraphicsExternalBufferID	-
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV11descriptionSSvp	swift.property	WaylandGraphicsExternalBufferID.description	var description: String { get }	-
-s:22WaylandGraphicsPreview0aB16ExternalBufferIDV8rawValues6UInt64Vvp	swift.property	WaylandGraphicsExternalBufferID.rawValue	let rawValue: UInt64	-
 s:22WaylandGraphicsPreview0aB23ExternalBufferLifecycleO	swift.enum	WaylandGraphicsExternalBufferLifecycle	enum WaylandGraphicsExternalBufferLifecycle	-
 s:22WaylandGraphicsPreview0aB23ExternalBufferLifecycleO9availableyA2CmF	swift.enum.case	WaylandGraphicsExternalBufferLifecycle.available	case available	-
 s:22WaylandGraphicsPreview0aB23ExternalBufferLifecycleO7foreignyA2CmF	swift.enum.case	WaylandGraphicsExternalBufferLifecycle.foreign	case foreign	-
@@ -6179,7 +6091,6 @@ s:22WaylandGraphicsPreview0aB24ExternalRetirementReasonO12unregisteredyA2CmF	swi
 s:22WaylandGraphicsPreview0aB24ExternalRetirementReasonO12windowClosedyA2CmF	swift.enum.case	WaylandGraphicsExternalRetirementReason.windowClosed	case windowClosed	-
 s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV	swift.struct	WaylandGraphicsExternalSubmissionID	struct WaylandGraphicsExternalSubmissionID	-
 s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV11descriptionSSvp	swift.property	WaylandGraphicsExternalSubmissionID.description	var description: String { get }	-
-s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV8rawValues6UInt64Vvp	swift.property	WaylandGraphicsExternalSubmissionID.rawValue	let rawValue: UInt64	-
 s:22WaylandGraphicsPreview0aB17ExternalSyncPointV	swift.struct	WaylandGraphicsExternalSyncPoint	struct WaylandGraphicsExternalSyncPoint	-
 s:22WaylandGraphicsPreview0aB17ExternalSyncPointV10timelineIDAA0abde8TimelineH0Vvp	swift.property	WaylandGraphicsExternalSyncPoint.timelineID	let timelineID: WaylandGraphicsExternalSyncTimelineID	-
 s:22WaylandGraphicsPreview0aB17ExternalSyncPointV5values6UInt64Vvp	swift.property	WaylandGraphicsExternalSyncPoint.value	let value: UInt64	-
@@ -6188,7 +6099,6 @@ s:22WaylandGraphicsPreview0aB20ExternalSyncTimelineV2idAA0abdeF2IDVvp	swift.prop
 s:22WaylandGraphicsPreview0aB20ExternalSyncTimelineV5pointyAA0abdE5PointVs6UInt64VKF	swift.method	WaylandGraphicsExternalSyncTimeline.point(_:)	func point(_ value: UInt64) throws -> WaylandGraphicsExternalSyncPoint	-
 s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV	swift.struct	WaylandGraphicsExternalSyncTimelineID	struct WaylandGraphicsExternalSyncTimelineID	-
 s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV11descriptionSSvp	swift.property	WaylandGraphicsExternalSyncTimelineID.description	var description: String { get }	-
-s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV8rawValues6UInt64Vvp	swift.property	WaylandGraphicsExternalSyncTimelineID.rawValue	let rawValue: UInt64	-
 s:22WaylandGraphicsPreview0aB35ExternalSynchronizationAvailabilityO	swift.enum	WaylandGraphicsExternalSynchronizationAvailability	enum WaylandGraphicsExternalSynchronizationAvailability	-
 s:22WaylandGraphicsPreview0aB35ExternalSynchronizationAvailabilityO17explicitAvailableyA2CmF	swift.enum.case	WaylandGraphicsExternalSynchronizationAvailability.explicitAvailable	case explicitAvailable	-
 s:22WaylandGraphicsPreview0aB35ExternalSynchronizationAvailabilityO27explicitRequiredUnavailableyA2CmF	swift.enum.case	WaylandGraphicsExternalSynchronizationAvailability.explicitRequiredUnavailable	case explicitRequiredUnavailable	-
@@ -6617,7 +6527,6 @@ s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	conformsTo	s:s16SendableMetatyp
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV11descriptionSSvp	memberOf	s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	-
-s:22WaylandGraphicsPreview0aB16ExternalBufferIDV8rawValues6UInt64Vvp	memberOf	s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	-
 s:22WaylandGraphicsPreview0aB16PresentationHintO	conformsTo	s:SH	Swift.Hashable
 s:22WaylandGraphicsPreview0aB16PresentationHintO	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB16PresentationHintO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -6718,7 +6627,6 @@ s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV	conformsTo	s:s16SendableMet
 s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV11descriptionSSvp	memberOf	s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV	-
-s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV8rawValues6UInt64Vvp	memberOf	s:22WaylandGraphicsPreview0aB20ExternalSubmissionIDV	-
 s:22WaylandGraphicsPreview0aB20ExternalSyncTimelineV	conformsTo	s:SH	Swift.Hashable
 s:22WaylandGraphicsPreview0aB20ExternalSyncTimelineV	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB20ExternalSyncTimelineV	conformsTo	s:s12IdentifiableP	Swift.Identifiable
@@ -6754,7 +6662,6 @@ s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV	conformsTo	s:s16SendableM
 s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV11descriptionSSvp	memberOf	s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV	-
-s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV8rawValues6UInt64Vvp	memberOf	s:22WaylandGraphicsPreview0aB22ExternalSyncTimelineIDV	-
 s:22WaylandGraphicsPreview0aB23ExternalBufferLifecycleO	conformsTo	s:SH	Swift.Hashable
 s:22WaylandGraphicsPreview0aB23ExternalBufferLifecycleO	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB23ExternalBufferLifecycleO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype

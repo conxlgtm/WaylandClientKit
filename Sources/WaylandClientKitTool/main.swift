@@ -60,6 +60,7 @@ struct Wck: ParsableCommand {
             Lint.self,
             Docs.self,
             API.self,
+            Identity.self,
             Imports.self,
             Shims.self,
             Safety.self,
@@ -503,6 +504,25 @@ struct API: ParsableCommand {
     }
 }
 
+struct Identity: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "identity", subcommands: [Verify.self]
+    )
+
+    struct Verify: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "verify")
+        @Flag(name: .long) var update = false
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            let context = try context()
+            try PublicIdentityAuditor(
+                repository: context.repository,
+                fileSystem: context.fileSystem
+            ).verify(update: update)
+        }
+    }
+}
+
 struct Imports: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "imports", subcommands: [Verify.self])
@@ -866,13 +886,17 @@ private func runDoccSymbolLinks(context: ToolContext) throws {
 }
 
 private func runUnitTests(context: ToolContext) throws {
+    var arguments = [
+        "test", "--no-parallel",
+        "-Xswiftc", "-Xcc",
+        "-Xswiftc", "-Wno-macro-redefined",
+        "-Xswiftc", "-warnings-as-errors",
+    ]
+    if context.runner.environment["WAYLAND_CLIENT_KIT_UNIT_COVERAGE"] == "1" {
+        arguments.append("--enable-code-coverage")
+    }
     try context.swift.runSwift(
-        [
-            "test", "--no-parallel",
-            "-Xswiftc", "-Xcc",
-            "-Xswiftc", "-Wno-macro-redefined",
-            "-Xswiftc", "-warnings-as-errors",
-        ],
+        arguments,
         repository: context.repository,
         environment: try compilerFilterEnvironment(context: context)
     )
@@ -948,6 +972,76 @@ private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) t
     }
 }
 
+private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) throws {
+    let packagePath = context.repository.url(
+        "IntegrationTests/InvalidManagedIdentityClient"
+    ).path
+    let targets = [
+        ("DiagnosticIDClient", "DiagnosticID"),
+        ("ForeignToplevelIDClient", "ForeignToplevelID"),
+        ("OutputHeadIDClient", "OutputManagementHeadID"),
+        ("OutputModeIDClient", "OutputManagementModeID"),
+        ("PointerConstraintIDClient", "PointerConstraintID"),
+        ("PointerGestureIDClient", "PointerGestureSubscriptionID"),
+        ("PresentationIdentityClient", "SurfacePresentationIdentity"),
+        ("RelativePointerIDClient", "RelativePointerSubscriptionID"),
+    ]
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "waylandclientkit-invalid-managed-identities"
+    )
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+
+    for (target, typeName) in targets {
+        let result = try context.swift.runSwift(
+            [
+                "build", "--disable-index-store", "--package-path", packagePath,
+                "--scratch-path", scratch.path, "--target", target,
+            ],
+            repository: context.repository,
+            environment: try compilerFilterEnvironment(context: context),
+            requireSuccess: false
+        )
+        guard result.exitCode != 0 else {
+            throw ToolError("managed identity client unexpectedly constructed \(typeName)")
+        }
+        let diagnostics = result.stdout + result.stderr
+        guard diagnostics.contains(typeName), diagnostics.contains("inaccessible") else {
+            throw ToolError(
+                "managed identity client failed before \(typeName) visibility was checked"
+            )
+        }
+    }
+}
+
+private func verifyMissingApplicationIdentityIsRejected(context: ToolContext) throws {
+    let packagePath = context.repository.url(
+        "IntegrationTests/InvalidApplicationIdentityClient"
+    ).path
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "waylandclientkit-invalid-application-identity"
+    )
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+
+    let result = try context.swift.runSwift(
+        [
+            "build", "--disable-index-store", "--package-path", packagePath,
+            "--scratch-path", scratch.path,
+        ],
+        repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context),
+        requireSuccess: false
+    )
+    guard result.exitCode != 0 else {
+        throw ToolError("display configuration without an application ID unexpectedly compiled")
+    }
+    let diagnostics = result.stdout + result.stderr
+    guard diagnostics.contains("applicationID"), diagnostics.contains("missing argument") else {
+        throw ToolError(
+            "invalid application identity client failed before the required argument was checked"
+        )
+    }
+}
+
 private func runSmokeLive(context: ToolContext) throws {
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
@@ -992,8 +1086,16 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
             exitCode: ToolExitCode.environment)
     }
 
-    let filters = ["WindowControlPublicRequestTests", "WindowDragSourcePublicRequestTests"]
+    let filters = [
+        "WindowControlPublicRequestTests",
+        "WindowDragSourcePublicRequestTests",
+        "SubsurfacePublicRequestTests",
+        "DesktopIntegrationPublicRequestTests",
+    ]
     var arguments = ["test"]
+    if context.runner.environment["WAYLAND_CLIENT_KIT_HEADLESS_COVERAGE"] == "1" {
+        arguments.append("--enable-code-coverage")
+    }
     var environment = requestTestEnvironment()
     switch sanitizer {
     case .none:
@@ -1121,6 +1223,10 @@ private func runLiveWaylandReleaseChecks(context: ToolContext) throws {
 
 private func runCheap(context: ToolContext) throws {
     try runLint(context: context)
+    try PublicIdentityAuditor(
+        repository: context.repository,
+        fileSystem: context.fileSystem
+    ).verify(update: false)
     try ProtocolTooling(
         repository: context.repository, runner: context.runner, diagnostics: context.diagnostics
     ).verifyGenerated()
@@ -1152,6 +1258,8 @@ private func runRequired(context: ToolContext) throws {
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
     try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
+    try verifyManagedIdentityConstructionIsRejected(context: context)
+    try verifyMissingApplicationIdentityIsRejected(context: context)
 }
 
 private func runCheckBase(context: ToolContext) throws {
@@ -1225,6 +1333,8 @@ private func requestTestEnvironment() -> [String: String] {
     [
         "WAYLAND_CLIENT_KIT_ENABLE_WINDOW_CONTROL_REQUEST_TESTS": "1",
         "WAYLAND_CLIENT_KIT_ENABLE_DND_SOURCE_REQUEST_TESTS": "1",
+        "WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS": "1",
+        "WAYLAND_CLIENT_KIT_ENABLE_DESKTOP_REQUEST_TESTS": "1",
     ]
 }
 

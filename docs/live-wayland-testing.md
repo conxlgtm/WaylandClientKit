@@ -20,6 +20,9 @@ swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer --stress-
 swift run wck smoke headless -- wck smoke live
 swift run wck smoke headless -- wck smoke integration
 swift run wck smoke headless -- wck smoke gpu-preview
+WAYLAND_CLIENT_KIT_HEADLESS_COVERAGE=1 \
+  swift run wck smoke headless -- wck test request-paths
+swift run wck coverage summarize
 swift run wck compositor evidence-summary
 swift run wck ci check
 swift run wck ci release
@@ -34,6 +37,12 @@ current compositor. It requires `WAYLAND_DISPLAY`.
 `swift run wck smoke integration` runs the external public API integration package
 against the current compositor. It requires `WAYLAND_DISPLAY` and sets
 `WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
+
+Pull requests run the ordinary product gate and a separate private-Weston gate.
+The headless gate covers connection setup, toplevel configure, SHM buffer commit,
+input-seat discovery, public request adapters, and orderly teardown. Unit and
+headless request-path coverage are reported separately so fake-backed proof is
+not confused with compositor-backed proof.
 
 `swift run wck test integration-graphics-preview` runs an external compile/test package for
 the `WaylandGraphicsPreview` product. It does not require a live compositor or a

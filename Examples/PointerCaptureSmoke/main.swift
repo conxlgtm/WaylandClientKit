@@ -11,6 +11,7 @@ enum PointerCaptureSmoke {
     static func main() async throws {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
         try await WaylandDisplay.withConnection(
+            applicationID: "org.waylandclientkit.PointerCaptureSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
                 inputEventCapacity: 256,
