@@ -1,5 +1,4 @@
 // swift-tools-version: 6.3.2
-// swiftlint:disable file_length
 import PackageDescription
 
 let librarySwiftSettings: [SwiftSetting] = [

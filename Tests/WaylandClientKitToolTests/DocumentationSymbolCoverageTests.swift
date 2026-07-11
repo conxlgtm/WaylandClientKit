@@ -9,7 +9,7 @@ struct DocumentationSymbolCoverageTests {
         let scratch = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: scratch) }
+        defer { Self.removeScratch(scratch) }
         let graph = scratch.appendingPathComponent("Example.symbols.json")
         try Self.graph(documented: true).write(to: graph, atomically: true, encoding: .utf8)
 
@@ -23,7 +23,7 @@ struct DocumentationSymbolCoverageTests {
         let scratch = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: scratch) }
+        defer { Self.removeScratch(scratch) }
         let graph = scratch.appendingPathComponent("Example.symbols.json")
         let baseline = scratch.appendingPathComponent("coverage.json")
         try Self.graph(documented: false).write(to: graph, atomically: true, encoding: .utf8)
@@ -51,5 +51,13 @@ struct DocumentationSymbolCoverageTests {
                "docComment":{"lines":[{"text":"Excluded package case."}]}}
             ]}
             """
+    }
+
+    private static func removeScratch(_ url: URL) {
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch {
+            // Temporary test directory removal is best effort.
+        }
     }
 }

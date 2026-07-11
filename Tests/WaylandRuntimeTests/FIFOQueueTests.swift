@@ -13,7 +13,7 @@ struct FIFOQueueTests {
         }
         #expect(queue.first == 2_500)
         #expect(queue.count == 500)
-        #expect(queue.count(where: { $0.isMultiple(of: 2) }) == 250)
+        #expect(queue.count { $0.isMultiple(of: 2) } == 250)
     }
 
     @Test

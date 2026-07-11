@@ -106,6 +106,7 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
 }
 
 extension WaylandSystemOperation {
+    // swiftlint:disable:next cyclomatic_complexity
     package init(_ rawOperation: RawSystemOperation) {
         switch rawOperation {
         case .validateArgument(let name):

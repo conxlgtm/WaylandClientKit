@@ -1,7 +1,9 @@
 package final class OptionalGlobalRollback {
     private var cleanup: [() -> Void] = []
 
-    package init() {}
+    package init() {
+        // Cleanup operations are registered after each successful bind.
+    }
 
     package func append(_ operation: @escaping () -> Void) {
         cleanup.append(operation)

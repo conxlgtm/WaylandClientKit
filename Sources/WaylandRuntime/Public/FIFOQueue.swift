@@ -3,7 +3,9 @@ package struct FIFOQueue<Element>: ExpressibleByArrayLiteral {
     private var storage: [Element?] = []
     private var headIndex = 0
 
-    package init() {}
+    package init() {
+        // Storage is allocated on the first append.
+    }
 
     package init(arrayLiteral elements: Element...) {
         storage = elements.map(Optional.some)
@@ -37,7 +39,7 @@ package struct FIFOQueue<Element>: ExpressibleByArrayLiteral {
     }
 
     package mutating func drain(keepingCapacity keepCapacity: Bool = false) -> [Element] {
-        let elements = Array(storage[headIndex...].compactMap { $0 })
+        let elements = Array(storage[headIndex...].compactMap(\.self))
         removeAll(keepingCapacity: keepCapacity)
         return elements
     }
@@ -47,7 +49,7 @@ package struct FIFOQueue<Element>: ExpressibleByArrayLiteral {
     ) -> [Element] {
         var retained: [Element?] = []
         var removed: [Element] = []
-        for element in storage[headIndex...].compactMap({ $0 }) {
+        for element in storage[headIndex...].compactMap(\.self) {
             if shouldRemove(element) {
                 removed.append(element)
             } else {
@@ -60,7 +62,7 @@ package struct FIFOQueue<Element>: ExpressibleByArrayLiteral {
     }
 
     package func count(where shouldCount: (Element) -> Bool) -> Int {
-        storage[headIndex...].compactMap { $0 }.count(where: shouldCount)
+        storage[headIndex...].compactMap(\.self).count(where: shouldCount)
     }
 
     private mutating func compactIfNeeded() {
