@@ -4,6 +4,12 @@ package struct SurfaceSubmitOptionalGlobals {
     package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
     package let fifoManager: OptionalFifoManager
     package let commitTimingManager: OptionalCommitTimingManager
+
+    package func destroy() {
+        commitTimingManager.destroy()
+        fifoManager.destroy()
+        linuxDrmSyncobjManager.destroy()
+    }
 }
 
 extension RawDisplayConnection {
@@ -11,26 +17,19 @@ extension RawDisplayConnection {
     package func bindSurfaceSubmitOptionalGlobalsIfPresent(
         registry reg: OpaquePointer
     ) throws -> SurfaceSubmitOptionalGlobals {
+        let rollback = OptionalGlobalRollback()
         let syncobjManager = try bindLinuxDrmSyncobjManagerIfPresent(registry: reg)
-
-        do {
-            let fifoManager = try bindFifoManagerIfPresent(registry: reg)
-            do {
-                let commitTimingManager =
-                    try bindCommitTimingManagerIfPresent(registry: reg)
-                return SurfaceSubmitOptionalGlobals(
-                    linuxDrmSyncobjManager: syncobjManager,
-                    fifoManager: fifoManager,
-                    commitTimingManager: commitTimingManager
-                )
-            } catch {
-                fifoManager.destroy()
-                throw error
-            }
-        } catch {
-            syncobjManager.destroy()
-            throw error
-        }
+        rollback.append { syncobjManager.destroy() }
+        let fifoManager = try bindFifoManagerIfPresent(registry: reg)
+        rollback.append { fifoManager.destroy() }
+        let commitTimingManager = try bindCommitTimingManagerIfPresent(registry: reg)
+        rollback.append { commitTimingManager.destroy() }
+        rollback.disarm()
+        return SurfaceSubmitOptionalGlobals(
+            linuxDrmSyncobjManager: syncobjManager,
+            fifoManager: fifoManager,
+            commitTimingManager: commitTimingManager
+        )
     }
 
     @safe
