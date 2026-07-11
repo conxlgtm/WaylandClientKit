@@ -233,6 +233,10 @@ struct ToolingConvergenceTests {
     @Test
     func exampleBuilderDiscoversExampleTargetsFromPackageManifest() throws {
         let root = try temporaryRepository()
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("Examples"),
+            withIntermediateDirectories: true
+        )
         try """
         // swift-tools-version: 6.3.2
         import PackageDescription
@@ -242,26 +246,22 @@ struct ToolingConvergenceTests {
                 .executableTarget(
                     name: "NamedSmoke",
                     dependencies: [],
-                    path: "Examples/CustomPath"
-                ),
-                .executableTarget(
-                    dependencies: [],
-                    path: "Examples/PathNamedSmoke"
+                    path: "CustomPath"
                 ),
                 .executableTarget(
                     name: "NotAnExample",
-                    path: "Sources/NotAnExample"
+                    path: "NotAnExample"
                 ),
             ]
         )
         """.write(
-            to: root.appendingPathComponent("Package.swift"),
+            to: root.appendingPathComponent("Examples/Package.swift"),
             atomically: true,
             encoding: .utf8)
 
         let targets = try ExampleBuilder.packageExampleTargets(repository: Repository(root: root))
 
-        #expect(targets == ["NamedSmoke", "PathNamedSmoke"])
+        #expect(targets == ["NamedSmoke", "NotAnExample"])
     }
 }
 

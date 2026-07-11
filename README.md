@@ -176,6 +176,10 @@ Useful first examples:
 - [OutputManagementSmoke](Examples/OutputManagementSmoke/main.swift)
 - [GPUPreviewSmokeClient](Examples/GPUPreviewSmokeClient/main.swift)
 
+Public examples live in their own Swift package. Run one with
+`swift run --package-path Examples <target>` so routine root-package builds do
+not compile every example executable.
+
 Build every example with:
 
 ```bash

@@ -176,6 +176,7 @@ let package = Package(
         ),
         .target(
             name: "WaylandExampleSupport",
+            path: "Examples/WaylandExampleSupport",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
@@ -191,24 +192,6 @@ let package = Package(
             swiftSettings: librarySwiftSettings
         ),
         .executableTarget(
-            name: "WaylandClientKitDemo",
-            dependencies: ["WaylandClient"],
-            path: "Examples/WaylandClientKitDemo",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "GPUPreviewSmokeClient",
-            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
-            path: "Examples/GPUPreviewSmokeClient",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "GraphicsPreviewManagedGPUClear",
-            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
-            path: "Examples/GraphicsPreviewManagedGPUClear",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
             name: "GraphicsPreviewExternalBufferSmoke",
             dependencies: [
                 "CEGLShims",
@@ -222,195 +205,15 @@ let package = Package(
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .executableTarget(
-            name: "GraphicsPreviewColorMetadataSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
-            path: "Examples/GraphicsPreviewColorMetadataSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "ColorManagementSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
-            path: "Examples/ColorManagementSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "OutputTopologySmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/OutputTopologySmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
             name: "OutputManagementSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/OutputManagementSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
-            name: "FrameworkHostSmoke",
-            dependencies: ["WaylandClient"],
-            path: "Examples/FrameworkHostSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "PresentationFeedbackAnimation",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/PresentationFeedbackAnimation",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "TwoWindowFrameworkHost",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/TwoWindowFrameworkHost",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "ClientSideResizeChrome",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/ClientSideResizeChrome",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "TextInputSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/TextInputSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "TabletInputSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/TabletInputSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "CompositorSessionSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/CompositorSessionSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "DataTransferSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/DataTransferSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "ToplevelDragSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/ToplevelDragSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "TwoWindowOrderStress",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/TwoWindowOrderStress",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "SerialActionsProbe",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/SerialActionsProbe",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "SessionStateSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/SessionStateSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "XDGActivationSmoke",
-            dependencies: ["WaylandClient"],
-            path: "Examples/XDGActivationSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "PointerCaptureSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/PointerCaptureSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "PointerGesturesSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/PointerGesturesSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "PointerWarpSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/PointerWarpSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "CursorAnimationSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/CursorAnimationSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "CursorPolicySmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/CursorPolicySmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "CustomCursorSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/CustomCursorSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "WindowIconSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/WindowIconSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "IdleInhibitSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/IdleInhibitSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "DialogSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/DialogSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "KeyboardShortcutsInhibitSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/KeyboardShortcutsInhibitSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "ForeignToplevelListSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/ForeignToplevelListSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "SystemBellSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/SystemBellSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "SurfaceRegionSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/SurfaceRegionSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "DamageRegionSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/DamageRegionSmoke",
-            swiftSettings: executableSwiftSettings
-        ),
-        .executableTarget(
-            name: "SubsurfaceSmoke",
-            dependencies: ["WaylandClient", "WaylandExampleSupport"],
-            path: "Examples/SubsurfaceSmoke",
+            name: "GraphicsPreviewManagedGPUClear",
+            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
+            path: "Examples/GraphicsPreviewManagedGPUClear",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
@@ -489,11 +292,6 @@ let package = Package(
         .testTarget(
             name: "WaylandSmokeSupportTests",
             dependencies: ["WaylandSmokeSupport"],
-            swiftSettings: strictMemorySafetySwiftSettings
-        ),
-        .testTarget(
-            name: "WaylandExampleSupportTests",
-            dependencies: ["WaylandExampleSupport"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(

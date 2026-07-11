@@ -32,27 +32,27 @@ swift run wck smoke headless -- wck smoke gpu-preview
 Run the manual interaction probes:
 
 ```bash
-swift run ClientSideResizeChrome
-swift run SerialActionsProbe
-swift run XDGActivationSmoke
-swift run PointerCaptureSmoke
-swift run PointerWarpSmoke -- --auto-close --print-summary
-swift run CursorPolicySmoke
-swift run CursorAnimationSmoke -- --auto-close --print-summary
+swift run --package-path Examples ClientSideResizeChrome
+swift run --package-path Examples SerialActionsProbe
+swift run --package-path Examples XDGActivationSmoke
+swift run --package-path Examples PointerCaptureSmoke
+swift run --package-path Examples PointerWarpSmoke -- --auto-close --print-summary
+swift run --package-path Examples CursorPolicySmoke
+swift run --package-path Examples CursorAnimationSmoke -- --auto-close --print-summary
 swift run GraphicsPreviewManagedGPUClear
 ```
 
 Run bounded examples when a compositor session is available:
 
 ```bash
-swift run TwoWindowFrameworkHost -- --auto-close --print-summary
-swift run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
-swift run TextInputSmoke -- --auto-close --print-summary
-swift run TabletInputSmoke -- --auto-close --print-summary
-swift run CompositorSessionSmoke -- --auto-close --print-summary
-swift run DataTransferSmoke -- --auto-close --print-summary
-swift run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
-swift run GPUPreviewSmokeClient
+swift run --package-path Examples TwoWindowFrameworkHost -- --auto-close --print-summary
+swift run --package-path Examples TwoWindowOrderStress -- --duration-seconds 3 --print-summary
+swift run --package-path Examples TextInputSmoke -- --auto-close --print-summary
+swift run --package-path Examples TabletInputSmoke -- --auto-close --print-summary
+swift run --package-path Examples CompositorSessionSmoke -- --auto-close --print-summary
+swift run --package-path Examples DataTransferSmoke -- --auto-close --print-summary
+swift run --package-path Examples PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
+swift run --package-path Examples GPUPreviewSmokeClient
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
 ```
 

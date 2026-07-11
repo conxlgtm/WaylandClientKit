@@ -65,7 +65,7 @@ Under a real Wayland session, also run:
 ```bash
 swift run wck smoke live
 swift run wck smoke integration
-swift run WaylandClientKitDemo
+swift run --package-path Examples WaylandClientKitDemo
 ```
 
 For a private headless Weston compositor, run:

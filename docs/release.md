@@ -122,7 +122,7 @@ swift run wck smoke live
 swift run wck smoke integration
 swift run wck smoke gpu-preview
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
-swift run WaylandClientKitDemo
+swift run --package-path Examples WaylandClientKitDemo
 ```
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
@@ -139,7 +139,7 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 6. Run `swift run wck smoke live` under a Wayland session.
 7. Run `swift run wck smoke integration` under a Wayland session.
 8. Run `swift run wck smoke gpu-preview` under a Wayland session.
-9. Manually run `swift run WaylandClientKitDemo` on at least one non-Weston desktop
+9. Manually run `swift run --package-path Examples WaylandClientKitDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
 10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
 11. Run `swift run wck compositor evidence-summary` and review missing evidence.
