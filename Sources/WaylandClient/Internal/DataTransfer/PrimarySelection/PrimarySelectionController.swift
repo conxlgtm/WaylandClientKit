@@ -1,6 +1,7 @@
 // swiftlint:disable file_length
 
 import WaylandRaw
+import WaylandRuntime
 
 package final class PrimarySelectionController {
     package let backend: any PrimarySelectionControllerBackend
@@ -11,7 +12,7 @@ package final class PrimarySelectionController {
     private var selectionBySeat: [SeatID: PrimarySelectionSelectionState] = [:]
     private var sourcesByID: [DataSourceID: RuntimePrimarySelectionSource] = [:]
     var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
-    private var pendingCallbackFailures: [DataTransferCallbackFailure] = []
+    private var pendingCallbackFailures: FIFOQueue<DataTransferCallbackFailure> = []
     private var offerIDs = IDGenerator<DataOfferID>()
     private var sourceIDs = IDGenerator<DataSourceID>()
 
@@ -186,9 +187,8 @@ package final class PrimarySelectionController {
 
     package func throwPendingCallbackErrorIfAny() throws {
         backend.preconditionIsOwnerThread()
-        guard !pendingCallbackFailures.isEmpty else { return }
-
-        throw pendingCallbackFailures.removeFirst()
+        guard let failure = pendingCallbackFailures.popFirst() else { return }
+        throw failure
     }
 }
 
