@@ -224,10 +224,10 @@ struct WaylandDisplayPublicAPISurfaceTests {
 struct WaylandPresentationAPISurfaceTests {
     @Test
     func presentationFeedbackTypesCompileForExternalClients() throws {
-        let timestamp = PresentationTimestamp(seconds: 12, nanoseconds: 345)
+        let timestamp: PresentationTimestamp? = nil
         let sequence = PresentationSequence(value: 99)
         let flags: PresentationFeedbackFlags = [.vsync, .hardwareClock]
-        #expect(timestamp.seconds == 12)
+        #expect(timestamp == nil)
         #expect(sequence.value == 99)
         #expect(flags.contains(.vsync))
 

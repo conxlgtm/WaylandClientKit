@@ -633,19 +633,6 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     public init(
         fileDescriptor planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
-        stride planeStride: UInt32
-    ) throws {
-        try self.init(
-            fd: planeFileDescriptor,
-            offset: planeOffset,
-            stride: planeStride,
-            planeIndex: 0
-        )
-    }
-
-    public init(
-        fileDescriptor planeFileDescriptor: consuming OwnedFileDescriptor,
-        offset planeOffset: UInt32,
         stride planeStride: UInt32,
         planeIndex planeIndexValue: UInt32 = 0
     ) throws {
@@ -1556,8 +1543,8 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     ///
     /// After a failed external release result, await this method before destroying
     /// the renderer allocation. Repeated and concurrent calls join the same cleanup.
-    public func close() async throws {
-        try await storage.close()
+    public func close() async {
+        await storage.close()
     }
 }
 

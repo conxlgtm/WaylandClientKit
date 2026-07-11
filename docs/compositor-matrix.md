@@ -34,22 +34,22 @@ summarizing the result in the main matrix.
 For an interactive checklist grouped by feature, run:
 
 ```bash
-swift run ClientSideResizeChrome
-swift run SerialActionsProbe
-swift run TwoWindowFrameworkHost -- --auto-close --print-summary
-swift run CursorAnimationSmoke -- --auto-close --print-summary
-swift run PointerWarpSmoke -- --auto-close --print-summary
-swift run TabletInputSmoke -- --auto-close --print-summary
-swift run CompositorSessionSmoke -- --auto-close --print-summary
-swift run TextInputSmoke -- --auto-close --print-summary
-swift run OutputTopologySmoke -- --auto-close --print-summary
-swift run GPUPreviewSmokeClient
-swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
+swift run --package-path Examples ClientSideResizeChrome
+swift run --package-path Examples SerialActionsProbe
+swift run --package-path Examples TwoWindowFrameworkHost -- --auto-close --print-summary
+swift run --package-path Examples CursorAnimationSmoke -- --auto-close --print-summary
+swift run --package-path Examples PointerWarpSmoke -- --auto-close --print-summary
+swift run --package-path Examples TabletInputSmoke -- --auto-close --print-summary
+swift run --package-path Examples CompositorSessionSmoke -- --auto-close --print-summary
+swift run --package-path Examples TextInputSmoke -- --auto-close --print-summary
+swift run --package-path Examples OutputTopologySmoke -- --auto-close --print-summary
+swift run --package-path Examples GPUPreviewSmokeClient
+swift run --package-path Examples GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 swift run GraphicsPreviewExternalBufferSmoke -- --probe
 swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer --stress-frames 120
-swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
-swift run ColorManagementSmoke
+swift run --package-path Examples GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
+swift run --package-path Examples ColorManagementSmoke
 ```
 
 Smoke examples should print matrix-friendly lines such as `feature`,
@@ -126,7 +126,7 @@ same-registration reuse smoke update before claiming sustained reuse evidence.
 | Hyprland / wlroots-family | Hyprland 0.55.2, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
 
 KDE/KWin manual interaction addendum on 2026-06-11:
-`swift run PointerCaptureSmoke` passed manual pointer-lock, pointer-confine, and
+`swift run --package-path Examples PointerCaptureSmoke` passed manual pointer-lock, pointer-confine, and
 relative-motion proof across two runs. The lock run logged `relative pointer
 auto-subscribed`, `lock requested id=locked-pointer-1 seat=seat-10`,
 `activated(locked-pointer-1)`, sustained `relative motion` events,
@@ -139,14 +139,14 @@ id=confined-pointer-1 seat=seat-10`, `activated(confined-pointer-1)`, 3108
 was already active, `inactivePersistent(confined-pointer-1)`, `result: pass`,
 and `cleanup: pass`.
 
-`swift run SerialActionsProbe` passed a manual subset for live button serials.
+`swift run --package-path Examples SerialActionsProbe` passed a manual subset for live button serials.
 The run logged live `seat=seat-10` pointer serials, 94 `action=move` attempts,
 6 `action=window-menu` attempts, pointer locations, configure snapshots, and
 `threw=false` request results. It did not log `action=resize` or `action=drag`,
 but later manual runs covered serial resize in `GraphicsPreviewManagedGPUClear`
 and drag-source serials in `DataTransferSmoke`.
 
-`swift run DataTransferSmoke` passed the manual drag-source/drop path after
+`swift run --package-path Examples DataTransferSmoke` passed the manual drag-source/drop path after
 WaylandClientKit was fixed to tolerate empty data-source MIME callbacks from KDE.
 The rerun logged `operation: start-drag-source pass`, `drag source started`,
 target `mime=none`, negotiated `text/plain;charset=utf-8`, `action=copy`, 165
@@ -252,13 +252,13 @@ resource setup and frame submission.
 
 KDE/KWin graphics preview addendum on 2026-06-13:
 
-- `swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo`
+- `swift run --package-path Examples GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo`
   produced `explicit sync: advertised v1, runtime active`, `fifo: active`,
   `backing: gpu active`, `fallback reason: none`, and `failure: none`.
-- `swift run GPUPreviewSmokeClient -- --sync require-explicit` produced
+- `swift run --package-path Examples GPUPreviewSmokeClient -- --sync require-explicit` produced
   `explicit sync: advertised v1, runtime active`, `backing: gpu active`,
   `fallback reason: none`, and `failure: none`.
-- `swift run GPUPreviewSmokeClient -- --pacing commit-timing` produced
+- `swift run --package-path Examples GPUPreviewSmokeClient -- --pacing commit-timing` produced
   `commit timing: fallback(commitTimingUnavailable)` with active GPU backing.
   `wayland-info` did not advertise `wp_commit_timing_manager_v1` in this
   session.

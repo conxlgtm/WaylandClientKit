@@ -46,7 +46,7 @@ struct WaylandTinyUIPrototypeTests {
             }
 
             #expect(result.operation == .show || result.operation == .redraw)
-            try await backing.close()
+            await backing.close()
         }
 
         _ = render

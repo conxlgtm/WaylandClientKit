@@ -18,23 +18,17 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case foreignToplevelListIncomplete
     case outputManagementUnavailable
     case outputManagementIncomplete
-    case foreignDragSource(DragSourceIdentity)
-    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)
     case unknownToplevelDrag(ToplevelDragID)
-    case foreignToplevelDrag(ToplevelDragID)
     case toplevelDragStillActive(ToplevelDragID)
     case idleInhibitUnavailable
     case keyboardShortcutsInhibitUnavailable
     case systemBellUnavailable
     case unknownIdleInhibitor(IdleInhibitorID)
-    case foreignIdleInhibitor(IdleInhibitorID)
     case invalidDialogParent(child: WindowID, parent: WindowID)
     case dialogAlreadyExists(WindowID)
     case unknownWindowDialog(WindowDialogID)
-    case foreignWindowDialog(WindowDialogID)
     case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)
     case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)
-    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)
     case emptyWindowIconName
     case windowIconNameContainsNUL
     case nonSquareWindowIconImage(width: Int32, height: Int32)
@@ -80,14 +74,8 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "wlr-output-management protocol is unavailable"
         case .outputManagementIncomplete:
             "wlr-output-management done or finished lifecycle was incomplete"
-        case .foreignDragSource(let sourceID):
-            "drag source belongs to another display: \(sourceID)"
-        case .dragSourceSeatMismatch(let sourceID, let expected, let actual):
-            "drag source \(sourceID) is on seat \(actual), expected \(expected)"
         case .unknownToplevelDrag(let dragID):
             "unknown toplevel drag: \(dragID)"
-        case .foreignToplevelDrag(let dragID):
-            "toplevel drag belongs to another display: \(dragID)"
         case .toplevelDragStillActive(let dragID):
             "toplevel drag is still active: \(dragID)"
         case .idleInhibitUnavailable:
@@ -98,22 +86,16 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "xdg-system-bell protocol is unavailable"
         case .unknownIdleInhibitor(let inhibitorID):
             "unknown idle inhibitor: \(inhibitorID)"
-        case .foreignIdleInhibitor(let inhibitorID):
-            "idle inhibitor belongs to another display: \(inhibitorID)"
         case .invalidDialogParent(let child, let parent):
             "window \(child) cannot use \(parent) as its dialog parent"
         case .dialogAlreadyExists(let windowID):
             "window already has an xdg-dialog object: \(windowID)"
         case .unknownWindowDialog(let dialogID):
             "unknown window dialog: \(dialogID)"
-        case .foreignWindowDialog(let dialogID):
-            "window dialog belongs to another display: \(dialogID)"
         case .keyboardShortcutsAlreadyInhibited(let windowID, let seatID):
             "keyboard shortcuts are already inhibited for window \(windowID) on seat \(seatID)"
         case .unknownKeyboardShortcutsInhibitor(let inhibitorID):
             "unknown keyboard shortcuts inhibitor: \(inhibitorID)"
-        case .foreignKeyboardShortcutsInhibitor(let inhibitorID):
-            "keyboard shortcuts inhibitor belongs to another display: \(inhibitorID)"
         case .emptyWindowIconName:
             "window icon name must not be empty"
         case .windowIconNameContainsNUL:

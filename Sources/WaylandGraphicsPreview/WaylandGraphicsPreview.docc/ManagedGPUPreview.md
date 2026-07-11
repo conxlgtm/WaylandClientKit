@@ -66,14 +66,14 @@ Unsupported or unavailable requirements are reported as typed
 ## Evidence
 
 Managed GPU support is compositor-sensitive. Use
-`swift run GPUPreviewSmokeClient` or `swift run GraphicsPreviewManagedGPUClear`
+`swift run --package-path Examples GPUPreviewSmokeClient` or `swift run GraphicsPreviewManagedGPUClear`
 under a real compositor and record the printed runtime path in
 `docs/compositor-matrix.md`.
 
 Examples:
 
 ```bash
-swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
+swift run --package-path Examples GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 ```
 

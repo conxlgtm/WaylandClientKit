@@ -1,5 +1,6 @@
 import Foundation
 import WaylandRaw
+import WaylandRuntime
 
 typealias RuntimeDataOfferHandleIndexEntry = (
     handle: RawDataOfferHandle,
@@ -135,7 +136,7 @@ struct DataTransferStore {
     private var detachedSourceSendIDs: Set<DataSourceID> = []
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var runtimeOffersByID: [DataOfferID: RuntimeDataOffer] = [:]
-    private var pendingCallbackFailures: [DataTransferCallbackFailure] = []
+    private var pendingCallbackFailures: FIFOQueue<DataTransferCallbackFailure> = []
 
     var boundSeatIDs: Set<SeatID> {
         Set(deviceBindings.keys)
@@ -383,7 +384,7 @@ struct DataTransferStore {
             return nil
         }
 
-        return pendingCallbackFailures.removeFirst()
+        return pendingCallbackFailures.popFirst()
     }
 
     mutating func discardCallbackFailures() {

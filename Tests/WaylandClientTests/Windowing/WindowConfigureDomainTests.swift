@@ -144,7 +144,7 @@ struct WindowConfigureDomainTests {
     @Test
     func waylandStringRejectsInteriorNUL() {
         #expect(
-            throws: ClientError.invalidWindowConfiguration(.interiorNUL(field: "WaylandString"))
+            throws: DomainValueError.interiorNUL(type: "WaylandString")
         ) {
             _ = try WaylandString("visible\0hidden")
         }
@@ -153,16 +153,12 @@ struct WindowConfigureDomainTests {
     @Test
     func nonEmptyWaylandStringRejectsEmptyAndInteriorNUL() {
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                .emptyString(field: "NonEmptyWaylandString")
-            )
+            throws: DomainValueError.emptyString(type: "NonEmptyWaylandString")
         ) {
             _ = try NonEmptyWaylandString("")
         }
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                .interiorNUL(field: "NonEmptyWaylandString")
-            )
+            throws: DomainValueError.interiorNUL(type: "NonEmptyWaylandString")
         ) {
             _ = try NonEmptyWaylandString("visible\0hidden")
         }

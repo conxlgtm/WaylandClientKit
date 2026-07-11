@@ -11,7 +11,7 @@ then be wrapped only where that improves ergonomics.
 `swift run wck ...` owns maintainer workflows: bootstrap checks, formatting,
 linting, protocol generation and verification, DocC verification, public API
 verification, identity visibility verification, shim checks, unsafe-token checks,
-example builds, smoke tests,
+symbol-level documentation coverage, example builds, smoke tests,
 coverage summaries, compositor evidence summaries, and CI/release gates.
 
 ### SwiftPM Plugins
@@ -79,7 +79,9 @@ tool-only targets.
 dependency-boundary, import-boundary, public identity visibility, and unsafe-token checks. It is a fast
 signal and does not prove that the library products compile.
 
-`swift run wck ci required` verifies the compiler-derived public API baseline,
+`swift run wck ci required` verifies the compiler-derived public API baseline
+and prevents the documented share of public types, methods, initializers, and
+enum cases from falling below `docs/documentation-symbol-coverage.json`,
 performs the strict-concurrency build, runs unit tests, and builds and tests all
 four external integration packages. It also builds an expected-failure graphics
 client and verifies that the removed split presentation/fallback initializer is

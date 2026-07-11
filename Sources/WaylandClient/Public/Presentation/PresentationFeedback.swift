@@ -2,7 +2,7 @@ public struct PresentationTimestamp: Equatable, Sendable {
     public let seconds: UInt64
     public let nanoseconds: UInt32
 
-    public init(seconds timestampSeconds: UInt64, nanoseconds timestampNanoseconds: UInt32) {
+    package init(seconds timestampSeconds: UInt64, nanoseconds timestampNanoseconds: UInt32) {
         seconds = timestampSeconds
         nanoseconds = timestampNanoseconds
     }

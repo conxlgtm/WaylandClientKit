@@ -5,133 +5,42 @@ import Testing
 @Suite
 struct EventStreamConfigurationTests {
     @Test
-    func eventStreamConfigurationRejectsInvalidCapacities() {
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .displayEventCapacity,
-                value: 0
-            )
-        ) {
-            _ = try EventStreamConfiguration(displayEventCapacity: 0)
-        }
-
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .inputEventCapacity,
-                value: 0
-            )
-        ) {
-            _ = try EventStreamConfiguration(inputEventCapacity: 0)
-        }
-
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .dataTransferEventCapacity,
-                value: 0
-            )
-        ) {
-            _ = try EventStreamConfiguration(dataTransferEventCapacity: 0)
-        }
-
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .textInputEventCapacity,
-                value: 0
-            )
-        ) {
-            _ = try EventStreamConfiguration(textInputEventCapacity: 0)
-        }
-
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .presentationEventCapacity,
-                value: 0
-            )
-        ) {
-            _ = try EventStreamConfiguration(presentationEventCapacity: 0)
+    func positiveIntRejectsInvalidCapacity() {
+        #expect(throws: DomainValueError.nonPositiveInt(0)) {
+            _ = try PositiveInt(0)
         }
     }
 
     @Test
-    func inputPipelineConfigurationRejectsInvalidCapacities() {
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .rawInputQueueCapacity,
-                value: 0
-            )
-        ) {
-            _ = try InputPipelineConfiguration(rawInputQueueCapacity: 0)
-        }
+    func configurationsUseOneCapacityDomainValue() throws {
+        let minimum = try PositiveInt(1)
+        let eventStreams = EventStreamConfiguration(
+            displayEventCapacity: minimum,
+            inputEventCapacity: minimum,
+            textInputEventCapacity: minimum,
+            dataTransferEventCapacity: minimum,
+            presentationEventCapacity: minimum
+        )
+        let inputPipeline = InputPipelineConfiguration(
+            motionCoalescing: [.pointerMotion],
+            rawInputQueueCapacity: minimum,
+            pendingInputEventCapacity: minimum
+        )
+        let diagnostics = DiagnosticsConfiguration(capacity: minimum)
 
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .pendingInputEventCapacity,
-                value: 0
-            )
-        ) {
-            _ = try InputPipelineConfiguration(pendingInputEventCapacity: 0)
-        }
+        #expect(eventStreams.displayEventCapacity == minimum)
+        #expect(eventStreams.inputEventCapacity == minimum)
+        #expect(eventStreams.textInputEventCapacity == minimum)
+        #expect(eventStreams.dataTransferEventCapacity == minimum)
+        #expect(eventStreams.presentationEventCapacity == minimum)
+        #expect(inputPipeline.rawInputQueueCapacity == minimum)
+        #expect(inputPipeline.pendingInputEventCapacity == minimum)
+        #expect(inputPipeline.motionCoalescing == [.pointerMotion])
+        #expect(diagnostics.capacity == minimum)
     }
 
     @Test
-    func diagnosticsConfigurationRejectsInvalidCapacity() {
-        #expect(
-            throws: DisplayConfigurationError.nonPositiveCapacity(
-                field: .diagnosticsCapacity,
-                value: 0
-            )
-        ) {
-            _ = try DiagnosticsConfiguration(capacity: 0)
-        }
-    }
-
-    @Test
-    func eventStreamConfigurationAcceptsMinimumValidCapacities() throws {
-        let eventStreams = try EventStreamConfiguration(
-            displayEventCapacity: 1,
-            inputEventCapacity: 1,
-            textInputEventCapacity: 1,
-            dataTransferEventCapacity: 1,
-            presentationEventCapacity: 1
-        )
-        #expect(
-            eventStreams.displayEventCapacity
-                == (try EventStreamCapacity(1, field: .displayEventCapacity))
-        )
-        #expect(
-            eventStreams.inputEventCapacity
-                == (try EventStreamCapacity(1, field: .inputEventCapacity))
-        )
-        #expect(
-            eventStreams.dataTransferEventCapacity
-                == (try EventStreamCapacity(1, field: .dataTransferEventCapacity))
-        )
-        #expect(
-            eventStreams.textInputEventCapacity
-                == (try EventStreamCapacity(1, field: .textInputEventCapacity))
-        )
-        #expect(
-            eventStreams.presentationEventCapacity
-                == (try EventStreamCapacity(1, field: .presentationEventCapacity))
-        )
-    }
-
-    @Test
-    func inputPipelineAndDiagnosticsAcceptMinimumValidCapacities() throws {
-        let inputPipeline = try InputPipelineConfiguration(
-            rawInputQueueCapacity: 1,
-            pendingInputEventCapacity: 1
-        )
-        let diagnostics = try DiagnosticsConfiguration(capacity: 1)
-
-        #expect(
-            inputPipeline.rawInputQueueCapacity
-                == (try InputQueueCapacity(1, field: .rawInputQueueCapacity))
-        )
-        #expect(
-            inputPipeline.pendingInputEventCapacity
-                == (try InputQueueCapacity(1, field: .pendingInputEventCapacity))
-        )
-        #expect(diagnostics.capacity == (try DiagnosticsCapacity(1)))
+    func inputPipelineDefaultsToAllMotionCoalescing() {
+        #expect(InputPipelineConfiguration().motionCoalescing == .all)
     }
 }

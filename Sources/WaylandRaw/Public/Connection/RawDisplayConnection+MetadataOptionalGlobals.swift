@@ -21,41 +21,26 @@ extension RawDisplayConnection {
     package func bindSurfaceMetadataOptionalGlobalsIfPresent(
         registry reg: OpaquePointer
     ) throws -> SurfaceMetadataOptionalGlobals {
+        let rollback = OptionalGlobalRollback()
         let contentTypeManager = try bindContentTypeManagerIfPresent(registry: reg)
-
-        do {
-            let alphaModifierManager = try bindAlphaModifierManagerIfPresent(registry: reg)
-            do {
-                let tearingControlManager =
-                    try bindTearingControlManagerIfPresent(registry: reg)
-                do {
-                    let colorRepresentationManager =
-                        try bindColorRepresentationManagerIfPresent(registry: reg)
-                    do {
-                        let colorManager = try bindColorManagerIfPresent(registry: reg)
-                        return SurfaceMetadataOptionalGlobals(
-                            contentTypeManager: contentTypeManager,
-                            alphaModifierManager: alphaModifierManager,
-                            tearingControlManager: tearingControlManager,
-                            colorRepresentationManager: colorRepresentationManager,
-                            colorManager: colorManager
-                        )
-                    } catch {
-                        colorRepresentationManager.destroy()
-                        throw error
-                    }
-                } catch {
-                    tearingControlManager.destroy()
-                    throw error
-                }
-            } catch {
-                alphaModifierManager.destroy()
-                throw error
-            }
-        } catch {
-            contentTypeManager.destroy()
-            throw error
-        }
+        rollback.append { contentTypeManager.destroy() }
+        let alphaModifierManager = try bindAlphaModifierManagerIfPresent(registry: reg)
+        rollback.append { alphaModifierManager.destroy() }
+        let tearingControlManager = try bindTearingControlManagerIfPresent(registry: reg)
+        rollback.append { tearingControlManager.destroy() }
+        let colorRepresentationManager =
+            try bindColorRepresentationManagerIfPresent(registry: reg)
+        rollback.append { colorRepresentationManager.destroy() }
+        let colorManager = try bindColorManagerIfPresent(registry: reg)
+        rollback.append { colorManager.destroy() }
+        rollback.disarm()
+        return SurfaceMetadataOptionalGlobals(
+            contentTypeManager: contentTypeManager,
+            alphaModifierManager: alphaModifierManager,
+            tearingControlManager: tearingControlManager,
+            colorRepresentationManager: colorRepresentationManager,
+            colorManager: colorManager
+        )
     }
 
     @safe

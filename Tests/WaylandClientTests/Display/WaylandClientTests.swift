@@ -63,9 +63,7 @@ struct WaylandClientTests {
         #expect(configuration.applicationID.value == "org.example.App")
 
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                .emptyString(field: "NonEmptyWaylandString")
-            )
+            throws: DomainValueError.emptyString(type: "NonEmptyWaylandString")
         ) {
             _ = try DisplayConfiguration(applicationID: "")
         }

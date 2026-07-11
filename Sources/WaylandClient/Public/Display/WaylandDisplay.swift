@@ -279,9 +279,10 @@ public actor WaylandDisplay {
                 capacity: RawInputQueueCapacity(
                     unchecked: displayConfiguration.inputPipeline.rawInputQueueCapacity.rawValue
                 ),
-                pointerMotionCoalescing: displayConfiguration
-                    .inputPipeline.pointerMotionCoalescing,
-                touchMotionCoalescing: displayConfiguration.inputPipeline.touchMotionCoalescing
+                pointerMotionCoalescing: displayConfiguration.inputPipeline.motionCoalescing
+                    .contains(.pointerMotion),
+                touchMotionCoalescing: displayConfiguration.inputPipeline.motionCoalescing
+                    .contains(.touchMotion)
             )
         )
         try connection.completeInitialDiscovery(timeoutMilliseconds: discoveryTimeoutMilliseconds)

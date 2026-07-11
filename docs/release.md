@@ -42,7 +42,7 @@ Where the environment supports Swift sanitizers, also run:
 
 ```bash
 swift run wck test tsan
-ASAN_OPTIONS=detect_leaks=0 swift run wck test asan
+swift run wck test asan
 swift run wck smoke headless -- wck test request-paths
 swift run wck smoke headless -- wck test request-paths-tsan
 swift run wck smoke headless -- wck test request-paths-asan
@@ -51,12 +51,11 @@ swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
-with `detect_leaks=0` is the required ASan gate. LeakSanitizer remains a
-separate informational check because it can exit with a ptrace-related fatal
-error even after the Swift test process reports passing tests, record that as
-an environment limitation rather than a test failure. To attempt the
-LeakSanitizer path explicitly, run `swift run wck test asan` without setting
-`ASAN_OPTIONS=detect_leaks=0`. The TSan target uses
+runs with `detect_leaks=0` in both unit and headless request paths. This gate
+proves address safety, not process-exit leak freedom. LeakSanitizer remains a
+separate informational check because Swift and XCTest runtime allocations vary
+by host. To attempt it explicitly, override `ASAN_OPTIONS` and run
+`swift test --sanitize=address --no-parallel`. The TSan target uses
 `safety/tsan-suppressions.txt` only for known Swift runtime
 metadata-cache, Swift Testing event graph, and libdispatch continuation
 allocator reports. It also disables TSan's deadlock detector because Swift
@@ -122,7 +121,7 @@ swift run wck smoke live
 swift run wck smoke integration
 swift run wck smoke gpu-preview
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
-swift run WaylandClientKitDemo
+swift run --package-path Examples WaylandClientKitDemo
 ```
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
@@ -139,7 +138,7 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 6. Run `swift run wck smoke live` under a Wayland session.
 7. Run `swift run wck smoke integration` under a Wayland session.
 8. Run `swift run wck smoke gpu-preview` under a Wayland session.
-9. Manually run `swift run WaylandClientKitDemo` on at least one non-Weston desktop
+9. Manually run `swift run --package-path Examples WaylandClientKitDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
 10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
 11. Run `swift run wck compositor evidence-summary` and review missing evidence.

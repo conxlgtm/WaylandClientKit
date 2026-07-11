@@ -214,15 +214,7 @@ public struct ToplevelDrag: Sendable, Hashable, Identifiable {
         ownership = DisplayOwnedIdentity(id: dragID, display: owningDisplay)
     }
 
-    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
-        ownership.isOwned(by: owningDisplay)
-    }
-
     public func destroy() async throws {
-        guard isOwned(by: display) else {
-            throw ClientError.display(.foreignToplevelDrag(id))
-        }
-
         try await display.destroyToplevelDrag(id)
     }
 

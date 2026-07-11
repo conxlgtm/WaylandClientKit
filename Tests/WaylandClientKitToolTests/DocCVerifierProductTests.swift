@@ -21,7 +21,7 @@ struct DocCVerifierProductTests {
             #expect(error.message.contains("WaylandGraphicsPreview"))
             #expect(
                 error.message.contains(
-                    "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc"
+                    "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc"
                 )
             )
         }

@@ -63,7 +63,7 @@ enum GPUPreviewSmokeClient {
                     }
                 }
 
-                try await backing.close()
+                await backing.close()
                 return report
             }
             exitCode = report.failure == nil ? EXIT_SUCCESS : EXIT_FAILURE

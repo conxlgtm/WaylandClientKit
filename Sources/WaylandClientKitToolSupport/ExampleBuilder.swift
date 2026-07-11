@@ -40,6 +40,12 @@ public struct ExampleBuilder {
         "XDGActivationSmoke",
     ]
 
+    private static let rootPackageTargets: Set<String> = [
+        "GraphicsPreviewExternalBufferSmoke",
+        "GraphicsPreviewManagedGPUClear",
+        "OutputManagementSmoke",
+    ]
+
     public let context: ToolContext
 
     public init(context: ToolContext) {
@@ -53,9 +59,14 @@ public struct ExampleBuilder {
             "example live execution is skipped by this build gate; examples are build-checked only")
         for configuration in configurations {
             for target in Self.targets {
+                let packageArguments =
+                    Self.rootPackageTargets.contains(target)
+                    ? []
+                    : ["--package-path", "Examples"]
                 try context.swift.runSwift(
                     [
-                        "build",
+                        "build"
+                    ] + packageArguments + [
                         "--disable-index-store",
                         "-c",
                         configuration,
@@ -112,10 +123,9 @@ public struct ExampleBuilder {
         repository: Repository,
         fileSystem: FileSystem = LocalFileSystem()
     ) throws -> Set<String> {
-        let packageText = try fileSystem.readText(repository.url("Package.swift"))
+        let packageText = try fileSystem.readText(repository.url("Examples/Package.swift"))
         let executableTargetPattern =
-            #"\.executableTarget\(\s*(?:name:\s*"([^"]+)",\s*)?"#
-            + #"[^)]*path:\s*"Examples/([^"]+)""#
+            #"\.executableTarget\(\s*name:\s*"([^"]+)"[\s\S]*?path:\s*"([^"]+)""#
         let regex = try NSRegularExpression(
             pattern: executableTargetPattern,
             options: [.dotMatchesLineSeparators]
@@ -123,13 +133,10 @@ public struct ExampleBuilder {
         let range = NSRange(packageText.startIndex..<packageText.endIndex, in: packageText)
         return Set(
             regex.matches(in: packageText, range: range).compactMap { match in
-                if let nameRange = Range(match.range(at: 1), in: packageText) {
-                    return String(packageText[nameRange])
-                }
-                guard let pathRange = Range(match.range(at: 2), in: packageText) else {
+                guard let nameRange = Range(match.range(at: 1), in: packageText) else {
                     return nil
                 }
-                return URL(fileURLWithPath: String(packageText[pathRange])).lastPathComponent
+                return String(packageText[nameRange])
             })
     }
 
@@ -137,7 +144,7 @@ public struct ExampleBuilder {
         let packageTargets = try Self.packageExampleTargets(
             repository: context.repository,
             fileSystem: context.fileSystem)
-        let checklistTargets = Set(Self.targets)
+        let checklistTargets = Set(Self.targets).subtracting(Self.rootPackageTargets)
         let missing = packageTargets.subtracting(checklistTargets).sorted()
         let extra = checklistTargets.subtracting(packageTargets).sorted()
         guard missing.isEmpty, extra.isEmpty else {
@@ -151,7 +158,7 @@ public struct ExampleBuilder {
             if !extra.isEmpty {
                 let extraTargets = extra.joined(separator: ", ")
                 failures.append(
-                    "Example build checklist targets missing from Package.swift: "
+                    "Example build checklist targets missing from Examples/Package.swift: "
                         + "\(extraTargets)")
             }
             throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)

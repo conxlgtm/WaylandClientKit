@@ -48,12 +48,12 @@
 /Sources/WaylandClient/Public/ @conxlgtm
 /Sources/WaylandClient/WaylandClient.docc/ @conxlgtm
 /Sources/WaylandCursor/ @conxlgtm
-/Sources/WaylandExampleSupport/ @conxlgtm
+/Examples/WaylandExampleSupport/ @conxlgtm
 /Sources/WaylandGPUPreview/ @conxlgtm
+/Sources/WaylandGraphicsCore/ @conxlgtm
 /Sources/WaylandGraphicsPreview/ @conxlgtm
-/Sources/WaylandGraphicsPreviewAPI/ @conxlgtm
-/Sources/WaylandGraphicsPreviewAPI/Public/ @conxlgtm
-/Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ @conxlgtm
+/Sources/WaylandGraphicsPreview/Public/ @conxlgtm
+/Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/ @conxlgtm
 /Sources/WaylandKeyboard/ @conxlgtm
 /Sources/WaylandRaw/ @conxlgtm
 /Sources/WaylandRaw/Public/ @conxlgtm

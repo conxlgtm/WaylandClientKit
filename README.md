@@ -159,7 +159,7 @@ details.
 - [Protocol Generation](docs/generation.md)
 - [Tooling](docs/tooling.md)
 - [WaylandClient DocC](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md)
-- [WaylandGraphicsPreview DocC](Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md)
+- [WaylandGraphicsPreview DocC](Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md)
 - [Compatibility Policy](docs/compatibility-policy.md)
 - [Versioning](docs/versioning.md)
 - [Release Checklist](docs/release.md)
@@ -175,6 +175,10 @@ Useful first examples:
 - [PresentationFeedbackAnimation](Examples/PresentationFeedbackAnimation/main.swift)
 - [OutputManagementSmoke](Examples/OutputManagementSmoke/main.swift)
 - [GPUPreviewSmokeClient](Examples/GPUPreviewSmokeClient/main.swift)
+
+Public examples live in their own Swift package. Run one with
+`swift run --package-path Examples <target>` so routine root-package builds do
+not compile every example executable.
 
 Build every example with:
 

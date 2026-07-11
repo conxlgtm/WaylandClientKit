@@ -3,227 +3,81 @@
 import CWaylandProtocols
 
 extension RawDisplayConnection {
-    // swiftlint:disable cyclomatic_complexity function_body_length line_length
+    // swiftlint:disable function_body_length
     @safe
     package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
-        let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
+        let rollback = OptionalGlobalRollback()
 
-        do {
-            let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
-            do {
-                let viewporter = try bindViewporterIfPresent(registry: reg)
-                do {
-                    let presentation = try bindPresentationIfPresent(registry: reg)
-                    do {
-                        let fractionalScaleManager =
-                            try bindFractionalScaleManagerIfPresent(registry: reg)
-                        do {
-                            let cursorShapeManager =
-                                try bindCursorShapeManagerIfPresent(registry: reg)
-                            do {
-                                let dataDeviceManager =
-                                    try bindDataDeviceManagerIfPresent(registry: reg)
-                                do {
-                                    let primarySelectionDeviceManager =
-                                        try bindPrimarySelectionDeviceManagerIfPresent(
-                                            registry: reg
-                                        )
-                                    do {
-                                        let textInputManager =
-                                            try bindTextInputManagerIfPresent(registry: reg)
-                                        do {
-                                            let linuxDmabuf = try bindLinuxDmabufIfPresent(
-                                                registry: reg
-                                            )
-                                            do {
-                                                let submitGlobals =
-                                                    try bindSurfaceSubmitOptionalGlobalsIfPresent(
-                                                        registry: reg
-                                                    )
-                                                do {
-                                                    let metadataGlobals =
-                                                        try
-                                                        bindSurfaceMetadataOptionalGlobalsIfPresent(
-                                                            registry: reg
-                                                        )
-                                                    do {
-                                                        let xdgToplevelIconManager =
-                                                            try bindXDGToplevelIconManagerIfPresent(
-                                                                registry: reg
-                                                            )
-                                                        do {
-                                                            let xdgActivation =
-                                                                try bindXDGActivationIfPresent(
-                                                                    registry: reg
-                                                                )
-                                                            do {
-                                                                let compositorSessionManager =
-                                                                    try
-                                                                    bindCompositorSessionManagerIfPresent(
-                                                                        registry: reg
-                                                                    )
-                                                                do {
-                                                                    let pointerWarp =
-                                                                        try bindPointerWarpIfPresent(
-                                                                            registry: reg
-                                                                        )
-                                                                    do {
-                                                                        let tabletManager =
-                                                                            try
-                                                                            bindTabletManagerIfPresent(
-                                                                                registry: reg
-                                                                            )
-                                                                        do {
-                                                                            let relativePointerManager =
-                                                                                try
-                                                                                bindRelativePointerManagerIfPresent(
-                                                                                    registry: reg
-                                                                                )
-                                                                            do {
-                                                                                let pointerConstraints =
-                                                                                    try
-                                                                                    bindPointerConstraintsIfPresent(
-                                                                                        registry:
-                                                                                            reg
-                                                                                    )
-                                                                                return
-                                                                                    OptionalGlobals(
-                                                                                        xdgDecorationManager:
-                                                                                            decorationManager,
-                                                                                        xdgOutputManager:
-                                                                                            xdgOutputManager,
-                                                                                        viewporter:
-                                                                                            viewporter,
-                                                                                        presentation:
-                                                                                            presentation,
-                                                                                        fractionalScaleManager:
-                                                                                            fractionalScaleManager,
-                                                                                        cursorShapeManager:
-                                                                                            cursorShapeManager,
-                                                                                        xdgToplevelIconManager:
-                                                                                            xdgToplevelIconManager,
-                                                                                        xdgActivation:
-                                                                                            xdgActivation,
-                                                                                        compositorSessionManager:
-                                                                                            compositorSessionManager,
-                                                                                        pointerWarp:
-                                                                                            pointerWarp,
-                                                                                        tabletManager:
-                                                                                            tabletManager,
-                                                                                        relativePointerManager:
-                                                                                            relativePointerManager,
-                                                                                        pointerConstraints:
-                                                                                            pointerConstraints,
-                                                                                        linuxDrmSyncobjManager:
-                                                                                            submitGlobals
-                                                                                            .linuxDrmSyncobjManager,
-                                                                                        fifoManager:
-                                                                                            submitGlobals
-                                                                                            .fifoManager,
-                                                                                        commitTimingManager:
-                                                                                            submitGlobals
-                                                                                            .commitTimingManager,
-                                                                                        contentTypeManager:
-                                                                                            metadataGlobals
-                                                                                            .contentTypeManager,
-                                                                                        alphaModifierManager:
-                                                                                            metadataGlobals
-                                                                                            .alphaModifierManager,
-                                                                                        tearingControlManager:
-                                                                                            metadataGlobals
-                                                                                            .tearingControlManager,
-                                                                                        colorRepresentationManager:
-                                                                                            metadataGlobals
-                                                                                            .colorRepresentationManager,
-                                                                                        colorManager:
-                                                                                            metadataGlobals
-                                                                                            .colorManager,
-                                                                                        dataDeviceManager:
-                                                                                            dataDeviceManager,
-                                                                                        primarySelectionDeviceManager:
-                                                                                            primarySelectionDeviceManager,
-                                                                                        textInputManager:
-                                                                                            textInputManager,
-                                                                                        linuxDmabuf:
-                                                                                            linuxDmabuf
-                                                                                    )
-                                                                            } catch {
-                                                                                relativePointerManager
-                                                                                    .destroy()
-                                                                                throw error
-                                                                            }
-                                                                        } catch {
-                                                                            tabletManager.destroy()
-                                                                            throw error
-                                                                        }
-                                                                    } catch {
-                                                                        pointerWarp.destroy()
-                                                                        throw error
-                                                                    }
-                                                                } catch {
-                                                                    compositorSessionManager.destroy()
-                                                                    throw error
-                                                                }
-                                                            } catch {
-                                                                xdgActivation.destroy()
-                                                                throw error
-                                                            }
-                                                        } catch {
-                                                            xdgToplevelIconManager.destroy()
-                                                            throw error
-                                                        }
-                                                    } catch {
-                                                        metadataGlobals.destroy()
-                                                        throw error
-                                                    }
-                                                } catch {
-                                                    submitGlobals.linuxDrmSyncobjManager.destroy()
-                                                    submitGlobals.fifoManager.destroy()
-                                                    submitGlobals.commitTimingManager.destroy()
-                                                    throw error
-                                                }
-                                            } catch {
-                                                linuxDmabuf.destroy()
-                                                throw error
-                                            }
-                                        } catch {
-                                            textInputManager.destroy()
-                                            throw error
-                                        }
-                                    } catch {
-                                        primarySelectionDeviceManager.destroy()
-                                        throw error
-                                    }
-                                } catch {
-                                    dataDeviceManager.destroy()
-                                    throw error
-                                }
-                            } catch {
-                                cursorShapeManager.destroy()
-                                throw error
-                            }
-                        } catch {
-                            fractionalScaleManager.destroy()
-                            throw error
-                        }
-                    } catch {
-                        presentation.destroy()
-                        throw error
-                    }
-                } catch {
-                    viewporter.destroy()
-                    throw error
-                }
-            } catch {
-                xdgOutputManager.destroy()
-                throw error
-            }
-        } catch {
-            decorationManager.destroy()
-            throw error
-        }
+        let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
+        rollback.append { decorationManager.destroy() }
+        let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
+        rollback.append { xdgOutputManager.destroy() }
+        let viewporter = try bindViewporterIfPresent(registry: reg)
+        rollback.append { viewporter.destroy() }
+        let presentation = try bindPresentationIfPresent(registry: reg)
+        rollback.append { presentation.destroy() }
+        let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(registry: reg)
+        rollback.append { fractionalScaleManager.destroy() }
+        let cursorShapeManager = try bindCursorShapeManagerIfPresent(registry: reg)
+        rollback.append { cursorShapeManager.destroy() }
+        let dataDeviceManager = try bindDataDeviceManagerIfPresent(registry: reg)
+        rollback.append { dataDeviceManager.destroy() }
+        let primarySelectionDeviceManager =
+            try bindPrimarySelectionDeviceManagerIfPresent(registry: reg)
+        rollback.append { primarySelectionDeviceManager.destroy() }
+        let textInputManager = try bindTextInputManagerIfPresent(registry: reg)
+        rollback.append { textInputManager.destroy() }
+        let linuxDmabuf = try bindLinuxDmabufIfPresent(registry: reg)
+        rollback.append { linuxDmabuf.destroy() }
+        let submitGlobals = try bindSurfaceSubmitOptionalGlobalsIfPresent(registry: reg)
+        rollback.append { submitGlobals.destroy() }
+        let metadataGlobals = try bindSurfaceMetadataOptionalGlobalsIfPresent(registry: reg)
+        rollback.append { metadataGlobals.destroy() }
+        let xdgToplevelIconManager = try bindXDGToplevelIconManagerIfPresent(registry: reg)
+        rollback.append { xdgToplevelIconManager.destroy() }
+        let xdgActivation = try bindXDGActivationIfPresent(registry: reg)
+        rollback.append { xdgActivation.destroy() }
+        let compositorSessionManager =
+            try bindCompositorSessionManagerIfPresent(registry: reg)
+        rollback.append { compositorSessionManager.destroy() }
+        let pointerWarp = try bindPointerWarpIfPresent(registry: reg)
+        rollback.append { pointerWarp.destroy() }
+        let tabletManager = try bindTabletManagerIfPresent(registry: reg)
+        rollback.append { tabletManager.destroy() }
+        let relativePointerManager = try bindRelativePointerManagerIfPresent(registry: reg)
+        rollback.append { relativePointerManager.destroy() }
+        let pointerConstraints = try bindPointerConstraintsIfPresent(registry: reg)
+
+        rollback.disarm()
+        return OptionalGlobals(
+            xdgDecorationManager: decorationManager,
+            xdgOutputManager: xdgOutputManager,
+            viewporter: viewporter,
+            presentation: presentation,
+            fractionalScaleManager: fractionalScaleManager,
+            cursorShapeManager: cursorShapeManager,
+            xdgToplevelIconManager: xdgToplevelIconManager,
+            xdgActivation: xdgActivation,
+            compositorSessionManager: compositorSessionManager,
+            pointerWarp: pointerWarp,
+            tabletManager: tabletManager,
+            relativePointerManager: relativePointerManager,
+            pointerConstraints: pointerConstraints,
+            linuxDrmSyncobjManager: submitGlobals.linuxDrmSyncobjManager,
+            fifoManager: submitGlobals.fifoManager,
+            commitTimingManager: submitGlobals.commitTimingManager,
+            contentTypeManager: metadataGlobals.contentTypeManager,
+            alphaModifierManager: metadataGlobals.alphaModifierManager,
+            tearingControlManager: metadataGlobals.tearingControlManager,
+            colorRepresentationManager: metadataGlobals.colorRepresentationManager,
+            colorManager: metadataGlobals.colorManager,
+            dataDeviceManager: dataDeviceManager,
+            primarySelectionDeviceManager: primarySelectionDeviceManager,
+            textInputManager: textInputManager,
+            linuxDmabuf: linuxDmabuf
+        )
     }
-    // swiftlint:enable cyclomatic_complexity function_body_length line_length
+    // swiftlint:enable function_body_length
 
     @safe
     private func bindXDGDecorationManagerIfPresent(

@@ -19,7 +19,7 @@ struct DisplayEventHubTests {
     @Test
     func displaySubscriberOverflowTerminatesOnlyThatSubscriber() async throws {
         let hub = DisplayEventHub(
-            configuration: try EventStreamConfiguration(displayEventCapacity: 1)
+            configuration: EventStreamConfiguration(displayEventCapacity: try PositiveInt(1))
         )
         let firstStream = hub.displayEvents()
         let secondStream = hub.displayEvents()
@@ -38,7 +38,7 @@ struct DisplayEventHubTests {
     @Test
     func displaySubscriberOverflowUsesConfiguredCapacity() async throws {
         let hub = DisplayEventHub(
-            configuration: try EventStreamConfiguration(displayEventCapacity: 1)
+            configuration: EventStreamConfiguration(displayEventCapacity: try PositiveInt(1))
         )
         let stream = hub.displayEvents()
         var iterator = stream.makeAsyncIterator()
@@ -141,7 +141,7 @@ struct DisplayDiagnosticsHubTests {
     @Test
     func diagnosticsStreamDropsOldestWithoutInvertingDiagnosticIDs() async throws {
         let hub = DisplayEventHub(
-            diagnosticsConfiguration: try DiagnosticsConfiguration(capacity: 1)
+            diagnosticsConfiguration: DiagnosticsConfiguration(capacity: try PositiveInt(1))
         )
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
 
@@ -175,7 +175,7 @@ struct DisplayDiagnosticsHubTests {
     @Test
     func diagnosticsStreamAggregatesDropNoticeWithoutUnusedNoticeIDs() async throws {
         let hub = DisplayEventHub(
-            diagnosticsConfiguration: try DiagnosticsConfiguration(capacity: 1)
+            diagnosticsConfiguration: DiagnosticsConfiguration(capacity: try PositiveInt(1))
         )
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
 

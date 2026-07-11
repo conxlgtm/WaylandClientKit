@@ -22,7 +22,7 @@ and maintainer policy records.
   main public app-substrate API for display lifecycle, windows, software
   drawing, input, data transfer, text input, cursor policy, presentation
   feedback, diagnostics, and optional protocol capabilities.
-- [WaylandGraphicsPreview DocC catalog](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md):
+- [WaylandGraphicsPreview DocC catalog](../Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md):
   source-breaking preview API for renderer-neutral graphics backing selection,
   frame leases, runtime path reporting, managed GPU attempts, and software
   fallback.
@@ -71,7 +71,7 @@ Every public feature family should have one conceptual home:
 | Text input lifecycle | [Text Input Lifecycle](../Sources/WaylandClient/WaylandClient.docc/TextInputLifecycle.md) |
 | Presentation feedback and animation | [Presentation Feedback And Frame Callbacks](../Sources/WaylandClient/WaylandClient.docc/PresentationFeedbackAndFrameCallbacks.md) |
 | Diagnostics and event overflow | [Diagnostics And Display Failures](../Sources/WaylandClient/WaylandClient.docc/DiagnosticsAndDisplayFailures.md), [Event Streams And Overflow](../Sources/WaylandClient/WaylandClient.docc/EventStreamsAndOverflow.md) |
-| Graphics preview | [Graphics Preview Overview](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md), [External Buffer Submission](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ExternalBufferSubmission.md), [Scheduling And Color Metadata](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/SchedulingAndColorMetadata.md) |
+| Graphics preview | [Graphics Preview Overview](../Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md), [External Buffer Submission](../Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/ExternalBufferSubmission.md), [Scheduling And Color Metadata](../Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/SchedulingAndColorMetadata.md) |
 | App/window restoration and compositor session capability | [Session Readiness](../Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md) |
 
 If a new public API family is added, add or update its canonical conceptual doc

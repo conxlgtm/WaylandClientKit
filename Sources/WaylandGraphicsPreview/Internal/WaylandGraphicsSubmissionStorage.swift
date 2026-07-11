@@ -251,6 +251,12 @@ private struct SubmittedExternalBufferFrame: Sendable {
     let presentationFeedbackState: ExternalPresentationFeedbackState
 }
 
+private struct PendingExternalExplicitRelease: Sendable {
+    let slotID: GBMBufferPoolSlotID
+    let syncState: GPUSubmittedBufferSyncState
+    let releaseTimeline: WaylandGraphicsExternalReleaseTimeline
+}
+
 private struct ExternalBufferConfigurationFact: Equatable, Sendable {
     let format: WaylandGraphicsDRMFormat
     let modifier: WaylandGraphicsDRMFormatModifier
@@ -486,8 +492,7 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         [WaylandGraphicsExternalSubmissionID: WaylandGraphicsExternalReleaseState] = [:]
     private var submissionIDsBySlotID: [GBMBufferPoolSlotID: WaylandGraphicsExternalSubmissionID] =
         [:]
-    private var monitorTasksBySubmissionID:
-        [WaylandGraphicsExternalSubmissionID: Task<Void, Never>] = [:]
+    private var monitorTask: Task<Void, Never>?
 
     func begin(
         submissionID: WaylandGraphicsExternalSubmissionID,
@@ -506,18 +511,14 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         result: WaylandGraphicsExternalReleaseResult
     ) {
         let state: WaylandGraphicsExternalReleaseState?
-        let monitorTask: Task<Void, Never>?
         lock.lock()
         if let submissionID = submissionIDsBySlotID.removeValue(forKey: slotID) {
             state = statesBySubmissionID.removeValue(forKey: submissionID)
-            monitorTask = monitorTasksBySubmissionID.removeValue(forKey: submissionID)
         } else {
             state = nil
-            monitorTask = nil
         }
         lock.unlock()
 
-        monitorTask?.cancel()
         guard let state else { return }
         state.finish(result)
     }
@@ -527,28 +528,22 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         result: WaylandGraphicsExternalReleaseResult
     ) {
         let state: WaylandGraphicsExternalReleaseState?
-        let monitorTask: Task<Void, Never>?
         lock.lock()
         state = statesBySubmissionID.removeValue(forKey: submissionID)
-        monitorTask = monitorTasksBySubmissionID.removeValue(forKey: submissionID)
         submissionIDsBySlotID = submissionIDsBySlotID.filter { $0.value != submissionID }
         lock.unlock()
 
-        monitorTask?.cancel()
         guard let state else { return }
         state.finish(result)
     }
 
-    func trackMonitorTask(
-        _ task: Task<Void, Never>,
-        submissionID: WaylandGraphicsExternalSubmissionID
-    ) {
+    func trackMonitorTask(_ task: Task<Void, Never>) {
         var shouldCancel = false
         lock.lock()
-        if statesBySubmissionID[submissionID] == nil {
+        if statesBySubmissionID.isEmpty || monitorTask != nil {
             shouldCancel = true
         } else {
-            monitorTasksBySubmissionID[submissionID] = task
+            monitorTask = task
         }
         lock.unlock()
 
@@ -557,20 +552,24 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         }
     }
 
+    func clearMonitorTask() {
+        lock.lock()
+        monitorTask = nil
+        lock.unlock()
+    }
+
     func finishAll(result: WaylandGraphicsExternalReleaseResult) {
         let states: [WaylandGraphicsExternalReleaseState]
-        let monitorTasks: [Task<Void, Never>]
+        let task: Task<Void, Never>?
         lock.lock()
         states = Array(statesBySubmissionID.values)
-        monitorTasks = Array(monitorTasksBySubmissionID.values)
+        task = monitorTask
         statesBySubmissionID.removeAll()
         submissionIDsBySlotID.removeAll()
-        monitorTasksBySubmissionID.removeAll()
+        monitorTask = nil
         lock.unlock()
 
-        for task in monitorTasks {
-            task.cancel()
-        }
+        task?.cancel()
         for state in states {
             state.finish(result)
         }
@@ -581,7 +580,7 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         defer { lock.unlock() }
         return ExternalReleaseSnapshot(
             pendingReceipts: statesBySubmissionID.count,
-            activeMonitors: monitorTasksBySubmissionID.count
+            activeMonitors: monitorTask == nil ? 0 : 1
         )
     }
 }
@@ -758,6 +757,9 @@ package actor WaylandGraphicsWindowBackingStorage {
     private var importedExternalSyncTimelineIDs: Set<WaylandGraphicsExternalSyncTimelineID> = []
     private var externalReleaseTimelineFactoryForTesting: ExternalReleaseTimelineFactory?
     private var externalReleaseMonitorFactoryForTesting: ExternalReleaseMonitorFactory?
+    private var pendingExternalExplicitReleases:
+        [WaylandGraphicsExternalSubmissionID: PendingExternalExplicitRelease] = [:]
+    private var externalExplicitReleaseMonitorTask: Task<Void, Never>?
     private var closeHasFinished = false
     private var closeWaiters: [CheckedContinuation<Void, Never>] = []
 
@@ -2015,7 +2017,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    func close() async throws {
+    func close() async {
         await close(shouldCloseWindow: true)
     }
 
@@ -2102,6 +2104,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 result: .failed(.explicitSyncReleaseFailed)
             )
         }
+        pendingExternalExplicitReleases.removeAll()
         externalReleaseRegistry.finishAll(result: .retired(.backingClosed))
         externalPresentationFeedbackRegistry.finishAll(result: .retired(.backingClosed))
         finishClose()
@@ -2674,44 +2677,37 @@ extension WaylandGraphicsWindowBackingStorage {
         syncState: GPUSubmittedBufferSyncState,
         releaseTimeline: WaylandGraphicsExternalReleaseTimeline
     ) {
-        let presenter = externalBufferPresenter
-        let releaseRegistry = externalReleaseRegistry
-        let releaseRetirementNotifier = externalReleaseRetirementNotifier
-        // Keep storage alive until the monitor records a terminal transition.
-        // A receipt can outlive the public backing value, but its waiter must not.
+        pendingExternalExplicitReleases[submissionID] = PendingExternalExplicitRelease(
+            slotID: slotID,
+            syncState: syncState,
+            releaseTimeline: releaseTimeline
+        )
+        startExternalExplicitReleaseMonitorIfNeeded()
+    }
+
+    private func startExternalExplicitReleaseMonitorIfNeeded() {
+        guard externalExplicitReleaseMonitorTask == nil,
+            !pendingExternalExplicitReleases.isEmpty,
+            !leaseState.isClosed
+        else {
+            return
+        }
+
         let operation: @Sendable () async -> Void = { [self] in
             do {
-                while !Task.isCancelled {
-                    if try releaseTimeline.releasePointIsSignaled(syncState.releasePoint.point) {
-                        try presenter.recordExplicitReleaseSignal(slotID: slotID)
-                        releaseRegistry.finish(
-                            submissionID: submissionID,
-                            result: .released
-                        )
-                        releaseRetirementNotifier.notify()
-                        return
-                    }
+                while !Task.isCancelled, await pollExternalExplicitReleases() {
                     try await Task.sleep(
                         nanoseconds: WaylandGraphicsExternalReleaseTimeline.pollSleepNanoseconds
                     )
                 }
-                releaseRegistry.finish(
-                    submissionID: submissionID,
-                    result: .retired(.backingClosed)
-                )
             } catch is CancellationError {
-                releaseRegistry.finish(
-                    submissionID: submissionID,
-                    result: .retired(.backingClosed)
-                )
+                // Backing retirement resolves all remaining receipts.
             } catch {
-                await handleExternalExplicitReleaseTrackingFailure(
-                    submissionID: submissionID,
-                    slotID: slotID
-                )
+                // Task.sleep only reports cancellation in this loop.
             }
+            await externalExplicitReleaseMonitorStopped()
         }
-        let monitorTask =
+        let task =
             if let externalReleaseMonitorFactoryForTesting {
                 externalReleaseMonitorFactoryForTesting(operation)
             } else {
@@ -2720,9 +2716,44 @@ extension WaylandGraphicsWindowBackingStorage {
                     await operation()
                 }
             }
-        releaseRegistry.trackMonitorTask(monitorTask, submissionID: submissionID)
+        externalExplicitReleaseMonitorTask = task
+        externalReleaseRegistry.trackMonitorTask(task)
     }
 
+    private func pollExternalExplicitReleases() async -> Bool {
+        for (submissionID, pending) in pendingExternalExplicitReleases {
+            do {
+                guard
+                    try pending.releaseTimeline.releasePointIsSignaled(
+                        pending.syncState.releasePoint.point
+                    )
+                else {
+                    continue
+                }
+                pendingExternalExplicitReleases.removeValue(forKey: submissionID)
+                try externalBufferPresenter.recordExplicitReleaseSignal(slotID: pending.slotID)
+                externalReleaseRegistry.finish(
+                    submissionID: submissionID,
+                    result: .released
+                )
+                externalReleaseRetirementNotifier.notify()
+            } catch {
+                pendingExternalExplicitReleases.removeValue(forKey: submissionID)
+                await handleExternalExplicitReleaseTrackingFailure(
+                    submissionID: submissionID,
+                    slotID: pending.slotID
+                )
+                return false
+            }
+        }
+        return !pendingExternalExplicitReleases.isEmpty
+    }
+
+    private func externalExplicitReleaseMonitorStopped() {
+        externalExplicitReleaseMonitorTask = nil
+        externalReleaseRegistry.clearMonitorTask()
+        startExternalExplicitReleaseMonitorIfNeeded()
+    }
     private func handleExternalSurfaceFeedbackFailure(
         _ error: GraphicsPreviewSurfaceFeedbackError
     ) async throws {
@@ -2975,8 +3006,8 @@ extension WaylandGraphicsWindowBackingStorage {
         )
     }
 
-    package func closeForTesting() async throws {
-        try await close()
+    package func closeForTesting() async {
+        await close()
     }
 
     package func externalBufferSubmittedSlotRawValuesForTesting() -> [Int] {

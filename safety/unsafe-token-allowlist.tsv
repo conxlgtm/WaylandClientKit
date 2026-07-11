@@ -23,15 +23,15 @@ Sources/WaylandRaw/Internal/EventLoop/EventLoop.swift	poll(	Wayland external eve
 Sources/WaylandRaw/Internal/EventLoop/QueueEventLoop.swift	poll(	Queue-specific Wayland external event-loop integration.
 Sources/WaylandRaw/Internal/Ownership/RawProxyAdoption.swift	swl_proxy_get_queue_raw	Centralized runtime queue assertion for proxy adoption.
 Sources/WaylandRaw/Internal/Support/ThreadAffinity.swift	pthread_*	Raw owner-thread affinity token.
-Sources/WaylandGraphicsPreview/Internal/GBM/**	OpaquePointer	GBM preview device and buffer object lifetime wrappers.
-Sources/WaylandGraphicsPreview/Internal/GBM/GBMBuffer.swift	@unchecked Sendable	Dmabuf export owns plane fds for transfer into Wayland buffer params during package-internal managed GPU setup.
-Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeBufferPointer	Borrow dmabuf device bytes and C string storage for libdrm render-node lookup.
-Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeMutableBufferPointer	Borrow render-node path storage for libdrm render-node lookup.
-Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift	@unchecked Sendable	External-buffer import plan owns plane fds during package-internal dmabuf import handoff without exposing raw handles publicly.
-Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmissionStorage.swift	@unchecked Sendable	Private lock-protected external-buffer release registry and timeline monitors bridge compositor release callbacks to public receipts.
+Sources/WaylandGraphicsCore/Internal/GBM/**	OpaquePointer	GBM preview device and buffer object lifetime wrappers.
+Sources/WaylandGraphicsCore/Internal/GBM/GBMBuffer.swift	@unchecked Sendable	Dmabuf export owns plane fds for transfer into Wayland buffer params during package-internal managed GPU setup.
+Sources/WaylandGraphicsCore/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeBufferPointer	Borrow dmabuf device bytes and C string storage for libdrm render-node lookup.
+Sources/WaylandGraphicsCore/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeMutableBufferPointer	Borrow render-node path storage for libdrm render-node lookup.
+Sources/WaylandGraphicsPreview/Public/WaylandGraphicsSubmission.swift	@unchecked Sendable	External-buffer import plan owns plane fds during package-internal dmabuf import handoff without exposing raw handles publicly.
+Sources/WaylandGraphicsPreview/Internal/WaylandGraphicsSubmissionStorage.swift	@unchecked Sendable	Private lock-protected external-buffer release registry and timeline monitor bridge compositor release callbacks to public receipts.
 Sources/WaylandGPUPreview/GPUWindowPresenter.swift	@unchecked Sendable	Private lock-protected presenter state crosses the window owner-thread callback boundary while preserving buffer lifetime behind presenter methods.
-Sources/WaylandGraphicsPreview/Internal/EGL/**	UnsafeMutableRawPointer	EGL preview display, context, and surface lifetime wrappers.
-Sources/WaylandGraphicsPreview/Internal/EGL/EGLRenderTarget.swift	UnsafeMutableBufferPointer	Scoped GPU smoke pixel readback buffer.
+Sources/WaylandGraphicsCore/Internal/EGL/**	UnsafeMutableRawPointer	EGL preview display, context, and surface lifetime wrappers.
+Sources/WaylandGraphicsCore/Internal/EGL/EGLRenderTarget.swift	UnsafeMutableBufferPointer	Scoped GPU smoke pixel readback buffer.
 Sources/WaylandRuntime/**	eventfd	Executor wake fd primitive.
 Sources/WaylandRuntime/**	nonisolated(unsafe)	Synchronized pthread-backed executor internals.
 Sources/WaylandRuntime/**	pthread_*	Executor owner thread, mutex, condition, and join primitives.

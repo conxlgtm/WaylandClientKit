@@ -1,5 +1,6 @@
 import Foundation
 import WaylandRaw
+import WaylandRuntime
 
 // SAFETY: Descriptor state is private to one write job. All access is
 // serialized through NSLock so ThreadSanitizer can observe cancellation and
@@ -305,7 +306,7 @@ package final class ThreadedDataTransferSourceWriter {
         private let condition = NSCondition()
         private var lifecycle = Lifecycle.running
         private var currentJob: DataTransferSourceWriteJob?
-        private var jobs: [DataTransferSourceWriteJob] = []
+        private var jobs: FIFOQueue<DataTransferSourceWriteJob> = []
         private var results: [DataTransferSourceWriteResult] = []
 
         func submit(_ submittedJobs: [DataTransferSourceWriteJob])
@@ -385,11 +386,9 @@ package final class ThreadedDataTransferSourceWriter {
                     condition.wait()
                 }
 
-                guard !jobs.isEmpty else {
+                guard let job = jobs.popFirst() else {
                     return nil
                 }
-
-                let job = jobs.removeFirst()
                 currentJob = job
                 return job
             }

@@ -1,3 +1,5 @@
+import WaylandRuntime
+
 @safe
 final class EventSubscription<Element: Sendable>: Sendable {
     private let broker: TypedEventBroker<Element>
@@ -117,7 +119,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
     private typealias Delivery = EventBrokerDelivery<Element>
 
     private enum SubscriberState {
-        case open(buffer: [Element], drops: DropLedger<Element>)
+        case open(buffer: FIFOQueue<Element>, drops: DropLedger<Element>)
         case waiting(Waiter, drops: DropLedger<Element>)
         case terminal(StreamTermination)
     }
@@ -219,7 +221,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 }
 
                 if !buffer.isEmpty {
-                    let element = buffer.removeFirst()
+                    let element = buffer.popFirst()
                     subscriber.state = .open(buffer: buffer, drops: drops)
                     subscribers[subscriberID] = subscriber
                     return .success(element)
@@ -334,7 +336,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
 
         private func appendBuffered(
             element: Element,
-            into buffer: inout [Element],
+            into buffer: inout FIFOQueue<Element>,
             drops: inout DropLedger<Element>,
             context: PublishContext
         ) -> Bool {
@@ -349,7 +351,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 drops = .none
                 return true
             case .dropOldest:
-                buffer.removeFirst()
+                _ = buffer.popFirst()
                 buffer.append(element)
                 drops.recordDrop()
                 return false
