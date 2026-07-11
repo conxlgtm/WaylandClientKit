@@ -191,8 +191,15 @@
                 major="''${version%%.*}"
                 rest="''${version#*.}"
                 minor="''${rest%%.*}"
+                patch="''${rest#*.}"
+                patch="''${patch%%[^0-9]*}"
 
-                if [ -z "$major" ] || [ -z "$minor" ]; then
+                minimum_major="''${WAYLAND_CLIENT_KIT_MINIMUM_SWIFT%%.*}"
+                minimum_rest="''${WAYLAND_CLIENT_KIT_MINIMUM_SWIFT#*.}"
+                minimum_minor="''${minimum_rest%%.*}"
+                minimum_patch="''${minimum_rest#*.}"
+
+                if [ -z "$major" ] || [ -z "$minor" ] || [ -z "$patch" ]; then
                   echo "error: could not parse $tool_name version: $version" >&2
                   return 1
                 fi
@@ -211,7 +218,17 @@
                     ;;
                 esac
 
-                if [ "$major" -lt 6 ] || { [ "$major" -eq 6 ] && [ "$minor" -lt 3 ]; } || [ "$major" -ge 100 ]; then
+                case "$patch" in
+                  *[!0-9]*)
+                    echo "error: could not parse $tool_name version: $version" >&2
+                    return 1
+                    ;;
+                esac
+
+                if [ "$major" -lt "$minimum_major" ] \
+                  || { [ "$major" -eq "$minimum_major" ] && [ "$minor" -lt "$minimum_minor" ]; } \
+                  || { [ "$major" -eq "$minimum_major" ] && [ "$minor" -eq "$minimum_minor" ] && [ "$patch" -lt "$minimum_patch" ]; } \
+                  || [ "$major" -ge 100 ]; then
                   echo "error: $tool_name $version is too old; WaylandClientKit requires $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT or newer" >&2
                   return 1
                 fi
