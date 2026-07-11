@@ -92,7 +92,7 @@ case .released:
 case .retired(_):
     rendererPool.retire(allocation)
 case .failed(_):
-    try await backing.close()
+    await backing.close()
     rendererPool.destroy(allocation)
 }
 ```

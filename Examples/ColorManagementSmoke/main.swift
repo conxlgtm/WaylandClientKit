@@ -38,7 +38,7 @@ enum ColorManagementSmoke {
             log("metadata color management: \(status(runtimePath.metadata.colorManagement))")
             log("metadata alpha modifier: \(status(runtimePath.metadata.alphaModifier))")
             log("cleanup: pass")
-            try await backing.close()
+            await backing.close()
         }
     }
 

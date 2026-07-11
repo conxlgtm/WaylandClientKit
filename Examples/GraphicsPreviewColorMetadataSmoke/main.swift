@@ -67,7 +67,7 @@ enum GraphicsPreviewColorMetadataSmoke {
             log("fallback: \(result.runtimePath.fallback.map(String.init(describing:)) ?? "none")")
             log("failure: none")
             log("cleanup: pass")
-            try await backing.close()
+            await backing.close()
         }
     }
 

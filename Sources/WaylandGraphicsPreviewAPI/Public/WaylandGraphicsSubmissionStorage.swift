@@ -2015,7 +2015,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    func close() async throws {
+    func close() async {
         await close(shouldCloseWindow: true)
     }
 

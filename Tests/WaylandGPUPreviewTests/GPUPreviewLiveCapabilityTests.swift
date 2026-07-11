@@ -98,7 +98,7 @@ struct GPUPreviewLiveCapabilityTests {
                 .clearColor(WaylandGraphicsXRGBColor(red: 0, green: 0, blue: 0))
             )
             let runtimePath = try await backing.runtimePath
-            try await backing.close()
+            await backing.close()
 
             #expect(runtimePath.backing == .fallback(.forcedSoftware))
         }
@@ -117,7 +117,7 @@ struct GPUPreviewLiveCapabilityTests {
                 )
             )
 
-            try await backing.close()
+            await backing.close()
 
             await expectGraphicsError(.backingClosed) {
                 _ = try await backing.nextFrame()
@@ -160,7 +160,7 @@ struct GPUPreviewLiveCapabilityTests {
             )
             let lease = try await backing.nextFrame()
 
-            try await backing.close()
+            await backing.close()
 
             await expectGraphicsError(.backingClosed) {
                 try await lease.submit(.clearColor(.black))
@@ -186,7 +186,7 @@ struct GPUPreviewLiveCapabilityTests {
                 try await lease.submitForTesting(
                     .clearColor(.black)
                 ) {
-                    try await backing.close()
+                    await backing.close()
                 }
             }
         }
@@ -216,7 +216,7 @@ struct GPUPreviewLiveCapabilityTests {
 
             let retryLease = try await backing.nextFrame()
             try await retryLease.submit(.clearColor(.black))
-            try await backing.close()
+            await backing.close()
         }
     }
 
@@ -267,7 +267,7 @@ private func expectGraphicsError(
 
 private func closeBackingForTesting(_ backing: WaylandGraphicsWindowBacking) async {
     do {
-        try await backing.close()
+        await backing.close()
     } catch {
         Issue.record("Failed to close graphics backing during test hook: \(error)")
     }

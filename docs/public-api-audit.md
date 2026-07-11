@@ -371,6 +371,9 @@ Current preview contract:
 - External configuration, buffer, submission, and synchronization timeline IDs
   are issued by WCK. Callers may compare and retain the typed values, but their
   constructors and raw values remain package-only.
+- Backing close is nonthrowing because it only joins deterministic resource
+  retirement. External buffer planes use one initializer with a defaulted zero
+  plane index.
 - The managed preview submission path can create a window backing, lease a
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame

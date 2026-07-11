@@ -96,7 +96,7 @@ enum GraphicsPreviewManagedGPUClear {
             _ = try await submitClearFrame(backing: backing, state: state, metadata: frameMetadata)
         } catch {
             let runtimePath = try? await backing.runtimePath
-            try? await backing.close()
+            await backing.close()
             return ManagedGPUClearReport(
                 capabilities: capabilities,
                 runtimePath: runtimePath,
@@ -127,7 +127,7 @@ enum GraphicsPreviewManagedGPUClear {
                 if let seconds = options.autoCloseSeconds {
                     group.addTask {
                         try await Task.sleep(for: .seconds(seconds))
-                        try await backing.close()
+                        await backing.close()
                     }
                 }
 
@@ -171,7 +171,7 @@ enum GraphicsPreviewManagedGPUClear {
                     metadata: metadata
                 )
             case .windowCloseRequested(let windowID) where windowID == backing.id:
-                try await backing.close()
+                await backing.close()
                 return
             case .windowClosed(let windowID) where windowID == backing.id:
                 return

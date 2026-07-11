@@ -80,7 +80,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             }
 
             if !backingWasClosed {
-                try await backing.close()
+                await backing.close()
             }
             log("cleanup: pass")
         }
@@ -140,7 +140,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             frameCount: frameCount,
             releaseCount: releaseCount
         )
-        try await backing.close()
+        await backing.close()
         return true
     }
 
@@ -277,7 +277,7 @@ enum GraphicsPreviewExternalBufferSmoke {
                 "fallback reason: \(result.frameResult.runtimePath.fallback.map(String.init(describing:)) ?? "none")"
             )
             log("failure: none")
-            try await backing.close()
+            await backing.close()
             return true
         } catch {
             log("renderer: active")

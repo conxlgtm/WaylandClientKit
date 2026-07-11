@@ -72,7 +72,7 @@ struct WaylandGraphicsPreviewClientTests {
             )
             _ = result.runtimePath
             _ = result.size
-            try await backing.close()
+            await backing.close()
         }
 
         _ = acceptsDisplay
