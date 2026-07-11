@@ -141,7 +141,7 @@ public struct PublicIdentityAuditor {
     private func discoverDeclarations() throws -> [String: IdentityDeclaration] {
         let roots = [
             repository.url("Sources/WaylandClient/Public"),
-            repository.url("Sources/WaylandGraphicsPreviewAPI/Public"),
+            repository.url("Sources/WaylandGraphicsPreview/Public"),
         ]
         let declarationPattern =
             #"\bpublic\s+struct\s+([A-Za-z_][A-Za-z0-9_]*(?:ID|Identity|Token|Serial))\b"#

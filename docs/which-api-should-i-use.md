@@ -35,7 +35,7 @@ tasks to public APIs and examples.
 | Inspect output-management facts | `WaylandDisplay.outputManagementSnapshot()` | `zwlr_output_manager_v1`, mutation is not public | [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
 | Time animation to real presentation | `Window.requestPresentationFeedback`, `Window.presentationEvents` | `wp_presentation` | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Inspect optional protocol support | `WaylandDisplay.capabilities()` | registry discovery | [Capabilities DocC](../Sources/WaylandClient/WaylandClient.docc/CapabilitiesAndOptionalProtocols.md) |
-| Try renderer-neutral GPU preview | `WaylandGraphicsPreview` values, `WaylandGraphicsWindowBacking`, frame leases | `zwp_linux_dmabuf_v1` plus surface-specific runtime setup | [Graphics preview docs](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md) |
+| Try renderer-neutral GPU preview | `WaylandGraphicsPreview` values, `WaylandGraphicsWindowBacking`, frame leases | `zwp_linux_dmabuf_v1` plus surface-specific runtime setup | [Graphics preview docs](../Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md) |
 | Request preview frame scheduling | `WaylandGraphicsFrameSchedule` | explicit sync, FIFO, commit timing, or presentation protocols as requested | [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift) |
 | Report color metadata facts | `WaylandGraphicsFrameMetadata`, color runtime path facts | color metadata protocols where advertised | [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 

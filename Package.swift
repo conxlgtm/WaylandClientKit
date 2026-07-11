@@ -150,7 +150,7 @@ let package = Package(
         .target(
             name: "WaylandGraphicsCore",
             dependencies: ["WaylandRaw", "CGBMShims", "CEGLShims", "CDRMSystem"],
-            path: "Sources/WaylandGraphicsPreview",
+            path: "Sources/WaylandGraphicsCore",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
@@ -161,7 +161,7 @@ let package = Package(
                 "WaylandGPUPreview",
                 "WaylandRaw",
             ],
-            path: "Sources/WaylandGraphicsPreviewAPI",
+            path: "Sources/WaylandGraphicsPreview",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(

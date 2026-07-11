@@ -21,9 +21,9 @@ public struct DocCVerifier {
         ),
         Product(
             moduleName: "WaylandGraphicsPreview",
-            catalogPath: "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc",
+            catalogPath: "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc",
             rootArticlePath:
-                "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/"
+                "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/"
                 + "WaylandGraphicsPreview.md"
         ),
     ]

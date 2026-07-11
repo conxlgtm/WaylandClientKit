@@ -574,7 +574,7 @@ public struct VerificationChecks {
             ),
             ("WaylandKeyboard", "Sources/WaylandKeyboard", ["WaylandClient"]),
             ("WaylandCursor", "Sources/WaylandCursor", ["WaylandClient"]),
-            ("WaylandGraphicsCore", "Sources/WaylandGraphicsPreview", ["WaylandClient"]),
+            ("WaylandGraphicsCore", "Sources/WaylandGraphicsCore", ["WaylandClient"]),
         ]
         var failures: [String] = []
         for (label, path, modules) in rules {

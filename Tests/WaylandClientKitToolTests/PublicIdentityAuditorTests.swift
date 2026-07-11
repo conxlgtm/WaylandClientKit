@@ -12,7 +12,7 @@ struct PublicIdentityAuditorTests {
             "Sources/WaylandClient/Public/FixtureID.swift"
         )
         let previewSource = root.appendingPathComponent(
-            "Sources/WaylandGraphicsPreviewAPI/Public/PreviewFixtureID.swift"
+            "Sources/WaylandGraphicsPreview/Public/PreviewFixtureID.swift"
         )
         let manifest = root.appendingPathComponent("docs/identity-categories.json")
         try FileManager.default.createDirectory(

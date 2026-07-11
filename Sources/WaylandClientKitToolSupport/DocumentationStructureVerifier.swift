@@ -47,13 +47,13 @@ public struct DocumentationStructureVerifier {
         "Sources/WaylandClient/WaylandClient.docc/TextInputLifecycle.md",
         "Sources/WaylandClient/WaylandClient.docc/WaylandClient.md",
         "Sources/WaylandClient/WaylandClient.docc/WindowDrawing.md",
-        "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/FrameLeases.md",
-        "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md",
-        "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsRuntimePath.md",
-        "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ManagedGPUPreview.md",
-        "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ManagedGraphicsBacking.md",
-        "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/SoftwareFallback.md",
-        "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md",
+        "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/FrameLeases.md",
+        "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md",
+        "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/GraphicsRuntimePath.md",
+        "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/ManagedGPUPreview.md",
+        "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/ManagedGraphicsBacking.md",
+        "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/SoftwareFallback.md",
+        "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md",
     ]
 
     public static let requiredPhrases = [
@@ -74,12 +74,12 @@ public struct DocumentationStructureVerifier {
             phrase: "Activation tokens are compositor-mediated focus or raise requests",
             description: "session readiness separates activation from restoration"),
         RequiredPhrase(
-            path: "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/"
+            path: "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/"
                 + "WaylandGraphicsPreview.md",
             phrase: "source-breaking",
             description: "graphics preview root states preview/source-breaking policy"),
         RequiredPhrase(
-            path: "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/"
+            path: "Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/"
                 + "WaylandGraphicsPreview.md",
             phrase: "raw GPU",
             description: "graphics preview root states raw GPU handles are not public"),
