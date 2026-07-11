@@ -1367,7 +1367,6 @@ s:13WaylandClient20PresentationSequenceV	swift.struct	PresentationSequence	struc
 s:13WaylandClient20PresentationSequenceV5valueACs6UInt64V_tcfc	swift.init	PresentationSequence.init(value:)	init(value sequenceValue: UInt64)	-
 s:13WaylandClient20PresentationSequenceV5values6UInt64Vvp	swift.property	PresentationSequence.value	let value: UInt64	-
 s:13WaylandClient21PresentationTimestampV	swift.struct	PresentationTimestamp	struct PresentationTimestamp	-
-s:13WaylandClient21PresentationTimestampV7seconds11nanosecondsACs6UInt64V_s6UInt32Vtcfc	swift.init	PresentationTimestamp.init(seconds:nanoseconds:)	init(seconds timestampSeconds: UInt64, nanoseconds timestampNanoseconds: UInt32)	-
 s:13WaylandClient21PresentationTimestampV11nanosecondss6UInt32Vvp	swift.property	PresentationTimestamp.nanoseconds	let nanoseconds: UInt32	-
 s:13WaylandClient21PresentationTimestampV7secondss6UInt64Vvp	swift.property	PresentationTimestamp.seconds	let seconds: UInt64	-
 s:13WaylandClient21PrimarySelectionEventV	swift.struct	PrimarySelectionEvent	struct PrimarySelectionEvent	-
@@ -4443,7 +4442,6 @@ s:13WaylandClient21PresentationTimestampV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient21PresentationTimestampV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient21PresentationTimestampV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient21PresentationTimestampV11nanosecondss6UInt32Vvp	memberOf	s:13WaylandClient21PresentationTimestampV	-
-s:13WaylandClient21PresentationTimestampV7seconds11nanosecondsACs6UInt64V_s6UInt32Vtcfc	memberOf	s:13WaylandClient21PresentationTimestampV	-
 s:13WaylandClient21PresentationTimestampV7secondss6UInt64Vvp	memberOf	s:13WaylandClient21PresentationTimestampV	-
 s:13WaylandClient21PrimarySelectionEventV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient21PrimarySelectionEventV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype

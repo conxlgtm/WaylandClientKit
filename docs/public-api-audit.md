@@ -658,6 +658,10 @@ These are expected to remain public because applications need protocol facts:
 - seat/window IDs,
 - unknown future raw values in public event wrappers.
 
+Protocol-provided presentation timestamps remain readable public values, but
+their initializer is package-scoped. Applications receive them from
+presentation feedback and cannot fabricate compositor timing facts.
+
 These are not expected to become public product API:
 
 - `RawOwnedProxy`,
