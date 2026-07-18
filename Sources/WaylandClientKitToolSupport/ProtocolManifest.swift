@@ -423,6 +423,10 @@ public struct ProtocolTooling {
             protocols: protocolIRs,
             manifest: manifest
         )
+        let registryBindBridgeArtifacts = try renderRegistryBindBridgeArtifacts(
+            protocols: protocolIRs,
+            manifest: manifest
+        )
         let scanner = try RepositoryNixTools(
             repository: repository,
             fileSystem: fileSystem,
@@ -456,6 +460,10 @@ public struct ProtocolTooling {
             try normalizeGeneratedFile(code)
         }
         try writeListenerBridgeArtifacts(listenerBridgeArtifacts, outputRoot: outputRoot)
+        try writeRegistryBindBridgeArtifacts(
+            registryBindBridgeArtifacts,
+            outputRoot: outputRoot
+        )
         try writeSupportedVersions(supportedVersions, outputRoot: outputRoot)
         try writeOptionalGlobalDescriptors(optionalGlobalDescriptors, outputRoot: outputRoot)
 

@@ -5,7 +5,8 @@ This directory contains vendored Wayland protocol XML used to generate the check
 - `manifest.json` records upstream source resolution, generated paths, scanner
   modes, checksums, WaylandClientKit tier, API exposure, and test strategy for each
   vendored protocol.
-- `generation-policy.json` records supported versions and global ownership.
+- `generation-policy.json` records supported versions and global ownership. Its
+  global entries also select the generated C registry bind bridges.
 - `listener-bridge-policy.json` selects listener bridges, preserves their C shim
   names, and records the few forwarding exceptions that stay handwritten.
 - `upstream/` contains copied upstream XML without local edits.

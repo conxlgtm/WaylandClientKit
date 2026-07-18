@@ -180,6 +180,7 @@ private let shimVerificationRules = [
         headerPaths: [
             "Sources/CWaylandProtocols/include/wayland-client-kit-shims.h",
             ListenerBridgeGeneration.headerOutputPath,
+            RegistryBindBridgeGeneration.headerOutputPath,
         ],
         implementationPaths: [
             "Sources/CWaylandProtocols/shims",
