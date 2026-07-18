@@ -40,6 +40,7 @@ Use these for repository operation and release review:
 - [Versioning](versioning.md)
 - [Release process](release.md)
 - [Tooling](tooling.md)
+- [Internal design guide](internal-design.md)
 - [Public API audit](public-api-audit.md)
 - [Strict memory-safety audit](strict-memory-safety-audit.md)
 - [Compositor matrix](compositor-matrix.md)
