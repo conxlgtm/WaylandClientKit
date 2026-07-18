@@ -187,22 +187,6 @@ public struct WaylandSystemError: Error, Equatable, Sendable, CustomStringConver
     }
 }
 
-public struct WaylandProtocolObjectID: Equatable, Hashable, Sendable, CustomStringConvertible {
-    public let rawValue: UInt32
-
-    public init(rawValue objectRawValue: UInt32) {
-        rawValue = objectRawValue
-    }
-
-    package init(_ objectID: RawObjectID) {
-        rawValue = objectID.value
-    }
-
-    public var description: String {
-        "\(rawValue)"
-    }
-}
-
 public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case display(interface: String?, objectID: UInt32, code: Int32)
     case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)

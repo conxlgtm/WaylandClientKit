@@ -1,39 +1,3 @@
-public struct TabletID: Equatable, Hashable, Sendable, CustomStringConvertible {
-    public let rawValue: UInt32
-
-    public init(rawValue tabletRawValue: UInt32) {
-        rawValue = tabletRawValue
-    }
-
-    public var description: String {
-        "tablet-\(rawValue)"
-    }
-}
-
-public struct TabletToolID: Equatable, Hashable, Sendable, CustomStringConvertible {
-    public let rawValue: UInt32
-
-    public init(rawValue toolRawValue: UInt32) {
-        rawValue = toolRawValue
-    }
-
-    public var description: String {
-        "tablet-tool-\(rawValue)"
-    }
-}
-
-public struct TabletPadID: Equatable, Hashable, Sendable, CustomStringConvertible {
-    public let rawValue: UInt32
-
-    public init(rawValue padRawValue: UInt32) {
-        rawValue = padRawValue
-    }
-
-    public var description: String {
-        "tablet-pad-\(rawValue)"
-    }
-}
-
 public enum TabletEvent: Equatable, Sendable {
     case tabletAdded(TabletID)
     case toolAdded(TabletToolID)

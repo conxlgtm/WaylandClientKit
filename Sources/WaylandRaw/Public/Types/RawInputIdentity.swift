@@ -1,15 +1,3 @@
-package struct RawSeatID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt32
-
-    package init(rawValue seatRawValue: UInt32) {
-        rawValue = seatRawValue
-    }
-
-    package var description: String {
-        "seat-\(rawValue)"
-    }
-}
-
 package struct RawInputDeviceID: Hashable, Sendable, CustomStringConvertible {
     public enum Kind: Hashable, Sendable, CustomStringConvertible {
         case pointer

@@ -1,17 +1,5 @@
 import WaylandRaw
 
-public struct OutputID: Hashable, Sendable, CustomStringConvertible {
-    public let rawValue: UInt32
-
-    public init(rawValue outputRawValue: UInt32) {
-        rawValue = outputRawValue
-    }
-
-    public var description: String {
-        "output-\(rawValue)"
-    }
-}
-
 public enum OutputSubpixelLayout: Equatable, Sendable {
     case unknown
     case none
@@ -309,40 +297,6 @@ extension PositiveInt32 {
         guard value > 0 else { return nil }
 
         self.init(unchecked: value)
-    }
-}
-
-public struct OutputManagementHeadID:
-    Hashable,
-    Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue headRawValue: UInt64) {
-        rawValue = headRawValue
-    }
-
-    public var description: String {
-        "output-head-\(rawValue)"
-    }
-}
-
-public struct OutputManagementModeID:
-    Hashable,
-    Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue modeRawValue: UInt64) {
-        rawValue = modeRawValue
-    }
-
-    public var description: String {
-        "output-mode-\(rawValue)"
     }
 }
 

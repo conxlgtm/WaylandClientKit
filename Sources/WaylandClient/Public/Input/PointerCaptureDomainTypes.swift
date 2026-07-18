@@ -99,35 +99,6 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
     }
 }
 
-public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,
-    CustomStringConvertible
-{
-    package let rawValue: UInt64
-
-    package init(rawValue subscriptionRawValue: UInt64) {
-        rawValue = subscriptionRawValue
-    }
-
-    public var description: String {
-        "relative-pointer-\(rawValue)"
-    }
-}
-
-public struct PointerGestureSubscriptionID: Equatable, Hashable, Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue subscriptionRawValue: UInt64) {
-        rawValue = subscriptionRawValue
-    }
-
-    public var description: String {
-        "pointer-gestures-\(rawValue)"
-    }
-}
-
 public struct RelativePointerSubscription: Hashable, Sendable {
     public let id: RelativePointerSubscriptionID
     private let display: WaylandDisplay

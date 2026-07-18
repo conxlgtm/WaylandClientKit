@@ -1,0 +1,424 @@
+import Foundation
+
+/// A checked-in file rendered from the identity generation policy.
+public struct GeneratedIdentityFile: Equatable, Sendable {
+    /// The repository-relative output path.
+    public let path: String
+
+    /// The complete generated contents.
+    public let contents: String
+
+    /// Creates a generated identity file.
+    public init(path: String, contents: String) {
+        self.path = path
+        self.contents = contents
+    }
+}
+
+/// Generates concrete identity wrappers without replacing their domain-specific types.
+public struct IdentityGenerator {
+    /// The repository-relative path to the identity generation policy.
+    public static let policyPath = "identities/generation-policy.json"
+
+    /// The repository-relative path to audit metadata for handwritten identities.
+    public static let manualAuditPath = "identities/manual-identity-categories.json"
+
+    /// The repository-relative path to the combined generated identity audit manifest.
+    public static let auditOutputPath = "docs/identity-categories.json"
+
+    /// The repository that owns the policy and checked-in outputs.
+    public let repository: Repository
+
+    /// The filesystem used to read and write generator inputs and outputs.
+    public let fileSystem: FileSystem
+
+    /// Creates an identity generator for a repository.
+    public init(repository: Repository, fileSystem: FileSystem = LocalFileSystem()) {
+        self.repository = repository
+        self.fileSystem = fileSystem
+    }
+
+    /// Renders every generated output without changing the checkout.
+    public func render() throws -> [GeneratedIdentityFile] {
+        let policy: IdentityGenerationPolicy = try decode(Self.policyPath)
+        let manualAudit: IdentityAuditManifest = try decode(Self.manualAuditPath)
+        try policy.validate(manualAudit: manualAudit)
+
+        var files = try policy.outputs.map { output in
+            let identities = policy.identities
+                .filter { $0.output == output.id }
+                .sorted { $0.type < $1.type }
+            guard !identities.isEmpty else {
+                throw ToolError(
+                    "identity generation output has no declarations: \(output.id)",
+                    exitCode: ToolExitCode.data
+                )
+            }
+            return GeneratedIdentityFile(
+                path: output.path,
+                contents: IdentitySwiftRenderer.render(output: output, identities: identities)
+            )
+        }
+        files.append(
+            GeneratedIdentityFile(
+                path: Self.auditOutputPath,
+                contents: try IdentityAuditRenderer.render(
+                    policy: policy,
+                    manualAudit: manualAudit
+                )
+            )
+        )
+        return files.sorted { $0.path < $1.path }
+    }
+
+    /// Replaces the checked-in files with freshly rendered output.
+    public func generate() throws {
+        for file in try render() {
+            try fileSystem.writeText(file.contents, to: repository.url(file.path))
+        }
+    }
+
+    /// Verifies that the checked-in files match the current policy.
+    public func verifyGenerated() throws {
+        var failures: [String] = []
+        for file in try render() {
+            let url = repository.url(file.path)
+            if !fileSystem.exists(url) {
+                failures.append("missing generated file: \(file.path)")
+            } else if try fileSystem.readText(url) != file.contents {
+                failures.append("changed generated file: \(file.path)")
+            }
+        }
+        guard failures.isEmpty else {
+            throw ToolError(
+                "generated identity declarations are not up to date\n"
+                    + failures.joined(separator: "\n"),
+                exitCode: ToolExitCode.data
+            )
+        }
+    }
+
+    private func decode<Value: Decodable>(_ path: String) throws -> Value {
+        let url = repository.url(path)
+        guard fileSystem.exists(url) else {
+            throw ToolError(
+                "Missing identity generator input: \(path)", exitCode: ToolExitCode.data)
+        }
+        do {
+            return try JSONDecoder().decode(Value.self, from: fileSystem.readData(url))
+        } catch {
+            throw ToolError(
+                "Malformed identity generator input \(path): \(error)",
+                exitCode: ToolExitCode.data
+            )
+        }
+    }
+}
+
+struct IdentityGenerationPolicy: Decodable {
+    let outputs: [IdentityOutputPolicy]
+    let identities: [IdentityPolicy]
+
+    func validate(manualAudit: IdentityAuditManifest) throws {
+        var failures: [String] = []
+        appendDuplicates(outputs.map(\.id), label: "output id", failures: &failures)
+        appendDuplicates(outputs.map(\.path), label: "output path", failures: &failures)
+        appendDuplicates(identities.map(\.type), label: "identity type", failures: &failures)
+        appendDuplicates(
+            manualAudit.identities.map(\.type),
+            label: "manual identity audit type",
+            failures: &failures
+        )
+
+        let outputIDs = Set(outputs.map(\.id))
+        for output in outputs where !Self.isOutputPath(output.path) {
+            failures.append("identity output is not a Swift file under Sources: \(output.path)")
+        }
+        for identity in identities {
+            if !outputIDs.contains(identity.output) {
+                failures.append("\(identity.type) references unknown output \(identity.output)")
+            }
+            if identity.access == .public, identity.auditCategory?.isEmpty != false {
+                failures.append("\(identity.type) is missing an audit category")
+            }
+            if identity.access != .public, identity.auditCategory != nil {
+                failures.append("\(identity.type) is not public but has an audit category")
+            }
+            identity.validateDocumentation(failures: &failures)
+        }
+        let generatedAuditTypes = identities.compactMap { $0.auditCategory == nil ? nil : $0.type }
+        let overlap = Set(generatedAuditTypes)
+            .intersection(manualAudit.identities.map(\.type))
+            .sorted()
+        if !overlap.isEmpty {
+            failures.append(
+                "generated and manual identity audits overlap: \(overlap.joined(separator: ", "))")
+        }
+        guard failures.isEmpty else {
+            throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
+        }
+    }
+
+    private func appendDuplicates(
+        _ values: [String],
+        label: String,
+        failures: inout [String]
+    ) {
+        let duplicates = Dictionary(grouping: values) { $0 }
+            .filter { $0.value.count > 1 }.keys.sorted()
+        if !duplicates.isEmpty {
+            failures.append("duplicate \(label): \(duplicates.joined(separator: ", "))")
+        }
+    }
+
+    private static func isOutputPath(_ path: String) -> Bool {
+        path.hasPrefix("Sources/") && path.hasSuffix(".swift")
+            && !path.split(separator: "/", omittingEmptySubsequences: false).contains("..")
+    }
+}
+
+struct IdentityOutputPolicy: Decodable {
+    let id: String
+    let path: String
+    let imports: [String]
+}
+
+struct IdentityPolicy: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case output
+        case access
+        case rawType
+        case storageName
+        case storageAccess
+        case constructorAccess
+        case constructorLabel
+        case constructorParameter
+        case constructorType
+        case constructorExpression
+        case attributes
+        case conformances
+        case sharedIDConformance
+        case sharedIDInExtension
+        case extensionConformances
+        case description
+        case integerLiteral
+        case additionalInitializers
+        case documentation
+        case auditCategory
+    }
+
+    let type: String
+    let output: String
+    let access: IdentityAccess
+    let rawType: String
+    let storageName: String?
+    let storageAccess: IdentityAccess
+    let constructorAccess: IdentityAccess
+    let constructorLabel: String?
+    let constructorParameter: String
+    let constructorType: String?
+    let constructorExpression: String?
+    let attributes: [String]
+    let conformances: [String]
+    let sharedIDConformance: String?
+    let sharedIDInExtension: Bool
+    let extensionConformances: [String]
+    let description: IdentityDescriptionPolicy?
+    let integerLiteral: IdentityIntegerLiteralPolicy?
+    let additionalInitializers: [IdentityInitializerOverride]
+    let documentation: IdentityDocumentationPolicy?
+    let auditCategory: String?
+
+    init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        type = try values.decode(String.self, forKey: .type)
+        output = try values.decode(String.self, forKey: .output)
+        access = try values.decode(IdentityAccess.self, forKey: .access)
+        rawType = try values.decode(String.self, forKey: .rawType)
+        storageName = try values.decodeIfPresent(String.self, forKey: .storageName)
+        storageAccess = try values.decode(IdentityAccess.self, forKey: .storageAccess)
+        constructorAccess = try values.decode(IdentityAccess.self, forKey: .constructorAccess)
+        constructorLabel = try values.decodeIfPresent(String.self, forKey: .constructorLabel)
+        constructorParameter = try values.decode(String.self, forKey: .constructorParameter)
+        constructorType = try values.decodeIfPresent(String.self, forKey: .constructorType)
+        constructorExpression = try values.decodeIfPresent(
+            String.self,
+            forKey: .constructorExpression
+        )
+        attributes = try values.decodeIfPresent([String].self, forKey: .attributes) ?? []
+        conformances = try values.decode([String].self, forKey: .conformances)
+        sharedIDConformance = try values.decodeIfPresent(
+            String.self,
+            forKey: .sharedIDConformance
+        )
+        sharedIDInExtension =
+            try values.decodeIfPresent(Bool.self, forKey: .sharedIDInExtension) ?? false
+        extensionConformances =
+            try values.decodeIfPresent([String].self, forKey: .extensionConformances) ?? []
+        description = try values.decodeIfPresent(
+            IdentityDescriptionPolicy.self,
+            forKey: .description
+        )
+        integerLiteral = try values.decodeIfPresent(
+            IdentityIntegerLiteralPolicy.self,
+            forKey: .integerLiteral
+        )
+        additionalInitializers =
+            try values.decodeIfPresent(
+                [IdentityInitializerOverride].self,
+                forKey: .additionalInitializers
+            ) ?? []
+        documentation = try values.decodeIfPresent(
+            IdentityDocumentationPolicy.self,
+            forKey: .documentation
+        )
+        auditCategory = try values.decodeIfPresent(String.self, forKey: .auditCategory)
+    }
+
+    var effectiveStorageName: String { storageName ?? "rawValue" }
+    var effectiveConstructorLabel: String { constructorLabel ?? "rawValue" }
+    var effectiveConstructorType: String { constructorType ?? rawType }
+    var effectiveConstructorExpression: String { constructorExpression ?? constructorParameter }
+
+    var directConformances: [String] {
+        guard let sharedIDConformance, !sharedIDInExtension else { return conformances }
+        return conformances + [sharedIDConformance]
+    }
+
+    var generatedExtensionConformances: [String] {
+        var result = extensionConformances
+        if let sharedIDConformance, sharedIDInExtension {
+            result.insert(sharedIDConformance, at: 0)
+        }
+        return result
+    }
+
+    func validateDocumentation(failures: inout [String]) {
+        guard access == .public else { return }
+        requireDocumentation(documentation?.summary, label: "type", failures: &failures)
+        if storageAccess == .public {
+            requireDocumentation(documentation?.storage, label: "storage", failures: &failures)
+        }
+        if constructorAccess == .public {
+            requireDocumentation(
+                documentation?.constructor, label: "constructor", failures: &failures)
+        }
+        if description?.effectiveAccess(typeAccess: access) == .public {
+            requireDocumentation(
+                documentation?.description, label: "description", failures: &failures)
+        }
+        if let integerLiteral, integerLiteral.access == .public {
+            requireDocumentation(
+                documentation?.integerLiteral, label: "literal initializer", failures: &failures)
+            if integerLiteral.typealiasAccess == .public {
+                requireDocumentation(
+                    documentation?.integerLiteralType, label: "literal type", failures: &failures)
+            }
+        }
+    }
+
+    private func requireDocumentation(
+        _ text: String?,
+        label: String,
+        failures: inout [String]
+    ) {
+        if text?.isEmpty != false {
+            failures.append("\(type) has an undocumented public \(label)")
+        }
+    }
+}
+
+struct IdentityDescriptionPolicy: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case access
+        case prefix
+        case expression
+        case inExtension
+    }
+
+    let access: IdentityAccess?
+    let prefix: String?
+    let expression: String?
+    let inExtension: Bool
+
+    init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        access = try values.decodeIfPresent(IdentityAccess.self, forKey: .access)
+        prefix = try values.decodeIfPresent(String.self, forKey: .prefix)
+        expression = try values.decodeIfPresent(String.self, forKey: .expression)
+        inExtension = try values.decodeIfPresent(Bool.self, forKey: .inExtension) ?? false
+    }
+
+    func effectiveAccess(typeAccess: IdentityAccess) -> IdentityAccess { access ?? typeAccess }
+}
+
+struct IdentityIntegerLiteralPolicy: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case access
+        case type
+        case assignDirectly
+        case typealiasAccess
+    }
+
+    let access: IdentityAccess
+    let type: String?
+    let assignDirectly: Bool
+    let typealiasAccess: IdentityAccess?
+
+    init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        access = try values.decode(IdentityAccess.self, forKey: .access)
+        type = try values.decodeIfPresent(String.self, forKey: .type)
+        assignDirectly = try values.decodeIfPresent(Bool.self, forKey: .assignDirectly) ?? false
+        typealiasAccess = try values.decodeIfPresent(
+            IdentityAccess.self,
+            forKey: .typealiasAccess
+        )
+    }
+}
+
+struct IdentityInitializerOverride: Decodable {
+    let access: IdentityAccess
+    let label: String
+    let parameter: String
+    let type: String
+    let expression: String
+}
+
+struct IdentityDocumentationPolicy: Decodable {
+    let summary: String
+    let storage: String?
+    let constructor: String?
+    let description: String?
+    let integerLiteral: String?
+    let integerLiteralType: String?
+}
+
+enum IdentityAccess: String, Codable, Comparable {
+    case `public`, package, `internal`, `fileprivate`, `private`
+
+    static func < (lhs: Self, rhs: Self) -> Bool { lhs.rank < rhs.rank }
+
+    private var rank: Int {
+        switch self {
+        case .public: 0
+        case .package: 1
+        case .internal: 2
+        case .fileprivate: 3
+        case .private: 4
+        }
+    }
+}
+
+struct IdentityAuditManifest: Codable {
+    let identities: [IdentityAuditEntry]
+}
+
+struct IdentityAuditEntry: Codable {
+    let type: String
+    let category: String
+    let constructor: IdentityAccess
+    let storage: String
+    let storageVisibility: IdentityAccess
+}

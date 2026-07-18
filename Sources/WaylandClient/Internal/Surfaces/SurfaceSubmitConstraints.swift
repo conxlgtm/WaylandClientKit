@@ -1,13 +1,5 @@
 import WaylandRaw
 
-package struct SurfaceSyncTimelineIdentity: Equatable, Hashable, Sendable {
-    package let rawValue: UInt64
-
-    package init(_ identity: UInt64) {
-        rawValue = identity
-    }
-}
-
 package struct SurfaceSyncPoint: Equatable, Sendable {
     package let timeline: SurfaceSyncTimelineIdentity
     package let point: RawSyncobjTimelinePoint

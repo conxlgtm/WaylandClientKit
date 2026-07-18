@@ -134,18 +134,6 @@ public enum DragAction: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-public struct DragOfferIdentity: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(_ offerID: DataOfferID) {
-        rawValue = offerID.rawValue
-    }
-
-    public var description: String {
-        "drag-offer-\(rawValue)"
-    }
-}
-
 public struct DragLocation: Equatable, Sendable {
     public let x: Double
     public let y: Double

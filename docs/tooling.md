@@ -76,8 +76,9 @@ tool-only targets.
 ## CI Gates
 
 `swift run wck ci cheap` runs formatting, lint, generated-file, manifest, shim,
-dependency-boundary, import-boundary, public identity visibility, and unsafe-token checks. It is a fast
-signal and does not prove that the library products compile.
+dependency-boundary, import-boundary, public identity visibility, generated
+identity declaration, and unsafe-token checks. It is a fast signal and does not
+prove that the library products compile.
 
 `swift run wck ci required` verifies the compiler-derived public API baseline
 and prevents the documented share of public types, methods, initializers, and

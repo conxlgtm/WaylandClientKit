@@ -29,23 +29,6 @@ public struct PresentationFeedbackFlags: OptionSet, Equatable, Sendable, Hashabl
     public static let zeroCopy = PresentationFeedbackFlags(rawValue: 0x8)
 }
 
-public struct SurfacePresentationIdentity:
-    Equatable,
-    Hashable,
-    Sendable,
-    CustomStringConvertible
-{
-    package let rawValue: UInt64
-
-    package init(rawValue identityRawValue: UInt64) {
-        rawValue = identityRawValue
-    }
-
-    public var description: String {
-        "presentation-\(rawValue)"
-    }
-}
-
 public enum SurfacePresentationFeedback: Equatable, Sendable {
     case presented(PresentationFeedback)
     case discarded(SurfacePresentationIdentity)

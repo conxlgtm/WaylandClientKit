@@ -506,8 +506,35 @@ struct API: ParsableCommand {
 
 struct Identity: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "identity", subcommands: [Verify.self]
+        commandName: "identity",
+        subcommands: [Generate.self, VerifyGenerated.self, Verify.self]
     )
+
+    struct Generate: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "generate")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            let context = try context()
+            try IdentityGenerator(
+                repository: context.repository,
+                fileSystem: context.fileSystem
+            ).generate()
+            context.diagnostics.success("generated identity declarations")
+        }
+    }
+
+    struct VerifyGenerated: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "verify-generated")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            let context = try context()
+            try IdentityGenerator(
+                repository: context.repository,
+                fileSystem: context.fileSystem
+            ).verifyGenerated()
+            context.diagnostics.success("generated identity declarations are up to date")
+        }
+    }
 
     struct Verify: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
@@ -1296,6 +1323,10 @@ private func runLiveWaylandReleaseChecks(context: ToolContext) throws {
 
 private func runCheap(context: ToolContext) throws {
     try runLint(context: context)
+    try IdentityGenerator(
+        repository: context.repository,
+        fileSystem: context.fileSystem
+    ).verifyGenerated()
     try PublicIdentityAuditor(
         repository: context.repository,
         fileSystem: context.fileSystem

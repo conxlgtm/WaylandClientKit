@@ -20,14 +20,6 @@ package protocol ActivationManagerBackend: AnyObject {
     func activate(token: ActivationToken, surface: RawSurface) throws
 }
 
-package struct ActivationRequestID: Hashable, Sendable {
-    package let rawValue: UInt64
-
-    package init(rawValue requestRawValue: UInt64) {
-        rawValue = requestRawValue
-    }
-}
-
 package final class PendingActivationTokenRequest: Sendable {
     package let id: ActivationRequestID
 

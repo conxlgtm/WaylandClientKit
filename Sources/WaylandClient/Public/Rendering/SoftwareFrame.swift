@@ -1,26 +1,4 @@
 @safe
-package struct SoftwareFrameReservationToken: UInt64WaylandEntityID {
-    package let rawValue: UInt64
-
-    package init(rawValue reservationRawValue: UInt64) {
-        rawValue = reservationRawValue
-    }
-
-    package var description: String {
-        "software-frame-reservation-\(rawValue)"
-    }
-}
-
-@safe
-public struct SoftwareFrameBufferID: Hashable, Sendable {
-    private let rawValue: UInt64
-
-    init(rawValue bufferRawValue: UInt64) {
-        rawValue = bufferRawValue
-    }
-}
-
-@safe
 public struct SoftwareFrameBuffer: ~Copyable {
     public let id: SoftwareFrameBufferID
     public let width: Int32

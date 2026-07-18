@@ -1,15 +1,3 @@
-package struct InputSerialActionID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(rawValue actionRawValue: UInt64) {
-        rawValue = actionRawValue
-    }
-
-    package var description: String {
-        "input-serial-action-\(rawValue)"
-    }
-}
-
 package typealias InputSerialActionHandler =
     @Sendable (InputEvent, InputSerialActionContext) -> Void
 

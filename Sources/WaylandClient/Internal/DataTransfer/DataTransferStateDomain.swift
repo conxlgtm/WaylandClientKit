@@ -1,27 +1,3 @@
-package struct DataOfferID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(rawValue offerRawValue: UInt64) {
-        rawValue = offerRawValue
-    }
-
-    package var description: String {
-        "data-offer-\(rawValue)"
-    }
-}
-
-package struct DataSourceID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(rawValue sourceRawValue: UInt64) {
-        rawValue = sourceRawValue
-    }
-
-    package var description: String {
-        "data-source-\(rawValue)"
-    }
-}
-
 package enum DataSourceRole: Equatable, Sendable {
     case selection(seatID: SeatID)
     case dragAndDrop(seatID: SeatID, actions: DragSourceActions)

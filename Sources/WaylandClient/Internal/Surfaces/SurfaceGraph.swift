@@ -1,21 +1,5 @@
 import WaylandRaw
 
-package struct SurfaceID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(rawValue surfaceRawValue: UInt64) {
-        rawValue = surfaceRawValue
-    }
-
-    package init(rawObjectID objectID: RawObjectID) {
-        rawValue = UInt64(objectID.value)
-    }
-
-    package var description: String {
-        "surface-\(rawValue)"
-    }
-}
-
 package enum SurfaceRole: Equatable, Sendable {
     case toplevel(windowID: WindowID)
     case popup(popupID: PopupID, parent: SurfaceID)

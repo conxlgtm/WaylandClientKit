@@ -193,54 +193,6 @@ public enum DataTransferOfferIdentity: Equatable, Sendable, CustomStringConverti
     }
 }
 
-public struct ClipboardOfferIdentity: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(_ offerID: DataOfferID) {
-        rawValue = offerID.rawValue
-    }
-
-    public var description: String {
-        "clipboard-offer-\(rawValue)"
-    }
-}
-
-public struct ClipboardSourceIdentity: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(_ sourceID: DataSourceID) {
-        rawValue = sourceID.rawValue
-    }
-
-    public var description: String {
-        "clipboard-source-\(rawValue)"
-    }
-}
-
-public struct PrimarySelectionOfferIdentity: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(_ offerID: DataOfferID) {
-        rawValue = offerID.rawValue
-    }
-
-    public var description: String {
-        "primary-selection-offer-\(rawValue)"
-    }
-}
-
-public struct PrimarySelectionSourceIdentity: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(_ sourceID: DataSourceID) {
-        rawValue = sourceID.rawValue
-    }
-
-    public var description: String {
-        "primary-selection-source-\(rawValue)"
-    }
-}
-
 public struct ClipboardSelectionEvent: Equatable, Sendable {
     public let seatID: SeatID
     public let offer: ClipboardOfferIdentity?

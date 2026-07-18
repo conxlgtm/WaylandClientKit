@@ -1,18 +1,6 @@
 import CWaylandProtocols
 import Glibc
 
-package struct RawOutputID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt32
-
-    package init(rawValue outputRawValue: UInt32) {
-        rawValue = outputRawValue
-    }
-
-    package var description: String {
-        "output-\(rawValue)"
-    }
-}
-
 package struct RawOutputPointerIdentity: Hashable, Sendable {
     package let rawValue: UInt
 

@@ -118,6 +118,33 @@ generation without turning those helpers into public API:
 These helpers are implementation infrastructure. Public users should continue to
 use stable concrete identity types.
 
+## Checked-in identity declarations
+
+`identities/generation-policy.json` is the source of truth for repetitive
+one-field identity wrappers. It records each concrete type, its access and raw
+value rules, conformances, diagnostic description, and any narrow projection or
+integer-literal behavior. The generator emits separate checked-in files for the
+public and internal declarations in `WaylandClient`, `WaylandRaw`, and
+`WaylandGraphicsPreview`. It does not replace these domain-specific types with a
+generic ID.
+
+Generate and verify the files with:
+
+```bash
+swift run wck identity generate
+swift run wck identity verify-generated
+```
+
+Generated public identities also carry their audit category in this policy.
+Constructor and stored-value visibility come from the same declaration fields.
+`identities/manual-identity-categories.json` contains only the four public
+identities whose declarations remain handwritten. Generation combines both
+inputs into `docs/identity-categories.json`, so the visibility audit does not
+duplicate generated declaration facts in a second handwritten manifest.
+
 The generated [identity visibility audit](identity-visibility.md) records every
 public identity category together with its constructor and stored-value access.
-`swift run wck ci cheap` verifies that table against the Swift declarations.
+After an intentional identity contract change, run
+`swift run wck identity verify --update` to refresh that report.
+`swift run wck ci cheap` verifies the generated declarations, combined category
+manifest, and visibility report against the Swift declarations.
