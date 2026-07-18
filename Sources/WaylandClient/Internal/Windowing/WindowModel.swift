@@ -28,7 +28,7 @@ package struct WindowModel: Equatable, Sendable {
 
     var isClosed: Bool {
         switch lifecycle {
-        case .closing, .destroyed:
+        case .destroyed:
             true
         case .created, .roleAssigned, .waitingForInitialConfigure, .active:
             false
@@ -47,7 +47,7 @@ package struct WindowModel: Equatable, Sendable {
             closeRequest
         case .active(let activeState):
             activeState.closeRequest
-        case .closing, .destroyed:
+        case .destroyed:
             .none
         }
     }
@@ -185,7 +185,7 @@ extension WindowModel {
         case .waitingForInitialConfigure, .active:
             publication = .published(id)
             return []
-        case .created, .roleAssigned, .closing, .destroyed:
+        case .created, .roleAssigned, .destroyed:
             throw invalidTransition(event: "published")
         }
     }
@@ -196,8 +196,6 @@ extension WindowModel {
         switch lifecycle {
         case .destroyed:
             throw ClientError.window(id, .invalidLifecycleTransition(.redrawAfterDestroyed))
-        case .closing:
-            return []
         case .created, .roleAssigned:
             throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
         case .waitingForInitialConfigure, .active:
@@ -441,8 +439,6 @@ extension WindowModel {
     private func requireActiveWindowState() throws -> ActiveWindowState {
         guard let activeState else {
             switch lifecycle {
-            case .closing:
-                throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
             case .destroyed:
                 throw ClientError.window(id, .invalidLifecycleTransition(.presentAfterDestroyed))
             case .created, .roleAssigned, .waitingForInitialConfigure:

@@ -40,7 +40,6 @@ package enum PopupLifecycle: Equatable, Sendable, CustomStringConvertible {
     case created
     case waitingForInitialConfigure
     case active(ActivePopupState)
-    case closing
     case destroyed
 
     package var description: String {
@@ -51,8 +50,6 @@ package enum PopupLifecycle: Equatable, Sendable, CustomStringConvertible {
             "waitingForInitialConfigure"
         case .active:
             "active"
-        case .closing:
-            "closing"
         case .destroyed:
             "destroyed"
         }
@@ -83,7 +80,7 @@ package struct PopupModel: Equatable, Sendable {
 
     package var isClosed: Bool {
         switch lifecycle {
-        case .closing, .destroyed:
+        case .destroyed:
             true
         case .created, .waitingForInitialConfigure, .active:
             false
@@ -204,8 +201,6 @@ extension PopupModel {
                 parentWindowID,
                 .invalidLifecycleTransition(.redrawAfterDestroyed)
             )
-        case .closing:
-            return []
         case .created:
             throw ClientError.window(
                 parentWindowID,
@@ -374,13 +369,12 @@ extension PopupModel {
         dismissedByCompositor: Bool
     ) -> [PopupEffect] {
         switch lifecycle {
-        case .destroyed, .closing:
+        case .destroyed:
             return []
         case .created, .waitingForInitialConfigure, .active:
             break
         }
 
-        lifecycle = .closing
         var effects: [PopupEffect] = [
             .cancelFrameCallback,
             .retireSwapchain,
@@ -456,11 +450,6 @@ extension PopupModel {
     private func requireActivePopupState() throws -> ActivePopupState {
         guard let activeState else {
             switch lifecycle {
-            case .closing:
-                throw ClientError.window(
-                    parentWindowID,
-                    .invalidLifecycleTransition(.presentWhileClosing)
-                )
             case .destroyed:
                 throw ClientError.window(
                     parentWindowID,

@@ -94,7 +94,6 @@ package enum XDGWindowLifecycle: Equatable, Sendable, CustomStringConvertible {
     case roleAssigned(CloseRequestState)
     case waitingForInitialConfigure(CloseRequestState)
     case active(ActiveWindowState)
-    case closing(ClosingWindowState)
     case destroyed
 
     package var description: String {
@@ -107,8 +106,6 @@ package enum XDGWindowLifecycle: Equatable, Sendable, CustomStringConvertible {
             "waitingForInitialConfigure"
         case .active:
             "active"
-        case .closing:
-            "closing"
         case .destroyed:
             "destroyed"
         }
@@ -165,5 +162,3 @@ package enum WindowPublicationState: Equatable, Sendable {
     case published(WindowID)
     case closedPublished(WindowID)
 }
-
-package struct ClosingWindowState: Equatable, Sendable {}
