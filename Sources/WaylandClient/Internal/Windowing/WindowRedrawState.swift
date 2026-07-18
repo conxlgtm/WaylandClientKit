@@ -33,269 +33,165 @@ package enum RedrawBufferAvailability: Equatable, Sendable {
 }
 
 struct WindowRedrawState: Equatable, Sendable {
-    private enum CleanPacing: Equatable, Sendable {
-        case frameReady
-        case waitingForFrame
-    }
-
     private enum RedrawRequest: Equatable, Sendable {
         case none
         case outstanding
     }
 
-    private enum DirtyPacing: Equatable, Sendable {
+    private enum Pacing: Equatable, Sendable {
         case frameReady(RedrawRequest)
         case waitingForFrame
         case waitingForBuffer
     }
 
-    private enum Storage: Equatable, Sendable {
-        case clean(generation: UInt64, pacing: CleanPacing)
-        case dirty(
-            contentGeneration: UInt64,
-            presentedGeneration: UInt64,
-            pacing: DirtyPacing
-        )
+    /// Records whether the current content generation has been presented.
+    ///
+    /// This cannot be derived from the numeric generations alone. Content
+    /// invalidation uses wrapping arithmetic, so a wrapped content generation
+    /// can compare below or equal to the last presented generation while still
+    /// representing newer content.
+    private enum PresentationStatus: Equatable, Sendable {
+        case current
+        case invalidated
     }
 
-    private var storage = Storage.clean(generation: 0, pacing: .frameReady)
+    private var contentGeneration: UInt64 = 0
+    private var presentedGeneration: UInt64 = 0
+    private var presentationStatus = PresentationStatus.current
+    private var pacing = Pacing.frameReady(.none)
 
     var isDirty: Bool {
-        if case .dirty = storage {
-            return true
-        }
-
-        return false
+        presentationStatus == .invalidated
     }
 
     var isWaitingForBuffer: Bool {
-        if case .dirty(_, _, .waitingForBuffer) = storage {
-            return true
-        }
-
-        return false
+        pacing == .waitingForBuffer
     }
 
     var hasOutstandingRedrawRequest: Bool {
-        if case .dirty(_, _, .frameReady(.outstanding)) = storage {
-            return true
-        }
-
-        return false
+        pacing == .frameReady(.outstanding)
     }
 
     var generationForCurrentDraw: UInt64 {
-        switch storage {
-        case .clean(let generation, _):
-            generation
-        case .dirty(let contentGeneration, _, _):
-            contentGeneration
-        }
+        contentGeneration
     }
 
     mutating func reduce(
         _ event: WindowRedrawEvent,
         bufferAvailability: RedrawBufferAvailability
     ) -> [WindowRedrawEffect] {
+        let effects: [WindowRedrawEffect]
         switch event {
         case .contentInvalidated:
             invalidateContent()
-            return publishIfNeeded(bufferAvailability: bufferAvailability)
+            effects = publishIfNeeded(bufferAvailability: bufferAvailability)
         case .frameBecameReady:
             markFrameReady()
-            return publishIfNeeded(bufferAvailability: bufferAvailability)
+            effects = publishIfNeeded(bufferAvailability: bufferAvailability)
         case .bufferBecameAvailable:
             markBufferAvailable()
-            return publishIfNeeded(bufferAvailability: bufferAvailability)
+            effects = publishIfNeeded(bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed:
             markRedrawRequestConsumed()
-            return []
+            effects = []
         case .drawBlockedByBuffer:
             markDrawBlockedByBuffer()
-            return []
+            effects = []
         case .presented(let generation):
             markPresented(generation: generation)
-            return []
+            effects = []
         case .transientStateReset:
             resetTransientState()
-            return []
+            effects = []
         }
+
+        preconditionInvariantsHold()
+        return effects
     }
 }
 
 extension WindowRedrawState {
     private mutating func invalidateContent() {
-        switch storage {
-        case .clean(let generation, let pacing):
-            storage = .dirty(
-                contentGeneration: generation &+ 1,
-                presentedGeneration: generation,
-                pacing: Self.dirtyPacing(for: pacing)
-            )
-        case .dirty(let contentGeneration, let presentedGeneration, let pacing):
-            storage = .dirty(
-                contentGeneration: contentGeneration &+ 1,
-                presentedGeneration: presentedGeneration,
-                pacing: pacing
-            )
-        }
+        contentGeneration &+= 1
+        presentationStatus = .invalidated
     }
 
     private mutating func markFrameReady() {
-        switch storage {
-        case .clean(let generation, _):
-            storage = .clean(generation: generation, pacing: .frameReady)
-        case .dirty(let contentGeneration, let presentedGeneration, .waitingForFrame):
-            storage = .dirty(
-                contentGeneration: contentGeneration,
-                presentedGeneration: presentedGeneration,
-                pacing: .frameReady(.none)
-            )
-        case .dirty(_, _, .waitingForBuffer),
-            .dirty(_, _, .frameReady):
-            break
+        if case .waitingForFrame = pacing {
+            pacing = .frameReady(.none)
         }
     }
 
     private mutating func markBufferAvailable() {
-        guard
-            case .dirty(
-                let contentGeneration,
-                let presentedGeneration,
-                .waitingForBuffer
-            ) = storage
-        else {
-            return
+        if case .waitingForBuffer = pacing {
+            pacing = .frameReady(.none)
         }
-
-        storage = .dirty(
-            contentGeneration: contentGeneration,
-            presentedGeneration: presentedGeneration,
-            pacing: .frameReady(.none)
-        )
     }
 
     private mutating func markRedrawRequestConsumed() {
-        guard
-            case .dirty(
-                let contentGeneration,
-                let presentedGeneration,
-                .frameReady(.outstanding)
-            ) = storage
-        else {
-            return
+        if case .frameReady(.outstanding) = pacing {
+            pacing = .frameReady(.none)
         }
-
-        storage = .dirty(
-            contentGeneration: contentGeneration,
-            presentedGeneration: presentedGeneration,
-            pacing: .frameReady(.none)
-        )
     }
 
     private mutating func markDrawBlockedByBuffer() {
-        guard case .dirty(let contentGeneration, let presentedGeneration, _) = storage else {
-            return
-        }
-
-        storage = .dirty(
-            contentGeneration: contentGeneration,
-            presentedGeneration: presentedGeneration,
-            pacing: .waitingForBuffer
-        )
+        guard isDirty else { return }
+        pacing = .waitingForBuffer
     }
 
-    private mutating func markPresented(generation presentedGeneration: UInt64) {
-        switch storage {
-        case .clean(let contentGeneration, _):
-            if presentedGeneration >= contentGeneration {
-                storage = .clean(generation: presentedGeneration, pacing: .waitingForFrame)
-            } else {
-                storage = .dirty(
-                    contentGeneration: contentGeneration,
-                    presentedGeneration: presentedGeneration,
-                    pacing: .waitingForFrame
-                )
-            }
-        case .dirty(let contentGeneration, _, _):
-            if presentedGeneration >= contentGeneration {
-                storage = .clean(generation: presentedGeneration, pacing: .waitingForFrame)
-            } else {
-                storage = .dirty(
-                    contentGeneration: contentGeneration,
-                    presentedGeneration: presentedGeneration,
-                    pacing: .waitingForFrame
-                )
-            }
+    private mutating func markPresented(generation newPresentedGeneration: UInt64) {
+        presentedGeneration = newPresentedGeneration
+        if newPresentedGeneration >= contentGeneration {
+            contentGeneration = newPresentedGeneration
+            presentationStatus = .current
+        } else {
+            presentationStatus = .invalidated
         }
+        pacing = .waitingForFrame
     }
 
     private mutating func resetTransientState() {
-        switch storage {
-        case .clean:
-            break
-        case .dirty(let contentGeneration, let presentedGeneration, .frameReady(.outstanding)),
-            .dirty(let contentGeneration, let presentedGeneration, .waitingForBuffer):
-            storage = .dirty(
-                contentGeneration: contentGeneration,
-                presentedGeneration: presentedGeneration,
-                pacing: .frameReady(.none)
-            )
-        case .dirty(_, _, .frameReady(.none)),
-            .dirty(_, _, .waitingForFrame):
-            break
+        switch pacing {
+        case .frameReady(.outstanding), .waitingForBuffer:
+            pacing = .frameReady(.none)
+        case .frameReady(.none), .waitingForFrame:
+            return
         }
     }
 
     private mutating func publishIfNeeded(
         bufferAvailability: RedrawBufferAvailability
     ) -> [WindowRedrawEffect] {
-        if case .dirty(
-            let contentGeneration,
-            let presentedGeneration,
-            .waitingForBuffer
-        ) = storage, bufferAvailability.isAvailable {
-            storage = .dirty(
-                contentGeneration: contentGeneration,
-                presentedGeneration: presentedGeneration,
-                pacing: .frameReady(.outstanding)
-            )
+        guard isDirty else { return [] }
+
+        if case .waitingForBuffer = pacing, bufferAvailability.isAvailable {
+            pacing = .frameReady(.outstanding)
             return [.publishRedrawRequested]
         }
 
-        guard
-            case .dirty(
-                let contentGeneration,
-                let presentedGeneration,
-                .frameReady(.none)
-            ) = storage
-        else {
+        guard case .frameReady(.none) = pacing else {
             return []
         }
 
         guard bufferAvailability.isAvailable else {
-            storage = .dirty(
-                contentGeneration: contentGeneration,
-                presentedGeneration: presentedGeneration,
-                pacing: .waitingForBuffer
-            )
+            pacing = .waitingForBuffer
             return []
         }
 
-        storage = .dirty(
-            contentGeneration: contentGeneration,
-            presentedGeneration: presentedGeneration,
-            pacing: .frameReady(.outstanding)
-        )
+        pacing = .frameReady(.outstanding)
         return [.publishRedrawRequested]
     }
 
-    private static func dirtyPacing(for pacing: CleanPacing) -> DirtyPacing {
+    private func preconditionInvariantsHold() {
+        if presentationStatus == .current {
+            precondition(contentGeneration == presentedGeneration)
+        }
+
         switch pacing {
-        case .frameReady:
-            .frameReady(.none)
-        case .waitingForFrame:
-            .waitingForFrame
+        case .frameReady(.outstanding), .waitingForBuffer:
+            precondition(isDirty)
+        case .frameReady(.none), .waitingForFrame:
+            break
         }
     }
 }
