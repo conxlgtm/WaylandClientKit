@@ -110,12 +110,12 @@ extern "C" {
 #endif
 
 #include "generated/shims/registry-bind-bridges.h"
+#include "generated/shims/request-bridges.h"
 
 /* ------------------------------------------------------------------ */
 /*  Core request wrappers                                             */
 /* ------------------------------------------------------------------ */
 
-struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor);
 struct wl_subsurface *swl_subcompositor_get_subsurface(
     struct wl_subcompositor *subcompositor,
     struct wl_surface *surface,
@@ -127,18 +127,6 @@ struct wl_buffer *swl_shm_pool_create_buffer(
     struct wl_shm_pool *pool, int32_t offset, int32_t width,
     int32_t height, int32_t stride, uint32_t format);
 
-struct wl_callback *swl_surface_frame(struct wl_surface *surface);
-
-struct wl_pointer *swl_seat_get_pointer(struct wl_seat *seat);
-struct wl_keyboard *swl_seat_get_keyboard(struct wl_seat *seat);
-struct wl_touch *swl_seat_get_touch(struct wl_seat *seat);
-void swl_pointer_set_cursor(
-    struct wl_pointer *pointer,
-    uint32_t serial,
-    struct wl_surface *surface,
-    int32_t hotspot_x,
-    int32_t hotspot_y);
-
 void swl_surface_attach(
     struct wl_surface *surface, struct wl_buffer *buffer, int32_t x, int32_t y);
 void swl_surface_commit(struct wl_surface *surface);
@@ -147,7 +135,6 @@ void swl_surface_damage_buffer(
     int32_t width, int32_t height);
 // for older wl_surface versions
 void swl_surface_damage(struct wl_surface *surface, int32_t xd, int32_t y, int32_t width, int32_t height);
-void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale);
 void swl_surface_set_opaque_region(
     struct wl_surface *surface, struct wl_region *region);
 void swl_surface_set_input_region(
@@ -172,10 +159,6 @@ uint32_t swl_shm_format_argb8888(void);
 /*  Data-device request wrappers                                      */
 /* ------------------------------------------------------------------ */
 
-struct wl_data_source *swl_data_device_manager_create_data_source(
-    struct wl_data_device_manager *manager);
-struct wl_data_device *swl_data_device_manager_get_data_device(
-    struct wl_data_device_manager *manager, struct wl_seat *seat);
 void swl_data_source_offer(struct wl_data_source *source, const char *mime_type);
 void swl_data_source_set_actions(struct wl_data_source *source, uint32_t dnd_actions);
 void swl_data_offer_accept(
@@ -202,13 +185,6 @@ uint32_t swl_data_device_manager_dnd_action_ask(void);
 /*  Primary-selection request wrappers                                */
 /* ------------------------------------------------------------------ */
 
-struct zwp_primary_selection_source_v1 *
-swl_primary_selection_device_manager_create_source(
-    struct zwp_primary_selection_device_manager_v1 *manager);
-struct zwp_primary_selection_device_v1 *
-swl_primary_selection_device_manager_get_device(
-    struct zwp_primary_selection_device_manager_v1 *manager,
-    struct wl_seat *seat);
 void swl_primary_selection_source_offer(
     struct zwp_primary_selection_source_v1 *source,
     const char *mime_type);
@@ -276,39 +252,6 @@ void swl_xdg_activation_token_v1_commit(
     struct xdg_activation_token_v1 *token);
 
 /* ------------------------------------------------------------------ */
-/*  Session-management request wrappers                               */
-/* ------------------------------------------------------------------ */
-
-struct xdg_session_v1 *swl_xdg_session_manager_v1_get_session(
-    struct xdg_session_manager_v1 *manager,
-    uint32_t reason,
-    const char *session_id);
-void swl_xdg_session_manager_v1_destroy(
-    struct xdg_session_manager_v1 *manager);
-
-struct xdg_toplevel_session_v1 *swl_xdg_session_v1_add_toplevel(
-    struct xdg_session_v1 *session,
-    struct xdg_toplevel *toplevel,
-    const char *name);
-struct xdg_toplevel_session_v1 *swl_xdg_session_v1_restore_toplevel(
-    struct xdg_session_v1 *session,
-    struct xdg_toplevel *toplevel,
-    const char *name);
-void swl_xdg_session_v1_remove_toplevel(
-    struct xdg_session_v1 *session,
-    const char *name);
-void swl_xdg_session_v1_destroy(
-    struct xdg_session_v1 *session);
-void swl_xdg_session_v1_remove(
-    struct xdg_session_v1 *session);
-
-void swl_xdg_toplevel_session_v1_rename(
-    struct xdg_toplevel_session_v1 *toplevel_session,
-    const char *name);
-void swl_xdg_toplevel_session_v1_destroy(
-    struct xdg_toplevel_session_v1 *toplevel_session);
-
-/* ------------------------------------------------------------------ */
 /*  Desktop integration request wrappers                              */
 /* ------------------------------------------------------------------ */
 
@@ -371,28 +314,6 @@ void swl_wp_pointer_warp_v1_warp_pointer(
     uint32_t serial);
 void swl_wp_pointer_warp_v1_destroy(
     struct wp_pointer_warp_v1 *warp);
-
-struct zwp_tablet_seat_v2 *swl_zwp_tablet_manager_v2_get_tablet_seat(
-    struct zwp_tablet_manager_v2 *manager,
-    struct wl_seat *seat);
-void swl_zwp_tablet_manager_v2_destroy(
-    struct zwp_tablet_manager_v2 *manager);
-void swl_zwp_tablet_seat_v2_destroy(
-    struct zwp_tablet_seat_v2 *tablet_seat);
-void swl_zwp_tablet_v2_destroy(
-    struct zwp_tablet_v2 *tablet);
-void swl_zwp_tablet_tool_v2_destroy(
-    struct zwp_tablet_tool_v2 *tool);
-void swl_zwp_tablet_pad_v2_destroy(
-    struct zwp_tablet_pad_v2 *pad);
-void swl_zwp_tablet_pad_group_v2_destroy(
-    struct zwp_tablet_pad_group_v2 *group);
-void swl_zwp_tablet_pad_ring_v2_destroy(
-    struct zwp_tablet_pad_ring_v2 *ring);
-void swl_zwp_tablet_pad_strip_v2_destroy(
-    struct zwp_tablet_pad_strip_v2 *strip);
-void swl_zwp_tablet_pad_dial_v2_destroy(
-    struct zwp_tablet_pad_dial_v2 *dial);
 
 struct zwp_relative_pointer_v1 *
 swl_zwp_relative_pointer_manager_v1_get_relative_pointer(
@@ -485,24 +406,8 @@ void swl_region_destroy(struct wl_region *region);
 /*  XDG request wrappers                                              */
 /* ------------------------------------------------------------------ */
 
-struct xdg_surface *swl_xdg_wm_base_get_xdg_surface(
-    struct xdg_wm_base *wm_base, struct wl_surface *surface);
-struct xdg_positioner *swl_xdg_wm_base_create_positioner(
-    struct xdg_wm_base *wm_base);
-
-struct xdg_toplevel *swl_xdg_surface_get_toplevel(struct xdg_surface *xdg_surface);
-struct xdg_popup *swl_xdg_surface_get_popup(
-    struct xdg_surface *xdg_surface,
-    struct xdg_surface *parent,
-    struct xdg_positioner *positioner);
-
-void swl_xdg_wm_base_pong(struct xdg_wm_base *wm_base, uint32_t serial);
-void swl_xdg_surface_ack_configure(struct xdg_surface *xdg_surface, uint32_t serial);
 void swl_xdg_toplevel_set_title(struct xdg_toplevel *xdg_toplevel, const char *title);
 void swl_xdg_toplevel_set_app_id(struct xdg_toplevel *xdg_toplevel, const char *app_id);
-void swl_xdg_toplevel_set_parent(
-    struct xdg_toplevel *xdg_toplevel,
-    struct xdg_toplevel *parent);
 void swl_xdg_toplevel_show_window_menu(
     struct xdg_toplevel *xdg_toplevel,
     struct wl_seat *seat,
@@ -549,15 +454,6 @@ void swl_xdg_popup_grab(
 /*  XDG decoration request wrappers                                   */
 /* ------------------------------------------------------------------ */
 
-struct zxdg_toplevel_decoration_v1 *swl_zxdg_decoration_manager_v1_get_toplevel_decoration(
-    struct zxdg_decoration_manager_v1 *manager,
-    struct xdg_toplevel *xdg_toplevel);
-
-void swl_zxdg_toplevel_decoration_v1_set_mode(
-    struct zxdg_toplevel_decoration_v1 *decoration, uint32_t mode);
-void swl_zxdg_toplevel_decoration_v1_unset_mode(
-    struct zxdg_toplevel_decoration_v1 *decoration);
-
 uint32_t swl_zxdg_toplevel_decoration_v1_mode_client_side(void);
 uint32_t swl_zxdg_toplevel_decoration_v1_mode_server_side(void);
 
@@ -565,25 +461,14 @@ uint32_t swl_zxdg_toplevel_decoration_v1_mode_server_side(void);
 /*  XDG output request wrappers                                       */
 /* ------------------------------------------------------------------ */
 
-struct zxdg_output_v1 *swl_zxdg_output_manager_v1_get_xdg_output(
-    struct zxdg_output_manager_v1 *manager,
-    struct wl_output *output);
-
 /* ------------------------------------------------------------------ */
 /*  Scale and viewport request wrappers                               */
 /* ------------------------------------------------------------------ */
 
-struct wp_viewport *swl_wp_viewporter_get_viewport(
-    struct wp_viewporter *viewporter,
-    struct wl_surface *surface);
 void swl_wp_viewport_set_destination(
     struct wp_viewport *viewport,
     int32_t width,
     int32_t height);
-
-struct wp_fractional_scale_v1 *swl_wp_fractional_scale_manager_v1_get_fractional_scale(
-    struct wp_fractional_scale_manager_v1 *manager,
-    struct wl_surface *surface);
 
 /* ------------------------------------------------------------------ */
 /*  Cursor-shape request wrappers                                     */
@@ -684,9 +569,6 @@ void swl_wp_color_representation_surface_v1_set_chroma_location(
     struct wp_color_representation_surface_v1 *surface,
     uint32_t chroma_location);
 
-struct wp_color_management_output_v1 *swl_wp_color_manager_v1_get_output(
-    struct wp_color_manager_v1 *manager,
-    struct wl_output *output);
 struct wp_color_management_surface_v1 *swl_wp_color_manager_v1_get_surface(
     struct wp_color_manager_v1 *manager,
     struct wl_surface *surface);
@@ -697,9 +579,6 @@ swl_wp_color_manager_v1_get_surface_feedback(
 struct wp_image_description_v1 *swl_wp_color_manager_v1_get_image_description(
     struct wp_color_manager_v1 *manager,
     struct wp_image_description_reference_v1 *reference);
-struct wp_image_description_v1 *
-swl_wp_color_management_output_v1_get_image_description(
-    struct wp_color_management_output_v1 *output);
 void swl_wp_color_management_surface_v1_set_image_description(
     struct wp_color_management_surface_v1 *surface,
     struct wp_image_description_v1 *image_description,
@@ -801,16 +680,11 @@ void swl_compositor_destroy(struct wl_compositor *compositor);
 void swl_subcompositor_destroy(struct wl_subcompositor *subcompositor);
 void swl_shm_destroy(struct wl_shm *shm);
 void swl_output_destroy(struct wl_output *output);
-void swl_output_release(struct wl_output *output);
 void swl_buffer_destroy(struct wl_buffer *buffer);
 void swl_surface_destroy(struct wl_surface *surface);
 void swl_subsurface_destroy(struct wl_subsurface *subsurface);
 void swl_shm_pool_destroy(struct wl_shm_pool *pool);
-void swl_pointer_release(struct wl_pointer *pointer);
-void swl_keyboard_release(struct wl_keyboard *keyboard);
-void swl_touch_release(struct wl_touch *touch);
 void swl_seat_destroy(struct wl_seat *seat);
-void swl_seat_release(struct wl_seat *seat);
 void swl_data_offer_destroy(struct wl_data_offer *offer);
 void swl_data_source_destroy(struct wl_data_source *source);
 void swl_data_device_destroy(struct wl_data_device *device);
@@ -827,18 +701,9 @@ void swl_primary_selection_device_manager_destroy(
 void swl_text_input_v3_destroy(struct zwp_text_input_v3 *text_input);
 void swl_text_input_manager_v3_destroy(
     struct zwp_text_input_manager_v3 *manager);
-void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface);
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel);
 void swl_xdg_positioner_destroy(struct xdg_positioner *positioner);
 void swl_xdg_popup_destroy(struct xdg_popup *popup);
-void swl_xdg_wm_base_destroy(struct xdg_wm_base *wm_base);
-void swl_zxdg_toplevel_decoration_v1_destroy(
-    struct zxdg_toplevel_decoration_v1 *decoration);
-void swl_zxdg_decoration_manager_v1_destroy(
-    struct zxdg_decoration_manager_v1 *manager);
-void swl_zxdg_output_v1_destroy(struct zxdg_output_v1 *output);
-void swl_zxdg_output_manager_v1_destroy(
-    struct zxdg_output_manager_v1 *manager);
 void swl_wp_viewport_destroy(struct wp_viewport *viewport);
 void swl_wp_viewporter_destroy(struct wp_viewporter *viewporter);
 void swl_wp_fractional_scale_v1_destroy(struct wp_fractional_scale_v1 *fractional_scale);
@@ -885,27 +750,16 @@ void swl_wp_color_representation_surface_v1_destroy(
     struct wp_color_representation_surface_v1 *surface);
 void swl_wp_color_representation_manager_v1_destroy(
     struct wp_color_representation_manager_v1 *manager);
-void swl_wp_color_management_output_v1_destroy(
-    struct wp_color_management_output_v1 *output);
 void swl_wp_color_management_surface_v1_destroy(
     struct wp_color_management_surface_v1 *surface);
 void swl_wp_color_management_surface_feedback_v1_destroy(
     struct wp_color_management_surface_feedback_v1 *feedback);
 void swl_wp_image_description_v1_destroy(
     struct wp_image_description_v1 *image_description);
-void swl_wp_image_description_reference_v1_destroy(
-    struct wp_image_description_reference_v1 *reference);
 void swl_wp_color_manager_v1_destroy(struct wp_color_manager_v1 *manager);
 void swl_wp_presentation_destroy(struct wp_presentation *presentation);
 void swl_wp_presentation_feedback_destroy(
     struct wp_presentation_feedback *feedback);
-void swl_zwp_linux_dmabuf_v1_destroy(
-    struct zwp_linux_dmabuf_v1 *linux_dmabuf);
-void swl_zwp_linux_buffer_params_v1_destroy(
-    struct zwp_linux_buffer_params_v1 *params);
-void swl_zwp_linux_dmabuf_feedback_v1_destroy(
-    struct zwp_linux_dmabuf_feedback_v1 *feedback);
-
 /* ------------------------------------------------------------------ */
 /*  Display wrappers                                                  */
 /* ------------------------------------------------------------------ */

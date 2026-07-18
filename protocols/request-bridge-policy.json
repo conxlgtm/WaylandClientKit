@@ -1,0 +1,252 @@
+{
+  "interfaces": {
+    "wl_display": {
+      "generatedRequests": [],
+      "handwrittenByDefault": "ownership"
+    },
+    "wl_compositor": {
+      "wrapperPrefix": "compositor",
+      "generatedRequests": [
+        "create_surface"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "wl_data_device_manager": {
+      "wrapperPrefix": "data_device_manager",
+      "generatedRequests": [
+        "create_data_source",
+        "get_data_device"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "wl_keyboard": {
+      "wrapperPrefix": "keyboard",
+      "generatedRequests": [
+        "release"
+      ]
+    },
+    "wl_output": {
+      "wrapperPrefix": "output",
+      "generatedRequests": [
+        "release"
+      ],
+      "handwrittenByDefault": "conditional_version"
+    },
+    "wl_pointer": {
+      "wrapperPrefix": "pointer",
+      "generatedRequests": [
+        "set_cursor",
+        "release"
+      ]
+    },
+    "wl_seat": {
+      "wrapperPrefix": "seat",
+      "generatedRequests": [
+        "get_pointer",
+        "get_keyboard",
+        "get_touch",
+        "release"
+      ],
+      "handwrittenByDefault": "conditional_version"
+    },
+    "wl_surface": {
+      "wrapperPrefix": "surface",
+      "generatedRequests": [
+        "frame",
+        "set_buffer_scale"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "wl_touch": {
+      "wrapperPrefix": "touch",
+      "generatedRequests": [
+        "release"
+      ]
+    },
+    "wp_color_management_output_v1": {
+      "generatedRequests": [
+        "get_image_description",
+        "destroy"
+      ]
+    },
+    "wp_color_manager_v1": {
+      "generatedRequests": [
+        "get_output"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "wp_fractional_scale_manager_v1": {
+      "generatedRequests": [
+        "get_fractional_scale"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "wp_image_description_reference_v1": {
+      "generatedRequests": [
+        "destroy"
+      ]
+    },
+    "wp_linux_drm_syncobj_manager_v1": {
+      "generatedRequests": [],
+      "handwrittenByDefault": "test_recording",
+      "handwrittenRequests": {
+        "import_timeline": "failure_injection"
+      }
+    },
+    "wp_viewporter": {
+      "generatedRequests": [
+        "get_viewport"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "xdg_session_manager_v1": {
+      "generatedRequests": [
+        "destroy",
+        "get_session"
+      ]
+    },
+    "xdg_session_v1": {
+      "generatedRequests": [
+        "destroy",
+        "remove",
+        "add_toplevel",
+        "restore_toplevel",
+        "remove_toplevel"
+      ]
+    },
+    "xdg_surface": {
+      "generatedRequests": [
+        "destroy",
+        "get_toplevel",
+        "get_popup",
+        "ack_configure"
+      ],
+      "handwrittenRequests": {
+        "set_window_geometry": "not_exposed"
+      }
+    },
+    "xdg_toplevel": {
+      "generatedRequests": [
+        "set_parent"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "xdg_toplevel_session_v1": {
+      "generatedRequests": [
+        "destroy",
+        "rename"
+      ]
+    },
+    "xdg_wm_base": {
+      "generatedRequests": [
+        "destroy",
+        "create_positioner",
+        "get_xdg_surface",
+        "pong"
+      ]
+    },
+    "zxdg_decoration_manager_v1": {
+      "generatedRequests": [
+        "destroy",
+        "get_toplevel_decoration"
+      ]
+    },
+    "zxdg_output_manager_v1": {
+      "generatedRequests": [
+        "destroy",
+        "get_xdg_output"
+      ]
+    },
+    "zxdg_output_v1": {
+      "generatedRequests": [
+        "destroy"
+      ]
+    },
+    "zxdg_toplevel_decoration_v1": {
+      "generatedRequests": [
+        "destroy",
+        "set_mode",
+        "unset_mode"
+      ]
+    },
+    "zwp_linux_buffer_params_v1": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "zwp_linux_dmabuf_feedback_v1": {
+      "generatedRequests": [
+        "destroy"
+      ]
+    },
+    "zwp_linux_dmabuf_v1": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "zwp_primary_selection_device_manager_v1": {
+      "wrapperPrefix": "primary_selection_device_manager",
+      "generatedRequests": [
+        "create_source",
+        "get_device"
+      ],
+      "handwrittenByDefault": "test_recording"
+    },
+    "zwp_tablet_manager_v2": {
+      "generatedRequests": [
+        "get_tablet_seat",
+        "destroy"
+      ]
+    },
+    "zwp_tablet_pad_dial_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    },
+    "zwp_tablet_pad_group_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    },
+    "zwp_tablet_pad_ring_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    },
+    "zwp_tablet_pad_strip_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    },
+    "zwp_tablet_pad_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    },
+    "zwp_tablet_seat_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    },
+    "zwp_tablet_tool_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    },
+    "zwp_tablet_v2": {
+      "generatedRequests": [
+        "destroy"
+      ],
+      "handwrittenByDefault": "not_exposed"
+    }
+  }
+}

@@ -36,24 +36,6 @@ static void swl_test_record_output_request(
 }
 #endif
 
-struct zxdg_output_v1 *swl_zxdg_output_manager_v1_get_xdg_output(
-    struct zxdg_output_manager_v1 *manager,
-    struct wl_output *output)
-{
-    return zxdg_output_manager_v1_get_xdg_output(manager, output);
-}
-
-void swl_zxdg_output_v1_destroy(struct zxdg_output_v1 *output)
-{
-    zxdg_output_v1_destroy(output);
-}
-
-void swl_zxdg_output_manager_v1_destroy(
-    struct zxdg_output_manager_v1 *manager)
-{
-    zxdg_output_manager_v1_destroy(manager);
-}
-
 struct zwlr_output_configuration_v1 *
 swl_zwlr_output_manager_v1_create_configuration(
     struct zwlr_output_manager_v1 *manager,

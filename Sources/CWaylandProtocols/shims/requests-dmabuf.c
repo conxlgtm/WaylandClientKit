@@ -227,24 +227,6 @@ void swl_zwp_linux_buffer_params_v1_create(
     swl_buffer_params_create_impl(params, width, height, format, flags);
 }
 
-void swl_zwp_linux_dmabuf_v1_destroy(
-    struct zwp_linux_dmabuf_v1 *linux_dmabuf)
-{
-    zwp_linux_dmabuf_v1_destroy(linux_dmabuf);
-}
-
-void swl_zwp_linux_buffer_params_v1_destroy(
-    struct zwp_linux_buffer_params_v1 *params)
-{
-    zwp_linux_buffer_params_v1_destroy(params);
-}
-
-void swl_zwp_linux_dmabuf_feedback_v1_destroy(
-    struct zwp_linux_dmabuf_feedback_v1 *feedback)
-{
-    zwp_linux_dmabuf_feedback_v1_destroy(feedback);
-}
-
 #ifdef SWL_ENABLE_TESTING
 void swl_test_dmabuf_request_recording_begin(void)
 {

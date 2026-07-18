@@ -193,21 +193,6 @@ static void swl_test_primary_selection_device_manager_destroy_record(
     zwp_primary_selection_device_manager_v1_destroy
 #endif
 
-struct zwp_primary_selection_source_v1 *
-swl_primary_selection_device_manager_create_source(
-    struct zwp_primary_selection_device_manager_v1 *manager)
-{
-    return zwp_primary_selection_device_manager_v1_create_source(manager);
-}
-
-struct zwp_primary_selection_device_v1 *
-swl_primary_selection_device_manager_get_device(
-    struct zwp_primary_selection_device_manager_v1 *manager,
-    struct wl_seat *seat)
-{
-    return zwp_primary_selection_device_manager_v1_get_device(manager, seat);
-}
-
 void swl_primary_selection_source_offer(
     struct zwp_primary_selection_source_v1 *source,
     const char *mime_type)

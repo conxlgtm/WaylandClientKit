@@ -518,11 +518,6 @@ static uint32_t swl_test_proxy_get_id(void *proxy)
 #define swl_subsurface_set_desync_impl wl_subsurface_set_desync
 #endif
 
-struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor)
-{
-    return wl_compositor_create_surface(compositor);
-}
-
 struct wl_shm_pool *swl_shm_create_pool(struct wl_shm *shm, int32_t fd, int32_t size)
 {
     return swl_shm_create_pool_impl(shm, fd, size);
@@ -534,11 +529,6 @@ struct wl_buffer *swl_shm_pool_create_buffer(
 {
     return swl_shm_pool_create_buffer_impl(
         pool, offset, width, height, stride, format);
-}
-
-struct wl_callback *swl_surface_frame(struct wl_surface *surface)
-{
-    return wl_surface_frame(surface);
 }
 
 void swl_surface_attach(
@@ -576,11 +566,6 @@ void swl_surface_damage_buffer(
     swl_surface_damage_buffer_impl(surface, x, y, width, height);
 }
 
-void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale)
-{
-    wl_surface_set_buffer_scale(surface, scale);
-}
-
 void swl_surface_set_opaque_region(
     struct wl_surface *surface,
     struct wl_region *region)
@@ -593,31 +578,6 @@ void swl_surface_set_input_region(
     struct wl_region *region)
 {
     swl_surface_set_input_region_impl(surface, region);
-}
-
-struct wl_pointer *swl_seat_get_pointer(struct wl_seat *seat)
-{
-    return wl_seat_get_pointer(seat);
-}
-
-struct wl_keyboard *swl_seat_get_keyboard(struct wl_seat *seat)
-{
-    return wl_seat_get_keyboard(seat);
-}
-
-struct wl_touch *swl_seat_get_touch(struct wl_seat *seat)
-{
-    return wl_seat_get_touch(seat);
-}
-
-void swl_pointer_set_cursor(
-    struct wl_pointer *pointer,
-    uint32_t serial,
-    struct wl_surface *surface,
-    int32_t hotspot_x,
-    int32_t hotspot_y)
-{
-    wl_pointer_set_cursor(pointer, serial, surface, hotspot_x, hotspot_y);
 }
 
 uint32_t swl_proxy_get_version(void *proxy)
@@ -721,11 +681,6 @@ void swl_output_destroy(struct wl_output *output)
     wl_output_destroy(output);
 }
 
-void swl_output_release(struct wl_output *output)
-{
-    wl_output_release(output);
-}
-
 void swl_buffer_destroy(struct wl_buffer *buffer)
 {
     swl_buffer_destroy_impl(buffer);
@@ -741,29 +696,9 @@ void swl_shm_pool_destroy(struct wl_shm_pool *pool)
     swl_shm_pool_destroy_impl(pool);
 }
 
-void swl_pointer_release(struct wl_pointer *pointer)
-{
-    wl_pointer_release(pointer);
-}
-
-void swl_keyboard_release(struct wl_keyboard *keyboard)
-{
-    wl_keyboard_release(keyboard);
-}
-
-void swl_touch_release(struct wl_touch *touch)
-{
-    wl_touch_release(touch);
-}
-
 void swl_seat_destroy(struct wl_seat *seat)
 {
     wl_seat_destroy(seat);
-}
-
-void swl_seat_release(struct wl_seat *seat)
-{
-    wl_seat_release(seat);
 }
 
 #ifdef SWL_ENABLE_TESTING

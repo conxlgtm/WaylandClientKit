@@ -864,13 +864,6 @@ void swl_wp_color_representation_manager_v1_destroy(
     swl_color_representation_manager_destroy_impl(manager);
 }
 
-struct wp_color_management_output_v1 *swl_wp_color_manager_v1_get_output(
-    struct wp_color_manager_v1 *manager,
-    struct wl_output *output)
-{
-    return wp_color_manager_v1_get_output(manager, output);
-}
-
 struct wp_color_management_surface_v1 *swl_wp_color_manager_v1_get_surface(
     struct wp_color_manager_v1 *manager,
     struct wl_surface *surface)
@@ -891,13 +884,6 @@ struct wp_image_description_v1 *swl_wp_color_manager_v1_get_image_description(
     struct wp_image_description_reference_v1 *reference)
 {
     return swl_color_manager_get_image_description_impl(manager, reference);
-}
-
-struct wp_image_description_v1 *
-swl_wp_color_management_output_v1_get_image_description(
-    struct wp_color_management_output_v1 *output)
-{
-    return wp_color_management_output_v1_get_image_description(output);
 }
 
 void swl_wp_color_management_surface_v1_set_image_description(
@@ -922,12 +908,6 @@ swl_wp_color_management_surface_feedback_v1_get_preferred(
     return swl_color_management_surface_feedback_get_preferred_impl(feedback);
 }
 
-void swl_wp_color_management_output_v1_destroy(
-    struct wp_color_management_output_v1 *output)
-{
-    wp_color_management_output_v1_destroy(output);
-}
-
 void swl_wp_color_management_surface_v1_destroy(
     struct wp_color_management_surface_v1 *surface)
 {
@@ -944,12 +924,6 @@ void swl_wp_image_description_v1_destroy(
     struct wp_image_description_v1 *image_description)
 {
     swl_image_description_destroy_impl(image_description);
-}
-
-void swl_wp_image_description_reference_v1_destroy(
-    struct wp_image_description_reference_v1 *reference)
-{
-    wp_image_description_reference_v1_destroy(reference);
 }
 
 void swl_wp_color_manager_v1_destroy(struct wp_color_manager_v1 *manager)

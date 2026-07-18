@@ -11,6 +11,7 @@ Vendored XML files:
 - `protocols/manifest.json`
 - `protocols/generation-policy.json`
 - `protocols/listener-bridge-policy.json`
+- `protocols/request-bridge-policy.json`
 
 These files are committed. `protocols/manifest.json` is the source of truth for
 the protocol inventory, source-resolution strategy, override environment
@@ -54,6 +55,12 @@ policy preserves the existing exported shim names, records the one intentionally
 omitted surface event, and marks installers that keep handwritten test or system
 header behavior. Normal listener forwarding comes from the same XML model.
 
+`protocols/request-bridge-policy.json` selects ordinary request wrappers that
+can call the XML-defined request directly. The XML supplies their argument and
+return types. The policy keeps existing C names and classifies requests that
+stay handwritten because they record tests, inject failures, handle version or
+ownership rules, convert values, or aren't exposed by the shim API.
+
 ## Generated Outputs
 
 Generated headers:
@@ -61,12 +68,14 @@ Generated headers:
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/include/generated/shims/listener-bridges.h`
 - `Sources/CWaylandProtocols/include/generated/shims/registry-bind-bridges.h`
+- `Sources/CWaylandProtocols/include/generated/shims/request-bridges.h`
 
 Generated C files:
 
 - `Sources/CWaylandProtocols/generated/`
 - `Sources/CWaylandProtocols/generated/shims/listener-bridges.c`
 - `Sources/CWaylandProtocols/generated/shims/registry-bind-bridges.c`
+- `Sources/CWaylandProtocols/generated/shims/request-bridges.c`
 
 Generated Swift files:
 
@@ -77,6 +86,8 @@ These files are committed. The exact file set comes from `generatedHeaderPath`
 and `generatedCodePath` in `protocols/manifest.json`, plus the supported globals
 and their registry bind bridges in `protocols/generation-policy.json`, and the
 listener inventory in `protocols/listener-bridge-policy.json`.
+The direct request-wrapper inventory and its naming exceptions come from
+`protocols/request-bridge-policy.json`.
 
 ## Shim Files
 
@@ -162,6 +173,7 @@ Reads:
 - `protocols/`
 - `protocols/generation-policy.json`
 - `protocols/listener-bridge-policy.json`
+- `protocols/request-bridge-policy.json`
 
 Writes:
 
@@ -185,25 +197,27 @@ Checks diffs for:
 - `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
 
 It validates vendored XML checksums, regenerates into a temporary output tree,
-validates both generation policies against the XML schema, and compares
+validates the generation policies against the XML schema, and compares
 that tree against the committed generated outputs, including the listener
-and registry bind bridge headers and C implementations. It does not write to
-the checkout.
+bridge, registry bind bridge, and ordinary request bridge headers and C
+implementations. It does not write to the checkout.
 
 ### `swift run wck shims verify`
 
 Run with `swift run wck shims verify`.
 
-Checks the hand-written protocol and cursor shim headers and C files for the
-required exported symbols used by Swift. This is intentionally separate from
-protocol generation, because shim files are project-owned code rather than
-scanner output.
+Checks the handwritten protocol and cursor shim files, plus the generated shim
+headers, for the required exported symbols used by Swift. This stays separate
+from protocol generation because requests with test hooks, conversions,
+failure injection, version checks, or ownership behavior remain project-owned.
 
 ## Boundary Rule
 
 Generated protocol files and schema-shaped bridges define the protocol surface.
 
-Shim files define the exported C surface imported by Swift.
+Generated request bridges and handwritten shim files together define the C
+surface imported by Swift. A request belongs in generated output only when its
+wrapper is a direct call described completely by the XML and naming policy.
 
 ## Adding Another Protocol
 
@@ -212,8 +226,9 @@ Shim files define the exported C surface imported by Swift.
 3. Update `protocols/manifest.json` with the generated header and C file paths.
 4. Add supported globals to `protocols/generation-policy.json`.
 5. Run `swift run wck protocols generate`.
-6. Add project-owned request shims only for behavior that isn't a generated registry bind or listener bridge.
-7. Update `swift run wck shims verify` expectations for required new shim symbols.
-8. Add raw Swift wrappers and tests.
-9. Surface public overlay APIs only when the behavior is tested and documented.
-10. Run `swift run wck ci check`.
+6. Classify request wrappers in `protocols/request-bridge-policy.json`.
+7. Add project-owned request shims only when the wrapper owns behavior beyond a direct XML request.
+8. Update `swift run wck shims verify` expectations for required new shim symbols.
+9. Add raw Swift wrappers and tests.
+10. Surface public overlay APIs only when the behavior is tested and documented.
+11. Run `swift run wck ci check`.
