@@ -1,14 +1,15 @@
 import WaylandRuntime
 
+/// Owns the thread and event streams that have to outlive an active display core.
 @safe
-final class WaylandDisplayRuntime: Sendable {
+final class DisplayLifetimeAnchor: Sendable {
     let executor: WaylandThreadExecutor
     let eventHub: DisplayEventHub
 
-    init(configuration displayConfiguration: DisplayConfiguration) throws {
+    init(configuration: DisplayConfiguration) throws {
         eventHub = DisplayEventHub(
-            configuration: displayConfiguration.eventStreams,
-            diagnosticsConfiguration: displayConfiguration.diagnostics
+            configuration: configuration.eventStreams,
+            diagnosticsConfiguration: configuration.diagnostics
         )
         executor = try WaylandThreadExecutor()
     }
@@ -17,35 +18,7 @@ final class WaylandDisplayRuntime: Sendable {
         executor.shutdown()
     }
 
-    var events: DisplayEvents {
-        eventHub.displayEvents()
-    }
-
-    var inputEvents: InputEvents {
-        eventHub.inputEvents()
-    }
-
-    var dataTransferEvents: DataTransferEvents {
-        eventHub.dataTransferEvents()
-    }
-
-    func windowPresentationEvents(for windowID: WindowID) -> WindowPresentationEvents {
-        eventHub.windowPresentationEvents(windowID: windowID)
-    }
-
-    var diagnostics: DisplayDiagnostics {
-        eventHub.diagnostics()
-    }
-
-    func installEventSource(_ source: any WaylandThreadEventSource) throws {
-        try executor.installEventSource(source)
-    }
-
-    func clearEventSource(_ source: (any WaylandThreadEventSource)?) {
-        executor.clearEventSource(source)
-    }
-
-    func actorDidDeinitialize(lifecycle: inout WaylandDisplayLifecycle) {
+    func displayDidDeinitialize(lifecycle: inout WaylandDisplayLifecycle) {
         switch lifecycle {
         case .closed, .abandoned:
             executor.requestStopAfterCurrentJob()
