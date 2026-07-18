@@ -1,8 +1,6 @@
 import WaylandClient
 import WaylandGraphicsCore
 
-// swiftlint:disable file_length
-
 package struct GPUWindowBackingState: Equatable, Sendable {
     package var lifecycle: GPUWindowBackingLifecycle
     package var runtimePath: GPURuntimePathSnapshot
@@ -195,11 +193,13 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
     package static var commitTimingRequiredButUnavailable: Self {
         .failure(.commitTimingRequiredButUnavailable)
     }
+
     package static func metadataRequiredButUnavailable(
         _ error: SurfaceCommitMetadataError
     ) -> Self {
         .failure(.metadataRequiredButUnavailable(error))
     }
+
     package static var compositorRejectedBuffer: Self { .failure(.compositorRejectedBuffer) }
     package static var commitTimingRejected: Self { .failure(.commitTimingRejected) }
     package static var commitFailed: Self { .failure(.commitFailed) }
