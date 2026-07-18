@@ -188,9 +188,7 @@ struct WaylandProtocolIRTests {
         }
         let optional = policy.interfaces.values.filter { $0.globalBinding == .optional }
         let retained = policy.interfaces.values.compactMap(\.retainedOptionalGlobal)
-        let capabilityReported = policy.interfaces.values.filter { interfacePolicy in
-            interfacePolicy.reportsCapability
-        }
+        let capabilityReported = policy.interfaces.values.filter(\.reportsCapability)
 
         #expect(Set(required) == Set(["wl_compositor", "wl_shm", "xdg_wm_base"]))
         #expect(optional.count == 36)

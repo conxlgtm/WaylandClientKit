@@ -101,9 +101,7 @@ enum OptionalGlobalDescriptorsGeneration {
         let allEntries = entries.map { entry in
             "        \(entry.descriptorName),"
         }.joined(separator: "\n")
-        let capabilityEntries = entries.filter { entry in
-            entry.policy.reportsCapability
-        }.map { entry in
+        let capabilityEntries = entries.filter(\.policy.reportsCapability).map { entry in
             "        \(entry.descriptorName).interfaceName,"
         }.joined(separator: "\n")
 

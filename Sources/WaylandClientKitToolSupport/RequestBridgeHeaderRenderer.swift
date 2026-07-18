@@ -41,7 +41,7 @@ enum RequestBridgeHeaderRenderer {
         bridges: [ResolvedRequestBridge]
     ) -> [String] {
         var interfaceNames = Set(bridges.map(\.interface.name))
-        for argument in bridges.flatMap({ $0.request.arguments }) {
+        for argument in bridges.flatMap(\.request.arguments) {
             if let interfaceName = argument.interfaceName {
                 interfaceNames.insert(interfaceName)
             }
