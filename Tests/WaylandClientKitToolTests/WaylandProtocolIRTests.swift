@@ -99,6 +99,34 @@ struct WaylandProtocolIRTests {
         #expect(protocolIRs.allSatisfy { !$0.name.isEmpty && !$0.interfaces.isEmpty })
     }
 
+    @Test
+    func checkedInSupportedVersionsMatchXMLAndGenerationPolicy() throws {
+        let tooling = ProtocolTooling(repository: Repository(root: repositoryRoot))
+        let expected = try tooling.renderSupportedVersions()
+        let actual = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift"
+            ),
+            encoding: .utf8
+        )
+
+        #expect(actual == expected)
+    }
+
+    @Test
+    func generationPolicyRecordsCurrentGlobalBindingChoices() throws {
+        let tooling = ProtocolTooling(repository: Repository(root: repositoryRoot))
+        let policy = try tooling.loadGenerationPolicy()
+        let required = policy.interfaces.compactMap { name, interfacePolicy in
+            interfacePolicy.globalBinding == .required ? name : nil
+        }
+        let optional = policy.interfaces.values.filter { $0.globalBinding == .optional }
+
+        #expect(Set(required) == Set(["wl_compositor", "wl_shm", "xdg_wm_base"]))
+        #expect(optional.count == 36)
+        #expect(policy.interfaces["wl_seat"]?.minimumRequiredVersion == 5)
+    }
+
     private func parseFixture() throws -> WaylandProtocolIR {
         try WaylandProtocolXMLParser().parse(
             Data(contentsOf: fixture("example.xml")),

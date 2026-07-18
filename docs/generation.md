@@ -36,9 +36,10 @@ That policy is a JSON overlay so these choices do not get mixed into vendored
 upstream XML.
 
 The current generator still uses `wayland-scanner` for its checked-in C output,
-and the C shims remain handwritten. Later changes can use the IR and policy model
-to move those repeated pieces one family at a time. This change does not alter
-their ownership.
+and the C shims remain handwritten. It also generates `SupportedVersions.swift`
+from the parsed interface versions and `protocols/generation-policy.json`. The
+policy records the client version cap, any non-default minimum version, and
+whether each supported global is required or optional.
 
 ## Generated Outputs
 
@@ -50,8 +51,13 @@ Generated C files:
 
 - `Sources/CWaylandProtocols/generated/`
 
+Generated Swift files:
+
+- `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
+
 These files are committed. The exact file set comes from `generatedHeaderPath`
-and `generatedCodePath` in `protocols/manifest.json`.
+and `generatedCodePath` in `protocols/manifest.json`, plus the supported globals
+listed in `protocols/generation-policy.json`.
 
 ## Shim Files
 
@@ -135,11 +141,13 @@ Run `swift run wck bootstrap maintainer-check` first to verify the scanner,
 Reads:
 
 - `protocols/`
+- `protocols/generation-policy.json`
 
 Writes:
 
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/generated/`
+- `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
 
 Does not write:
 
@@ -152,10 +160,12 @@ Checks diffs for:
 
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/generated/`
+- `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
 
 It validates vendored XML checksums, regenerates into a temporary output tree,
-and compares that tree against the committed generated outputs. It does not
-write to the checkout and does not check shim files as generated output.
+validates the generation policy against the XML interface versions, and compares
+that tree against the committed generated outputs. It does not write to the
+checkout and does not check shim files as generated output.
 
 ### `swift run wck shims verify`
 
@@ -177,9 +187,10 @@ Shim files define the exported C surface imported by Swift.
 1. Add the protocol XML under `protocols/upstream/`.
 2. Update `protocols/manifest.json` if the protocol should be tracked there.
 3. Update `protocols/manifest.json` with the generated header and C file paths.
-4. Run `swift run wck protocols generate`.
-5. Add project-owned shim declarations and implementations for the Swift-facing surface.
-6. Update `swift run wck shims verify` expectations for required new shim symbols.
-7. Add raw Swift wrappers and tests.
-8. Surface public overlay APIs only when the behavior is tested and documented.
-9. Run `swift run wck ci check`.
+4. Add supported globals to `protocols/generation-policy.json`.
+5. Run `swift run wck protocols generate`.
+6. Add project-owned shim declarations and implementations for the Swift-facing surface.
+7. Update `swift run wck shims verify` expectations for required new shim symbols.
+8. Add raw Swift wrappers and tests.
+9. Surface public overlay APIs only when the behavior is tested and documented.
+10. Run `swift run wck ci check`.

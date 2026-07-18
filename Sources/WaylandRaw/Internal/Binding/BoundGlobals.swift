@@ -1,50 +1,6 @@
 import CWaylandClientSystem
 import CWaylandProtocols
 
-package enum SupportedVersions {
-    package static let wlCompositor: RawVersion = 6
-    package static let wlSubcompositor: RawVersion = 1
-    package static let wlShm: RawVersion = 1
-    package static let wlOutput: RawVersion = 4
-    package static let xdgWmBase: RawVersion = 7
-    package static let zxdgDecorationManagerV1Minimum: RawVersion = 1
-    package static let zxdgDecorationManagerV1: RawVersion = 2
-    package static let zxdgOutputManagerV1Minimum: RawVersion = 2
-    package static let zxdgOutputManagerV1: RawVersion = 3
-    package static let wpViewporter: RawVersion = 1
-    package static let wpPresentation: RawVersion = 2
-    package static let wpFractionalScaleManagerV1: RawVersion = 1
-    package static let wpCursorShapeManagerV1: RawVersion = 2
-    package static let xdgActivationV1: RawVersion = 1
-    package static let xdgSessionManagerV1: RawVersion = 1
-    package static let xdgToplevelIconManagerV1: RawVersion = 1
-    package static let xdgSystemBellV1: RawVersion = 1
-    package static let xdgWmDialogV1: RawVersion = 1
-    package static let xdgToplevelDragManagerV1: RawVersion = 1
-    package static let extForeignToplevelListV1: RawVersion = 1
-    package static let wpPointerWarpV1: RawVersion = 1
-    package static let zwpTabletManagerV2: RawVersion = 2
-    package static let zwpRelativePointerManagerV1: RawVersion = 1
-    package static let zwpPointerConstraintsV1: RawVersion = 1
-    package static let zwpPointerGesturesV1: RawVersion = 3
-    package static let zwpKeyboardShortcutsInhibitManagerV1: RawVersion = 1
-    package static let zwpIdleInhibitManagerV1: RawVersion = 1
-    package static let wpLinuxDrmSyncobjManagerV1: RawVersion = 1
-    package static let wpFifoManagerV1: RawVersion = 1
-    package static let wpCommitTimingManagerV1: RawVersion = 1
-    package static let wpContentTypeManagerV1: RawVersion = 1
-    package static let wpAlphaModifierV1: RawVersion = 1
-    package static let wpTearingControlManagerV1: RawVersion = 1
-    package static let wpColorRepresentationManagerV1: RawVersion = 1
-    package static let wpColorManagerV1: RawVersion = 2
-    package static let zwpLinuxDmabufV1: RawVersion = 5
-    package static let wlSeat: RawVersion = 10
-    package static let wlDataDeviceManager: RawVersion = 3
-    package static let zwpPrimarySelectionDeviceManagerV1: RawVersion = 1
-    package static let zwpTextInputManagerV3: RawVersion = 2
-    package static let zwlrOutputManagerV1: RawVersion = 4
-}
-
 package enum XDGDecorationManagerBindingDecision: Equatable, Sendable {
     case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
     case bind(version: RawVersion)

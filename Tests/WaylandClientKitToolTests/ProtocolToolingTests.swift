@@ -189,14 +189,25 @@ struct ProtocolToolingTests {
                 "WCK_NIX_BIN": bin.appendingPathComponent("nix").path,
             ])
 
-        try ProtocolTooling(repository: Repository(root: root), runner: runner).generateProtocols()
+        let tooling = ProtocolTooling(repository: Repository(root: root), runner: runner)
+        try tooling.generateProtocols()
+        try tooling.verifyGenerated()
 
         let invocations = try String(contentsOf: scannerInvocations, encoding: .utf8)
         #expect(invocations.contains("client-header"))
         #expect(invocations.contains("private-code"))
+        let supportedVersions = try String(
+            contentsOf: root.appendingPathComponent(
+                "Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift"
+            ),
+            encoding: .utf8
+        )
+        #expect(supportedVersions.contains("package enum SupportedVersions"))
     }
+}
 
-    private func temporaryRepository() throws -> URL {
+extension ProtocolToolingTests {
+    func temporaryRepository() throws -> URL {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("waylandclientkit-protocol-tooling-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -207,7 +218,7 @@ struct ProtocolToolingTests {
         return root
     }
 
-    private func writeProtocolXML(in root: URL) throws {
+    func writeProtocolXML(in root: URL) throws {
         let xml = root.appendingPathComponent("protocols/upstream/core/wayland.xml")
         try FileManager.default.createDirectory(
             at: xml.deletingLastPathComponent(),
@@ -216,7 +227,7 @@ struct ProtocolToolingTests {
         try "<protocol name=\"wayland\"/>".write(to: xml, atomically: true, encoding: .utf8)
     }
 
-    private func writeProtocolManifest(
+    func writeProtocolManifest(
         in root: URL,
         localPath: String = "protocols/upstream/core/wayland.xml",
         generatedHeaderPath: String =
@@ -257,9 +268,18 @@ struct ProtocolToolingTests {
           ]
         }
         """.write(to: manifest, atomically: true, encoding: .utf8)
+        try """
+        {
+          "interfaces": {}
+        }
+        """.write(
+            to: root.appendingPathComponent("protocols/generation-policy.json"),
+            atomically: true,
+            encoding: .utf8
+        )
     }
 
-    private func writeExecutable(_ contents: String, to url: URL) throws {
+    func writeExecutable(_ contents: String, to url: URL) throws {
         try contents.write(to: url, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes(
             [.posixPermissions: 0o755],

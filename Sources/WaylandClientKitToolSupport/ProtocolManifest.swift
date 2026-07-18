@@ -414,7 +414,8 @@ public struct ProtocolTooling {
         let manifest = try loadManifest()
         // Parse every input before replacing generated directories. This keeps malformed
         // XML from leaving a partially regenerated tree behind.
-        _ = try loadProtocolIRs(from: manifest)
+        let protocolIRs = try loadProtocolIRs(from: manifest)
+        let supportedVersions = try renderSupportedVersions(protocols: protocolIRs)
         let scanner = try RepositoryNixTools(
             repository: repository,
             fileSystem: fileSystem,
@@ -447,6 +448,7 @@ public struct ProtocolTooling {
             try normalizeGeneratedFile(header)
             try normalizeGeneratedFile(code)
         }
+        try writeSupportedVersions(supportedVersions, outputRoot: outputRoot)
 
         diagnostics.success("generated Wayland protocol artifacts")
     }
@@ -496,6 +498,18 @@ public struct ProtocolTooling {
             failures.append(
                 contentsOf: try directoryDifferences(
                     expected: expected, actual: actual, label: path))
+        }
+
+        let supportedVersionsPath = SupportedVersionsGeneration.outputPath
+        let expectedSupportedVersions = generated.appendingPathComponent(supportedVersionsPath)
+        let actualSupportedVersions = repository.url(supportedVersionsPath)
+        if !fileSystem.exists(actualSupportedVersions) {
+            failures.append("missing generated file: \(supportedVersionsPath)")
+        } else if try !fileSystem.filesEqual(
+            expectedSupportedVersions,
+            actualSupportedVersions
+        ) {
+            failures.append("changed generated file: \(supportedVersionsPath)")
         }
 
         guard failures.isEmpty else {
