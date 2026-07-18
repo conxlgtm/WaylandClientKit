@@ -128,21 +128,18 @@ extension GPURuntimePathSnapshot {
         snapshot.egl = .fallback(runtimeReason)
         snapshot.dmabufImport = snapshot.dmabufImport.fallback(runtimeReason)
         snapshot.bufferLifecycle = snapshot.bufferLifecycle.fallback(runtimeReason)
-        switch reason {
-        case .explicitSyncRequiredButUnavailable, .explicitSyncSetupFailed,
-            .explicitSyncSubmissionFailed, .explicitSyncReleaseFailed:
-            snapshot.synchronization = .explicitFallback(runtimeReason)
-        default:
-            break
-        }
-        if case .fifoRequiredButUnavailable = reason {
-            snapshot.pacing = .fallback(runtimeReason)
-        }
-        if case .commitTimingRequiredButUnavailable = reason {
-            snapshot.pacing = .fallback(runtimeReason)
-        }
-        if case .metadataRequiredButUnavailable(let error) = reason {
-            markMetadataRequirementFallback(error, in: &snapshot)
+        if case .failure(let failure) = reason {
+            switch failure {
+            case .explicitSyncRequiredButUnavailable, .explicitSyncSetupFailed,
+                .explicitSyncSubmissionFailed, .explicitSyncReleaseFailed:
+                snapshot.synchronization = .explicitFallback(runtimeReason)
+            case .fifoRequiredButUnavailable, .commitTimingRequiredButUnavailable:
+                snapshot.pacing = .fallback(runtimeReason)
+            case .metadataRequiredButUnavailable(let error):
+                markMetadataRequirementFallback(error, in: &snapshot)
+            default:
+                break
+            }
         }
         return snapshot
     }
@@ -244,47 +241,12 @@ extension RuntimePathStatus {
 }
 
 extension GPURuntimePathReason {
-    // swiftlint:disable:next cyclomatic_complexity
     package init(_ fallbackReason: GPUFallbackReason) {
         switch fallbackReason {
         case .policyForcedSHM:
             self = .policyForcedSHM
-        case .dmabufUnavailable:
-            self = .dmabufUnavailable
-        case .surfaceFeedbackUnavailable:
-            self = .surfaceFeedbackUnavailable
-        case .noCompatibleFormat:
-            self = .noCompatibleFormat
-        case .noRenderNode:
-            self = .noRenderNode
-        case .gbmAllocationFailed:
-            self = .gbmAllocationFailed
-        case .explicitSyncRequiredButUnavailable:
-            self = .explicitSynchronizationUnavailable
-        case .explicitSyncSetupFailed:
-            self = .explicitSynchronizationSetupFailed
-        case .explicitSyncSubmissionFailed:
-            self = .explicitSynchronizationSubmissionFailed
-        case .explicitSyncReleaseFailed:
-            self = .explicitSynchronizationReleaseFailed
-        case .fifoRequiredButUnavailable:
-            self = .fifoUnavailable
-        case .commitTimingRequiredButUnavailable:
-            self = .commitTimingUnavailable
-        case .metadataRequiredButUnavailable(let error):
-            self = GPURuntimePathReason(error)
-        case .gbmUnavailable:
-            self = .gbmUnavailable
-        case .eglUnavailable:
-            self = .eglUnavailable
-        case .compositorRejectedBuffer:
-            self = .compositorRejectedBuffer
-        case .commitTimingRejected:
-            self = .commitTimingRejected
-        case .commitFailed:
-            self = .commitFailed
-        case .presentationTrackingFailed:
-            self = .presentationTrackingFailed
+        case .failure(let failure):
+            self = GPURuntimePathReason(failure)
         }
     }
 

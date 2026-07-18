@@ -170,70 +170,52 @@ package enum GPUBackingDecision: Equatable, Sendable {
 
 package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
     case policyForcedSHM
-    case dmabufUnavailable
-    case surfaceFeedbackUnavailable
-    case noCompatibleFormat
-    case noRenderNode
-    case gbmUnavailable
-    case gbmAllocationFailed
-    case eglUnavailable
-    case explicitSyncRequiredButUnavailable
-    case explicitSyncSetupFailed
-    case explicitSyncSubmissionFailed
-    case explicitSyncReleaseFailed
-    case fifoRequiredButUnavailable
-    case commitTimingRequiredButUnavailable
-    case metadataRequiredButUnavailable(SurfaceCommitMetadataError)
-    case compositorRejectedBuffer
-    case commitTimingRejected
-    case commitFailed
-    case presentationTrackingFailed
+    case failure(GPUFailureReason)
+
+    package init(_ failure: GPUFailureReason) {
+        self = .failure(failure)
+    }
+
+    package static var dmabufUnavailable: Self { .failure(.dmabufUnavailable) }
+    package static var surfaceFeedbackUnavailable: Self { .failure(.surfaceFeedbackUnavailable) }
+    package static var noCompatibleFormat: Self { .failure(.noCompatibleFormat) }
+    package static var noRenderNode: Self { .failure(.noRenderNode) }
+    package static var gbmUnavailable: Self { .failure(.gbmUnavailable) }
+    package static var gbmAllocationFailed: Self { .failure(.gbmAllocationFailed) }
+    package static var eglUnavailable: Self { .failure(.eglUnavailable) }
+    package static var explicitSyncRequiredButUnavailable: Self {
+        .failure(.explicitSyncRequiredButUnavailable)
+    }
+    package static var explicitSyncSetupFailed: Self { .failure(.explicitSyncSetupFailed) }
+    package static var explicitSyncSubmissionFailed: Self {
+        .failure(.explicitSyncSubmissionFailed)
+    }
+    package static var explicitSyncReleaseFailed: Self { .failure(.explicitSyncReleaseFailed) }
+    package static var fifoRequiredButUnavailable: Self { .failure(.fifoRequiredButUnavailable) }
+    package static var commitTimingRequiredButUnavailable: Self {
+        .failure(.commitTimingRequiredButUnavailable)
+    }
+    package static func metadataRequiredButUnavailable(
+        _ error: SurfaceCommitMetadataError
+    ) -> Self {
+        .failure(.metadataRequiredButUnavailable(error))
+    }
+    package static var compositorRejectedBuffer: Self { .failure(.compositorRejectedBuffer) }
+    package static var commitTimingRejected: Self { .failure(.commitTimingRejected) }
+    package static var commitFailed: Self { .failure(.commitFailed) }
+    package static var presentationTrackingFailed: Self { .failure(.presentationTrackingFailed) }
 
     package var description: String {
         switch self {
         case .policyForcedSHM:
             "SHM was forced by policy"
-        case .dmabufUnavailable:
-            "linux-dmabuf is unavailable"
-        case .surfaceFeedbackUnavailable:
-            "surface-specific linux-dmabuf feedback is unavailable"
-        case .noCompatibleFormat:
-            "no compatible dmabuf format was found"
-        case .noRenderNode:
-            "no DRM render node was found"
-        case .gbmUnavailable:
-            "GBM is unavailable"
-        case .gbmAllocationFailed:
-            "GBM allocation failed"
-        case .eglUnavailable:
-            "EGL is unavailable"
-        case .explicitSyncRequiredButUnavailable:
-            "explicit synchronization was required but unavailable"
-        case .explicitSyncSetupFailed:
-            "explicit synchronization setup failed"
-        case .explicitSyncSubmissionFailed:
-            "explicit synchronization submission failed"
-        case .explicitSyncReleaseFailed:
-            "explicit synchronization release wait failed"
-        case .fifoRequiredButUnavailable:
-            "FIFO pacing was required but unavailable"
-        case .commitTimingRequiredButUnavailable:
-            "commit timing was required but unavailable"
-        case .metadataRequiredButUnavailable(let error):
-            "required surface metadata was unavailable: \(error.description)"
-        case .compositorRejectedBuffer:
-            "the compositor rejected the GPU buffer"
-        case .commitTimingRejected:
-            "commit timing constraints were rejected"
-        case .commitFailed:
-            "surface commit failed"
-        case .presentationTrackingFailed:
-            "presentation tracking failed"
+        case .failure(let failure):
+            failure.description
         }
     }
 }
 
-package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
+package enum GPUFailureReason: Equatable, Sendable, CustomStringConvertible {
     case dmabufUnavailable
     case surfaceFeedbackUnavailable
     case noCompatibleFormat
@@ -255,15 +237,12 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     case presentationTrackingFailed
 
     package init(_ fallbackReason: GPUFallbackReason) {
-        if let failure = Self.platformFailure(for: fallbackReason)
-            ?? Self.requirementFailure(for: fallbackReason)
-            ?? Self.compositorFailure(for: fallbackReason)
-        {
+        switch fallbackReason {
+        case .failure(let failure):
             self = failure
-            return
+        case .policyForcedSHM:
+            preconditionFailure("policy-forced SHM is not a GPU backing failure")
         }
-
-        preconditionFailure("policy-forced SHM is not a GPU backing failure")
     }
 
     package init(_ submitError: SurfaceSubmitConstraintError) {
@@ -293,69 +272,6 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             self = .commitTimingRequiredButUnavailable
         case .metadataUnavailable(let error):
             self = .metadataRequiredButUnavailable(error)
-        }
-    }
-
-    private static func platformFailure(
-        for fallbackReason: GPUFallbackReason
-    ) -> Self? {
-        switch fallbackReason {
-        case .dmabufUnavailable:
-            .dmabufUnavailable
-        case .surfaceFeedbackUnavailable:
-            .surfaceFeedbackUnavailable
-        case .noCompatibleFormat:
-            .noCompatibleFormat
-        case .noRenderNode:
-            .noRenderNode
-        case .gbmUnavailable:
-            .gbmUnavailable
-        case .gbmAllocationFailed:
-            .gbmAllocationFailed
-        case .eglUnavailable:
-            .eglUnavailable
-        default:
-            nil
-        }
-    }
-
-    private static func requirementFailure(
-        for fallbackReason: GPUFallbackReason
-    ) -> Self? {
-        switch fallbackReason {
-        case .explicitSyncRequiredButUnavailable:
-            .explicitSyncRequiredButUnavailable
-        case .explicitSyncSetupFailed:
-            .explicitSyncSetupFailed
-        case .explicitSyncSubmissionFailed:
-            .explicitSyncSubmissionFailed
-        case .explicitSyncReleaseFailed:
-            .explicitSyncReleaseFailed
-        case .fifoRequiredButUnavailable:
-            .fifoRequiredButUnavailable
-        case .commitTimingRequiredButUnavailable:
-            .commitTimingRequiredButUnavailable
-        case .metadataRequiredButUnavailable(let error):
-            .metadataRequiredButUnavailable(error)
-        default:
-            nil
-        }
-    }
-
-    private static func compositorFailure(
-        for fallbackReason: GPUFallbackReason
-    ) -> Self? {
-        switch fallbackReason {
-        case .compositorRejectedBuffer:
-            .compositorRejectedBuffer
-        case .commitTimingRejected:
-            .commitTimingRejected
-        case .commitFailed:
-            .commitFailed
-        case .presentationTrackingFailed:
-            .presentationTrackingFailed
-        default:
-            nil
         }
     }
 
@@ -402,6 +318,8 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
         }
     }
 }
+
+package typealias GPUBackingFailure = GPUFailureReason
 
 package struct GPUBackingInvalidation: Equatable, Sendable {
     package let reason: GPUBackingInvalidationReason
