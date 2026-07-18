@@ -192,13 +192,12 @@ Tests:
 
 ## Managed Window Coordinators
 
-`TopLevelWindow` receives a coordinator factory and separates role lifecycle,
-software reservations, graphics constraints, presentation feedback, and
-desktop-integration access. Software reservations and presentation feedback use
-one close-aware resource ledger, so close-before-registration, reentrant close,
-double close, peer removal, and connection-failure cleanup share the same
-exactly-once retirement rule. Small fake resources test that rule without a
-compositor; the required Weston path covers the live adapters.
+`TopLevelWindow` owns its configure state and surface runtime directly. Software
+reservations and presentation feedback use separate close-aware resource ledgers,
+so close-before-registration, reentrant close, double close, peer removal, and
+connection-failure cleanup share the same exactly-once retirement rule. Small
+fake resources test that rule without a compositor. The required Weston path
+covers the live adapters.
 
 ## Cursor And Drag Visual Surfaces
 

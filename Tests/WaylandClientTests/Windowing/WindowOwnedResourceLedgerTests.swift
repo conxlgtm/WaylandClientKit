@@ -1,30 +1,9 @@
 import Testing
-import WaylandRaw
 
 @testable import WaylandClient
 
 @Suite
 struct WindowOwnedResourceLedgerTests {
-    @Test
-    func factoryCreatesSeparateWindowConcernCoordinators() {
-        let coordinators = DefaultTopLevelWindowCoordinatorFactory()
-            .makeCoordinators(surfaceID: RawObjectID(42))
-
-        #expect(!coordinators.roleLifecycle.configureState.hasReceivedInitialConfigure)
-        let firstReservation = coordinators.softwarePresentation.allocateIdentity()
-        let secondReservation = coordinators.softwarePresentation.allocateIdentity()
-        #expect(firstReservation != secondReservation)
-        let firstFeedback = coordinators.presentationFeedback.allocateIdentity()
-        let secondFeedback = coordinators.presentationFeedback.allocateIdentity()
-        #expect(firstFeedback != secondFeedback)
-        if case .unassigned = coordinators.graphicsConstraints.runtime.phase {
-            // Expected before xdg role installation.
-        } else {
-            Issue.record("expected a fresh graphics constraint runtime")
-        }
-        _ = coordinators.desktopIntegration
-    }
-
     @Test
     func closeBeforeStartRetiresLateResourceImmediately() {
         let log = RetirementLog()
