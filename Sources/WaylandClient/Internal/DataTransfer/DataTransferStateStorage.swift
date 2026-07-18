@@ -19,7 +19,7 @@ package struct DataTransferSeatState: Equatable, Sendable {
         device.hasDataDevice
     }
 
-    package var selection: ClipboardSelectionState {
+    package var selection: DataSelectionState {
         device.selection
     }
 
@@ -31,7 +31,7 @@ package struct DataTransferSeatState: Equatable, Sendable {
         device = .bound(selection: .none)
     }
 
-    package mutating func setSelection(_ selection: ClipboardSelectionState) throws {
+    package mutating func setSelection(_ selection: DataSelectionState) throws {
         guard device.hasDataDevice else {
             throw DataTransferError.missingDataDevice(seatID)
         }
@@ -40,12 +40,12 @@ package struct DataTransferSeatState: Equatable, Sendable {
     }
 }
 
-package enum ClipboardSelectionState: Equatable, Sendable {
+package enum DataSelectionState: Equatable, Sendable {
     case none
     case remoteOffer(DataOfferID)
     case ownedSource(DataSourceID)
 
-    package static func fromRemoteOffer(_ offerID: DataOfferID?) -> ClipboardSelectionState {
+    package static func fromRemoteOffer(_ offerID: DataOfferID?) -> DataSelectionState {
         if let offerID {
             .remoteOffer(offerID)
         } else {
@@ -53,7 +53,7 @@ package enum ClipboardSelectionState: Equatable, Sendable {
         }
     }
 
-    package static func fromOwnedSource(_ sourceID: DataSourceID?) -> ClipboardSelectionState {
+    package static func fromOwnedSource(_ sourceID: DataSourceID?) -> DataSelectionState {
         if let sourceID {
             .ownedSource(sourceID)
         } else {

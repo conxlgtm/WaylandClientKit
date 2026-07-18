@@ -7,6 +7,32 @@ package protocol DataTransferReceivePipeBackend: AnyObject {
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult
 }
 
+package protocol DataTransferOfferReceiveBackend: DataTransferReceivePipeBackend {
+    func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
+}
+
+extension DataTransferOfferReceiveBackend {
+    package func receiveOffer(
+        _ offer: DataOfferSnapshot,
+        using binding: any DataTransferReceiveBinding,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        guard offer.mimeTypes.contains(mimeType) else {
+            throw DataTransferError.mimeTypeUnavailable(mimeType)
+        }
+
+        let descriptors = try makeOfferReceivePipe()
+        var readEnd = try descriptors.adoptReadEnd(using: self)
+        try descriptors.receive(
+            into: binding,
+            mimeType: mimeType,
+            readEnd: &readEnd,
+            using: self
+        )
+        return readEnd
+    }
+}
+
 extension DataTransferPipeDescriptors {
     package func adoptReadEnd(
         using backend: any DataTransferReceivePipeBackend

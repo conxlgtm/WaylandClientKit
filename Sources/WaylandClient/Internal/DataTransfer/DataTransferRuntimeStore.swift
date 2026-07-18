@@ -115,12 +115,7 @@ struct RuntimeDataSource {
         binding sourceBinding: any DataTransferSourceBinding,
         payloads sourcePayloads: DataTransferSourcePayloadSet
     ) throws {
-        guard sourceBinding.id == sourceID else {
-            throw DataTransferManagerInvariantViolation.sourceBindingIDMismatch(
-                expected: sourceID,
-                actual: sourceBinding.id
-            )
-        }
+        try sourceBinding.validateID(sourceID)
 
         id = sourceID
         binding = sourceBinding

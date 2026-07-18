@@ -209,7 +209,7 @@ package enum NonEmptyMIMETypeList {
 
 package enum DataTransferSeatDeviceState: Equatable, Sendable {
     case unbound
-    case bound(selection: ClipboardSelectionState)
+    case bound(selection: DataSelectionState)
 
     package var hasDataDevice: Bool {
         switch self {
@@ -220,7 +220,7 @@ package enum DataTransferSeatDeviceState: Equatable, Sendable {
         }
     }
 
-    package var selection: ClipboardSelectionState {
+    package var selection: DataSelectionState {
         switch self {
         case .unbound:
             .none
@@ -239,7 +239,7 @@ package struct DataTransferSeatSnapshot: Equatable, Sendable {
         device.hasDataDevice
     }
 
-    package var selection: ClipboardSelectionState {
+    package var selection: DataSelectionState {
         device.selection
     }
 

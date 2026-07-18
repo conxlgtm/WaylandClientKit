@@ -262,7 +262,7 @@ extension DataTransferState {
             }
         }
 
-        let nextSelection = ClipboardSelectionState.fromRemoteOffer(offerID)
+        let nextSelection = DataSelectionState.fromRemoteOffer(offerID)
         guard seat.selection != nextSelection else {
             return []
         }
@@ -311,7 +311,7 @@ extension DataTransferState {
             }
         }
 
-        let nextSelection = ClipboardSelectionState.fromOwnedSource(sourceID)
+        let nextSelection = DataSelectionState.fromOwnedSource(sourceID)
         guard seat.selection != nextSelection else {
             return []
         }
@@ -602,17 +602,11 @@ extension DataTransferState {
     }
 
     private mutating func appendSelectionCleanup(
-        _ selection: ClipboardSelectionState,
+        _ selection: DataSelectionState,
         seatID: SeatID,
         to effects: inout [DataTransferEffect]
     ) {
-        switch selection {
-        case .none:
-            return
-        case .remoteOffer(let offerID):
-            appendSelectionOfferCleanup(offerID, seatID: seatID, to: &effects)
-        case .ownedSource(let sourceID):
-            appendSelectionSourceCleanup(sourceID, seatID: seatID, to: &effects)
-        }
+        appendSelectionOfferCleanup(selection.offerID, seatID: seatID, to: &effects)
+        appendSelectionSourceCleanup(selection.sourceID, seatID: seatID, to: &effects)
     }
 }

@@ -1,5 +1,3 @@
-// swiftlint:disable file_length
-
 import WaylandRaw
 import WaylandRuntime
 
@@ -9,7 +7,7 @@ package final class PrimarySelectionController {
     private var deviceBindings: [SeatID: any PrimarySelectionDeviceBinding] = [:]
     private var offerIDsByHandle: [RawPrimarySelectionOfferHandle: DataOfferID] = [:]
     private var offersByID: [DataOfferID: RuntimePrimarySelectionOffer] = [:]
-    private var selectionBySeat: [SeatID: PrimarySelectionSelectionState] = [:]
+    private var selectionBySeat: [SeatID: DataSelectionState] = [:]
     private var sourcesByID: [DataSourceID: RuntimePrimarySelectionSource] = [:]
     var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
     private var pendingCallbackFailures: FIFOQueue<DataTransferCallbackFailure> = []
@@ -73,22 +71,11 @@ package final class PrimarySelectionController {
                 offerID.primarySelectionIdentity
             )
         }
-        guard offer.mimeTypes.contains(mimeType) else {
-            throw DataTransferError.mimeTypeUnavailable(mimeType)
-        }
         guard let binding = offersByID[offerID]?.binding else {
             throw DataTransferError.offerExpired
         }
 
-        let descriptors = try backend.makeOfferReceivePipe()
-        var readEnd = try descriptors.adoptReadEnd(using: backend)
-        try descriptors.receive(
-            into: binding,
-            mimeType: mimeType,
-            readEnd: &readEnd,
-            using: backend
-        )
-        return readEnd
+        return try backend.receiveOffer(offer, using: binding, mimeType: mimeType)
     }
 
     package func setSelectionSource(
@@ -106,9 +93,7 @@ package final class PrimarySelectionController {
             onEvent: sourceEventHandler(for: sourceID)
         )
         do {
-            for mimeType in payloads.mimeTypes {
-                sourceBinding.offer(mimeType: mimeType)
-            }
+            sourceBinding.offer(payloads.mimeTypes)
             let source = try RuntimePrimarySelectionSource(
                 id: sourceID,
                 seatID: seatID,
@@ -145,7 +130,7 @@ package final class PrimarySelectionController {
         deviceBinding.setSelection(source: nil, serial: serial)
         let currentSelection = selectionBySeat[seatID] ?? .none
         cleanupSelection(currentSelection)
-        selectionBySeat[seatID] = PrimarySelectionSelectionState.none
+        selectionBySeat[seatID] = DataSelectionState.none
     }
 
     package func clearSelectionSource(
@@ -202,7 +187,7 @@ extension PrimarySelectionController {
             self?.handleDeviceEvent(event, seatID: seatID)
         }
         deviceBindings[seatID] = binding
-        selectionBySeat[seatID] = PrimarySelectionSelectionState.none
+        selectionBySeat[seatID] = DataSelectionState.none
     }
 
     private func removeSeat(_ seatID: SeatID) {
@@ -241,7 +226,7 @@ extension PrimarySelectionController {
                 }
 
                 cleanupSelection(currentSelection)
-                selectionBySeat[seatID] = PrimarySelectionSelectionState.none
+                selectionBySeat[seatID] = DataSelectionState.none
                 publishSelectionChanged(seatID: seatID, offerID: nil)
             case .selection(.some(let handle)):
                 try handleSelection(handle: handle, seatID: seatID)
@@ -273,11 +258,11 @@ extension PrimarySelectionController {
             self?.handleOfferEvent(event, offerID: offerID)
         }
         offerIDsByHandle[handle] = offerID
-        offersByID[offerID] = .pending(
+        offersByID[offerID] = RuntimePrimarySelectionOffer(
             handle: handle,
             binding: binding,
+            id: offerID,
             seatID: seatID,
-            mimeTypes: []
         )
     }
 
@@ -343,7 +328,7 @@ extension PrimarySelectionController {
             guard !offer.pendingMIMETypes.isEmpty else {
                 throw DataTransferError.emptyDataOffer
             }
-            try offer.markActive(id: offerID)
+            offer.markActive()
             offersByID[offerID] = offer
         }
 
@@ -403,31 +388,18 @@ extension PrimarySelectionController {
                 )
             }
             let mimeType = try MIMEType(rawMimeType ?? "")
-            guard source.snapshot.mimeTypes.contains(mimeType) else {
-                throw DataTransferError.mimeTypeUnavailable(mimeType)
-            }
-            guard let data = source.payloads.data(for: mimeType) else {
-                throw DataTransferError.sourceDataUnavailable(mimeType)
-            }
 
             let requestSource = DataTransferSourceWriteSource.primarySelection(sourceID)
-            pendingSourceSendRequests.append(
-                try DataTransferSourceSendRequest(
-                    source: requestSource,
-                    mimeType: mimeType,
-                    descriptor: descriptor,
-                    data: data,
-                    descriptorIO: backend.sourceDescriptorIO
-                )
+            let prepared = try PreparedDataTransferSourceSend(
+                source: requestSource,
+                snapshot: source.snapshot,
+                data: source.payloads.data(for: mimeType),
+                mimeType: mimeType,
+                descriptor: descriptor,
+                descriptorIO: backend.sourceDescriptorIO
             )
-            eventQueue.append(
-                .sourceSendRequested(
-                    DataTransferSourceTransferEvent(
-                        source: requestSource.diagnosticSource,
-                        mimeType: mimeType
-                    )
-                )
-            )
+            pendingSourceSendRequests.append(prepared.request)
+            eventQueue.append(prepared.event)
         } catch {
             try closeSourceSendDescriptor(descriptor)
             throw error
@@ -444,18 +416,16 @@ extension PrimarySelectionController {
         return deviceBinding
     }
 
-    private func cleanupSelection(_ selection: PrimarySelectionSelectionState) {
-        switch selection {
-        case .none:
-            return
-        case .remoteOffer(let offerID):
+    private func cleanupSelection(_ selection: DataSelectionState) {
+        if let offerID = selection.offerID {
             destroyOffer(offerID)
-        case .ownedSource(let sourceID):
-            if cancelSource(sourceID) {
-                eventQueue.append(
-                    .primarySelectionSourceCancelled(sourceID.primarySelectionIdentity)
-                )
-            }
+            return
+        }
+        guard let sourceID = selection.sourceID else { return }
+        if cancelSource(sourceID) {
+            eventQueue.append(
+                .primarySelectionSourceCancelled(sourceID.primarySelectionIdentity)
+            )
         }
     }
 
@@ -482,7 +452,7 @@ extension PrimarySelectionController {
         }
 
         for seatID in selectedSeatIDs {
-            selectionBySeat[seatID] = PrimarySelectionSelectionState.none
+            selectionBySeat[seatID] = DataSelectionState.none
         }
         return true
     }

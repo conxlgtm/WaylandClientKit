@@ -19,26 +19,32 @@ package protocol DataTransferDragIconBinding: AnyObject {
     func destroy()
 }
 
-package protocol DataTransferOfferBinding: AnyObject, DataTransferReceiveBinding {
+package protocol DataTransferOfferResourceBinding: AnyObject, DataTransferReceiveBinding {
+    func destroy()
+}
+
+package protocol DataTransferSourceResourceBinding: AnyObject {
+    var id: DataSourceID { get }
+
+    func offer(mimeType: MIMEType)
+    func destroy()
+}
+
+package protocol DataTransferOfferBinding: DataTransferOfferResourceBinding {
     var id: DataOfferID { get }
     var protocolVersion: RawVersion { get }
 
     func accept(serial: InputSerial, mimeType: MIMEType?)
-    func receive(mimeType: MIMEType, fd: Int32)
     func setDragActions(_ actions: DragActionSet, preferredAction: DragAction)
     func finish()
-    func destroy()
 }
 
-package protocol DataTransferSourceBinding: AnyObject {
-    var id: DataSourceID { get }
+package protocol DataTransferSourceBinding: DataTransferSourceResourceBinding {
     var protocolVersion: RawVersion { get }
 
-    func offer(mimeType: MIMEType)
     func setDragActions(_ actions: DragActionSet)
     func createToplevelDrag(manager: RawXDGToplevelDragManager) throws -> RawXDGToplevelDrag
     func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?)
-    func destroy()
 }
 
 package struct DataTransferPipeDescriptors: Equatable, Sendable {
@@ -46,7 +52,7 @@ package struct DataTransferPipeDescriptors: Equatable, Sendable {
     package let writeEnd: Int32
 }
 
-package protocol DataTransferManagerBackend: AnyObject, DataTransferReceivePipeBackend {
+package protocol DataTransferManagerBackend: AnyObject, DataTransferOfferReceiveBackend {
     func preconditionIsOwnerThread()
     func bindDataDevice(
         for seatID: SeatID,
@@ -62,7 +68,6 @@ package protocol DataTransferManagerBackend: AnyObject, DataTransferReceivePipeB
         onEvent: @escaping (RawDataSourceEvent) -> Void
     ) throws -> any DataTransferSourceBinding
     func prepareDragIcon(_ icon: DragIcon) throws -> (any DataTransferDragIconBinding)?
-    func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
 
     var sourceDescriptorIO: DataTransferSourceDescriptorIO { get }

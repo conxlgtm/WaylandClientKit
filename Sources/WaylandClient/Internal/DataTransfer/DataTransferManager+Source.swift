@@ -31,9 +31,7 @@ extension DataTransferManager {
             callbackIdentity: callbackIdentity
         )
         do {
-            for mimeType in payloads.mimeTypes {
-                sourceBinding.offer(mimeType: mimeType)
-            }
+            sourceBinding.offer(payloads.mimeTypes)
             try store.insertSource(
                 binding: sourceBinding,
                 payloads: payloads,
@@ -396,39 +394,24 @@ extension DataTransferManager {
             guard let source = store.sourceSnapshot(sourceID) else {
                 throw callbackIdentity.unknownSourceError
             }
-            guard source.mimeTypes.contains(mimeType) else {
-                throw DataTransferError.mimeTypeUnavailable(mimeType)
-            }
-            guard
-                let data = store.sourcePayloadData(
-                    sourceID: sourceID,
-                    mimeType: mimeType
-                )
-            else {
-                throw DataTransferError.sourceDataUnavailable(mimeType)
-            }
 
             let requestSource = try writeSource(
                 for: sourceID,
                 callbackIdentity: callbackIdentity
             )
-            store.appendSourceSendRequest(
-                try DataTransferSourceSendRequest(
-                    source: requestSource,
-                    mimeType: mimeType,
-                    descriptor: descriptor,
-                    data: data,
-                    descriptorIO: backend.sourceDescriptorIO
-                )
+            let prepared = try PreparedDataTransferSourceSend(
+                source: requestSource,
+                snapshot: source,
+                data: store.sourcePayloadData(
+                    sourceID: sourceID,
+                    mimeType: mimeType
+                ),
+                mimeType: mimeType,
+                descriptor: descriptor,
+                descriptorIO: backend.sourceDescriptorIO
             )
-            eventQueue.append(
-                .sourceSendRequested(
-                    DataTransferSourceTransferEvent(
-                        source: requestSource.diagnosticSource,
-                        mimeType: mimeType
-                    )
-                )
-            )
+            store.appendSourceSendRequest(prepared.request)
+            eventQueue.append(prepared.event)
         } catch {
             try closeSourceSendDescriptor(descriptor)
             throw error

@@ -49,7 +49,7 @@ final class RecordingPrimarySelectionBackend: PrimarySelectionControllerBackend 
         handle: RawPrimarySelectionOfferHandle,
         id: DataOfferID,
         onEvent: @escaping (RawPrimarySelectionOfferEvent) -> Void
-    ) throws -> any PrimarySelectionOfferBinding {
+    ) throws -> any DataTransferOfferResourceBinding {
         let binding = RecordingPrimarySelectionOfferBinding(id: id, onEvent: onEvent)
         offerBindingsByHandle[handle] = binding
         return binding
@@ -58,7 +58,7 @@ final class RecordingPrimarySelectionBackend: PrimarySelectionControllerBackend 
     func createPrimarySelectionSource(
         id: DataSourceID,
         onEvent: @escaping (RawPrimarySelectionSourceEvent) -> Void
-    ) throws -> any PrimarySelectionSourceBinding {
+    ) throws -> any DataTransferSourceResourceBinding {
         let binding = RecordingPrimarySelectionSourceBinding(
             id: sourceBindingIDOverride ?? id,
             onEvent: onEvent
@@ -127,7 +127,10 @@ final class RecordingPrimarySelectionDeviceBinding: PrimarySelectionDeviceBindin
         onEvent(event)
     }
 
-    func setSelection(source: (any PrimarySelectionSourceBinding)?, serial: InputSerial) {
+    func setSelection(
+        source: (any DataTransferSourceResourceBinding)?,
+        serial: InputSerial
+    ) {
         selections.append(Selection(sourceID: source?.id, serial: serial))
     }
 
@@ -136,7 +139,7 @@ final class RecordingPrimarySelectionDeviceBinding: PrimarySelectionDeviceBindin
     }
 }
 
-final class RecordingPrimarySelectionOfferBinding: PrimarySelectionOfferBinding {
+final class RecordingPrimarySelectionOfferBinding: DataTransferOfferResourceBinding {
     struct Receive: Equatable {
         let mimeType: MIMEType
         let fd: Int32
@@ -169,7 +172,7 @@ final class RecordingPrimarySelectionOfferBinding: PrimarySelectionOfferBinding 
     }
 }
 
-final class RecordingPrimarySelectionSourceBinding: PrimarySelectionSourceBinding {
+final class RecordingPrimarySelectionSourceBinding: DataTransferSourceResourceBinding {
     let id: DataSourceID
     var offeredMimeTypes: [MIMEType] = []
     var destroyCount = 0

@@ -13,22 +13,11 @@ extension DataTransferManager {
         guard let offer = store.offerSnapshot(offerID) else {
             throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
-        guard offer.mimeTypes.contains(mimeType) else {
-            throw DataTransferError.mimeTypeUnavailable(mimeType)
-        }
         guard let binding = offerBindingsByID[offerID] else {
             throw DataTransferError.offerExpired
         }
 
-        let descriptors = try backend.makeOfferReceivePipe()
-        var readEnd = try descriptors.adoptReadEnd(using: backend)
-        try descriptors.receive(
-            into: binding,
-            mimeType: mimeType,
-            readEnd: &readEnd,
-            using: backend
-        )
-        return readEnd
+        return try backend.receiveOffer(offer, using: binding, mimeType: mimeType)
     }
 
     package func receiveDragOffer(
