@@ -3,7 +3,14 @@
     "example_manager_v1": {
       "globalBinding": "optional",
       "maximumSupportedVersion": 2,
-      "minimumRequiredVersion": 1
+      "minimumRequiredVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindExampleManagerIfPresent",
+        "bindingOrder": 0,
+        "propertyName": "exampleManager",
+        "wrapperTypeName": "OptionalExampleManager"
+      }
     }
   }
 }

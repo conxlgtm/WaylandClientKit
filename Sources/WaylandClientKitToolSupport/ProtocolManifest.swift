@@ -416,6 +416,9 @@ public struct ProtocolTooling {
         // XML from leaving a partially regenerated tree behind.
         let protocolIRs = try loadProtocolIRs(from: manifest)
         let supportedVersions = try renderSupportedVersions(protocols: protocolIRs)
+        let optionalGlobalDescriptors = try renderOptionalGlobalDescriptors(
+            protocols: protocolIRs
+        )
         let scanner = try RepositoryNixTools(
             repository: repository,
             fileSystem: fileSystem,
@@ -449,6 +452,7 @@ public struct ProtocolTooling {
             try normalizeGeneratedFile(code)
         }
         try writeSupportedVersions(supportedVersions, outputRoot: outputRoot)
+        try writeOptionalGlobalDescriptors(optionalGlobalDescriptors, outputRoot: outputRoot)
 
         diagnostics.success("generated Wayland protocol artifacts")
     }
@@ -500,16 +504,18 @@ public struct ProtocolTooling {
                     expected: expected, actual: actual, label: path))
         }
 
-        let supportedVersionsPath = SupportedVersionsGeneration.outputPath
-        let expectedSupportedVersions = generated.appendingPathComponent(supportedVersionsPath)
-        let actualSupportedVersions = repository.url(supportedVersionsPath)
-        if !fileSystem.exists(actualSupportedVersions) {
-            failures.append("missing generated file: \(supportedVersionsPath)")
-        } else if try !fileSystem.filesEqual(
-            expectedSupportedVersions,
-            actualSupportedVersions
-        ) {
-            failures.append("changed generated file: \(supportedVersionsPath)")
+        let generatedSwiftPaths = [
+            SupportedVersionsGeneration.outputPath,
+            OptionalGlobalDescriptorsGeneration.outputPath,
+        ]
+        for path in generatedSwiftPaths {
+            let expected = generated.appendingPathComponent(path)
+            let actual = repository.url(path)
+            if !fileSystem.exists(actual) {
+                failures.append("missing generated file: \(path)")
+            } else if try !fileSystem.filesEqual(expected, actual) {
+                failures.append("changed generated file: \(path)")
+            }
         }
 
         guard failures.isEmpty else {

@@ -39,7 +39,13 @@ The current generator still uses `wayland-scanner` for its checked-in C output,
 and the C shims remain handwritten. It also generates `SupportedVersions.swift`
 from the parsed interface versions and `protocols/generation-policy.json`. The
 policy records the client version cap, any non-default minimum version, and
-whether each supported global is required or optional.
+whether each supported global is required or optional. For optional globals, it
+also records whether the public capability inventory reports the interface. An
+optional global retained for the display lifetime records its wrapper type,
+stored property, binding method, and acquisition order. The generator uses that
+metadata for optional-global storage, binding rollback, invalidation, and
+reverse-order destruction. The raw bind methods and their unsafe C calls remain
+handwritten.
 
 ## Generated Outputs
 
@@ -53,6 +59,7 @@ Generated C files:
 
 Generated Swift files:
 
+- `Sources/WaylandRaw/Internal/Binding/OptionalGlobalDescriptors.swift`
 - `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
 
 These files are committed. The exact file set comes from `generatedHeaderPath`
@@ -147,6 +154,7 @@ Writes:
 
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/generated/`
+- `Sources/WaylandRaw/Internal/Binding/OptionalGlobalDescriptors.swift`
 - `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
 
 Does not write:
@@ -160,6 +168,7 @@ Checks diffs for:
 
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/generated/`
+- `Sources/WaylandRaw/Internal/Binding/OptionalGlobalDescriptors.swift`
 - `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
 
 It validates vendored XML checksums, regenerates into a temporary output tree,

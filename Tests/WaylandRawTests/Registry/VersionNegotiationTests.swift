@@ -85,22 +85,17 @@ struct VersionNegotiationTests {
                 advertisedVersion: 3
             )
         )
-        #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v1Global))
-        #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v2Global))
-        #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v3Global))
         #expect(
-            RawDisplayConnection.xdgDecorationManagerBindingDecision(v1Global)
+            OptionalGlobalDescriptors.zxdgDecorationManagerV1.bindingDecision(for: v1Global)
                 == .bind(version: RawVersion(1))
         )
         #expect(
-            RawDisplayConnection.xdgDecorationManagerBindingDecision(v2Global)
+            OptionalGlobalDescriptors.zxdgDecorationManagerV1.bindingDecision(for: v2Global)
                 == .bind(version: RawVersion(2))
         )
         #expect(
-            v3Global.negotiatedVersion(
-                supportedByClient: SupportedVersions.zxdgDecorationManagerV1
-            )
-                == RawVersion(2)
+            OptionalGlobalDescriptors.zxdgDecorationManagerV1.bindingDecision(for: v3Global)
+                == .bind(version: RawVersion(2))
         )
     }
 
@@ -127,22 +122,19 @@ struct VersionNegotiationTests {
                 advertisedVersion: 3
             )
         )
-        #expect(!RawDisplayConnection.shouldBindXDGOutputManager(v1Global))
-        #expect(RawDisplayConnection.shouldBindXDGOutputManager(v2Global))
-        #expect(RawDisplayConnection.shouldBindXDGOutputManager(v3Global))
         #expect(
-            RawDisplayConnection.xdgOutputManagerBindingDecision(v1Global)
+            OptionalGlobalDescriptors.zxdgOutputManagerV1.bindingDecision(for: v1Global)
                 == .unsupportedVersion(
                     advertised: RawVersion(1),
                     minimum: RawVersion(2)
                 )
         )
         #expect(
-            RawDisplayConnection.xdgOutputManagerBindingDecision(v2Global)
+            OptionalGlobalDescriptors.zxdgOutputManagerV1.bindingDecision(for: v2Global)
                 == .bind(version: RawVersion(2))
         )
         #expect(
-            RawDisplayConnection.xdgOutputManagerBindingDecision(v3Global)
+            OptionalGlobalDescriptors.zxdgOutputManagerV1.bindingDecision(for: v3Global)
                 == .bind(version: RawVersion(3))
         )
     }

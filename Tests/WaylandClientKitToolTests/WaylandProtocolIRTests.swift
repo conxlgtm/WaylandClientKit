@@ -45,6 +45,9 @@ struct WaylandProtocolIRTests {
         #expect(manager.maximumSupportedVersion == 2)
         #expect(manager.minimumRequiredVersion == 1)
         #expect(manager.globalBinding == .optional)
+        #expect(manager.reportsCapability)
+        #expect(manager.retainedOptionalGlobal?.propertyName == "exampleManager")
+        #expect(manager.retainedOptionalGlobal?.wrapperTypeName == "OptionalExampleManager")
     }
 
     @Test
@@ -63,6 +66,55 @@ struct WaylandProtocolIRTests {
             Issue.record("expected policy validation to reject a version above the XML")
         } catch let error as ToolError {
             #expect(error.message.contains("maximumSupportedVersion 4 exceeds XML version 3"))
+        }
+    }
+
+    @Test
+    func policyOverlayRejectsCapabilityReportingForRequiredGlobal() throws {
+        let policy = WaylandProtocolGenerationPolicy(
+            interfaces: [
+                "example_manager_v1": WaylandInterfaceGenerationPolicy(
+                    maximumSupportedVersion: 2,
+                    globalBinding: .required,
+                    reportsCapability: true
+                )
+            ]
+        )
+
+        do {
+            try policy.validate(against: [parseFixture()])
+            Issue.record("expected policy validation to reject required capability reporting")
+        } catch let error as ToolError {
+            #expect(error.message.contains("reportsCapability requires optional globalBinding"))
+        }
+    }
+
+    @Test
+    func policyOverlayRejectsNoncontiguousRetainedBindingOrder() throws {
+        let policy = WaylandProtocolGenerationPolicy(
+            interfaces: [
+                "example_manager_v1": WaylandInterfaceGenerationPolicy(
+                    maximumSupportedVersion: 2,
+                    globalBinding: .optional,
+                    retainedOptionalGlobal: WaylandRetainedOptionalGlobalPolicy(
+                        propertyName: "exampleManager",
+                        bindingMethodName: "bindExampleManagerIfPresent",
+                        wrapperTypeName: "OptionalExampleManager",
+                        bindingOrder: 1
+                    )
+                )
+            ]
+        )
+
+        do {
+            try policy.validate(against: [parseFixture()])
+            Issue.record("expected policy validation to reject a binding-order gap")
+        } catch let error as ToolError {
+            #expect(
+                error.message.contains(
+                    "retained optional-global binding order must be contiguous from zero"
+                )
+            )
         }
     }
 
@@ -114,6 +166,20 @@ struct WaylandProtocolIRTests {
     }
 
     @Test
+    func checkedInOptionalGlobalDescriptorsMatchXMLAndGenerationPolicy() throws {
+        let tooling = ProtocolTooling(repository: Repository(root: repositoryRoot))
+        let expected = try tooling.renderOptionalGlobalDescriptors()
+        let actual = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/WaylandRaw/Internal/Binding/OptionalGlobalDescriptors.swift"
+            ),
+            encoding: .utf8
+        )
+
+        #expect(actual == expected)
+    }
+
+    @Test
     func generationPolicyRecordsCurrentGlobalBindingChoices() throws {
         let tooling = ProtocolTooling(repository: Repository(root: repositoryRoot))
         let policy = try tooling.loadGenerationPolicy()
@@ -121,9 +187,16 @@ struct WaylandProtocolIRTests {
             interfacePolicy.globalBinding == .required ? name : nil
         }
         let optional = policy.interfaces.values.filter { $0.globalBinding == .optional }
+        let retained = policy.interfaces.values.compactMap(\.retainedOptionalGlobal)
+        let capabilityReported = policy.interfaces.values.filter { interfacePolicy in
+            interfacePolicy.reportsCapability
+        }
 
         #expect(Set(required) == Set(["wl_compositor", "wl_shm", "xdg_wm_base"]))
         #expect(optional.count == 36)
+        #expect(retained.count == 25)
+        #expect(retained.map(\.bindingOrder).sorted() == (0..<25).map(UInt32.init))
+        #expect(capabilityReported.count == 25)
         #expect(policy.interfaces["wl_seat"]?.minimumRequiredVersion == 5)
     }
 

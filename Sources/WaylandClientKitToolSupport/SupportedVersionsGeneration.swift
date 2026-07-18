@@ -45,7 +45,7 @@ enum SupportedVersionsGeneration {
         ].joined(separator: "\n")
     }
 
-    private static func swiftPropertyName(for interfaceName: String) throws -> String {
+    static func swiftPropertyName(for interfaceName: String) throws -> String {
         let components = interfaceName.split(
             separator: "_",
             omittingEmptySubsequences: false

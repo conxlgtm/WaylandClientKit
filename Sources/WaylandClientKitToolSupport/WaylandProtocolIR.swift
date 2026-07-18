@@ -232,40 +232,140 @@ public struct WaylandProtocolGenerationPolicy: Codable, Equatable, Sendable {
                     exitCode: ToolExitCode.data
                 )
             }
-            guard policy.maximumSupportedVersion > 0 else {
+            try validate(interfacePolicy: policy, named: name, against: interface)
+        }
+
+        try validateRetainedOptionalGlobals()
+    }
+
+    private func validate(
+        interfacePolicy policy: WaylandInterfaceGenerationPolicy,
+        named name: String,
+        against interface: WaylandInterfaceIR
+    ) throws {
+        guard policy.maximumSupportedVersion > 0 else {
+            throw ToolError(
+                "\(name) maximumSupportedVersion must be greater than zero",
+                exitCode: ToolExitCode.data
+            )
+        }
+        guard policy.maximumSupportedVersion <= interface.version else {
+            throw ToolError(
+                "\(name) maximumSupportedVersion \(policy.maximumSupportedVersion) exceeds "
+                    + "XML version \(interface.version)",
+                exitCode: ToolExitCode.data
+            )
+        }
+        if let minimumRequiredVersion = policy.minimumRequiredVersion {
+            guard minimumRequiredVersion > 0 else {
                 throw ToolError(
-                    "\(name) maximumSupportedVersion must be greater than zero",
+                    "\(name) minimumRequiredVersion must be greater than zero",
                     exitCode: ToolExitCode.data
                 )
             }
-            guard policy.maximumSupportedVersion <= interface.version else {
+            guard minimumRequiredVersion <= policy.maximumSupportedVersion else {
                 throw ToolError(
-                    "\(name) maximumSupportedVersion \(policy.maximumSupportedVersion) exceeds "
-                        + "XML version \(interface.version)",
+                    "\(name) minimumRequiredVersion \(minimumRequiredVersion) exceeds "
+                        + "maximumSupportedVersion \(policy.maximumSupportedVersion)",
                     exitCode: ToolExitCode.data
                 )
-            }
-            if let minimumRequiredVersion = policy.minimumRequiredVersion {
-                guard minimumRequiredVersion > 0 else {
-                    throw ToolError(
-                        "\(name) minimumRequiredVersion must be greater than zero",
-                        exitCode: ToolExitCode.data
-                    )
-                }
-                guard minimumRequiredVersion <= policy.maximumSupportedVersion else {
-                    throw ToolError(
-                        "\(name) minimumRequiredVersion \(minimumRequiredVersion) exceeds "
-                            + "maximumSupportedVersion \(policy.maximumSupportedVersion)",
-                        exitCode: ToolExitCode.data
-                    )
-                }
             }
         }
+        if policy.reportsCapability, policy.globalBinding != .optional {
+            throw ToolError(
+                "\(name) reportsCapability requires optional globalBinding",
+                exitCode: ToolExitCode.data
+            )
+        }
+    }
+
+    private func validateRetainedOptionalGlobals() throws {
+        let retainedGlobals = interfaces.compactMap { interfaceName, interfacePolicy in
+            interfacePolicy.retainedOptionalGlobal.map { (interfaceName, interfacePolicy, $0) }
+        }
+        var propertyNames: Set<String> = []
+        var bindingMethodNames: Set<String> = []
+        var bindingOrders: Set<UInt32> = []
+
+        for (interfaceName, interfacePolicy, retainedGlobal) in retainedGlobals {
+            guard interfacePolicy.globalBinding == .optional else {
+                throw ToolError(
+                    "\(interfaceName) retainedOptionalGlobal requires optional globalBinding",
+                    exitCode: ToolExitCode.data
+                )
+            }
+            try validateRetainedNames(retainedGlobal, interfaceName: interfaceName)
+            guard propertyNames.insert(retainedGlobal.propertyName).inserted else {
+                throw ToolError(
+                    "retained optional globals use property more than once: "
+                        + retainedGlobal.propertyName,
+                    exitCode: ToolExitCode.data
+                )
+            }
+            guard bindingMethodNames.insert(retainedGlobal.bindingMethodName).inserted else {
+                throw ToolError(
+                    "retained optional globals use binding method more than once: "
+                        + retainedGlobal.bindingMethodName,
+                    exitCode: ToolExitCode.data
+                )
+            }
+            guard bindingOrders.insert(retainedGlobal.bindingOrder).inserted else {
+                throw ToolError(
+                    "retained optional globals use binding order more than once: "
+                        + String(retainedGlobal.bindingOrder),
+                    exitCode: ToolExitCode.data
+                )
+            }
+        }
+
+        for (expectedOrder, retainedGlobal)
+            in retainedGlobals
+            .map(\.2)
+            .sorted(by: { $0.bindingOrder < $1.bindingOrder })
+            .enumerated()
+        where retainedGlobal.bindingOrder != UInt32(expectedOrder) {
+            throw ToolError(
+                "retained optional-global binding order must be contiguous from zero",
+                exitCode: ToolExitCode.data
+            )
+        }
+    }
+
+    private func validateRetainedNames(
+        _ retainedGlobal: WaylandRetainedOptionalGlobalPolicy,
+        interfaceName: String
+    ) throws {
+        let names = [
+            ("property name", retainedGlobal.propertyName),
+            ("binding method", retainedGlobal.bindingMethodName),
+            ("wrapper type", retainedGlobal.wrapperTypeName),
+        ]
+        for (label, name) in names where !Self.isSwiftIdentifier(name) {
+            throw ToolError(
+                "\(interfaceName) has invalid retained optional-global \(label): \(name)",
+                exitCode: ToolExitCode.data
+            )
+        }
+    }
+
+    private static func isSwiftIdentifier(_ value: String) -> Bool {
+        guard let first = value.first, first.isLetter || first == "_" else {
+            return false
+        }
+        return value.allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" }
     }
 }
 
 /// Client-specific generation choices for one Wayland interface.
 public struct WaylandInterfaceGenerationPolicy: Codable, Equatable, Sendable {
+    private enum CodingKeys: String, CodingKey {
+        case maximumSupportedVersion
+        case minimumRequiredVersion
+        case globalBinding
+        case reportsCapability
+        case retainedOptionalGlobal
+    }
+
     /// The highest interface version implemented by the client.
     public let maximumSupportedVersion: UInt32
 
@@ -275,15 +375,98 @@ public struct WaylandInterfaceGenerationPolicy: Codable, Equatable, Sendable {
     /// How the interface participates in registry binding, when it is a global.
     public let globalBinding: WaylandGlobalBindingPolicy?
 
+    /// Whether the public display capability inventory reports this optional global.
+    public let reportsCapability: Bool
+
+    /// The owned optional-global slot generated for this interface, when retained.
+    public let retainedOptionalGlobal: WaylandRetainedOptionalGlobalPolicy?
+
     /// Creates an interface policy value.
     public init(
         maximumSupportedVersion interfaceMaximumSupportedVersion: UInt32,
         minimumRequiredVersion interfaceMinimumRequiredVersion: UInt32? = nil,
-        globalBinding interfaceGlobalBinding: WaylandGlobalBindingPolicy? = nil
+        globalBinding interfaceGlobalBinding: WaylandGlobalBindingPolicy? = nil,
+        reportsCapability interfaceReportsCapability: Bool = false,
+        retainedOptionalGlobal interfaceRetainedOptionalGlobal:
+            WaylandRetainedOptionalGlobalPolicy? = nil
     ) {
         maximumSupportedVersion = interfaceMaximumSupportedVersion
         minimumRequiredVersion = interfaceMinimumRequiredVersion
         globalBinding = interfaceGlobalBinding
+        reportsCapability = interfaceReportsCapability
+        retainedOptionalGlobal = interfaceRetainedOptionalGlobal
+    }
+
+    /// Decodes an interface policy, treating an omitted capability flag as false.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        maximumSupportedVersion = try container.decode(
+            UInt32.self,
+            forKey: .maximumSupportedVersion
+        )
+        minimumRequiredVersion = try container.decodeIfPresent(
+            UInt32.self,
+            forKey: .minimumRequiredVersion
+        )
+        globalBinding = try container.decodeIfPresent(
+            WaylandGlobalBindingPolicy.self,
+            forKey: .globalBinding
+        )
+        reportsCapability =
+            try container.decodeIfPresent(
+                Bool.self,
+                forKey: .reportsCapability
+            ) ?? false
+        retainedOptionalGlobal = try container.decodeIfPresent(
+            WaylandRetainedOptionalGlobalPolicy.self,
+            forKey: .retainedOptionalGlobal
+        )
+    }
+
+    /// Encodes the interface policy without writing the default capability flag.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(maximumSupportedVersion, forKey: .maximumSupportedVersion)
+        try container.encodeIfPresent(
+            minimumRequiredVersion,
+            forKey: .minimumRequiredVersion
+        )
+        try container.encodeIfPresent(globalBinding, forKey: .globalBinding)
+        if reportsCapability {
+            try container.encode(true, forKey: .reportsCapability)
+        }
+        try container.encodeIfPresent(
+            retainedOptionalGlobal,
+            forKey: .retainedOptionalGlobal
+        )
+    }
+}
+
+/// Generation details for an optional global owned by `OptionalGlobals`.
+public struct WaylandRetainedOptionalGlobalPolicy: Codable, Equatable, Sendable {
+    /// The `OptionalGlobals` property that owns the raw wrapper.
+    public let propertyName: String
+
+    /// The handwritten raw binding method called by generated orchestration.
+    public let bindingMethodName: String
+
+    /// The optional wrapper stored in `OptionalGlobals`.
+    public let wrapperTypeName: String
+
+    /// The acquisition position used to generate rollback and reverse destruction.
+    public let bindingOrder: UInt32
+
+    /// Creates retained optional-global generation details.
+    public init(
+        propertyName: String,
+        bindingMethodName: String,
+        wrapperTypeName: String,
+        bindingOrder: UInt32
+    ) {
+        self.propertyName = propertyName
+        self.bindingMethodName = bindingMethodName
+        self.wrapperTypeName = wrapperTypeName
+        self.bindingOrder = bindingOrder
     }
 }
 

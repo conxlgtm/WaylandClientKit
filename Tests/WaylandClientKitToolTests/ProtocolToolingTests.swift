@@ -203,6 +203,13 @@ struct ProtocolToolingTests {
             encoding: .utf8
         )
         #expect(supportedVersions.contains("package enum SupportedVersions"))
+        let optionalGlobalDescriptors = try String(
+            contentsOf: root.appendingPathComponent(
+                "Sources/WaylandRaw/Internal/Binding/OptionalGlobalDescriptors.swift"
+            ),
+            encoding: .utf8
+        )
+        #expect(optionalGlobalDescriptors.contains("package enum OptionalGlobalDescriptors"))
     }
 }
 
