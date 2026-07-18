@@ -159,6 +159,7 @@ let package = Package(
                 "WaylandGraphicsCore",
                 "WaylandGPUPreview",
                 "WaylandRaw",
+                "WaylandRuntime",
             ],
             path: "Sources/WaylandGraphicsPreview",
             swiftSettings: strictMemorySafetySwiftSettings

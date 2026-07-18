@@ -3,6 +3,7 @@ import Glibc
 import WaylandClient
 import WaylandGPUPreview
 import WaylandRaw
+import WaylandRuntime
 
 // swiftlint:disable file_length
 
@@ -1220,85 +1221,6 @@ public enum WaylandGraphicsExternalPresentationFeedbackResult:
     case retired(WaylandGraphicsExternalRetirementReason)
 }
 
-// SAFETY: Receipt result and waiter access is protected by lock. Continuations
-// are resumed after unlocking so resumed work cannot re-enter locked state.
-@safe
-package final class WaylandGraphicsExternalReleaseState: @unchecked Sendable {
-    private let lock = NSLock()
-    private var result: WaylandGraphicsExternalReleaseResult?
-    private var waiters: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>] = []
-
-    package init() {
-        // Starts unresolved until compositor release, backing close, or failure.
-    }
-
-    package func wait() async -> WaylandGraphicsExternalReleaseResult {
-        return await withCheckedContinuation { continuation in
-            lock.lock()
-            if let result {
-                lock.unlock()
-                continuation.resume(returning: result)
-            } else {
-                waiters.append(continuation)
-                lock.unlock()
-            }
-        }
-    }
-
-    package func finish(_ terminalResult: WaylandGraphicsExternalReleaseResult) {
-        let continuations: [CheckedContinuation<WaylandGraphicsExternalReleaseResult, Never>]
-        lock.lock()
-        guard result == nil else {
-            lock.unlock()
-            return
-        }
-
-        result = terminalResult
-        continuations = waiters
-        waiters.removeAll()
-        lock.unlock()
-
-        for continuation in continuations {
-            continuation.resume(returning: terminalResult)
-        }
-    }
-}
-
-package actor ExternalPresentationFeedbackState {
-    private var result: WaylandGraphicsExternalPresentationFeedbackResult?
-    private var waiters:
-        [CheckedContinuation<WaylandGraphicsExternalPresentationFeedbackResult, Never>] = []
-
-    package init(
-        initialResult: WaylandGraphicsExternalPresentationFeedbackResult? = nil
-    ) {
-        result = initialResult
-    }
-
-    package func wait() async -> WaylandGraphicsExternalPresentationFeedbackResult {
-        if let result {
-            return result
-        }
-
-        return await withCheckedContinuation { continuation in
-            waiters.append(continuation)
-        }
-    }
-
-    package func finish(
-        _ terminalResult: WaylandGraphicsExternalPresentationFeedbackResult
-    ) {
-        guard result == nil else { return }
-
-        result = terminalResult
-        let continuations = waiters
-        waiters.removeAll()
-        for continuation in continuations {
-            continuation.resume(returning: terminalResult)
-        }
-    }
-}
-
 // swiftlint:disable:next type_name
 public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     public let id: WaylandGraphicsExternalSubmissionID
@@ -1309,8 +1231,9 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     public let releaseSynchronization: WaylandGraphicsExternalReleaseSynchronization
     public let presentationFeedbackIdentity: WaylandGraphicsExternalPresentationFeedbackIdentity?
 
-    private let releaseState: WaylandGraphicsExternalReleaseState
-    private let presentationFeedbackState: ExternalPresentationFeedbackState
+    private let releaseCompletion: CompletionCell<WaylandGraphicsExternalReleaseResult>
+    private let presentationFeedbackCompletion:
+        CompletionCell<WaylandGraphicsExternalPresentationFeedbackResult>
 
     package init(
         id submissionID: WaylandGraphicsExternalSubmissionID,
@@ -1321,11 +1244,12 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
             WaylandGraphicsExternalReleaseMechanism,
         releaseSynchronization submissionReleaseSynchronization:
             WaylandGraphicsExternalReleaseSynchronization,
-        releaseState submissionReleaseState: WaylandGraphicsExternalReleaseState,
+        releaseCompletion submissionReleaseCompletion:
+            CompletionCell<WaylandGraphicsExternalReleaseResult>,
         presentationFeedbackIdentity submissionPresentationFeedbackIdentity:
             WaylandGraphicsExternalPresentationFeedbackIdentity?,
-        presentationFeedbackState submissionPresentationFeedbackState:
-            ExternalPresentationFeedbackState
+        presentationFeedbackCompletion submissionPresentationFeedbackCompletion:
+            CompletionCell<WaylandGraphicsExternalPresentationFeedbackResult>
     ) {
         id = submissionID
         bufferID = submittedBufferID
@@ -1334,8 +1258,8 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
         releaseMechanism = submissionReleaseMechanism
         releaseSynchronization = submissionReleaseSynchronization
         presentationFeedbackIdentity = submissionPresentationFeedbackIdentity
-        releaseState = submissionReleaseState
-        presentationFeedbackState = submissionPresentationFeedbackState
+        releaseCompletion = submissionReleaseCompletion
+        presentationFeedbackCompletion = submissionPresentationFeedbackCompletion
     }
 
     /// Waits for the terminal tracking result for this submission.
@@ -1343,13 +1267,13 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     /// Only `.released` is compositor release evidence. A `.failed` result requires
     /// the renderer to keep the allocation alive until the owning backing has closed.
     public func waitForRelease() async -> WaylandGraphicsExternalReleaseResult {
-        await releaseState.wait()
+        await releaseCompletion.wait()
     }
 
     public func waitForPresentationFeedback() async
         -> WaylandGraphicsExternalPresentationFeedbackResult
     {
-        await presentationFeedbackState.wait()
+        await presentationFeedbackCompletion.wait()
     }
 }
 
