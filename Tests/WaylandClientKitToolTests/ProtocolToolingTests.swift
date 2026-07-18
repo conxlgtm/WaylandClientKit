@@ -284,6 +284,24 @@ extension ProtocolToolingTests {
             atomically: true,
             encoding: .utf8
         )
+        try """
+        {
+          "interfaces": {}
+        }
+        """.write(
+            to: root.appendingPathComponent("protocols/listener-bridge-policy.json"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try """
+        {
+          "interfaces": {}
+        }
+        """.write(
+            to: root.appendingPathComponent("protocols/request-bridge-policy.json"),
+            atomically: true,
+            encoding: .utf8
+        )
     }
 
     func writeExecutable(_ contents: String, to url: URL) throws {
