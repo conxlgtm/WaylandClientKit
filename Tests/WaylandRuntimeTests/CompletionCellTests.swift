@@ -52,8 +52,18 @@
         func initiallyCompletedCellReturnsItsValue() async {
             let cell = CompletionCell(completed: "ready")
 
+            #expect(cell.completedValue == "ready")
             #expect(await cell.wait() == "ready")
             #expect(!cell.complete("replacement"))
+        }
+
+        @Test
+        func completedValueDoesNotWaitForPendingCell() {
+            let cell = CompletionCell<Int>()
+
+            #expect(cell.completedValue == nil)
+            #expect(cell.complete(7))
+            #expect(cell.completedValue == 7)
         }
 
         @Test

@@ -79,6 +79,16 @@ package final class CompletionCell<Value: Sendable>: Sendable {
         return true
     }
 
+    /// Returns the completed value without waiting, or `nil` while the cell is pending.
+    package var completedValue: Value? {
+        state.withLock { state in
+            guard case .completed(let value) = state else {
+                return nil
+            }
+            return value
+        }
+    }
+
     #if ENABLE_TESTING
         package var pendingWaiterCountForTesting: Int {
             state.withLock { state in
