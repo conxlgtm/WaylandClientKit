@@ -183,6 +183,11 @@ public struct ProtocolTooling {
             ProtocolManifest.self, from: repository.url("protocols/manifest.json"))
     }
 
+    /// Parses every vendored protocol in manifest order.
+    public func loadProtocolIRs() throws -> [WaylandProtocolIR] {
+        try loadProtocolIRs(from: loadManifest())
+    }
+
     public func validateManifest() throws {
         let manifest = try loadManifest()
         var failures: [String] = []
@@ -407,6 +412,9 @@ public struct ProtocolTooling {
             try validateManifest()
         }
         let manifest = try loadManifest()
+        // Parse every input before replacing generated directories. This keeps malformed
+        // XML from leaving a partially regenerated tree behind.
+        _ = try loadProtocolIRs(from: manifest)
         let scanner = try RepositoryNixTools(
             repository: repository,
             fileSystem: fileSystem,
@@ -441,6 +449,21 @@ public struct ProtocolTooling {
         }
 
         diagnostics.success("generated Wayland protocol artifacts")
+    }
+
+    private func loadProtocolIRs(from manifest: ProtocolManifest) throws -> [WaylandProtocolIR] {
+        let parser = WaylandProtocolXMLParser()
+        return try manifest.protocols.map { entry in
+            let url = repository.url(entry.localPath)
+            let protocolIR = try parser.parse(
+                fileSystem.readData(url),
+                source: entry.localPath
+            )
+            diagnostics.verbose(
+                "parsed \(protocolIR.interfaces.count) interfaces from \(entry.localPath)"
+            )
+            return protocolIR
+        }
     }
 
     public func verifyGenerated() throws {

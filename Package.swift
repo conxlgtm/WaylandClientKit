@@ -296,6 +296,9 @@ let package = Package(
         .testTarget(
             name: "WaylandClientKitToolTests",
             dependencies: ["WaylandClientKitToolSupport"],
+            resources: [
+                .copy("Fixtures")
+            ],
             swiftSettings: librarySwiftSettings
         ),
         .plugin(

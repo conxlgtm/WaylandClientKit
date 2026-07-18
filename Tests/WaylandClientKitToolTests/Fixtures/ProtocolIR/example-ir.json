@@ -1,0 +1,97 @@
+{
+  "interfaces" : [
+    {
+      "enumerations" : [
+        {
+          "entries" : [
+            {
+              "name" : "alpha",
+              "rawValue" : "0x1",
+              "since" : 1
+            },
+            {
+              "deprecatedSince" : 4,
+              "name" : "beta",
+              "rawValue" : "0x2",
+              "since" : 3
+            }
+          ],
+          "isBitfield" : true,
+          "name" : "flags",
+          "since" : 2
+        }
+      ],
+      "events" : [
+        {
+          "arguments" : [
+            {
+              "enumerationName" : "flags",
+              "isNullable" : false,
+              "name" : "flags",
+              "wireType" : "uint"
+            }
+          ],
+          "isDestructor" : false,
+          "name" : "advertised",
+          "opcode" : 0,
+          "since" : 2
+        }
+      ],
+      "name" : "example_manager_v1",
+      "requests" : [
+        {
+          "arguments" : [
+
+          ],
+          "isDestructor" : true,
+          "name" : "destroy",
+          "opcode" : 0,
+          "since" : 2
+        },
+        {
+          "arguments" : [
+            {
+              "interfaceName" : "example_item_v1",
+              "isNullable" : false,
+              "name" : "item",
+              "wireType" : "new_id"
+            },
+            {
+              "interfaceName" : "wl_surface",
+              "isNullable" : true,
+              "name" : "parent",
+              "wireType" : "object"
+            }
+          ],
+          "isDestructor" : false,
+          "name" : "create_item",
+          "opcode" : 1,
+          "since" : 1
+        }
+      ],
+      "version" : 3
+    },
+    {
+      "enumerations" : [
+
+      ],
+      "events" : [
+        {
+          "arguments" : [
+
+          ],
+          "isDestructor" : true,
+          "name" : "done",
+          "opcode" : 0,
+          "since" : 1
+        }
+      ],
+      "name" : "example_item_v1",
+      "requests" : [
+
+      ],
+      "version" : 1
+    }
+  ],
+  "name" : "example_v1"
+}

@@ -21,6 +21,25 @@ Tool ownership is described in [Tooling Ownership](tooling.md). New protocol
 checks should be implemented in `WaylandClientKitToolSupport` and exposed through
 `wck`.
 
+## Schema IR And Client Policy
+
+`WaylandProtocolXMLParser` reads each vendored XML file into a small intermediate
+representation before generation starts. The model keeps interfaces, versions,
+requests, events, arguments, opcodes, destructors, and enumerations in source
+order. Parsing every input first also means malformed XML cannot leave the
+checked-in generated directories half replaced.
+
+The XML model contains protocol facts only. Client choices such as the highest
+version WaylandClientKit implements, a minimum bindable version, and whether a
+global is required or optional belong in `WaylandProtocolGenerationPolicy`.
+That policy is a JSON overlay so these choices do not get mixed into vendored
+upstream XML.
+
+The current generator still uses `wayland-scanner` for its checked-in C output,
+and the C shims remain handwritten. Later changes can use the IR and policy model
+to move those repeated pieces one family at a time. This change does not alter
+their ownership.
+
 ## Generated Outputs
 
 Generated headers:
