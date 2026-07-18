@@ -9,6 +9,8 @@ Vendored XML files:
 - `protocols/upstream/staging/`
 - `protocols/upstream/legacy-unstable/`
 - `protocols/manifest.json`
+- `protocols/generation-policy.json`
+- `protocols/listener-bridge-policy.json`
 
 These files are committed. `protocols/manifest.json` is the source of truth for
 the protocol inventory, source-resolution strategy, override environment
@@ -35,27 +37,33 @@ global is required or optional belong in `WaylandProtocolGenerationPolicy`.
 That policy is a JSON overlay so these choices do not get mixed into vendored
 upstream XML.
 
-The current generator still uses `wayland-scanner` for its checked-in C output,
-and the C shims remain handwritten. It also generates `SupportedVersions.swift`
-from the parsed interface versions and `protocols/generation-policy.json`. The
-policy records the client version cap, any non-default minimum version, and
-whether each supported global is required or optional. For optional globals, it
-also records whether the public capability inventory reports the interface. An
-optional global retained for the display lifetime records its wrapper type,
-stored property, binding method, and acquisition order. The generator uses that
-metadata for optional-global storage, binding rollback, invalidation, and
-reverse-order destruction. The raw bind methods and their unsafe C calls remain
-handwritten.
+The generator uses `wayland-scanner` for the native protocol declarations and C
+code. It generates `SupportedVersions.swift` and optional-global ownership from
+the parsed interface versions and `protocols/generation-policy.json`. That policy
+records the client version cap, any non-default minimum version, and whether each
+supported global is required or optional. For optional globals, it also records
+whether the public capability inventory reports the interface. An optional
+global retained for the display lifetime records its wrapper type, stored
+property, binding method, and acquisition order. The raw bind methods and their
+unsafe C calls remain handwritten.
+
+`protocols/listener-bridge-policy.json` selects the listener callback bundles
+used by the Swift raw layer. The XML supplies event order and C wire types. The
+policy preserves the existing exported shim names, records the one intentionally
+omitted surface event, and marks installers that keep handwritten test or system
+header behavior. Normal listener forwarding comes from the same XML model.
 
 ## Generated Outputs
 
 Generated headers:
 
 - `Sources/CWaylandProtocols/include/generated/`
+- `Sources/CWaylandProtocols/include/generated/shims/listener-bridges.h`
 
 Generated C files:
 
 - `Sources/CWaylandProtocols/generated/`
+- `Sources/CWaylandProtocols/generated/shims/listener-bridges.c`
 
 Generated Swift files:
 
@@ -64,11 +72,12 @@ Generated Swift files:
 
 These files are committed. The exact file set comes from `generatedHeaderPath`
 and `generatedCodePath` in `protocols/manifest.json`, plus the supported globals
-listed in `protocols/generation-policy.json`.
+listed in `protocols/generation-policy.json` and the listener inventory in
+`protocols/listener-bridge-policy.json`.
 
 ## Shim Files
 
-These files are not generated:
+The umbrella header and special-case shim implementations remain handwritten:
 
 - `Sources/CWaylandProtocols/include/wayland-client-kit-shims.h`
 - `Sources/CWaylandProtocols/shims/*.c`
@@ -149,6 +158,7 @@ Reads:
 
 - `protocols/`
 - `protocols/generation-policy.json`
+- `protocols/listener-bridge-policy.json`
 
 Writes:
 
@@ -172,9 +182,9 @@ Checks diffs for:
 - `Sources/WaylandRaw/Internal/Binding/SupportedVersions.swift`
 
 It validates vendored XML checksums, regenerates into a temporary output tree,
-validates the generation policy against the XML interface versions, and compares
-that tree against the committed generated outputs. It does not write to the
-checkout and does not check shim files as generated output.
+validates both generation policies against the XML schema, and compares
+that tree against the committed generated outputs, including the listener
+bridge header and C implementation. It does not write to the checkout.
 
 ### `swift run wck shims verify`
 

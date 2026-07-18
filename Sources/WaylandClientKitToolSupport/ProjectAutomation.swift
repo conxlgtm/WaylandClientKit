@@ -167,28 +167,38 @@ private let runtimeShimSymbols = symbolList(
     """
 )
 
-private struct ShimVerificationRule {
+struct ShimVerificationRule {
     let label: String
-    let headerPath: String
-    let implementationPath: String
+    let headerPaths: [String]
+    let implementationPaths: [String]
     let symbols: [String]
 }
 
 private let shimVerificationRules = [
     ShimVerificationRule(
         label: "protocol",
-        headerPath: "Sources/CWaylandProtocols/include/wayland-client-kit-shims.h",
-        implementationPath: "Sources/CWaylandProtocols/shims",
+        headerPaths: [
+            "Sources/CWaylandProtocols/include/wayland-client-kit-shims.h",
+            ListenerBridgeGeneration.headerOutputPath,
+        ],
+        implementationPaths: [
+            "Sources/CWaylandProtocols/shims",
+            "Sources/CWaylandProtocols/generated/shims",
+        ],
         symbols: protocolShimSymbols),
     ShimVerificationRule(
         label: "runtime",
-        headerPath: "Sources/CWaylandRuntimeShims/include/wayland-client-kit-runtime-shims.h",
-        implementationPath: "Sources/CWaylandRuntimeShims",
+        headerPaths: [
+            "Sources/CWaylandRuntimeShims/include/wayland-client-kit-runtime-shims.h"
+        ],
+        implementationPaths: ["Sources/CWaylandRuntimeShims"],
         symbols: runtimeShimSymbols),
     ShimVerificationRule(
         label: "cursor",
-        headerPath: "Sources/CWaylandCursorShims/include/wayland-client-kit-cursor-shims.h",
-        implementationPath: "Sources/CWaylandCursorShims",
+        headerPaths: [
+            "Sources/CWaylandCursorShims/include/wayland-client-kit-cursor-shims.h"
+        ],
+        implementationPaths: ["Sources/CWaylandCursorShims"],
         symbols: cursorShimSymbols),
 ]
 
@@ -693,32 +703,7 @@ public struct VerificationChecks {
             }
         }
         for rule in shimVerificationRules {
-            let headerPath = context.repository.url(rule.headerPath)
-            let implementationPath = context.repository.url(rule.implementationPath)
-            guard context.fileSystem.exists(headerPath) else {
-                failures.append("Missing \(rule.label) shim header: \(rule.headerPath)")
-                continue
-            }
-            guard context.fileSystem.isDirectory(implementationPath) else {
-                failures.append(
-                    "Missing \(rule.label) shim implementation directory: "
-                        + rule.implementationPath
-                )
-                continue
-            }
-            let headerText = try context.fileSystem.readText(headerPath)
-            let implementationText = try shimImplementationText(
-                under: implementationPath,
-                relativePath: rule.implementationPath,
-                failures: &failures)
-            for symbol in rule.symbols {
-                if !containsIdentifier(symbol, in: headerText) {
-                    failures.append("Missing shim declaration: \(symbol)")
-                }
-                if !containsIdentifier(symbol, in: implementationText) {
-                    failures.append("Missing shim implementation: \(symbol)")
-                }
-            }
+            try verifyShimRule(rule, failures: &failures)
         }
         guard failures.isEmpty else {
             throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
@@ -796,6 +781,63 @@ public struct VerificationChecks {
         }
         return relativePath.hasPrefix("Sources/")
             && ["c", "h"].contains(file.pathExtension)
+    }
+}
+
+extension VerificationChecks {
+    func verifyShimRule(
+        _ rule: ShimVerificationRule,
+        failures: inout [String]
+    ) throws {
+        let headerText = try shimHeaderText(for: rule, failures: &failures)
+        let implementationText = try shimSourceText(for: rule, failures: &failures)
+        for symbol in rule.symbols {
+            if !containsIdentifier(symbol, in: headerText) {
+                failures.append("Missing shim declaration: \(symbol)")
+            }
+            if !containsIdentifier(symbol, in: implementationText) {
+                failures.append("Missing shim implementation: \(symbol)")
+            }
+        }
+    }
+
+    func shimHeaderText(
+        for rule: ShimVerificationRule,
+        failures: inout [String]
+    ) throws -> String {
+        var text = ""
+        for relativePath in rule.headerPaths {
+            let headerPath = context.repository.url(relativePath)
+            guard context.fileSystem.exists(headerPath) else {
+                failures.append("Missing \(rule.label) shim header: \(relativePath)")
+                continue
+            }
+            text += try context.fileSystem.readText(headerPath)
+        }
+        return text
+    }
+
+    func shimSourceText(
+        for rule: ShimVerificationRule,
+        failures: inout [String]
+    ) throws -> String {
+        var text = ""
+        for relativePath in rule.implementationPaths {
+            let implementationPath = context.repository.url(relativePath)
+            guard context.fileSystem.isDirectory(implementationPath) else {
+                failures.append(
+                    "Missing \(rule.label) shim implementation directory: "
+                        + relativePath
+                )
+                continue
+            }
+            text += try shimImplementationText(
+                under: implementationPath,
+                relativePath: relativePath,
+                failures: &failures
+            )
+        }
+        return text
     }
 }
 

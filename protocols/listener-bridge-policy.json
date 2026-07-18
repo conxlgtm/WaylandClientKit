@@ -1,0 +1,220 @@
+{
+  "interfaces": {
+    "ext_foreign_toplevel_handle_v1": {
+      "callbackPrefix": "ext_foreign_toplevel_handle_v1",
+      "forwarding": "generated"
+    },
+    "ext_foreign_toplevel_list_v1": {
+      "callbackPrefix": "ext_foreign_toplevel_list_v1",
+      "forwarding": "generated"
+    },
+    "wl_buffer": {
+      "callbackPrefix": "buffer",
+      "forwarding": "handwritten"
+    },
+    "wl_callback": {
+      "callbackPrefix": "callback",
+      "forwarding": "generated"
+    },
+    "wl_data_device": {
+      "callbackPrefix": "data_device",
+      "forwarding": "generated"
+    },
+    "wl_data_offer": {
+      "callbackPrefix": "data_offer",
+      "forwarding": "generated"
+    },
+    "wl_data_source": {
+      "callbackPrefix": "data_source",
+      "forwarding": "generated"
+    },
+    "wl_keyboard": {
+      "callbackPrefix": "keyboard",
+      "forwarding": "generated"
+    },
+    "wl_output": {
+      "callbackPrefix": "output",
+      "forwarding": "handwritten"
+    },
+    "wl_pointer": {
+      "callbackPrefix": "pointer",
+      "forwarding": "generated"
+    },
+    "wl_registry": {
+      "callbackPrefix": "registry",
+      "forwarding": "generated"
+    },
+    "wl_seat": {
+      "callbackPrefix": "seat",
+      "forwarding": "generated"
+    },
+    "wl_surface": {
+      "callbackPrefix": "surface",
+      "forwarding": "handwritten",
+      "omittedEvents": [
+        "preferred_buffer_transform"
+      ]
+    },
+    "wl_touch": {
+      "callbackPrefix": "touch",
+      "forwarding": "generated"
+    },
+    "wp_color_manager_v1": {
+      "callbackPrefix": "wp_color_manager_v1",
+      "forwarding": "handwritten"
+    },
+    "wp_color_representation_manager_v1": {
+      "callbackPrefix": "wp_color_representation_manager_v1",
+      "forwarding": "handwritten"
+    },
+    "wp_fractional_scale_v1": {
+      "callbackPrefix": "wp_fractional_scale_v1",
+      "forwarding": "generated"
+    },
+    "wp_image_description_v1": {
+      "callbackPrefix": "wp_image_description_v1",
+      "forwarding": "handwritten"
+    },
+    "wp_presentation": {
+      "callbackPrefix": "wp_presentation",
+      "forwarding": "handwritten"
+    },
+    "wp_presentation_feedback": {
+      "callbackPrefix": "wp_presentation_feedback",
+      "forwarding": "handwritten"
+    },
+    "xdg_activation_token_v1": {
+      "callbackPrefix": "xdg_activation_token_v1",
+      "forwarding": "generated"
+    },
+    "xdg_popup": {
+      "callbackPrefix": "xdg_popup",
+      "eventCallbackNames": {
+        "popup_done": "done"
+      },
+      "forwarding": "generated"
+    },
+    "xdg_session_v1": {
+      "callbackPrefix": "xdg_session_v1",
+      "forwarding": "generated"
+    },
+    "xdg_surface": {
+      "callbackPrefix": "xdg_surface",
+      "forwarding": "generated"
+    },
+    "xdg_toplevel": {
+      "callbackPrefix": "xdg_toplevel",
+      "forwarding": "generated"
+    },
+    "xdg_toplevel_icon_manager_v1": {
+      "callbackPrefix": "xdg_toplevel_icon_manager_v1",
+      "forwarding": "generated"
+    },
+    "xdg_toplevel_session_v1": {
+      "callbackPrefix": "xdg_toplevel_session_v1",
+      "forwarding": "generated"
+    },
+    "xdg_wm_base": {
+      "callbackPrefix": "xdg_wm_base",
+      "forwarding": "generated"
+    },
+    "zwlr_output_configuration_v1": {
+      "callbackPrefix": "zwlr_output_configuration_v1",
+      "forwarding": "generated"
+    },
+    "zwlr_output_head_v1": {
+      "callbackPrefix": "zwlr_output_head_v1",
+      "forwarding": "generated"
+    },
+    "zwlr_output_manager_v1": {
+      "callbackPrefix": "zwlr_output_manager_v1",
+      "forwarding": "generated"
+    },
+    "zwlr_output_mode_v1": {
+      "callbackPrefix": "zwlr_output_mode_v1",
+      "forwarding": "generated"
+    },
+    "zwp_confined_pointer_v1": {
+      "callbackPrefix": "zwp_confined_pointer_v1",
+      "forwarding": "generated"
+    },
+    "zwp_keyboard_shortcuts_inhibitor_v1": {
+      "callbackPrefix": "zwp_keyboard_shortcuts_inhibitor_v1",
+      "forwarding": "handwritten"
+    },
+    "zwp_linux_buffer_params_v1": {
+      "callbackPrefix": "zwp_linux_buffer_params",
+      "forwarding": "generated",
+      "installerPrefix": "zwp_linux_buffer_params_v1"
+    },
+    "zwp_linux_dmabuf_feedback_v1": {
+      "callbackPrefix": "zwp_linux_dmabuf_feedback",
+      "forwarding": "generated",
+      "installerPrefix": "zwp_linux_dmabuf_feedback_v1"
+    },
+    "zwp_locked_pointer_v1": {
+      "callbackPrefix": "zwp_locked_pointer_v1",
+      "forwarding": "generated"
+    },
+    "zwp_pointer_gesture_hold_v1": {
+      "callbackPrefix": "zwp_pointer_gesture_hold_v1",
+      "forwarding": "generated"
+    },
+    "zwp_pointer_gesture_pinch_v1": {
+      "callbackPrefix": "zwp_pointer_gesture_pinch_v1",
+      "forwarding": "generated"
+    },
+    "zwp_pointer_gesture_swipe_v1": {
+      "callbackPrefix": "zwp_pointer_gesture_swipe_v1",
+      "forwarding": "generated"
+    },
+    "zwp_primary_selection_device_v1": {
+      "callbackPrefix": "primary_selection_device",
+      "forwarding": "generated"
+    },
+    "zwp_primary_selection_offer_v1": {
+      "callbackPrefix": "primary_selection_offer",
+      "forwarding": "generated"
+    },
+    "zwp_primary_selection_source_v1": {
+      "callbackPrefix": "primary_selection_source",
+      "forwarding": "generated"
+    },
+    "zwp_relative_pointer_v1": {
+      "callbackPrefix": "zwp_relative_pointer_v1",
+      "forwarding": "generated"
+    },
+    "zwp_tablet_pad_group_v2": {
+      "callbackPrefix": "zwp_tablet_pad_group_v2",
+      "forwarding": "generated"
+    },
+    "zwp_tablet_pad_v2": {
+      "callbackPrefix": "zwp_tablet_pad_v2",
+      "forwarding": "generated"
+    },
+    "zwp_tablet_seat_v2": {
+      "callbackPrefix": "zwp_tablet_seat_v2",
+      "forwarding": "generated"
+    },
+    "zwp_tablet_tool_v2": {
+      "callbackPrefix": "zwp_tablet_tool_v2",
+      "forwarding": "generated"
+    },
+    "zwp_tablet_v2": {
+      "callbackPrefix": "zwp_tablet_v2",
+      "forwarding": "generated"
+    },
+    "zwp_text_input_v3": {
+      "callbackPrefix": "text_input_v3",
+      "forwarding": "generated"
+    },
+    "zxdg_output_v1": {
+      "callbackPrefix": "zxdg_output_v1",
+      "forwarding": "generated"
+    },
+    "zxdg_toplevel_decoration_v1": {
+      "callbackPrefix": "zxdg_toplevel_decoration_v1",
+      "forwarding": "generated"
+    }
+  }
+}
