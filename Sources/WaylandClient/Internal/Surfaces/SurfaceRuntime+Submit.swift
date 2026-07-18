@@ -16,36 +16,15 @@ extension SurfaceRuntime {
     }
 
     var hasExplicitSynchronizationObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasExplicitSynchronization
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.submitConstraintObjects.hasExplicitSynchronization ?? false
     }
 
     var hasFifoObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasFifo
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.submitConstraintObjects.hasFifo ?? false
     }
 
     var hasCommitTimerObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasCommitTimer
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.submitConstraintObjects.hasCommitTimer ?? false
     }
 
     mutating func installExplicitSynchronizationObject(
@@ -89,18 +68,8 @@ extension SurfaceRuntime {
     mutating func applySubmitConstraints(
         _ constraints: SurfaceSubmitConstraints
     ) throws(SurfaceSubmitConstraintError) {
-        switch phase {
-        case .unassigned(var objects):
+        try updateSurfaceObjects { objects throws(SurfaceSubmitConstraintError) in
             try objects.submitConstraintObjects.apply(constraints)
-            phase = .unassigned(objects)
-        case .live(let roleResources, var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .live(roleResources: roleResources, objects)
-        case .roleDestroyed(var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .roleDestroyed(objects)
-        case .surfaceDestroyed:
-            return
         }
     }
 

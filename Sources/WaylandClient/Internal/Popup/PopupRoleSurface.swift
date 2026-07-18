@@ -325,9 +325,9 @@ extension PopupRoleSurface {
         surfaceRuntime.destroyScaleInstallation()
     }
 
-    package func updateScaleResources(
-        _ update: (inout SurfaceScaleInstallation) throws -> Bool
-    ) rethrows -> Bool {
+    package func updateScaleResources<Failure: Error>(
+        _ update: (inout SurfaceScaleInstallation) throws(Failure) -> Bool
+    ) throws(Failure) -> Bool {
         try surfaceRuntime.updateScaleInstallation(update)
     }
 
