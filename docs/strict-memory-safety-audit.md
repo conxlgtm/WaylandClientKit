@@ -2,6 +2,22 @@
 
 WaylandClientKit treats raw Wayland objects and shared-memory mappings as explicit unsafe islands. Public client-facing APIs should not expose raw C pointers or mmap lifetimes directly.
 
+## Unsafe Boundary Reference
+
+This table records the lifetime facts that are easy to lose when the code around an
+unsafe boundary changes. More detailed behavior and tests follow in the sections
+below.
+
+| Boundary | Owner | Where it may be used | What keeps it valid | Transfer and invalidation | Missed cleanup |
+| --- | --- | --- | --- | --- | --- |
+| `RawOwnedProxy` and `RawProxyAdoption` | One move-only proxy owner | The display owner thread and its queue | The adopted proxy remains alive and attached to the checked queue | `destroy` consumes normal ownership. `abandon` is the explicit escape hatch after ownership moves elsewhere | `deinit` performs best-effort destruction through the stored destroy function |
+| `CListenerStorage` and `CallbackBoxStorage` | The matching raw listener owner | A Wayland callback on the display owner thread | The owner keeps callback storage alive through callback return | Cancellation invalidates callback lookup before the proxy is destroyed | Storage stays allocated until any active callback returns |
+| `MappedRegion`, `RawSharedMemoryPool`, and `RawBuffer` | The mapped region and its pool | The display owner thread, except for scoped public byte borrows | The pool outlives every buffer that points into its mapping | Buffer destruction ends the buffer borrow. Pool destruction waits for retired buffers | `MappedRegion.deinit` unmaps the region if normal cleanup was missed |
+| `WaylandThreadExecutor` and `ThreadAffinity` | The executor's owned pthread | Only the executor thread may touch its event source or raw display state | The executor owns the thread, wake descriptor, and accepted jobs until shutdown | Shutdown stops acceptance, wakes the thread, drains its policy, and joins it | Executor teardown closes wake resources after the owner thread stops |
+| `DataTransferSourceWriter` | One writer state and worker thread | Its condition-protected state may cross the writer thread boundary | Each queued write owns its data and descriptor until completion or cancellation | Draining or cancellation removes the queued request and closes the descriptor once | Shutdown wakes and joins the worker before state is released |
+| Raw dma-buf, GBM, and EGL wrappers | The importing graphics backing or render target | Setup and rendering paths with their documented owner-thread or lock boundary | Owned descriptors, proxies, and graphics objects stay in their wrapper until transfer | Move-only descriptor values transfer ownership into import. Destroy or retirement invalidates the wrapper | Wrapper teardown releases the native object when normal retirement was missed |
+| External-buffer release and presentation registries | The graphics backing storage | Registry locks protect lookup state. Completion happens after unlocking | A registry entry retains its completion cell until a terminal result | Release, failure, or backing close removes the entry before completing waiters | Backing close completes every remaining receipt and cancels its monitor task |
+
 ## Shared Memory and Borrowed Buffers
 
 Remaining unsafe constructs:
