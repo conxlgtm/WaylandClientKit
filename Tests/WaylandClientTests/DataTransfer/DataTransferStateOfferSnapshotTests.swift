@@ -12,27 +12,25 @@ struct DataTransferStateOfferSnapshotTests {
         #expect(throws: DataTransferError.emptyDataOffer) {
             _ = try DataOfferSnapshot(
                 id: offer1,
-                role: .selection(seatID: seat1),
+                role: .dragAndDrop(seatID: seat1),
                 mimeTypes: []
             )
         }
     }
 
     @Test
-    func offerSnapshotsNeverExposePendingOffer() throws {
-        var state = try boundState(seat1)
-        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
-            .state
+    func offerSnapshotsNeverExposePendingDragOffer() throws {
+        var state = try availableState(seat1)
+        state = try state.reduce(.dragOfferCreated(id: offer1, seatID: seat1)).state
 
         #expect(state.offerSnapshot(offer1) == nil)
         #expect(state.offerSnapshots.isEmpty)
     }
 
     @Test
-    func pendingOfferPromotesOnlyAfterFirstMIMEType() throws {
-        var state = try boundState(seat1)
-        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
-            .state
+    func pendingDragOfferPromotesOnlyAfterFirstMIMEType() throws {
+        var state = try availableState(seat1)
+        state = try state.reduce(.dragOfferCreated(id: offer1, seatID: seat1)).state
 
         state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
 
@@ -40,17 +38,16 @@ struct DataTransferStateOfferSnapshotTests {
             state.offerSnapshot(offer1)
                 == (try DataOfferSnapshot(
                     id: offer1,
-                    role: .selection(seatID: seat1),
+                    role: .dragAndDrop(seatID: seat1),
                     mimeTypes: [.plainText]
                 ))
         )
     }
 
     @Test
-    func duplicateRemoteOfferMIMETypeIsDeduplicatedByPolicy() throws {
-        var state = try boundState(seat1)
-        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
-            .state
+    func duplicateDragOfferMIMETypeIsDeduplicatedByPolicy() throws {
+        var state = try availableState(seat1)
+        state = try state.reduce(.dragOfferCreated(id: offer1, seatID: seat1)).state
 
         state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
         state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
@@ -59,30 +56,22 @@ struct DataTransferStateOfferSnapshotTests {
     }
 
     @Test
-    func lateMIMETypeForCurrentSelectionPublishesSelectionChange() throws {
-        var state = try boundState(seat1)
-        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
-            .state
-        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
-        state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
+    func lateMIMETypeForActiveDragOfferPublishesChange() throws {
+        let state = try activeDragState()
 
         let update = try state.reduce(.offerMimeType(id: offer1, mimeType: .uriList))
 
         #expect(
             update.effects == [
-                .publishSelectionChanged(seatID: seat1, offerID: offer1)
+                .publishDragOfferChanged(seatID: seat1, offerID: offer1)
             ]
         )
         #expect(update.state.offerSnapshot(offer1)?.mimeTypes == [.plainText, .uriList])
     }
 
     @Test
-    func duplicateLateMIMETypeForCurrentSelectionDoesNotPublishAgain() throws {
-        var state = try boundState(seat1)
-        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
-            .state
-        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
-        state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
+    func duplicateLateMIMETypeForActiveDragOfferDoesNotPublishAgain() throws {
+        let state = try activeDragState()
 
         let update = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText))
 
@@ -90,8 +79,24 @@ struct DataTransferStateOfferSnapshotTests {
         #expect(update.state.offerSnapshot(offer1)?.mimeTypes == [.plainText])
     }
 
-    private func boundState(_ seatID: SeatID) throws -> DataTransferState {
-        let available = try DataTransferState().reduce(.seatAvailable(seatID)).state
-        return try available.reduce(.dataDeviceBound(seatID)).state
+    private func availableState(_ seatID: SeatID) throws -> DataTransferState {
+        try DataTransferState().reduce(.seatAvailable(seatID)).state
+    }
+
+    private func activeDragState() throws -> DataTransferState {
+        var state = try availableState(seat1)
+        state = try state.reduce(.dragOfferCreated(id: offer1, seatID: seat1)).state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
+        return try state.reduce(
+            .dragEntered(
+                DataTransferDragEnterTransition(
+                    seatID: seat1,
+                    offerID: offer1,
+                    serial: 1,
+                    location: DragLocation(x: 0, y: 0),
+                    target: .focusless
+                )
+            )
+        ).state
     }
 }

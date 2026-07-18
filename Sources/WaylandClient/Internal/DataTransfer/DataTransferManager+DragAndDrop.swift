@@ -13,54 +13,144 @@ extension DataTransferManager {
             return
         }
         let target = surfaceTargetResolver(enter.surfaceID)
-        guard let offerID = store.offerID(for: handle) else {
-            throw DataTransferError.unknownOfferHandle(rawValue: handle.rawValue, seatID: seatID)
-        }
-        let dragEntered = DataTransferAction.dragEntered(
-            DataTransferDragEnterTransition(
-                enter,
+        if let offerID = store.offerID(for: handle) {
+            try enterExistingDragOffer(
+                offerID,
+                event: enter,
                 seatID: seatID,
-                offerID: offerID,
                 target: target
             )
-        )
-        if let existingOffer = store.offerSnapshot(offerID) {
-            guard case .dragAndDrop(seatID) = existingOffer.role else {
-                throw DataTransferError.unknownDragOfferIdentity(offerID.dragIdentity)
-            }
-            try apply(dragEntered)
             return
         }
 
-        guard let runtimeOffer = store.runtimeOffer(offerID) else {
+        let claimedOffer = try selectionEngine.takePendingOfferForDrag(
+            handle: handle,
+            seatID: seatID
+        )
+        try enterClaimedDragOffer(
+            claimedOffer,
+            handle: handle,
+            event: enter,
+            seatID: seatID,
+            target: target
+        )
+    }
+
+    private func enterExistingDragOffer(
+        _ offerID: DataOfferID,
+        event: RawDataDeviceEnter,
+        seatID: SeatID,
+        target: InputEventTarget
+    ) throws {
+        guard let existingOffer = store.offerSnapshot(offerID),
+            case .dragAndDrop(seatID) = existingOffer.role
+        else {
             throw DataTransferError.unknownDragOfferIdentity(offerID.dragIdentity)
         }
-        guard runtimeOffer.pendingSeatID == seatID else {
-            throw DataTransferError.mismatchedOfferSeat(
-                offer: .dragAndDrop(offerID.dragIdentity),
-                expected: seatID,
-                actual: runtimeOffer.pendingSeatID
+        try apply(
+            .dragEntered(
+                DataTransferDragEnterTransition(
+                    event,
+                    seatID: seatID,
+                    offerID: offerID,
+                    target: target
+                )
             )
-        }
-        guard !runtimeOffer.pendingMIMETypes.isEmpty else {
-            throw DataTransferError.emptyDataOffer
-        }
+        )
+    }
 
+    private func enterClaimedDragOffer(
+        _ claimedOffer: SelectionEngineClaimedOffer,
+        handle: RawDataOfferHandle,
+        event: RawDataDeviceEnter,
+        seatID: SeatID,
+        target: InputEventTarget
+    ) throws {
+        guard let binding = claimedOffer.binding as? any DataTransferOfferBinding else {
+            selectionEngine.restoreClaimedOffer(claimedOffer)
+            preconditionFailure("clipboard offer is not backed by a data-device offer")
+        }
+        let offerID = claimedOffer.id
+        let pendingMetadata =
+            pendingDragMetadataByOfferID.removeValue(forKey: offerID)
+            ?? PendingDragOfferMetadata()
+        store.insertPendingOffer(
+            handle: handle,
+            offerID: offerID,
+            binding: binding,
+            seatID: seatID
+        )
+        do {
+            try restoreClaimedOfferMetadata(
+                claimedOffer,
+                pendingMetadata: pendingMetadata
+            )
+            try apply(
+                dragActivationActions(
+                    claimedOffer,
+                    event: event,
+                    pendingMetadata: pendingMetadata,
+                    target: target
+                ),
+                activatingOffers: [offerID]
+            )
+        } catch {
+            _ = store.removeOffer(offerID)
+            pendingDragMetadataByOfferID[offerID] = pendingMetadata
+            selectionEngine.restoreClaimedOffer(claimedOffer)
+            throw error
+        }
+    }
+
+    private func restoreClaimedOfferMetadata(
+        _ claimedOffer: SelectionEngineClaimedOffer,
+        pendingMetadata: PendingDragOfferMetadata
+    ) throws {
+        for mimeType in claimedOffer.mimeTypes {
+            try store.appendPendingMIMEType(mimeType, offerID: claimedOffer.id)
+        }
+        try store.setPendingSourceActions(
+            pendingMetadata.sourceActions,
+            offerID: claimedOffer.id
+        )
+        if let selectedAction = pendingMetadata.selectedAction {
+            try store.setPendingSelectedAction(selectedAction, offerID: claimedOffer.id)
+        }
+    }
+
+    private func dragActivationActions(
+        _ claimedOffer: SelectionEngineClaimedOffer,
+        event: RawDataDeviceEnter,
+        pendingMetadata: PendingDragOfferMetadata,
+        target: InputEventTarget
+    ) -> [DataTransferAction] {
         var actions: [DataTransferAction] = [
-            .offerCreated(id: offerID, role: .dragAndDrop(seatID: seatID))
+            .dragOfferCreated(id: claimedOffer.id, seatID: claimedOffer.seatID)
         ]
         actions.append(
-            contentsOf: runtimeOffer.pendingMIMETypes.map { mimeType in
-                .offerMimeType(id: offerID, mimeType: mimeType)
+            contentsOf: claimedOffer.mimeTypes.map { mimeType in
+                .offerMimeType(id: claimedOffer.id, mimeType: mimeType)
             }
         )
         actions.append(
-            .offerSourceActions(id: offerID, actions: runtimeOffer.pendingSourceActions)
+            .offerSourceActions(
+                id: claimedOffer.id,
+                actions: pendingMetadata.sourceActions
+            )
         )
-        if let selectedAction = runtimeOffer.pendingSelectedAction {
-            actions.append(.offerSelectedAction(id: offerID, action: selectedAction))
+        if let selectedAction = pendingMetadata.selectedAction {
+            actions.append(.offerSelectedAction(id: claimedOffer.id, action: selectedAction))
         }
-        actions.append(dragEntered)
-        try apply(actions, activatingOffers: [offerID])
+        actions.append(
+            .dragEntered(
+                DataTransferDragEnterTransition(
+                    event,
+                    seatID: claimedOffer.seatID,
+                    offerID: claimedOffer.id,
+                    target: target
+                )
+            )
+        )
+        return actions
     }
 }

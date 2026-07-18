@@ -262,15 +262,13 @@ package struct DataTransferDragEnterTransition: Equatable, Sendable {
 
 package enum DataTransferAction: Equatable, Sendable {
     case seatAvailable(SeatID)
-    case dataDeviceBound(SeatID)
     case seatRemoved(SeatID)
-    case offerCreated(id: DataOfferID, role: DataOfferRole)
+    case dragOfferCreated(id: DataOfferID, seatID: SeatID)
     case offerMimeType(id: DataOfferID, mimeType: MIMEType)
     case offerSourceActions(id: DataOfferID, actions: DragActionSet)
     case offerSelectedAction(id: DataOfferID, action: DragAction)
     case dragAccepted(id: DataOfferID, mimeType: MIMEType?)
     case dragActionsRequested(id: DataOfferID, preferredAction: DragAction)
-    case selectionChanged(seatID: SeatID, offerID: DataOfferID?)
     case dragEntered(DataTransferDragEnterTransition)
     case dragMotion(
         seatID: SeatID,
@@ -281,7 +279,6 @@ package enum DataTransferAction: Equatable, Sendable {
     case dragDropped(SeatID)
     case dragFinished(DataOfferID)
     case dragCancelled(DataOfferID)
-    case sourceCreated(id: DataSourceID, seatID: SeatID, mimeTypes: [MIMEType])
     case dragSourceCreated(
         id: DataSourceID,
         seatID: SeatID,
@@ -293,17 +290,13 @@ package enum DataTransferAction: Equatable, Sendable {
     case dragSourceDropPerformed(DataSourceID)
     case dragSourceFinished(DataSourceID)
     case dragSourceInvalidFinished(DataSourceID)
-    case selectionSourceChanged(seatID: SeatID, sourceID: DataSourceID?)
     case sourceCancelled(DataSourceID)
 }
 
 package enum DataTransferEffect: Equatable, Sendable {
-    case bindDataDevice(SeatID)
-    case releaseDataDevice(SeatID)
     case destroyOffer(DataOfferID)
     case destroySource(DataSourceID)
     case cancelSource(DataSourceID)
-    case publishSelectionChanged(seatID: SeatID, offerID: DataOfferID?)
     case publishDragEntered(DataTransferDragEnterTransition)
     case publishDragMotion(
         seatID: SeatID, offerID: DataOfferID, time: WaylandTimestampMilliseconds,
@@ -311,7 +304,6 @@ package enum DataTransferEffect: Equatable, Sendable {
     case publishDragLeft(seatID: SeatID, offerID: DataOfferID)
     case publishDragDropped(seatID: SeatID, offerID: DataOfferID)
     case publishDragOfferChanged(seatID: SeatID, offerID: DataOfferID)
-    case publishSourceCancelled(DataSourceID)
     case publishDragSourceCancelled(DataSourceID)
     case publishDragSourceTargetChanged(id: DataSourceID, mimeType: MIMEType?)
     case publishDragSourceActionChanged(id: DataSourceID, action: DragAction)

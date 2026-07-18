@@ -3,20 +3,10 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
 
-        guard let seat = store.seatSnapshot(seatID) else {
+        guard store.seatSnapshot(seatID) != nil else {
             throw DataTransferError.unknownSeat(seatID)
         }
-        guard seat.hasDataDevice else {
-            throw DataTransferError.missingDataDevice(seatID)
-        }
-        guard let offerID = seat.selectionOfferID else {
-            return nil
-        }
-        guard let offer = store.offerSnapshot(offerID) else {
-            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
-        }
-
-        return offer
+        return try selectionEngine.offer(for: seatID)
     }
 
     package func dragOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
@@ -26,7 +16,7 @@ extension DataTransferManager {
         guard let seat = store.seatSnapshot(seatID) else {
             throw DataTransferError.unknownSeat(seatID)
         }
-        guard seat.hasDataDevice else {
+        guard selectionEngine.boundSeatIDs.contains(seatID) else {
             throw DataTransferError.missingDataDevice(seatID)
         }
         guard let offerID = seat.dragAndDropOfferID else {

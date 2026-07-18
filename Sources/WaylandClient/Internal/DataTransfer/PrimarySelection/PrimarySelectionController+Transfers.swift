@@ -2,8 +2,7 @@ import WaylandRaw
 
 extension PrimarySelectionController {
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
-        backend.preconditionIsOwnerThread()
-        return pendingSourceSendRequests.drain()
+        selectionEngine.drainSourceSendRequests()
     }
 
     package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
@@ -21,25 +20,16 @@ extension PrimarySelectionController {
     }
 
     package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
-        var remainingRequests: [DataTransferSourceSendRequest] = []
-        for request in drainSourceSendRequests() {
-            if request.source == .primarySelection(sourceID) {
-                DataTransferSourceSendLifecycle.discardRequests(
-                    CollectionOfOne(request)
-                ) { request, error in
-                    recordCallbackError(
-                        error,
-                        context: .primarySelectionSource(
-                            request.sourceID.primarySelectionIdentity
-                        )
-                    )
-                }
-            } else {
-                remainingRequests.append(request)
-            }
+        DataTransferSourceSendLifecycle.discardRequests(
+            selectionEngine.removeSourceSendRequests(for: sourceID)
+        ) { request, error in
+            recordCallbackError(
+                error,
+                context: .primarySelectionSource(
+                    request.sourceID.primarySelectionIdentity
+                )
+            )
         }
-
-        pendingSourceSendRequests = remainingRequests
     }
 
     func discardAllPendingSourceSendRequests() {

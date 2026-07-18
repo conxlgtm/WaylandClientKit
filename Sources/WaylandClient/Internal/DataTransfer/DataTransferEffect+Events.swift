@@ -1,7 +1,5 @@
 extension DataTransferEffect {
     package enum RuntimeSideEffect: Equatable, Sendable {
-        case bindDataDevice(SeatID)
-        case releaseDataDevice(SeatID)
         case destroyOffer(DataOfferID)
         case destroySource(DataSourceID)
         case cancelSource(DataSourceID)
@@ -9,12 +7,6 @@ extension DataTransferEffect {
 
     package var publishedEvent: DataTransferEvent? {
         switch self {
-        case .publishSelectionChanged(let seatID, let offerID):
-            .clipboardSelectionChanged(
-                ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
-            )
-        case .publishSourceCancelled(let sourceID):
-            .clipboardSourceCancelled(sourceID.clipboardIdentity)
         case .publishDragEntered(let enter):
             .dragEntered(
                 DragEnterEvent(
@@ -61,26 +53,20 @@ extension DataTransferEffect {
                     finalAction: finalAction
                 )
             )
-        case .bindDataDevice, .releaseDataDevice, .destroyOffer,
-            .destroySource, .cancelSource:
+        case .destroyOffer, .destroySource, .cancelSource:
             nil
         }
     }
 
     package var runtimeSideEffect: RuntimeSideEffect? {
         switch self {
-        case .bindDataDevice(let seatID):
-            .bindDataDevice(seatID)
-        case .releaseDataDevice(let seatID):
-            .releaseDataDevice(seatID)
         case .destroyOffer(let offerID):
             .destroyOffer(offerID)
         case .destroySource(let sourceID):
             .destroySource(sourceID)
         case .cancelSource(let sourceID):
             .cancelSource(sourceID)
-        case .publishSelectionChanged, .publishSourceCancelled,
-            .publishDragEntered, .publishDragMotion, .publishDragLeft,
+        case .publishDragEntered, .publishDragMotion, .publishDragLeft,
             .publishDragDropped, .publishDragOfferChanged,
             .publishDragSourceCancelled, .publishDragSourceTargetChanged,
             .publishDragSourceActionChanged, .publishDragSourceDropPerformed,

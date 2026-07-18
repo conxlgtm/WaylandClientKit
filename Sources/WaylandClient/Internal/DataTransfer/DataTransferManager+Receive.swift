@@ -10,13 +10,16 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
 
+        if selectionEngine.offerSnapshot(offerID) != nil {
+            return try selectionEngine.receiveOffer(id: offerID, mimeType: mimeType)
+        }
+
         guard let offer = store.offerSnapshot(offerID) else {
             throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
         guard let binding = offerBindingsByID[offerID] else {
             throw DataTransferError.offerExpired
         }
-
         return try backend.receiveOffer(offer, using: binding, mimeType: mimeType)
     }
 

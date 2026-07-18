@@ -1,6 +1,5 @@
 import Foundation
 import WaylandRaw
-import WaylandRuntime
 
 typealias RuntimeDataOfferHandleIndexEntry = (
     handle: RawDataOfferHandle,
@@ -125,17 +124,9 @@ struct RuntimeDataSource {
 
 struct DataTransferStore {
     private var state = DataTransferState()
-    private var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
     private var sourceRecords: [DataSourceID: RuntimeDataSource] = [:]
-    private var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
-    private var detachedSourceSendIDs: Set<DataSourceID> = []
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var runtimeOffersByID: [DataOfferID: RuntimeDataOffer] = [:]
-    private var pendingCallbackFailures: FIFOQueue<DataTransferCallbackFailure> = []
-
-    var boundSeatIDs: Set<SeatID> {
-        Set(deviceBindings.keys)
-    }
 
     var sourceIDs: Set<DataSourceID> {
         Set(sourceRecords.keys)
@@ -145,20 +136,12 @@ struct DataTransferStore {
         sourceRecords
     }
 
-    var detachedSourceSendIDsForInvariantChecks: Set<DataSourceID> {
-        detachedSourceSendIDs
-    }
-
     var offerIDs: Set<DataOfferID> {
         Set(runtimeOffersByID.keys)
     }
 
     var indexedOfferIDs: Set<DataOfferID> {
         Set(offerIDsByHandle.values)
-    }
-
-    var callbackFailure: DataTransferCallbackFailure? {
-        pendingCallbackFailures.first
     }
 
     var seatSnapshots: [DataTransferSeatSnapshot] {
@@ -199,17 +182,6 @@ struct DataTransferStore {
 
     var offerHandleIndexEntries: [RuntimeDataOfferHandleIndexEntry] {
         offerIDsByHandle.map { (handle: $0.key, offerID: $0.value) }
-    }
-
-    func deviceBinding(for seatID: SeatID) -> (any DataTransferDeviceBinding)? {
-        deviceBindings[seatID]
-    }
-
-    @discardableResult
-    mutating func removeDeviceBinding(
-        for seatID: SeatID
-    ) -> (any DataTransferDeviceBinding)? {
-        deviceBindings.removeValue(forKey: seatID)
     }
 
     func hasOffer(handle: RawDataOfferHandle) -> Bool {
@@ -305,14 +277,6 @@ struct DataTransferStore {
         sourceRecords[source.id] = source
     }
 
-    mutating func insertPreparedDevice(_ preparedDevice: PreparedDataTransferDeviceBinding) {
-        precondition(
-            deviceBindings[preparedDevice.seatID] == nil,
-            "data device binding was inserted twice"
-        )
-        deviceBindings[preparedDevice.seatID] = preparedDevice.binding
-    }
-
     mutating func activateOfferForCommit(_ offerID: DataOfferID) {
         guard var offer = runtimeOffersByID[offerID] else {
             preconditionFailure("activated data offer is missing its runtime record")
@@ -331,63 +295,6 @@ struct DataTransferStore {
 
     @discardableResult
     mutating func removeSource(_ sourceID: DataSourceID) -> RuntimeDataSource? {
-        detachedSourceSendIDs.remove(sourceID)
         return sourceRecords.removeValue(forKey: sourceID)
-    }
-
-    @discardableResult
-    mutating func detachSourcePreservingPendingSends(
-        _ sourceID: DataSourceID
-    ) -> RuntimeDataSource? {
-        let source = sourceRecords.removeValue(forKey: sourceID)
-        if pendingSourceSendRequests.contains(where: { $0.source.sourceID == sourceID }) {
-            detachedSourceSendIDs.insert(sourceID)
-        }
-        return source
-    }
-
-    mutating func appendSourceSendRequest(_ request: DataTransferSourceSendRequest) {
-        pendingSourceSendRequests.append(request)
-    }
-
-    mutating func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
-        let requests = pendingSourceSendRequests.drain()
-        detachedSourceSendIDs.removeAll(keepingCapacity: true)
-        return requests
-    }
-
-    mutating func removeSourceSendRequests(
-        for sourceID: DataSourceID
-    ) -> [DataTransferSourceSendRequest] {
-        let removedRequests = pendingSourceSendRequests.removeAllReturning { request in
-            request.source.sourceID == sourceID
-        }
-        pruneDetachedSourceSendIDs()
-        return removedRequests
-    }
-
-    func pendingSourceSendRequestsForInvariantChecks() -> [DataTransferSourceSendRequest] {
-        pendingSourceSendRequests
-    }
-
-    mutating func takeCallbackFailure() -> DataTransferCallbackFailure? {
-        guard !pendingCallbackFailures.isEmpty else {
-            return nil
-        }
-
-        return pendingCallbackFailures.popFirst()
-    }
-
-    mutating func discardCallbackFailures() {
-        pendingCallbackFailures.removeAll(keepingCapacity: false)
-    }
-
-    mutating func recordCallbackFailure(_ failure: DataTransferCallbackFailure) {
-        pendingCallbackFailures.append(failure)
-    }
-
-    private mutating func pruneDetachedSourceSendIDs() {
-        let pendingSourceIDs = Set(pendingSourceSendRequests.map(\.source.sourceID))
-        detachedSourceSendIDs = detachedSourceSendIDs.intersection(pendingSourceIDs)
     }
 }

@@ -4,9 +4,6 @@ extension DataTransferStore {
         _ transition: PreparedDataTransferTransition
     ) -> [DataTransferPostCommitAction] {
         replaceState(transition.state)
-        for preparedDevice in transition.deviceBindings {
-            insertPreparedDevice(preparedDevice)
-        }
         for source in transition.sourceRecords {
             insertSource(source)
         }
@@ -36,20 +33,9 @@ extension DataTransferStore {
                 offers.append(offer)
             }
         }
-        var devices: [any DataTransferDeviceBinding] = []
-        for seatID in boundSeatIDs.sortedByRawValue() {
-            if let device = removeDeviceBinding(for: seatID) {
-                devices.append(device)
-            }
-        }
-        let requests = drainSourceSendRequests()
-        discardCallbackFailures()
-
         return CommittedDataTransferShutdown(
             sources: sources,
-            offers: offers,
-            devices: devices,
-            pendingSourceSendRequests: requests
+            offers: offers
         )
     }
 
@@ -64,15 +50,11 @@ extension DataTransferStore {
             return []
         }
         switch sideEffect {
-        case .bindDataDevice:
-            return []
-        case .releaseDataDevice(let seatID):
-            return commitDeviceRelease(seatID)
         case .destroyOffer(let offerID):
             guard let offer = removeOffer(offerID) else { return [] }
             return [.destroyOffer(offer.binding)]
         case .destroySource(let sourceID):
-            guard let source = detachSourcePreservingPendingSends(sourceID) else { return [] }
+            guard let source = removeSource(sourceID) else { return [] }
             return [.destroySource(source.binding)]
         case .cancelSource(let sourceID):
             let source = removeSource(sourceID)
@@ -80,24 +62,9 @@ extension DataTransferStore {
                 .cancelSource(
                     id: sourceID,
                     binding: source?.binding,
-                    requests: removeSourceSendRequests(for: sourceID)
+                    requests: []
                 )
             ]
         }
-    }
-
-    private mutating func commitDeviceRelease(
-        _ seatID: SeatID
-    ) -> [DataTransferPostCommitAction] {
-        var actions: [DataTransferPostCommitAction] = []
-        if let binding = removeDeviceBinding(for: seatID) {
-            actions.append(.releaseDevice(binding))
-        }
-        for offerID in pendingOfferIDs(for: seatID) {
-            if let offer = removeOffer(offerID) {
-                actions.append(.destroyOffer(offer.binding))
-            }
-        }
-        return actions
     }
 }

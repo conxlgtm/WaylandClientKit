@@ -1,42 +1,12 @@
 package struct DataTransferSeatState: Equatable, Sendable {
     package var seatID: SeatID
-    package var device: DataTransferSeatDeviceState
 
-    package init(
-        seatID stateSeatID: SeatID,
-        hasDataDevice stateHasDataDevice: Bool = false
-    ) {
+    package init(seatID stateSeatID: SeatID) {
         seatID = stateSeatID
-        device = stateHasDataDevice ? .bound(selection: .none) : .unbound
     }
 
     package init(_ snapshot: DataTransferSeatSnapshot) throws {
         seatID = snapshot.seatID
-        device = snapshot.device
-    }
-
-    package var hasDataDevice: Bool {
-        device.hasDataDevice
-    }
-
-    package var selection: DataSelectionState {
-        device.selection
-    }
-
-    package mutating func bindDataDevice() {
-        guard case .unbound = device else {
-            return
-        }
-
-        device = .bound(selection: .none)
-    }
-
-    package mutating func setSelection(_ selection: DataSelectionState) throws {
-        guard device.hasDataDevice else {
-            throw DataTransferError.missingDataDevice(seatID)
-        }
-
-        device = .bound(selection: selection)
     }
 }
 
@@ -44,22 +14,6 @@ package enum DataSelectionState: Equatable, Sendable {
     case none
     case remoteOffer(DataOfferID)
     case ownedSource(DataSourceID)
-
-    package static func fromRemoteOffer(_ offerID: DataOfferID?) -> DataSelectionState {
-        if let offerID {
-            .remoteOffer(offerID)
-        } else {
-            .none
-        }
-    }
-
-    package static func fromOwnedSource(_ sourceID: DataSourceID?) -> DataSelectionState {
-        if let sourceID {
-            .ownedSource(sourceID)
-        } else {
-            .none
-        }
-    }
 
     package var offerID: DataOfferID? {
         guard case .remoteOffer(let offerID) = self else {
@@ -75,10 +29,6 @@ package enum DataSelectionState: Equatable, Sendable {
         }
 
         return sourceID
-    }
-
-    package var hasAnySelection: Bool {
-        self != .none
     }
 }
 
