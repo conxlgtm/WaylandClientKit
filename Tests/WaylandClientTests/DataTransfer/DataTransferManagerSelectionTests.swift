@@ -79,6 +79,52 @@ struct DataTransferManagerSelectionTests {
     }
 
     @Test
+    func failedEmptyOfferActivationCanRetryAfterMIMEArrives() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        device.emit(.selection(offerHandle1))
+
+        #expect(manager.offerSnapshots.isEmpty)
+        #expect(manager.drainDataTransferEvents().isEmpty)
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .emptyDataOffer
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+
+        offer.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle1))
+
+        #expect(
+            manager.offerSnapshots
+                == [
+                    try DataOfferSnapshot(
+                        id: offer.id,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText]
+                    )
+                ]
+        )
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .clipboardSelectionChanged(
+                        ClipboardSelectionEvent(seatID: seat1, offerID: offer.id)
+                    )
+                ]
+        )
+        try manager.checkInvariantsForTesting()
+    }
+
+    @Test
     func selectionOfferReturnsNilWhenSeatHasNoSelection() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)

@@ -81,6 +81,23 @@ struct DataTransferManagerTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func failedInitialBindingPreparationLeavesStoreEmpty() throws {
+        let backend = RecordingDataTransferBackend()
+        backend.failingSeatID = seat1
+        let manager = DataTransferManager(backend: backend)
+
+        #expect(throws: DataTransferError.unavailable) {
+            try manager.synchronizeSeats([seat1])
+        }
+
+        #expect(manager.seatSnapshots.isEmpty)
+        #expect(manager.offerSnapshots.isEmpty)
+        #expect(manager.sourceSnapshots.isEmpty)
+        #expect(manager.drainDataTransferEvents().isEmpty)
+        try manager.checkInvariantsForTesting()
+    }
+
+    @Test
     func dataDeviceSelectionClearWithoutCurrentSelectionIsNoOp() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)

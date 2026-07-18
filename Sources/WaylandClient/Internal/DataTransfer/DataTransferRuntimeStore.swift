@@ -185,8 +185,8 @@ struct DataTransferStore {
         state.sourceSnapshot(sourceID)
     }
 
-    func transitionPlan(for action: DataTransferAction) throws -> DataTransferTransitionPlan {
-        try state.reduce(action)
+    func transitionPlan(for actions: [DataTransferAction]) throws -> DataTransferTransitionPlan {
+        try state.reduce(actions)
     }
 
     mutating func replaceState(_ nextState: DataTransferState) {
@@ -199,13 +199,6 @@ struct DataTransferStore {
 
     var offerHandleIndexEntries: [RuntimeDataOfferHandleIndexEntry] {
         offerIDsByHandle.map { (handle: $0.key, offerID: $0.value) }
-    }
-
-    mutating func insertDeviceBinding(
-        _ binding: any DataTransferDeviceBinding,
-        for seatID: SeatID
-    ) {
-        deviceBindings[seatID] = binding
     }
 
     func deviceBinding(for seatID: SeatID) -> (any DataTransferDeviceBinding)? {
@@ -290,16 +283,6 @@ struct DataTransferStore {
         runtimeOffersByID[offerID] = runtimeOffer
     }
 
-    mutating func markOfferActive(_ offerID: DataOfferID) throws -> RuntimeDataOffer {
-        guard var runtimeOffer = runtimeOffersByID[offerID] else {
-            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
-        }
-
-        runtimeOffer.markActive()
-        runtimeOffersByID[offerID] = runtimeOffer
-        return runtimeOffer
-    }
-
     @discardableResult
     mutating func removeOffer(_ offerID: DataOfferID) -> RuntimeDataOffer? {
         guard let runtimeOffer = runtimeOffersByID.removeValue(forKey: offerID) else {
@@ -317,16 +300,29 @@ struct DataTransferStore {
             .sortedByRawValue()
     }
 
-    mutating func insertSource(
-        binding: any DataTransferSourceBinding,
-        payloads: DataTransferSourcePayloadSet,
-        sourceID: DataSourceID
-    ) throws {
-        sourceRecords[sourceID] = try RuntimeDataSource(
-            id: sourceID,
-            binding: binding,
-            payloads: payloads
+    mutating func insertSource(_ source: RuntimeDataSource) {
+        precondition(sourceRecords[source.id] == nil, "data source was inserted twice")
+        sourceRecords[source.id] = source
+    }
+
+    mutating func insertPreparedDevice(_ preparedDevice: PreparedDataTransferDeviceBinding) {
+        precondition(
+            deviceBindings[preparedDevice.seatID] == nil,
+            "data device binding was inserted twice"
         )
+        deviceBindings[preparedDevice.seatID] = preparedDevice.binding
+    }
+
+    mutating func activateOfferForCommit(_ offerID: DataOfferID) {
+        guard var offer = runtimeOffersByID[offerID] else {
+            preconditionFailure("activated data offer is missing its runtime record")
+        }
+        guard case .pending = offer else {
+            preconditionFailure("data offer was activated twice")
+        }
+
+        offer.markActive()
+        runtimeOffersByID[offerID] = offer
     }
 
     func sourcePayloadData(sourceID: DataSourceID, mimeType: MIMEType) -> Data? {

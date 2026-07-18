@@ -32,18 +32,22 @@ extension DataTransferManager {
         )
         do {
             sourceBinding.offer(payloads.mimeTypes)
-            try store.insertSource(
+            let sourceRecord = try RuntimeDataSource(
+                id: sourceID,
                 binding: sourceBinding,
-                payloads: payloads,
-                sourceID: sourceID
+                payloads: payloads
             )
-            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
-            try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
+            try apply(
+                [
+                    .sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes),
+                    .selectionSourceChanged(seatID: seatID, sourceID: sourceID),
+                ],
+                insertingSources: [sourceRecord]
+            )
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
             preconditionInvariantsHold()
         } catch {
             sourceBinding.destroy()
-            store.removeSource(sourceID)
             throw error
         }
 
@@ -78,18 +82,21 @@ extension DataTransferManager {
             }
             sourceBinding.setDragActions(request.actions)
             try request.beforeStartDrag?(sourceBinding)
-            try store.insertSource(
+            let sourceRecord = try RuntimeDataSource(
+                id: sourceID,
                 binding: sourceBinding,
-                payloads: request.payloads,
-                sourceID: sourceID
+                payloads: request.payloads
             )
             try apply(
-                .dragSourceCreated(
-                    id: sourceID,
-                    seatID: request.seatID,
-                    mimeTypes: request.payloads.mimeTypes,
-                    actions: request.actions
-                )
+                [
+                    .dragSourceCreated(
+                        id: sourceID,
+                        seatID: request.seatID,
+                        mimeTypes: request.payloads.mimeTypes,
+                        actions: request.actions
+                    )
+                ],
+                insertingSources: [sourceRecord]
             )
             deviceBinding.startDrag(
                 source: sourceBinding,
@@ -103,7 +110,6 @@ extension DataTransferManager {
         } catch {
             iconBinding?.destroy()
             sourceBinding.destroy()
-            store.removeSource(sourceID)
             throw error
         }
 
@@ -432,17 +438,17 @@ extension DataTransferManager {
         )
     }
 
-    package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
+    func discardSourceSendRequests(_ requests: [DataTransferSourceSendRequest]) {
         DataTransferSourceSendLifecycle.discardRequests(
-            store.removeSourceSendRequests(for: sourceID),
+            requests,
             recordError: recordSourceSendDiscardError
         )
     }
 
-    func discardAllPendingSourceSendRequests() {
-        DataTransferSourceSendLifecycle.discardRequests(
-            store.drainSourceSendRequests()
-        ) { _, _ in
+    func discardSourceSendRequestsDuringShutdown(
+        _ requests: [DataTransferSourceSendRequest]
+    ) {
+        DataTransferSourceSendLifecycle.discardRequests(requests) { _, _ in
             // Discard-all runs during teardown, so pending close failures cannot be routed.
         }
     }

@@ -108,6 +108,15 @@ package struct DataTransferState: Equatable, Sendable {
         let effects = try next.apply(action)
         return DataTransferTransitionPlan(state: next, effects: effects)
     }
+
+    package func reduce(_ actions: [DataTransferAction]) throws -> DataTransferTransitionPlan {
+        var next = self
+        var effects: [DataTransferEffect] = []
+        for action in actions {
+            effects.append(contentsOf: try next.apply(action))
+        }
+        return DataTransferTransitionPlan(state: next, effects: effects)
+    }
 }
 
 typealias SeatState = DataTransferSeatState

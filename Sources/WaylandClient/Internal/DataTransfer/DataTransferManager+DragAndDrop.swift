@@ -16,20 +16,19 @@ extension DataTransferManager {
         guard let offerID = store.offerID(for: handle) else {
             throw DataTransferError.unknownOfferHandle(rawValue: handle.rawValue, seatID: seatID)
         }
+        let dragEntered = DataTransferAction.dragEntered(
+            DataTransferDragEnterTransition(
+                enter,
+                seatID: seatID,
+                offerID: offerID,
+                target: target
+            )
+        )
         if let existingOffer = store.offerSnapshot(offerID) {
             guard case .dragAndDrop(seatID) = existingOffer.role else {
                 throw DataTransferError.unknownDragOfferIdentity(offerID.dragIdentity)
             }
-            try apply(
-                .dragEntered(
-                    DataTransferDragEnterTransition(
-                        enter,
-                        seatID: seatID,
-                        offerID: offerID,
-                        target: target
-                    )
-                )
-            )
+            try apply(dragEntered)
             return
         }
 
@@ -47,24 +46,21 @@ extension DataTransferManager {
             throw DataTransferError.emptyDataOffer
         }
 
-        try apply(.offerCreated(id: offerID, role: .dragAndDrop(seatID: seatID)))
-        for mimeType in runtimeOffer.pendingMIMETypes {
-            try apply(.offerMimeType(id: offerID, mimeType: mimeType))
-        }
-        try apply(.offerSourceActions(id: offerID, actions: runtimeOffer.pendingSourceActions))
-        if let selectedAction = runtimeOffer.pendingSelectedAction {
-            try apply(.offerSelectedAction(id: offerID, action: selectedAction))
-        }
-        _ = try store.markOfferActive(offerID)
-        try apply(
-            .dragEntered(
-                DataTransferDragEnterTransition(
-                    enter,
-                    seatID: seatID,
-                    offerID: offerID,
-                    target: target
-                )
-            )
+        var actions: [DataTransferAction] = [
+            .offerCreated(id: offerID, role: .dragAndDrop(seatID: seatID))
+        ]
+        actions.append(
+            contentsOf: runtimeOffer.pendingMIMETypes.map { mimeType in
+                .offerMimeType(id: offerID, mimeType: mimeType)
+            }
         )
+        actions.append(
+            .offerSourceActions(id: offerID, actions: runtimeOffer.pendingSourceActions)
+        )
+        if let selectedAction = runtimeOffer.pendingSelectedAction {
+            actions.append(.offerSelectedAction(id: offerID, action: selectedAction))
+        }
+        actions.append(dragEntered)
+        try apply(actions, activatingOffers: [offerID])
     }
 }

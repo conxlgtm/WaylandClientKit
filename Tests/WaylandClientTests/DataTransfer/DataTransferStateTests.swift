@@ -187,6 +187,21 @@ struct DataTransferStateTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func actionBatchDiscardsEarlierChangesWhenALaterActionFails() throws {
+        let state = try boundState(seat1)
+
+        #expect(throws: DataTransferError.emptyDataOffer) {
+            _ = try state.reduce([
+                .offerCreated(id: offer1, role: .selection(seatID: seat1)),
+                .selectionChanged(seatID: seat1, offerID: offer1),
+            ])
+        }
+
+        #expect(state.offerSnapshots.isEmpty)
+        #expect(state.seatSnapshot(seat1)?.selectionOfferID == nil)
+    }
+
+    @Test
     func sourceReplacementCancelsPreviousSource() throws {
         var state = try boundState(seat1)
         state = try state.reduce(
