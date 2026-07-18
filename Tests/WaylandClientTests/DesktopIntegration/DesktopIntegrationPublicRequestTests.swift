@@ -411,8 +411,8 @@
     ) async throws -> (Result, RecordedDesktopRequestSet) {
         try await CoreRequestRecordingGate.withExclusiveRecording {
             try await DesktopRequestRecordingGate.withExclusiveRecording {
-                swl_test_core_request_recording_begin()
-                swl_test_desktop_request_recording_begin()
+                swl_test_core_request_recording_begin_forwarding()
+                swl_test_desktop_request_recording_begin_forwarding()
                 defer {
                     swl_test_desktop_request_recording_end()
                     swl_test_core_request_recording_end()
@@ -433,8 +433,8 @@
     ) async throws -> RecordedDesktopAndCoreRequestSet {
         try await CoreRequestRecordingGate.withExclusiveRecording {
             try await DesktopRequestRecordingGate.withExclusiveRecording {
-                swl_test_core_request_recording_begin()
-                swl_test_desktop_request_recording_begin()
+                swl_test_core_request_recording_begin_forwarding()
+                swl_test_desktop_request_recording_begin_forwarding()
                 defer {
                     swl_test_desktop_request_recording_end()
                     swl_test_core_request_recording_end()

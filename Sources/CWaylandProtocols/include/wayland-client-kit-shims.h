@@ -1709,6 +1709,7 @@ void swl_test_fractional_scale_listener_emit_preferred_scale(
     struct swl_test_fractional_preferred_scale_record *record);
 
 void swl_test_core_request_recording_begin(void);
+void swl_test_core_request_recording_begin_forwarding(void);
 void swl_test_core_request_recording_end(void);
 struct swl_test_core_request_record swl_test_core_request_record(void);
 
@@ -1903,6 +1904,7 @@ void swl_test_activation_listener_emit_done(
     struct swl_test_activation_listener_record *record);
 
 void swl_test_desktop_request_recording_begin(void);
+void swl_test_desktop_request_recording_begin_forwarding(void);
 void swl_test_desktop_request_recording_end(void);
 struct swl_test_desktop_request_record swl_test_desktop_request_record(void);
 struct swl_test_desktop_destroy_record swl_test_desktop_destroy_record(void);
