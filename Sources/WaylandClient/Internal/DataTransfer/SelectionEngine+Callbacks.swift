@@ -166,16 +166,23 @@ extension SelectionEngine {
         descriptor: Int32,
         sourceID: DataSourceID
     ) throws {
+        let context: (SelectionEngineSourceRecord, MIMEType)?
         do {
-            guard
-                let (source, mimeType) = try sourceSendContext(
-                    rawMIMEType: rawMIMEType,
-                    sourceID: sourceID
-                )
-            else {
-                try closeSourceSendDescriptor(descriptor)
-                return
-            }
+            context = try sourceSendContext(
+                rawMIMEType: rawMIMEType,
+                sourceID: sourceID
+            )
+        } catch {
+            try closeSourceSendDescriptor(descriptor)
+            throw error
+        }
+
+        guard let (source, mimeType) = context else {
+            try closeSourceSendDescriptor(descriptor)
+            return
+        }
+
+        do {
             let prepared = try PreparedDataTransferSourceSend(
                 source: kind.writeSource(sourceID),
                 snapshot: source.snapshot,
