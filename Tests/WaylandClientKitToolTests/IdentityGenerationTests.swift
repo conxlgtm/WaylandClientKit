@@ -26,7 +26,9 @@ struct IdentityGenerationTests {
         try generator.generate()
         try generator.verifyGenerated()
 
-        let output = root.appendingPathComponent("Sources/Fixture/FixtureIdentities.swift")
+        let output = root.appendingPathComponent(
+            "Sources/Fixture/Generated/FixtureIdentities.swift"
+        )
         try "stale\n".write(to: output, atomically: true, encoding: .utf8)
 
         #expect(throws: ToolError.self) {
@@ -62,6 +64,98 @@ struct IdentityGenerationTests {
         #expect(throws: ToolError.self) {
             _ = try generator.render()
         }
+    }
+
+    @Test
+    func generationRefusesToReplaceHandwrittenFile() throws {
+        let root = try fixtureRepository()
+        let output = root.appendingPathComponent(
+            "Sources/Fixture/Generated/FixtureIdentities.swift"
+        )
+        let handwritten = "struct HandwrittenValue {}\n"
+        try FileManager.default.createDirectory(
+            at: output.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try handwritten.write(to: output, atomically: true, encoding: .utf8)
+
+        #expect(throws: ToolError.self) {
+            try IdentityGenerator(repository: Repository(root: root)).generate()
+        }
+        #expect(try String(contentsOf: output, encoding: .utf8) == handwritten)
+    }
+
+    @Test
+    func policyRejectsOutputOutsideGeneratedDirectory() throws {
+        let policy = fixturePolicy.replacingOccurrences(
+            of: "Sources/Fixture/Generated/FixtureIdentities.swift",
+            with: "Sources/Fixture/FixtureIdentities.swift"
+        )
+        let root = try fixtureRepository(policy: policy)
+
+        #expect(throws: ToolError.self) {
+            _ = try IdentityGenerator(repository: Repository(root: root)).render()
+        }
+    }
+
+    @Test
+    func generationPreflightsEveryDestinationBeforeWriting() throws {
+        let root = try fixtureRepository(policy: twoOutputFixturePolicy)
+        let generator = IdentityGenerator(repository: Repository(root: root))
+        try generator.generate()
+
+        let first = root.appendingPathComponent(
+            "Sources/Fixture/Generated/FixtureIdentities.swift"
+        )
+        let second = root.appendingPathComponent(
+            "Sources/Fixture/Generated/OtherIdentities.swift"
+        )
+        let firstBefore = try String(contentsOf: first, encoding: .utf8)
+        let handwritten = "struct HandwrittenValue {}\n"
+        try handwritten.write(to: second, atomically: true, encoding: .utf8)
+        try writePolicy(
+            twoOutputFixturePolicy.replacingOccurrences(of: "fixture-", with: "changed-"),
+            to: root
+        )
+
+        #expect(throws: ToolError.self) {
+            try generator.generate()
+        }
+        #expect(try String(contentsOf: first, encoding: .utf8) == firstBefore)
+        #expect(try String(contentsOf: second, encoding: .utf8) == handwritten)
+    }
+
+    @Test
+    func generationReportsAndRemovesOwnedOrphans() throws {
+        let root = try fixtureRepository(policy: twoOutputFixturePolicy)
+        let generator = IdentityGenerator(repository: Repository(root: root))
+        try generator.generate()
+
+        let orphan = root.appendingPathComponent(
+            "Sources/Fixture/Generated/OtherIdentities.swift"
+        )
+        let handwritten = root.appendingPathComponent(
+            "Sources/Fixture/Generated/Handwritten.swift"
+        )
+        try "struct HandwrittenValue {}\n".write(
+            to: handwritten,
+            atomically: true,
+            encoding: .utf8
+        )
+        try writePolicy(fixturePolicy, to: root)
+
+        do {
+            try generator.verifyGenerated()
+            Issue.record("Expected verification to report the orphaned generated file")
+        } catch let error as ToolError {
+            #expect(error.message.contains("unexpected generated file"))
+            #expect(error.message.contains("OtherIdentities.swift"))
+        }
+
+        try generator.generate()
+        #expect(!FileManager.default.fileExists(atPath: orphan.path))
+        #expect(FileManager.default.fileExists(atPath: handwritten.path))
+        try generator.verifyGenerated()
     }
 
     @Test
@@ -102,14 +196,17 @@ struct IdentityGenerationTests {
             || source.hasPrefix("public var ")
     }
 
-    private func fixtureRepository(manualType: String = "ManualToken") throws -> URL {
+    private func fixtureRepository(
+        manualType: String = "ManualToken",
+        policy: String? = nil
+    ) throws -> URL {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("waylandclientkit-identity-generation-\(UUID().uuidString)")
         try FileManager.default.createDirectory(
             at: root.appendingPathComponent("identities"),
             withIntermediateDirectories: true
         )
-        try fixturePolicy.write(
+        try (policy ?? fixturePolicy).write(
             to: root.appendingPathComponent(IdentityGenerator.policyPath),
             atomically: true,
             encoding: .utf8
@@ -128,7 +225,7 @@ struct IdentityGenerationTests {
           "outputs": [
             {
               "id": "fixture",
-              "path": "Sources/Fixture/FixtureIdentities.swift",
+              "path": "Sources/Fixture/Generated/FixtureIdentities.swift",
               "imports": []
             }
           ],
@@ -145,7 +242,7 @@ struct IdentityGenerationTests {
               "sharedIDConformance": "UInt64WaylandEntityID",
               "sharedIDInExtension": true,
               "description": { "prefix": "fixture-" },
-              "auditCategory": "client identity",
+              "auditCategory": "raw protocol identity",
               "documentation": {
                 "summary": "Identifies one generated fixture.",
                 "storage": "The numeric fixture identity.",
@@ -156,6 +253,69 @@ struct IdentityGenerationTests {
           ]
         }
         """
+    }
+
+    private var twoOutputFixturePolicy: String {
+        """
+        {
+          "outputs": [
+            {
+              "id": "fixture",
+              "path": "Sources/Fixture/Generated/FixtureIdentities.swift",
+              "imports": []
+            },
+            {
+              "id": "other",
+              "path": "Sources/Fixture/Generated/OtherIdentities.swift",
+              "imports": []
+            }
+          ],
+          "identities": [
+            {
+              "type": "FixtureID",
+              "output": "fixture",
+              "access": "public",
+              "rawType": "UInt64",
+              "storageAccess": "public",
+              "constructorAccess": "public",
+              "constructorParameter": "fixtureRawValue",
+              "conformances": ["Hashable", "Sendable"],
+              "description": { "prefix": "fixture-" },
+              "auditCategory": "raw protocol identity",
+              "documentation": {
+                "summary": "Identifies one generated fixture.",
+                "storage": "The numeric fixture identity.",
+                "constructor": "Creates a fixture identity from its numeric value.",
+                "description": "A stable diagnostic description of the fixture."
+              }
+            },
+            {
+              "type": "OtherID",
+              "output": "other",
+              "access": "public",
+              "rawType": "UInt64",
+              "storageAccess": "public",
+              "constructorAccess": "public",
+              "constructorParameter": "otherRawValue",
+              "conformances": ["Hashable", "Sendable"],
+              "auditCategory": "raw protocol identity",
+              "documentation": {
+                "summary": "Identifies another generated fixture.",
+                "storage": "The numeric fixture identity.",
+                "constructor": "Creates another fixture identity from its numeric value."
+              }
+            }
+          ]
+        }
+        """
+    }
+
+    private func writePolicy(_ policy: String, to root: URL) throws {
+        try policy.write(
+            to: root.appendingPathComponent(IdentityGenerator.policyPath),
+            atomically: true,
+            encoding: .utf8
+        )
     }
 
     private func manualAudit(type: String) -> String {
