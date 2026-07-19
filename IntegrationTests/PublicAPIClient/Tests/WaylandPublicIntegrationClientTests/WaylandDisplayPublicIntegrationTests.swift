@@ -178,20 +178,6 @@ private func show(_ popup: PopupSurface, color: UInt32) async throws {
     try await popup.show(timeoutMilliseconds: timeout, drawColor(color))
 }
 
-private func nextDisplayEvent(
-    in events: DisplayEvents,
-    matching predicate: @escaping @Sendable (DisplayEvent) -> Bool
-) async throws -> DisplayEvent {
-    var iterator = events.makeAsyncIterator()
-    while let event = try await iterator.next() {
-        if predicate(event) {
-            return event
-        }
-    }
-
-    throw PublicIntegrationError.streamEnded
-}
-
 private struct PublicStreamSources: Sendable {
     let displayEvents: DisplayEvents
     let inputEvents: InputEvents
@@ -256,20 +242,16 @@ func displayEvent(
         nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
         operation: "waiting for display event"
     ) {
-        try await withThrowingTaskGroup(of: DisplayEvent.self) { group in
-            group.addTask {
-                try await nextDisplayEvent(in: events, matching: predicate)
-            }
+        var iterator = events.makeAsyncIterator()
+        try await trigger()
 
-            await Task.yield()
-            try await trigger()
-
-            guard let event = try await group.next() else {
-                throw PublicIntegrationError.streamEnded
+        while let event = try await iterator.next() {
+            if predicate(event) {
+                return event
             }
-            group.cancelAll()
-            return event
         }
+
+        throw PublicIntegrationError.streamEnded
     }
 }
 
