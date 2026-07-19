@@ -67,6 +67,56 @@ struct IdentityGenerationTests {
     }
 
     @Test
+    func policyRejectsUnknownAuditCategory() throws {
+        let policy = fixturePolicy.replacingOccurrences(
+            of: "raw protocol identity",
+            with: "client identty"
+        )
+        let root = try fixtureRepository(policy: policy)
+
+        #expect(throws: ToolError.self) {
+            _ = try IdentityGenerator(repository: Repository(root: root)).render()
+        }
+    }
+
+    @Test
+    func clientIdentityCannotExposePublicStorage() throws {
+        let policy = fixturePolicy.replacingOccurrences(
+            of: "raw protocol identity",
+            with: "client identity"
+        )
+        let root = try fixtureRepository(policy: policy)
+
+        #expect(throws: ToolError.self) {
+            _ = try IdentityGenerator(repository: Repository(root: root)).render()
+        }
+    }
+
+    @Test
+    func projectionIdentityCannotExposePublicConstruction() throws {
+        let policy =
+            fixturePolicy
+            .replacingOccurrences(of: "raw protocol identity", with: "public projection")
+            .replacingOccurrences(
+                of: "\"storageAccess\": \"public\"", with: "\"storageAccess\": \"package\"")
+        let root = try fixtureRepository(policy: policy)
+
+        #expect(throws: ToolError.self) {
+            _ = try IdentityGenerator(repository: Repository(root: root)).render()
+        }
+    }
+
+    @Test
+    func rawProtocolIdentityCanExposeItsProtocolValue() throws {
+        let root = try fixtureRepository()
+        let files = try IdentityGenerator(repository: Repository(root: root)).render()
+        let swift = try #require(firstSwiftFile(in: files))
+
+        #expect(swift.contents.contains("public let rawValue: UInt64"))
+        #expect(swift.contents.contains("public init(rawValue fixtureRawValue: UInt64)"))
+    }
+
+    @Test
     func generationRefusesToReplaceHandwrittenFile() throws {
         let root = try fixtureRepository()
         let output = root.appendingPathComponent(
@@ -186,7 +236,9 @@ struct IdentityGenerationTests {
             }
         }
     }
+}
 
+extension IdentityGenerationTests {
     private func isPublicDeclaration(_ line: String) -> Bool {
         let source = line.trimmingCharacters(in: .whitespaces)
         return source.hasPrefix("public struct ")
@@ -194,6 +246,10 @@ struct IdentityGenerationTests {
             || source.hasPrefix("public init(")
             || source.hasPrefix("public typealias ")
             || source.hasPrefix("public var ")
+    }
+
+    private func firstSwiftFile(in files: [GeneratedIdentityFile]) -> GeneratedIdentityFile? {
+        files.first { $0.path.hasSuffix(".swift") }
     }
 
     private func fixtureRepository(

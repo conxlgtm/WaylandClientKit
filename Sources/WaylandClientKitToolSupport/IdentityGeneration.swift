@@ -205,12 +205,13 @@ struct IdentityGenerationPolicy: Decodable {
             if !outputIDs.contains(identity.output) {
                 failures.append("\(identity.type) references unknown output \(identity.output)")
             }
-            if identity.access == .public, identity.auditCategory?.isEmpty != false {
+            if identity.access == .public, identity.auditCategory == nil {
                 failures.append("\(identity.type) is missing an audit category")
             }
             if identity.access != .public, identity.auditCategory != nil {
                 failures.append("\(identity.type) is not public but has an audit category")
             }
+            identity.validateVisibility(failures: &failures)
             identity.validateDocumentation(failures: &failures)
         }
         let generatedAuditTypes = identities.compactMap { $0.auditCategory == nil ? nil : $0.type }
@@ -302,7 +303,7 @@ struct IdentityPolicy: Decodable {
     let integerLiteral: IdentityIntegerLiteralPolicy?
     let additionalInitializers: [IdentityInitializerOverride]
     let documentation: IdentityDocumentationPolicy?
-    let auditCategory: String?
+    let auditCategory: IdentityAuditCategory?
 
     init(from decoder: any Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -347,7 +348,10 @@ struct IdentityPolicy: Decodable {
             IdentityDocumentationPolicy.self,
             forKey: .documentation
         )
-        auditCategory = try values.decodeIfPresent(String.self, forKey: .auditCategory)
+        auditCategory = try values.decodeIfPresent(
+            IdentityAuditCategory.self,
+            forKey: .auditCategory
+        )
     }
 
     var effectiveStorageName: String { storageName ?? "rawValue" }
@@ -392,6 +396,35 @@ struct IdentityPolicy: Decodable {
         }
     }
 
+    func validateVisibility(failures: inout [String]) {
+        guard access == .public, let auditCategory else { return }
+        switch auditCategory {
+        case .rawProtocolIdentity, .applicationIdentity, .opaqueProtocolToken:
+            if storageAccess != .public {
+                failures.append(
+                    "\(type) is a \(auditCategory.rawValue) and needs public storage")
+            }
+            if constructorAccess != .public {
+                failures.append(
+                    "\(type) is a \(auditCategory.rawValue) and needs a public constructor")
+            }
+
+        case .clientIdentity, .publicProjection, .displayOwnedHandleIdentity,
+            .seatScopedIdentity:
+            if storageAccess == .public {
+                failures.append(
+                    "\(type) is a \(auditCategory.rawValue) and cannot expose public storage")
+            }
+            if constructorAccess == .public
+                || additionalInitializers.contains(where: { $0.access == .public })
+                || integerLiteral?.access == .public
+            {
+                failures.append(
+                    "\(type) is a \(auditCategory.rawValue) and cannot expose public construction")
+            }
+        }
+    }
+
     private func requireDocumentation(
         _ text: String?,
         label: String,
@@ -401,98 +434,4 @@ struct IdentityPolicy: Decodable {
             failures.append("\(type) has an undocumented public \(label)")
         }
     }
-}
-
-struct IdentityDescriptionPolicy: Decodable {
-    private enum CodingKeys: String, CodingKey {
-        case access
-        case prefix
-        case expression
-        case inExtension
-    }
-
-    let access: IdentityAccess?
-    let prefix: String?
-    let expression: String?
-    let inExtension: Bool
-
-    init(from decoder: any Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        access = try values.decodeIfPresent(IdentityAccess.self, forKey: .access)
-        prefix = try values.decodeIfPresent(String.self, forKey: .prefix)
-        expression = try values.decodeIfPresent(String.self, forKey: .expression)
-        inExtension = try values.decodeIfPresent(Bool.self, forKey: .inExtension) ?? false
-    }
-
-    func effectiveAccess(typeAccess: IdentityAccess) -> IdentityAccess { access ?? typeAccess }
-}
-
-struct IdentityIntegerLiteralPolicy: Decodable {
-    private enum CodingKeys: String, CodingKey {
-        case access
-        case type
-        case assignDirectly
-        case typealiasAccess
-    }
-
-    let access: IdentityAccess
-    let type: String?
-    let assignDirectly: Bool
-    let typealiasAccess: IdentityAccess?
-
-    init(from decoder: any Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        access = try values.decode(IdentityAccess.self, forKey: .access)
-        type = try values.decodeIfPresent(String.self, forKey: .type)
-        assignDirectly = try values.decodeIfPresent(Bool.self, forKey: .assignDirectly) ?? false
-        typealiasAccess = try values.decodeIfPresent(
-            IdentityAccess.self,
-            forKey: .typealiasAccess
-        )
-    }
-}
-
-struct IdentityInitializerOverride: Decodable {
-    let access: IdentityAccess
-    let label: String
-    let parameter: String
-    let type: String
-    let expression: String
-}
-
-struct IdentityDocumentationPolicy: Decodable {
-    let summary: String
-    let storage: String?
-    let constructor: String?
-    let description: String?
-    let integerLiteral: String?
-    let integerLiteralType: String?
-}
-
-enum IdentityAccess: String, Codable, Comparable {
-    case `public`, package, `internal`, `fileprivate`, `private`
-
-    static func < (lhs: Self, rhs: Self) -> Bool { lhs.rank < rhs.rank }
-
-    private var rank: Int {
-        switch self {
-        case .public: 0
-        case .package: 1
-        case .internal: 2
-        case .fileprivate: 3
-        case .private: 4
-        }
-    }
-}
-
-struct IdentityAuditManifest: Codable {
-    let identities: [IdentityAuditEntry]
-}
-
-struct IdentityAuditEntry: Codable {
-    let type: String
-    let category: String
-    let constructor: IdentityAccess
-    let storage: String
-    let storageVisibility: IdentityAccess
 }
