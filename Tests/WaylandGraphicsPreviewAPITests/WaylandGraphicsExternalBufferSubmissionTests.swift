@@ -1154,6 +1154,46 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         await storage.closeForTesting()
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func delayedImplicitReleaseFinishesOnlyItsSubmission() async throws {
+        let barrier = AsyncTestBarrier()
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        await storage.setImplicitExternalReleaseHandlerHookForTesting {
+            await barrier.suspend()
+        }
+
+        let firstLease = try await storage.nextFrame()
+        let first = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
+        )
+
+        await window.emitImportedBufferRelease(at: 0)
+        await barrier.waitUntilSuspended()
+
+        let secondLease = try await storage.nextFrame()
+        let secondRenderLease = try await secondLease.reserveExternalBuffer(first.buffer)
+        let secondReceipt = try await secondRenderLease.submit()
+
+        #expect(secondReceipt.id != first.receipt.id)
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 1)
+        await barrier.resume()
+
+        #expect(await first.receipt.waitForRelease() == .released)
+        #expect(await first.receipt.waitForRelease() == .released)
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 1)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        await window.emitImportedBufferRelease(at: 0)
+
+        #expect(await secondReceipt.waitForRelease() == .released)
+        #expect(await secondReceipt.waitForRelease() == .released)
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 0)
+        await storage.closeForTesting()
+    }
+
     @Test
     func externalBufferPoolStressDrainsToQuiescence() async throws {
         let frameCount = 1_000

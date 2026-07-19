@@ -484,6 +484,12 @@ private struct ExternalBufferRegistryState: Sendable {
     }
 }
 
+@safe
+private struct ClaimedImplicitExternalRelease: Sendable {
+    let submissionID: WaylandGraphicsExternalSubmissionID
+    let completion: CompletionCell<WaylandGraphicsExternalReleaseResult>
+}
+
 // SAFETY: All mutable registry dictionaries are protected by lock. Completion
 // cells are completed after unlocking so resumed work cannot re-enter locked state.
 @safe
@@ -508,21 +514,25 @@ private final class WaylandGraphicsExternalReleaseRegistry: @unchecked Sendable 
         return completion
     }
 
-    func finish(
-        slotID: GBMBufferPoolSlotID,
-        result: WaylandGraphicsExternalReleaseResult
-    ) {
-        let completion: CompletionCell<WaylandGraphicsExternalReleaseResult>?
+    func claimImplicitRelease(
+        slotID: GBMBufferPoolSlotID
+    ) -> ClaimedImplicitExternalRelease? {
+        let release: ClaimedImplicitExternalRelease?
         lock.lock()
         if let submissionID = submissionIDsBySlotID.removeValue(forKey: slotID) {
-            completion = completionsBySubmissionID.removeValue(forKey: submissionID)
+            if let completion = completionsBySubmissionID.removeValue(forKey: submissionID) {
+                release = ClaimedImplicitExternalRelease(
+                    submissionID: submissionID,
+                    completion: completion
+                )
+            } else {
+                release = nil
+            }
         } else {
-            completion = nil
+            release = nil
         }
         lock.unlock()
-
-        guard let completion else { return }
-        completion.complete(result)
+        return release
     }
 
     func finish(
@@ -750,6 +760,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     private var importedExternalSyncTimelineIDs: Set<WaylandGraphicsExternalSyncTimelineID> = []
     private var externalReleaseTimelineFactoryForTesting: ExternalReleaseTimelineFactory?
     private var externalReleaseMonitorFactoryForTesting: ExternalReleaseMonitorFactory?
+    private var implicitReleaseHook: (@Sendable () async -> Void)?
     private var pendingExternalExplicitReleases:
         [WaylandGraphicsExternalSubmissionID: PendingExternalExplicitRelease] = [:]
     private var externalExplicitReleaseMonitorTask: Task<Void, Never>?
@@ -779,17 +790,25 @@ package actor WaylandGraphicsWindowBackingStorage {
         externalBufferPresenter = GPUWindowPresenter(onImplicitRelease: onImplicitRelease)
         backingRuntimePath = initialRuntimePath
         releaseRetirementNotifier.setHandler { [weak self] slotID in
+            guard
+                let release = releaseRegistryForPresenter.claimImplicitRelease(
+                    slotID: slotID
+                )
+            else {
+                return
+            }
+
             // swiftlint:disable:next no_unstructured_task
-            Task { [weak self, releaseRegistryForPresenter] in
+            Task { [weak self] in
                 guard let self else {
-                    releaseRegistryForPresenter.finish(
-                        slotID: slotID,
-                        result: .released
-                    )
+                    release.completion.complete(.released)
                     return
                 }
 
-                await finishImplicitExternalBufferRelease(slotID: slotID)
+                await finishImplicitExternalBufferRelease(
+                    slotID: slotID,
+                    release: release
+                )
             }
         }
     }
@@ -1019,9 +1038,26 @@ package actor WaylandGraphicsWindowBackingStorage {
         await retireStaleAvailableExternalBuffers()
     }
 
-    private func finishImplicitExternalBufferRelease(slotID: GBMBufferPoolSlotID) async {
-        await synchronizeReleasedExternalBuffers()
-        externalReleaseRegistry.finish(slotID: slotID, result: .released)
+    private func finishImplicitExternalBufferRelease(
+        slotID: GBMBufferPoolSlotID,
+        release: ClaimedImplicitExternalRelease
+    ) async {
+        if let implicitReleaseHook {
+            await implicitReleaseHook()
+        }
+
+        let effects: ExternalBufferRegistryEffects
+        if let bufferID = externalBufferRegistry.bufferID(
+            for: release.submissionID,
+            slotID: slotID
+        ) {
+            effects = externalBufferRegistry.markReleased(bufferID: bufferID)
+        } else {
+            effects = ExternalBufferRegistryEffects()
+        }
+        await apply(effects)
+        await retireStaleAvailableExternalBuffers()
+        release.completion.complete(.released)
     }
 
     private func externalSynchronizationAvailability()
@@ -2971,6 +3007,12 @@ extension WaylandGraphicsWindowBackingStorage {
         _ factory: @escaping ExternalReleaseMonitorFactory
     ) {
         externalReleaseMonitorFactoryForTesting = factory
+    }
+
+    package func setImplicitExternalReleaseHandlerHookForTesting(
+        _ hook: @escaping @Sendable () async -> Void
+    ) {
+        implicitReleaseHook = hook
     }
 
     package func markExternalBufferStaleForTesting(
