@@ -105,7 +105,7 @@ public struct ProcessRunner: Sendable {
                 throw ToolError(
                     """
                     command failed with exit code \(result.exitCode): \(result.commandLine)
-                    \(result.stderr.isEmpty ? result.stdout : result.stderr)
+                    \(failureDetails(for: result))
                     """,
                     exitCode: ToolExitCode.process
                 )
@@ -244,7 +244,7 @@ public struct ProcessRunner: Sendable {
                 throw ToolError(
                     """
                     command failed with exit code \(result.exitCode): \(result.commandLine)
-                    \(result.stderr.isEmpty ? result.stdout : result.stderr)
+                    \(failureDetails(for: result))
                     """,
                     exitCode: ToolExitCode.process
                 )
@@ -306,6 +306,17 @@ public struct ProcessRunner: Sendable {
             }
         }
     #endif
+
+    private func failureDetails(for result: ProcessResult) -> String {
+        var sections: [String] = []
+        if !result.stdout.isEmpty {
+            sections.append("standard output:\n\(result.stdout)")
+        }
+        if !result.stderr.isEmpty {
+            sections.append("standard error:\n\(result.stderr)")
+        }
+        return sections.joined(separator: "\n")
+    }
 
     private func ignoreCleanupError(_ operation: () throws -> Void) {
         do {
