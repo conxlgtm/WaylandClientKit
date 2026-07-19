@@ -8,6 +8,23 @@
 #include <stddef.h>
 
 #ifdef SWL_ENABLE_TESTING
+#include <pthread.h>
+
+// Live request tests switch these hooks from the test task while requests run
+// on the display thread. This mutex keeps hook changes and captured records in
+// one order that ThreadSanitizer can observe.
+static pthread_mutex_t swl_test_desktop_request_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+#define SWL_DESKTOP_REQUEST_LOCK() \
+    ((void)pthread_mutex_lock(&swl_test_desktop_request_mutex))
+#define SWL_DESKTOP_REQUEST_UNLOCK() \
+    ((void)pthread_mutex_unlock(&swl_test_desktop_request_mutex))
+#else
+#define SWL_DESKTOP_REQUEST_LOCK() ((void)0)
+#define SWL_DESKTOP_REQUEST_UNLOCK() ((void)0)
+#endif
+
+#ifdef SWL_ENABLE_TESTING
 static char swl_test_desktop_request_text[256];
 static struct swl_test_desktop_request_record swl_test_desktop_request_latest;
 static struct swl_test_desktop_destroy_record swl_test_desktop_destroy_latest;
@@ -555,7 +572,11 @@ struct xdg_toplevel_icon_v1 *
 swl_xdg_toplevel_icon_manager_v1_create_icon(
     struct xdg_toplevel_icon_manager_v1 *manager)
 {
-    return swl_xdg_toplevel_icon_manager_v1_create_icon_impl(manager);
+    SWL_DESKTOP_REQUEST_LOCK();
+    struct xdg_toplevel_icon_v1 *icon =
+        swl_xdg_toplevel_icon_manager_v1_create_icon_impl(manager);
+    SWL_DESKTOP_REQUEST_UNLOCK();
+    return icon;
 }
 
 void swl_xdg_toplevel_icon_manager_v1_set_icon(
@@ -563,14 +584,18 @@ void swl_xdg_toplevel_icon_manager_v1_set_icon(
     struct xdg_toplevel *toplevel,
     struct xdg_toplevel_icon_v1 *icon)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_icon_manager_v1_set_icon_impl(manager, toplevel, icon);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_toplevel_icon_v1_set_name(
     struct xdg_toplevel_icon_v1 *icon,
     const char *name)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_icon_v1_set_name_impl(icon, name);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_toplevel_icon_v1_add_buffer(
@@ -578,7 +603,9 @@ void swl_xdg_toplevel_icon_v1_add_buffer(
     struct wl_buffer *buffer,
     int32_t scale)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_icon_v1_add_buffer_impl(icon, buffer, scale);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 struct zwp_idle_inhibitor_v1 *
@@ -586,60 +613,86 @@ swl_zwp_idle_inhibit_manager_v1_create_inhibitor(
     struct zwp_idle_inhibit_manager_v1 *manager,
     struct wl_surface *surface)
 {
-    return swl_zwp_idle_inhibit_manager_v1_create_inhibitor_impl(manager, surface);
+    SWL_DESKTOP_REQUEST_LOCK();
+    struct zwp_idle_inhibitor_v1 *inhibitor =
+        swl_zwp_idle_inhibit_manager_v1_create_inhibitor_impl(manager, surface);
+    SWL_DESKTOP_REQUEST_UNLOCK();
+    return inhibitor;
 }
 
 void swl_xdg_system_bell_v1_ring(
     struct xdg_system_bell_v1 *bell,
     struct wl_surface *surface)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_system_bell_v1_ring_impl(bell, surface);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_wm_dialog_v1_destroy(struct xdg_wm_dialog_v1 *manager)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_wm_dialog_v1_destroy_impl(manager);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 struct xdg_dialog_v1 *swl_xdg_wm_dialog_v1_get_xdg_dialog(
     struct xdg_wm_dialog_v1 *manager,
     struct xdg_toplevel *toplevel)
 {
-    return swl_xdg_wm_dialog_v1_get_xdg_dialog_impl(manager, toplevel);
+    SWL_DESKTOP_REQUEST_LOCK();
+    struct xdg_dialog_v1 *dialog =
+        swl_xdg_wm_dialog_v1_get_xdg_dialog_impl(manager, toplevel);
+    SWL_DESKTOP_REQUEST_UNLOCK();
+    return dialog;
 }
 
 void swl_xdg_dialog_v1_destroy(struct xdg_dialog_v1 *dialog)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_dialog_v1_destroy_impl(dialog);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_dialog_v1_set_modal(struct xdg_dialog_v1 *dialog)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_dialog_v1_set_modal_impl(dialog);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_dialog_v1_unset_modal(struct xdg_dialog_v1 *dialog)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_dialog_v1_unset_modal_impl(dialog);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_toplevel_drag_manager_v1_destroy(
     struct xdg_toplevel_drag_manager_v1 *manager)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_drag_manager_v1_destroy_impl(manager);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 struct xdg_toplevel_drag_v1 *swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(
     struct xdg_toplevel_drag_manager_v1 *manager,
     struct wl_data_source *source)
 {
-    return swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag_impl(
+    SWL_DESKTOP_REQUEST_LOCK();
+    struct xdg_toplevel_drag_v1 *drag =
+        swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag_impl(
         manager, source);
+    SWL_DESKTOP_REQUEST_UNLOCK();
+    return drag;
 }
 
 void swl_xdg_toplevel_drag_v1_destroy(struct xdg_toplevel_drag_v1 *drag)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_drag_v1_destroy_impl(drag);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_toplevel_drag_v1_attach(
@@ -648,52 +701,70 @@ void swl_xdg_toplevel_drag_v1_attach(
     int32_t x_offset,
     int32_t y_offset)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_drag_v1_attach_impl(drag, toplevel, x_offset, y_offset);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_ext_foreign_toplevel_list_v1_stop(
     struct ext_foreign_toplevel_list_v1 *list)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_ext_foreign_toplevel_list_v1_stop_impl(list);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_ext_foreign_toplevel_list_v1_destroy(
     struct ext_foreign_toplevel_list_v1 *list)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_ext_foreign_toplevel_list_v1_destroy_impl(list);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_ext_foreign_toplevel_handle_v1_destroy(
     struct ext_foreign_toplevel_handle_v1 *handle)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_ext_foreign_toplevel_handle_v1_destroy_impl(handle);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_toplevel_icon_manager_v1_destroy(
     struct xdg_toplevel_icon_manager_v1 *manager)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_icon_manager_v1_destroy_impl(manager);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_toplevel_icon_v1_destroy(struct xdg_toplevel_icon_v1 *icon)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_toplevel_icon_v1_destroy_impl(icon);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_zwp_idle_inhibit_manager_v1_destroy(
     struct zwp_idle_inhibit_manager_v1 *manager)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_zwp_idle_inhibit_manager_v1_destroy_impl(manager);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_zwp_idle_inhibitor_v1_destroy(struct zwp_idle_inhibitor_v1 *inhibitor)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_zwp_idle_inhibitor_v1_destroy_impl(inhibitor);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_xdg_system_bell_v1_destroy(struct xdg_system_bell_v1 *bell)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_xdg_system_bell_v1_destroy_impl(bell);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 #ifdef SWL_ENABLE_TESTING
@@ -749,16 +820,21 @@ static void swl_test_desktop_request_recording_start(int forwards_requests)
 
 void swl_test_desktop_request_recording_begin(void)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_test_desktop_request_recording_start(0);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_test_desktop_request_recording_begin_forwarding(void)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_test_desktop_request_recording_start(1);
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 void swl_test_desktop_request_recording_end(void)
 {
+    SWL_DESKTOP_REQUEST_LOCK();
     swl_test_desktop_request_forwards_requests = 0;
     swl_xdg_toplevel_icon_manager_v1_create_icon_impl =
         swl_xdg_toplevel_icon_manager_v1_create_icon_default;
@@ -802,15 +878,24 @@ void swl_test_desktop_request_recording_end(void)
         swl_ext_foreign_toplevel_list_v1_destroy_default;
     swl_ext_foreign_toplevel_handle_v1_destroy_impl =
         swl_ext_foreign_toplevel_handle_v1_destroy_default;
+    SWL_DESKTOP_REQUEST_UNLOCK();
 }
 
 struct swl_test_desktop_request_record swl_test_desktop_request_record(void)
 {
-    return swl_test_desktop_request_latest;
+    SWL_DESKTOP_REQUEST_LOCK();
+    struct swl_test_desktop_request_record record =
+        swl_test_desktop_request_latest;
+    SWL_DESKTOP_REQUEST_UNLOCK();
+    return record;
 }
 
 struct swl_test_desktop_destroy_record swl_test_desktop_destroy_record(void)
 {
-    return swl_test_desktop_destroy_latest;
+    SWL_DESKTOP_REQUEST_LOCK();
+    struct swl_test_desktop_destroy_record record =
+        swl_test_desktop_destroy_latest;
+    SWL_DESKTOP_REQUEST_UNLOCK();
+    return record;
 }
 #endif

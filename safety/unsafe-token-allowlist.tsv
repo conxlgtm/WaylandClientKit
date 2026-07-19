@@ -51,6 +51,8 @@ Sources/CWaylandProtocols/include/wayland-client-kit-shims.h	swl_proxy_get_queue
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_create_wrapper	Queue-at-creation wrapper shim.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_set_queue	Queue-at-creation wrapper shim.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_wrapper_destroy	Queue-at-creation wrapper shim.
+Sources/CWaylandProtocols/shims/requests-core.c	pthread_*	Testing-only core request recording lock used to serialize hook globals under ThreadSanitizer.
+Sources/CWaylandProtocols/shims/requests-desktop.c	pthread_*	Testing-only desktop request recording lock used to serialize hook globals under ThreadSanitizer.
 Sources/CWaylandRuntimeShims/fd-shim.c	pthread_*	C shim blocks SIGPIPE around fd writes without changing process-global signal disposition.
 Sources/CWaylandProtocols/shims/requests-core.c	wl_proxy_get_queue	Queue assertion shim implementation.
 Sources/CWaylandProtocols/shims/requests-core.c	swl_proxy_get_queue_raw	Queue assertion shim implementation.
