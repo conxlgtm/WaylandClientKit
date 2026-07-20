@@ -1,0 +1,32 @@
+{
+  "identities": [
+    {
+      "type": "ActivationAppID",
+      "category": "application identity",
+      "constructor": "public",
+      "storage": "value",
+      "storageVisibility": "public"
+    },
+    {
+      "type": "ActivationToken",
+      "category": "opaque protocol token",
+      "constructor": "public",
+      "storage": "value",
+      "storageVisibility": "public"
+    },
+    {
+      "type": "PointerConstraintID",
+      "category": "client identity",
+      "constructor": "package",
+      "storage": "rawValue",
+      "storageVisibility": "package"
+    },
+    {
+      "type": "WaylandGraphicsExternalPresentationFeedbackIdentity",
+      "category": "public projection",
+      "constructor": "package",
+      "storage": "submissionID",
+      "storageVisibility": "public"
+    }
+  ]
+}

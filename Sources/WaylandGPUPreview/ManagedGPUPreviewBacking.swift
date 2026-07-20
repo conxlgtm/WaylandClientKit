@@ -44,42 +44,10 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
 
     package var fallbackReason: GPUFallbackReason {
         switch failure {
-        case .dmabufUnavailable:
-            .dmabufUnavailable
-        case .surfaceFeedbackUnavailable:
-            .surfaceFeedbackUnavailable
-        case .noCompatibleFormat:
-            .noCompatibleFormat
-        case .noRenderNode:
-            .noRenderNode
-        case .gbmUnavailable:
-            .gbmUnavailable
-        case .gbmAllocationFailed:
-            .gbmAllocationFailed
-        case .eglUnavailable:
-            .eglUnavailable
-        case .explicitSyncRequiredButUnavailable:
-            .explicitSyncRequiredButUnavailable
-        case .explicitSyncSetupFailed:
-            .explicitSyncSetupFailed
-        case .explicitSyncSubmissionFailed:
-            .explicitSyncSubmissionFailed
-        case .explicitSyncReleaseFailed:
-            .explicitSyncReleaseFailed
-        case .fifoRequiredButUnavailable:
-            .fifoRequiredButUnavailable
-        case .commitTimingRequiredButUnavailable:
-            .commitTimingRequiredButUnavailable
-        case .metadataRequiredButUnavailable(let error):
-            .metadataRequiredButUnavailable(error)
-        case .compositorRejectedBuffer, .submitConstraintRejected:
+        case .submitConstraintRejected:
             .compositorRejectedBuffer
-        case .commitTimingRejected:
-            .commitTimingRejected
-        case .commitFailed:
-            .commitFailed
-        case .presentationTrackingFailed:
-            .presentationTrackingFailed
+        default:
+            GPUFallbackReason(failure)
         }
     }
 

@@ -1,5 +1,5 @@
-import Synchronization
 import WaylandRaw
+import WaylandRuntime
 
 package typealias ActivationTokenResult = Result<ActivationToken, ActivationError>
 
@@ -20,84 +20,27 @@ package protocol ActivationManagerBackend: AnyObject {
     func activate(token: ActivationToken, surface: RawSurface) throws
 }
 
-package struct ActivationRequestID: Hashable, Sendable {
-    package let rawValue: UInt64
-
-    package init(rawValue requestRawValue: UInt64) {
-        rawValue = requestRawValue
-    }
-}
-
 package final class PendingActivationTokenRequest: Sendable {
     package let id: ActivationRequestID
 
-    private let state = Mutex<ActivationTokenRequestState>(.pending)
+    private let completion = CompletionCell<ActivationTokenResult>()
 
     package init(id requestID: ActivationRequestID) {
         id = requestID
     }
 
     package func value() async throws -> ActivationToken {
-        let result = await withCheckedContinuation { continuation in
-            let immediate: ActivationTokenResult? = state.withLock { tokenState in
-                switch tokenState {
-                case .pending:
-                    tokenState = .waiting(continuation)
-                    return nil
-                case .waiting:
-                    preconditionFailure("activation token request awaited more than once")
-                case .completed(let result):
-                    return result
-                }
-            }
-
-            if let immediate {
-                continuation.resume(returning: immediate)
-            }
-        }
-
-        return try result.get()
+        try await completion.wait().get()
     }
 
     package func completedResult() -> ActivationTokenResult? {
-        state.withLock { tokenState in
-            guard case .completed(let result) = tokenState else { return nil }
-
-            return result
-        }
+        completion.completedValue
     }
 
     @discardableResult
     package func complete(_ result: ActivationTokenResult) -> Bool {
-        let completion =
-            state.withLock { tokenState in
-                switch tokenState {
-                case .pending:
-                    tokenState = .completed(result)
-                    return (
-                        waiter: nil as CheckedContinuation<ActivationTokenResult, Never>?,
-                        didComplete: true
-                    )
-                case .waiting(let waiter):
-                    tokenState = .completed(result)
-                    return (waiter: waiter, didComplete: true)
-                case .completed:
-                    return (
-                        waiter: nil as CheckedContinuation<ActivationTokenResult, Never>?,
-                        didComplete: false
-                    )
-                }
-            }
-
-        completion.waiter?.resume(returning: result)
-        return completion.didComplete
+        completion.complete(result)
     }
-}
-
-private enum ActivationTokenRequestState {
-    case pending
-    case waiting(CheckedContinuation<Result<ActivationToken, ActivationError>, Never>)
-    case completed(Result<ActivationToken, ActivationError>)
 }
 
 package final class ActivationManager {

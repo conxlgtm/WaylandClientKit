@@ -1,48 +1,16 @@
 import CWaylandProtocols
 
-package struct SurfaceSubmitOptionalGlobals {
-    package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
-    package let fifoManager: OptionalFifoManager
-    package let commitTimingManager: OptionalCommitTimingManager
-
-    package func destroy() {
-        commitTimingManager.destroy()
-        fifoManager.destroy()
-        linuxDrmSyncobjManager.destroy()
-    }
-}
-
 extension RawDisplayConnection {
     @safe
-    package func bindSurfaceSubmitOptionalGlobalsIfPresent(
-        registry reg: OpaquePointer
-    ) throws -> SurfaceSubmitOptionalGlobals {
-        let rollback = OptionalGlobalRollback()
-        let syncobjManager = try bindLinuxDrmSyncobjManagerIfPresent(registry: reg)
-        rollback.append { syncobjManager.destroy() }
-        let fifoManager = try bindFifoManagerIfPresent(registry: reg)
-        rollback.append { fifoManager.destroy() }
-        let commitTimingManager = try bindCommitTimingManagerIfPresent(registry: reg)
-        rollback.append { commitTimingManager.destroy() }
-        rollback.disarm()
-        return SurfaceSubmitOptionalGlobals(
-            linuxDrmSyncobjManager: syncobjManager,
-            fifoManager: fifoManager,
-            commitTimingManager: commitTimingManager
-        )
-    }
-
-    @safe
-    private func bindLinuxDrmSyncobjManagerIfPresent(
+    func bindLinuxDrmSyncobjManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalLinuxDrmSyncobjManager {
-        guard let global = optionalGlobal(named: "wp_linux_drm_syncobj_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.wpLinuxDrmSyncobjManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpLinuxDrmSyncobjManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_wp_linux_drm_syncobj_manager_v1(
@@ -51,7 +19,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_linux_drm_syncobj_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawLinuxDrmSyncobjManager(
@@ -63,16 +31,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindFifoManagerIfPresent(
+    func bindFifoManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalFifoManager {
-        guard let global = optionalGlobal(named: "wp_fifo_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.wpFifoManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpFifoManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_wp_fifo_manager_v1(
@@ -81,7 +48,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_fifo_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawFifoManager(
@@ -93,16 +60,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindCommitTimingManagerIfPresent(
+    func bindCommitTimingManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalCommitTimingManager {
-        guard let global = optionalGlobal(named: "wp_commit_timing_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.wpCommitTimingManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpCommitTimingManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_wp_commit_timing_manager_v1(
@@ -111,7 +77,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_commit_timing_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawCommitTimingManager(

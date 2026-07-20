@@ -3,91 +3,16 @@
 import CWaylandProtocols
 
 extension RawDisplayConnection {
-    // swiftlint:disable function_body_length
     @safe
-    package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
-        let rollback = OptionalGlobalRollback()
-
-        let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
-        rollback.append { decorationManager.destroy() }
-        let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
-        rollback.append { xdgOutputManager.destroy() }
-        let viewporter = try bindViewporterIfPresent(registry: reg)
-        rollback.append { viewporter.destroy() }
-        let presentation = try bindPresentationIfPresent(registry: reg)
-        rollback.append { presentation.destroy() }
-        let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(registry: reg)
-        rollback.append { fractionalScaleManager.destroy() }
-        let cursorShapeManager = try bindCursorShapeManagerIfPresent(registry: reg)
-        rollback.append { cursorShapeManager.destroy() }
-        let dataDeviceManager = try bindDataDeviceManagerIfPresent(registry: reg)
-        rollback.append { dataDeviceManager.destroy() }
-        let primarySelectionDeviceManager =
-            try bindPrimarySelectionDeviceManagerIfPresent(registry: reg)
-        rollback.append { primarySelectionDeviceManager.destroy() }
-        let textInputManager = try bindTextInputManagerIfPresent(registry: reg)
-        rollback.append { textInputManager.destroy() }
-        let linuxDmabuf = try bindLinuxDmabufIfPresent(registry: reg)
-        rollback.append { linuxDmabuf.destroy() }
-        let submitGlobals = try bindSurfaceSubmitOptionalGlobalsIfPresent(registry: reg)
-        rollback.append { submitGlobals.destroy() }
-        let metadataGlobals = try bindSurfaceMetadataOptionalGlobalsIfPresent(registry: reg)
-        rollback.append { metadataGlobals.destroy() }
-        let xdgToplevelIconManager = try bindXDGToplevelIconManagerIfPresent(registry: reg)
-        rollback.append { xdgToplevelIconManager.destroy() }
-        let xdgActivation = try bindXDGActivationIfPresent(registry: reg)
-        rollback.append { xdgActivation.destroy() }
-        let compositorSessionManager =
-            try bindCompositorSessionManagerIfPresent(registry: reg)
-        rollback.append { compositorSessionManager.destroy() }
-        let pointerWarp = try bindPointerWarpIfPresent(registry: reg)
-        rollback.append { pointerWarp.destroy() }
-        let tabletManager = try bindTabletManagerIfPresent(registry: reg)
-        rollback.append { tabletManager.destroy() }
-        let relativePointerManager = try bindRelativePointerManagerIfPresent(registry: reg)
-        rollback.append { relativePointerManager.destroy() }
-        let pointerConstraints = try bindPointerConstraintsIfPresent(registry: reg)
-
-        rollback.disarm()
-        return OptionalGlobals(
-            xdgDecorationManager: decorationManager,
-            xdgOutputManager: xdgOutputManager,
-            viewporter: viewporter,
-            presentation: presentation,
-            fractionalScaleManager: fractionalScaleManager,
-            cursorShapeManager: cursorShapeManager,
-            xdgToplevelIconManager: xdgToplevelIconManager,
-            xdgActivation: xdgActivation,
-            compositorSessionManager: compositorSessionManager,
-            pointerWarp: pointerWarp,
-            tabletManager: tabletManager,
-            relativePointerManager: relativePointerManager,
-            pointerConstraints: pointerConstraints,
-            linuxDrmSyncobjManager: submitGlobals.linuxDrmSyncobjManager,
-            fifoManager: submitGlobals.fifoManager,
-            commitTimingManager: submitGlobals.commitTimingManager,
-            contentTypeManager: metadataGlobals.contentTypeManager,
-            alphaModifierManager: metadataGlobals.alphaModifierManager,
-            tearingControlManager: metadataGlobals.tearingControlManager,
-            colorRepresentationManager: metadataGlobals.colorRepresentationManager,
-            colorManager: metadataGlobals.colorManager,
-            dataDeviceManager: dataDeviceManager,
-            primarySelectionDeviceManager: primarySelectionDeviceManager,
-            textInputManager: textInputManager,
-            linuxDmabuf: linuxDmabuf
-        )
-    }
-    // swiftlint:enable function_body_length
-
-    @safe
-    private func bindXDGDecorationManagerIfPresent(
+    func bindXDGDecorationManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalXDGDecorationManager {
-        guard let global = optionalGlobal(named: "zxdg_decoration_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.zxdgDecorationManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        switch Self.xdgDecorationManagerBindingDecision(global) {
+        switch descriptor.bindingDecision(for: global) {
         case .unsupportedVersion(let advertised, let minimum):
             return .unsupportedVersion(advertised: advertised, minimum: minimum)
         case .bind(let version):
@@ -98,7 +23,7 @@ extension RawDisplayConnection {
                     version.value
                 )
             else {
-                throw RuntimeError.bindFailed("zxdg_decoration_manager_v1")
+                throw RuntimeError.bindFailed(descriptor.interfaceName)
             }
 
             let wrappedManager = try RawXDGDecorationManager(
@@ -111,16 +36,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindXDGToplevelIconManagerIfPresent(
+    func bindXDGToplevelIconManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalXDGToplevelIconManager {
-        guard let global = optionalGlobal(named: "xdg_toplevel_icon_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.xdgToplevelIconManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.xdgToplevelIconManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
         guard
             let manager = unsafe swl_registry_bind_xdg_toplevel_icon_manager_v1(
                 reg,
@@ -128,7 +52,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("xdg_toplevel_icon_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         return .bound(
@@ -140,38 +64,16 @@ extension RawDisplayConnection {
         )
     }
 
-    package static func shouldBindXDGDecorationManager(
-        _ global: RawGlobalAdvertisement
-    ) -> Bool {
-        global.advertisedVersion >= SupportedVersions.zxdgDecorationManagerV1Minimum
-    }
-
-    package static func xdgDecorationManagerBindingDecision(
-        _ global: RawGlobalAdvertisement
-    ) -> XDGDecorationManagerBindingDecision {
-        guard shouldBindXDGDecorationManager(global) else {
-            return .unsupportedVersion(
-                advertised: global.advertisedVersion,
-                minimum: SupportedVersions.zxdgDecorationManagerV1Minimum
-            )
-        }
-
-        return .bind(
-            version: global.negotiatedVersion(
-                supportedByClient: SupportedVersions.zxdgDecorationManagerV1
-            )
-        )
-    }
-
     @safe
-    private func bindXDGOutputManagerIfPresent(
+    func bindXDGOutputManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalXDGOutputManager {
-        guard let global = optionalGlobal(named: "zxdg_output_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.zxdgOutputManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        switch Self.xdgOutputManagerBindingDecision(global) {
+        switch descriptor.bindingDecision(for: global) {
         case .unsupportedVersion(let advertised, let minimum):
             return .unsupportedVersion(
                 advertised: advertised,
@@ -185,7 +87,7 @@ extension RawDisplayConnection {
                     version.value
                 )
             else {
-                throw RuntimeError.bindFailed("zxdg_output_manager_v1")
+                throw RuntimeError.bindFailed(descriptor.interfaceName)
             }
 
             let wrappedManager = try RawXDGOutputManager(
@@ -197,40 +99,16 @@ extension RawDisplayConnection {
         }
     }
 
-    package static func shouldBindXDGOutputManager(
-        _ global: RawGlobalAdvertisement
-    ) -> Bool {
-        global.advertisedVersion >= SupportedVersions.zxdgOutputManagerV1Minimum
-    }
-
-    package static func xdgOutputManagerBindingDecision(
-        _ global: RawGlobalAdvertisement
-    ) -> XDGOutputManagerBindingDecision {
-        guard shouldBindXDGOutputManager(global) else {
-            return .unsupportedVersion(
-                advertised: global.advertisedVersion,
-                minimum: SupportedVersions.zxdgOutputManagerV1Minimum
-            )
-        }
-
-        return .bind(
-            version: global.negotiatedVersion(
-                supportedByClient: SupportedVersions.zxdgOutputManagerV1
-            )
-        )
-    }
-
     @safe
-    private func bindViewporterIfPresent(
+    func bindViewporterIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalViewporter {
-        guard let global = optionalGlobal(named: "wp_viewporter") else {
+        let descriptor = OptionalGlobalDescriptors.wpViewporter
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpViewporter
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let viewporter = unsafe swl_registry_bind_wp_viewporter(
@@ -239,7 +117,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_viewporter")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedViewporter = try RawViewporter(
@@ -251,16 +129,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindPresentationIfPresent(
+    func bindPresentationIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalPresentation {
-        guard let global = optionalGlobal(named: "wp_presentation") else {
+        let descriptor = OptionalGlobalDescriptors.wpPresentation
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpPresentation
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let presentation = unsafe swl_registry_bind_wp_presentation(
@@ -269,7 +146,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_presentation")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedPresentation = try RawPresentation(
@@ -281,16 +158,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindFractionalScaleManagerIfPresent(
+    func bindFractionalScaleManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalFractionalScaleManager {
-        guard let global = optionalGlobal(named: "wp_fractional_scale_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.wpFractionalScaleManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpFractionalScaleManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_wp_fractional_scale_manager_v1(
@@ -299,7 +175,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_fractional_scale_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawFractionalScaleManager(
@@ -311,16 +187,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindCursorShapeManagerIfPresent(
+    func bindCursorShapeManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalCursorShapeManager {
-        guard let global = optionalGlobal(named: "wp_cursor_shape_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.wpCursorShapeManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpCursorShapeManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_wp_cursor_shape_manager_v1(
@@ -329,7 +204,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_cursor_shape_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawCursorShapeManager(
@@ -341,16 +216,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindXDGActivationIfPresent(
+    func bindXDGActivationIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalXDGActivation {
-        guard let global = optionalGlobal(named: "xdg_activation_v1") else {
+        let descriptor = OptionalGlobalDescriptors.xdgActivationV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.xdgActivationV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let activation = unsafe swl_registry_bind_xdg_activation_v1(
@@ -359,7 +233,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("xdg_activation_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedActivation = try RawXDGActivation(
@@ -371,16 +245,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindCompositorSessionManagerIfPresent(
+    func bindCompositorSessionManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalCompositorSessionManager {
-        guard let global = optionalGlobal(named: "xdg_session_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.xdgSessionManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.xdgSessionManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_xdg_session_manager_v1(
@@ -389,7 +262,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("xdg_session_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawCompositorSessionManager(
@@ -401,16 +274,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindRelativePointerManagerIfPresent(
+    func bindRelativePointerManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalRelativePointerManager {
-        guard let global = optionalGlobal(named: "zwp_relative_pointer_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.zwpRelativePointerManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.zwpRelativePointerManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_zwp_relative_pointer_manager_v1(
@@ -419,7 +291,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("zwp_relative_pointer_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawRelativePointerManager(
@@ -431,16 +303,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindPointerWarpIfPresent(
+    func bindPointerWarpIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalPointerWarp {
-        guard let global = optionalGlobal(named: "wp_pointer_warp_v1") else {
+        let descriptor = OptionalGlobalDescriptors.wpPointerWarpV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wpPointerWarpV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let warp = unsafe swl_registry_bind_wp_pointer_warp_v1(
@@ -449,7 +320,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wp_pointer_warp_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedWarp = try RawPointerWarp(
@@ -461,16 +332,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindTabletManagerIfPresent(
+    func bindTabletManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalTabletManager {
-        guard let global = optionalGlobal(named: "zwp_tablet_manager_v2") else {
+        let descriptor = OptionalGlobalDescriptors.zwpTabletManagerV2
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.zwpTabletManagerV2
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_zwp_tablet_manager_v2(
@@ -479,7 +349,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("zwp_tablet_manager_v2")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawTabletManager(
@@ -491,16 +361,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindPointerConstraintsIfPresent(
+    func bindPointerConstraintsIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalPointerConstraints {
-        guard let global = optionalGlobal(named: "zwp_pointer_constraints_v1") else {
+        let descriptor = OptionalGlobalDescriptors.zwpPointerConstraintsV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.zwpPointerConstraintsV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let constraints = unsafe swl_registry_bind_zwp_pointer_constraints_v1(
@@ -509,7 +378,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("zwp_pointer_constraints_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedConstraints = try RawPointerConstraints(
@@ -521,16 +390,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindDataDeviceManagerIfPresent(
+    func bindDataDeviceManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalDataDeviceManager {
-        guard let global = optionalGlobal(named: "wl_data_device_manager") else {
+        let descriptor = OptionalGlobalDescriptors.wlDataDeviceManager
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.wlDataDeviceManager
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_wl_data_device_manager(
@@ -539,7 +407,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("wl_data_device_manager")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawDataDeviceManager(
@@ -551,16 +419,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindPrimarySelectionDeviceManagerIfPresent(
+    func bindPrimarySelectionDeviceManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalPrimarySelectionDeviceManager {
-        guard let global = optionalGlobal(named: "zwp_primary_selection_device_manager_v1") else {
+        let descriptor = OptionalGlobalDescriptors.zwpPrimarySelectionDeviceManagerV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.zwpPrimarySelectionDeviceManagerV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_zwp_primary_selection_device_manager_v1(
@@ -569,7 +436,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("zwp_primary_selection_device_manager_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawPrimarySelectionDeviceManager(
@@ -581,16 +448,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindTextInputManagerIfPresent(
+    func bindTextInputManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalTextInputManager {
-        guard let global = optionalGlobal(named: "zwp_text_input_manager_v3") else {
+        let descriptor = OptionalGlobalDescriptors.zwpTextInputManagerV3
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.zwpTextInputManagerV3
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let manager = unsafe swl_registry_bind_zwp_text_input_manager_v3(
@@ -599,7 +465,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("zwp_text_input_manager_v3")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedManager = try RawTextInputManager(
@@ -611,16 +477,15 @@ extension RawDisplayConnection {
     }
 
     @safe
-    private func bindLinuxDmabufIfPresent(
+    func bindLinuxDmabufIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalLinuxDmabuf {
-        guard let global = optionalGlobal(named: "zwp_linux_dmabuf_v1") else {
+        let descriptor = OptionalGlobalDescriptors.zwpLinuxDmabufV1
+        guard let global = optionalGlobal(named: descriptor.interfaceName) else {
             return .missing
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.zwpLinuxDmabufV1
-        )
+        let version = descriptor.negotiatedVersion(for: global)
 
         guard
             let linuxDmabuf = unsafe swl_registry_bind_zwp_linux_dmabuf_v1(
@@ -629,7 +494,7 @@ extension RawDisplayConnection {
                 version.value
             )
         else {
-            throw RuntimeError.bindFailed("zwp_linux_dmabuf_v1")
+            throw RuntimeError.bindFailed(descriptor.interfaceName)
         }
 
         let wrappedLinuxDmabuf = try RawLinuxDmabuf(

@@ -1,28 +1,5 @@
 import WaylandClient
 
-package struct WaylandGraphicsFrameLeaseID:
-    Equatable,
-    Hashable,
-    Sendable,
-    ExpressibleByIntegerLiteral,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue leaseRawValue: UInt64) {
-        rawValue = leaseRawValue
-    }
-
-    package init(integerLiteral value: UInt64) {
-        self.init(rawValue: value)
-    }
-
-    package var description: String {
-        "graphics-frame-lease-\(rawValue)"
-    }
-}
-
 package enum WaylandGraphicsErrorMapper {
     package static func callerDrawError(from error: any Error) -> (any Error)? {
         guard let drawFailure = error as? WindowSoftwareDrawFailure else {

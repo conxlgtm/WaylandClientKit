@@ -12,6 +12,7 @@
 /docs/compatibility-policy.md @conxlgtm
 /docs/public-api-audit.md @conxlgtm
 /docs/public-api-baseline.md @conxlgtm
+/identities/ @conxlgtm
 /safety/ @conxlgtm
 /justfile @conxlgtm
 /flake.nix @conxlgtm

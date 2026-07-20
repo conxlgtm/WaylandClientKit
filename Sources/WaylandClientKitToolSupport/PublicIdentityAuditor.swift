@@ -233,7 +233,7 @@ public struct PublicIdentityAuditor {
     }
 
     private func render(_ record: IdentityAuditRecord) -> String {
-        "| `\(record.type)` | \(record.category) | `\(record.constructor.rawValue)` | "
+        "| `\(record.type)` | \(record.category.rawValue) | `\(record.constructor.rawValue)` | "
             + "`\(record.storage)` | `\(record.storageVisibility.rawValue)` | "
             + "`\(record.source)` |"
     }
@@ -245,7 +245,7 @@ private struct IdentityManifest: Decodable {
 
 private struct IdentityManifestEntry: Decodable {
     let type: String
-    let category: String
+    let category: IdentityAuditCategory
     let constructor: IdentityAccessLevel
     let storage: String
     let storageVisibility: IdentityAccessLevel
@@ -258,7 +258,7 @@ private struct IdentityDeclaration {
 
 private struct IdentityAuditRecord {
     let type: String
-    let category: String
+    let category: IdentityAuditCategory
     let constructor: IdentityAccessLevel
     let storage: String
     let storageVisibility: IdentityAccessLevel

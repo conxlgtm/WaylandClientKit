@@ -48,7 +48,7 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
         handle: RawPrimarySelectionOfferHandle,
         id _: DataOfferID,
         onEvent: @escaping (RawPrimarySelectionOfferEvent) -> Void
-    ) throws -> any PrimarySelectionOfferBinding {
+    ) throws -> any DataTransferOfferResourceBinding {
         let globals = try connection.bindRequiredGlobals()
         guard case .bound(let manager) = globals.extensions.primarySelectionDeviceManager else {
             throw DataTransferError.unavailable
@@ -73,7 +73,7 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
     func createPrimarySelectionSource(
         id: DataSourceID,
         onEvent: @escaping (RawPrimarySelectionSourceEvent) -> Void
-    ) throws -> any PrimarySelectionSourceBinding {
+    ) throws -> any DataTransferSourceResourceBinding {
         let globals = try connection.bindRequiredGlobals()
         guard case .bound(let manager) = globals.extensions.primarySelectionDeviceManager else {
             throw DataTransferError.unavailable
@@ -125,7 +125,10 @@ private final class LivePrimarySelectionDeviceBinding: PrimarySelectionDeviceBin
         owner = listenerOwner
     }
 
-    func setSelection(source: (any PrimarySelectionSourceBinding)?, serial: InputSerial) {
+    func setSelection(
+        source: (any DataTransferSourceResourceBinding)?,
+        serial: InputSerial
+    ) {
         precondition(!isReleased, "primary selection device binding was already released")
         let liveSource = source as? LivePrimarySelectionSourceBinding
         device.setSelection(source: liveSource?.source, serial: serial.rawValue)
@@ -146,7 +149,7 @@ private final class LivePrimarySelectionDeviceBinding: PrimarySelectionDeviceBin
     }
 }
 
-private final class LivePrimarySelectionOfferBinding: PrimarySelectionOfferBinding {
+private final class LivePrimarySelectionOfferBinding: DataTransferOfferResourceBinding {
     private let offer: RawPrimarySelectionOffer
     private let owner: RawPrimarySelectionOfferOwner
     private var isDestroyed = false
@@ -179,7 +182,7 @@ private final class LivePrimarySelectionOfferBinding: PrimarySelectionOfferBindi
     }
 }
 
-private final class LivePrimarySelectionSourceBinding: PrimarySelectionSourceBinding {
+private final class LivePrimarySelectionSourceBinding: DataTransferSourceResourceBinding {
     let id: DataSourceID
 
     let source: RawPrimarySelectionSource

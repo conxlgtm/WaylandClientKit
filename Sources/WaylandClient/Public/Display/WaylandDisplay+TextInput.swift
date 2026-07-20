@@ -1,6 +1,6 @@
 extension WaylandDisplay {
     nonisolated public var textInputEvents: TextInputEvents {
-        runtime.textInputEvents
+        lifetimeAnchor.eventHub.textInputEvents()
     }
 
     public func textInputSession(for seatID: SeatID) throws -> TextInputSession {
@@ -58,11 +58,5 @@ extension WaylandDisplay {
 
     package func hideTextInputPanel(seatID: SeatID) throws {
         try requireCore().hideTextInputPanel(seatID: seatID)
-    }
-}
-
-extension WaylandDisplayRuntime {
-    var textInputEvents: TextInputEvents {
-        eventHub.textInputEvents()
     }
 }

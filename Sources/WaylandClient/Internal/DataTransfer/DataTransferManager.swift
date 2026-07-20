@@ -19,26 +19,32 @@ package protocol DataTransferDragIconBinding: AnyObject {
     func destroy()
 }
 
-package protocol DataTransferOfferBinding: AnyObject, DataTransferReceiveBinding {
+package protocol DataTransferOfferResourceBinding: AnyObject, DataTransferReceiveBinding {
+    func destroy()
+}
+
+package protocol DataTransferSourceResourceBinding: AnyObject {
+    var id: DataSourceID { get }
+
+    func offer(mimeType: MIMEType)
+    func destroy()
+}
+
+package protocol DataTransferOfferBinding: DataTransferOfferResourceBinding {
     var id: DataOfferID { get }
     var protocolVersion: RawVersion { get }
 
     func accept(serial: InputSerial, mimeType: MIMEType?)
-    func receive(mimeType: MIMEType, fd: Int32)
     func setDragActions(_ actions: DragActionSet, preferredAction: DragAction)
     func finish()
-    func destroy()
 }
 
-package protocol DataTransferSourceBinding: AnyObject {
-    var id: DataSourceID { get }
+package protocol DataTransferSourceBinding: DataTransferSourceResourceBinding {
     var protocolVersion: RawVersion { get }
 
-    func offer(mimeType: MIMEType)
     func setDragActions(_ actions: DragActionSet)
     func createToplevelDrag(manager: RawXDGToplevelDragManager) throws -> RawXDGToplevelDrag
     func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?)
-    func destroy()
 }
 
 package struct DataTransferPipeDescriptors: Equatable, Sendable {
@@ -46,7 +52,7 @@ package struct DataTransferPipeDescriptors: Equatable, Sendable {
     package let writeEnd: Int32
 }
 
-package protocol DataTransferManagerBackend: AnyObject, DataTransferReceivePipeBackend {
+package protocol DataTransferManagerBackend: AnyObject, DataTransferOfferReceiveBackend {
     func preconditionIsOwnerThread()
     func bindDataDevice(
         for seatID: SeatID,
@@ -62,7 +68,6 @@ package protocol DataTransferManagerBackend: AnyObject, DataTransferReceivePipeB
         onEvent: @escaping (RawDataSourceEvent) -> Void
     ) throws -> any DataTransferSourceBinding
     func prepareDragIcon(_ icon: DragIcon) throws -> (any DataTransferDragIconBinding)?
-    func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
 
     var sourceDescriptorIO: DataTransferSourceDescriptorIO { get }
@@ -76,9 +81,39 @@ package final class DataTransferManager {
     let surfaceTargetResolver: (RawObjectID?) -> InputEventTarget
     package var sourceWillCancel: (DataSourceID) -> Void
     var store = DataTransferStore()
-    private var offerIDs = IDGenerator<DataOfferID>()
-    package var sourceIDs = IDGenerator<DataSourceID>()
+    var pendingDragMetadataByOfferID: [DataOfferID: PendingDragOfferMetadata] = [:]
     var isShutdown = false
+    lazy var selectionEngine = SelectionEngine(
+        kind: .clipboard,
+        backend: ClipboardSelectionEngineBackend(
+            backend: backend,
+            onDragDeviceEvent: { [weak self] event, seatID in
+                self?.handleDragDataDeviceEvent(event, seatID: seatID)
+            },
+            onDragOfferEvent: { [weak self] event, offerID in
+                self?.handleDragOfferEvent(event, offerID: offerID)
+            }
+        ),
+        eventQueue: eventQueue,
+        hooks: SelectionEngineHooks(
+            sourceWillCancel: { [weak self] sourceID in
+                self?.sourceWillCancel(sourceID)
+            },
+            offerDidDestroy: { [weak self] offerID in
+                self?.pendingDragMetadataByOfferID[offerID] = nil
+            },
+            unownedOfferEvent: { [weak self] event, offerID in
+                self?.handleTransferredOfferEvent(event, offerID: offerID) ?? false
+            },
+            externalOfferID: { [weak self] handle in
+                guard case .clipboard(let rawHandle) = handle else { return nil }
+                return self?.store.offerID(for: rawHandle)
+            },
+            externalSourceIDs: { [weak self] in
+                self?.store.sourceIDs ?? []
+            }
+        )
+    )
 
     package init(
         connection rawConnection: RawDisplayConnection,
@@ -114,91 +149,110 @@ package final class DataTransferManager {
         let desiredSeats = Set(seatIDs)
         let currentSeats = Set(store.seatSnapshots.map(\.seatID))
         for seatID in Self.sortedSeatIDs(currentSeats.subtracting(desiredSeats)) {
-            try apply(.seatRemoved(seatID))
+            let postCommitActions = try commit([.seatRemoved(seatID)])
+            selectionEngine.removeSeat(seatID)
+            preconditionInvariantsHold()
+            performPostCommitActions(postCommitActions)
         }
         for seatID in Self.sortedSeatIDs(desiredSeats.subtracting(currentSeats)) {
-            try apply(.seatAvailable(seatID))
+            try selectionEngine.addSeat(seatID)
+            do {
+                try apply(.seatAvailable(seatID))
+            } catch {
+                selectionEngine.removeSeat(seatID)
+                throw error
+            }
         }
 
         preconditionInvariantsHold()
     }
 
     package func apply(_ action: DataTransferAction) throws {
-        let plan = try store.transitionPlan(for: action)
-        var nextState = plan.state
-
-        try interpret(plan.effects, nextState: &nextState)
-        store.replaceState(nextState)
+        try apply([action])
     }
 
-    private func interpret(
-        _ effects: [DataTransferEffect],
-        nextState: inout DataTransferState
+    func apply(
+        _ actions: [DataTransferAction],
+        insertingSources sourceRecords: [RuntimeDataSource] = [],
+        activatingOffers activatedOfferIDs: [DataOfferID] = []
     ) throws {
-        for effect in effects {
-            try interpret(effect, nextState: &nextState)
+        let postCommitActions = try commit(
+            actions,
+            insertingSources: sourceRecords,
+            activatingOffers: activatedOfferIDs
+        )
+        preconditionInvariantsHold()
+        performPostCommitActions(postCommitActions)
+    }
+
+    private func commit(
+        _ actions: [DataTransferAction],
+        insertingSources sourceRecords: [RuntimeDataSource] = [],
+        activatingOffers activatedOfferIDs: [DataOfferID] = []
+    ) throws -> [DataTransferPostCommitAction] {
+        let prepared = try prepareTransition(
+            actions,
+            insertingSources: sourceRecords,
+            activatingOffers: activatedOfferIDs
+        )
+        return store.commit(prepared).map { action in
+            switch action {
+            case .destroySource(let binding):
+                selectionEngine.detachExternalSourcePreservingPendingSends(binding.id)
+                return action
+            case .cancelSource(let sourceID, let binding, let requests):
+                return .cancelSource(
+                    id: sourceID,
+                    binding: binding,
+                    requests: requests + selectionEngine.removeSourceSendRequests(for: sourceID)
+                )
+            case .destroyOffer, .publish:
+                return action
+            }
         }
     }
 
-    private func interpret(
-        _ effect: DataTransferEffect,
-        nextState: inout DataTransferState
-    ) throws {
-        if let event = effect.publishedEvent {
-            eventQueue.append(event)
-            return
+    private func prepareTransition(
+        _ actions: [DataTransferAction],
+        insertingSources sourceRecords: [RuntimeDataSource],
+        activatingOffers activatedOfferIDs: [DataOfferID]
+    ) throws -> PreparedDataTransferTransition {
+        let plan = try store.transitionPlan(for: actions)
+        for offerID in activatedOfferIDs {
+            guard let offer = store.runtimeOffer(offerID), case .pending = offer else {
+                throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
+            }
         }
 
-        guard let sideEffect = effect.runtimeSideEffect else {
-            return
-        }
+        return PreparedDataTransferTransition(
+            state: plan.state,
+            effects: plan.effects,
+            sourceRecords: sourceRecords,
+            activatedOfferIDs: activatedOfferIDs
+        )
+    }
 
-        switch sideEffect {
-        case .bindDataDevice(let seatID):
-            try bindDataDevice(for: seatID, nextState: &nextState)
-        case .releaseDataDevice(let seatID):
-            store.removeDeviceBinding(for: seatID)?.release()
-            destroyPendingOfferBindings(for: seatID)
-        case .destroyOffer(let offerID):
-            destroyOfferBinding(offerID)
-        case .destroySource(let sourceID):
-            destroySourceBindingPreservingPendingSends(sourceID)
-        case .cancelSource(let sourceID):
-            cancelSourceBinding(sourceID)
+    private func performPostCommitActions(_ actions: [DataTransferPostCommitAction]) {
+        for action in actions {
+            switch action {
+            case .destroyOffer(let binding):
+                binding.destroy()
+            case .destroySource(let binding):
+                binding.destroy()
+            case .cancelSource(let sourceID, let binding, let requests):
+                sourceWillCancel(sourceID)
+                binding?.destroy()
+                discardSourceSendRequests(requests)
+            case .publish(let event):
+                eventQueue.append(event)
+            }
         }
     }
 
-    private func bindDataDevice(
-        for seatID: SeatID,
-        nextState: inout DataTransferState
-    ) throws {
-        guard store.deviceBinding(for: seatID) == nil else {
-            return
-        }
-
-        let binding = try backend.bindDataDevice(for: seatID) { [weak self] event in
-            self?.handleDataDeviceEvent(event, seatID: seatID)
-        }
-        do {
-            nextState = try nextState.reduce(.dataDeviceBound(seatID)).state
-        } catch {
-            binding.release()
-            throw error
-        }
-
-        store.insertDeviceBinding(binding, for: seatID)
-    }
-
-    private func handleDataDeviceEvent(_ event: RawDataDeviceEvent, seatID: SeatID) {
+    func handleDragDataDeviceEvent(_ event: RawDataDeviceEvent, seatID: SeatID) {
         guard !isShutdown else { return }
         do {
             switch event {
-            case .dataOffer(let handle):
-                try handleDataOffer(handle, seatID: seatID)
-            case .selection(nil):
-                try apply(.selectionChanged(seatID: seatID, offerID: nil))
-            case .selection(.some(let handle)):
-                try handleSelection(handle: handle, seatID: seatID)
             case .enter(let enter):
                 try handleDragEnter(enter, seatID: seatID)
             case .leave:
@@ -213,6 +267,8 @@ package final class DataTransferManager {
                         location: DragLocation(waylandX: x, waylandY: y)
                     )
                 )
+            case .dataOffer, .selection:
+                preconditionFailure("selection event bypassed the shared selection engine")
             }
             preconditionInvariantsHold()
         } catch {
@@ -220,125 +276,27 @@ package final class DataTransferManager {
         }
     }
 
-    private func handleDataOffer(_ handle: RawDataOfferHandle?, seatID: SeatID) throws {
-        guard let handle else {
-            throw DataTransferError.missingOfferHandle(seatID: seatID)
-        }
-        guard !store.hasOffer(handle: handle) else {
-            throw DataTransferError.duplicateOfferHandle(
-                rawValue: handle.rawValue,
-                existingOffer: store.offerID(for: handle).map(ClipboardOfferIdentity.init)
-            )
-        }
-
-        let offerID = allocateOfferID()
-        let handleOfferEvent: (RawDataOfferEvent) -> Void = { [weak self] event in
-            self?.handleDataOfferEvent(event, offerID: offerID)
-        }
-        let binding = try backend.adoptDataOffer(
-            handle: handle,
-            id: offerID,
-            onEvent: handleOfferEvent
-        )
-        store.insertPendingOffer(
-            handle: handle,
-            offerID: offerID,
-            binding: binding,
-            seatID: seatID
-        )
-    }
-
-    private func handleSelection(handle: RawDataOfferHandle, seatID: SeatID) throws {
-        guard let offerID = store.offerID(for: handle) else {
-            throw DataTransferError.unknownOfferHandle(
-                rawValue: handle.rawValue,
-                seatID: seatID
-            )
-        }
-
-        if let existingOffer = store.offerSnapshot(offerID) {
-            guard existingOffer.role.seatID == seatID else {
-                throw DataTransferError.mismatchedOfferSeat(
-                    offer: .clipboard(offerID.clipboardIdentity),
-                    expected: seatID,
-                    actual: existingOffer.role.seatID
-                )
-            }
-        } else {
-            guard let runtimeOffer = store.runtimeOffer(offerID) else {
-                throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
-            }
-            guard runtimeOffer.pendingSeatID == seatID else {
-                throw DataTransferError.mismatchedOfferSeat(
-                    offer: .clipboard(offerID.clipboardIdentity),
-                    expected: seatID,
-                    actual: runtimeOffer.pendingSeatID
-                )
-            }
-            guard !runtimeOffer.pendingMIMETypes.isEmpty else {
-                throw DataTransferError.emptyDataOffer
-            }
-
-            try apply(.offerCreated(id: offerID, role: .selection(seatID: seatID)))
-            for mimeType in runtimeOffer.pendingMIMETypes {
-                try apply(.offerMimeType(id: offerID, mimeType: mimeType))
-            }
-            _ = try store.markOfferActive(offerID)
-        }
-
-        try apply(.selectionChanged(seatID: seatID, offerID: offerID))
-    }
-
-    private func destroyOfferBinding(_ offerID: DataOfferID) {
-        if let runtimeOffer = store.removeOffer(offerID) {
-            runtimeOffer.binding.destroy()
-        }
-    }
-
-    private func destroySourceBinding(_ sourceID: DataSourceID) {
-        store.removeSource(sourceID)?.binding.destroy()
-    }
-
-    private func destroySourceBindingPreservingPendingSends(_ sourceID: DataSourceID) {
-        store.detachSourcePreservingPendingSends(sourceID)?.binding.destroy()
-    }
-
-    private func cancelSourceBinding(_ sourceID: DataSourceID) {
-        sourceWillCancel(sourceID)
-        destroySourceBinding(sourceID)
-        discardPendingSourceSendRequests(for: sourceID)
-    }
-
-    private func destroyPendingOfferBindings(for seatID: SeatID) {
-        for offerID in store.pendingOfferIDs(for: seatID) {
-            destroyOfferBinding(offerID)
-        }
-    }
-
     private static func sortedSeatIDs(_ seatIDs: Set<SeatID>) -> [SeatID] {
         seatIDs.sortedByRawValue()
-    }
-
-    private static func sortedOfferIDs(_ offerIDs: Set<DataOfferID>) -> [DataOfferID] {
-        offerIDs.sortedByRawValue()
-    }
-
-    private static func sortedSourceIDs(_ sourceIDs: Set<DataSourceID>) -> [DataSourceID] {
-        sourceIDs.sortedByRawValue()
-    }
-
-    private func allocateOfferID() -> DataOfferID {
-        offerIDs.next()
     }
 }
 
 extension DataTransferManager {
     package var seatSnapshots: [DataTransferSeatSnapshot] {
-        store.seatSnapshots
+        store.seatSnapshots.map { seat in
+            let isBound = selectionEngine.boundSeatIDs.contains(seat.seatID)
+            return DataTransferSeatSnapshot(
+                seatID: seat.seatID,
+                device: isBound
+                    ? .bound(selection: selectionEngine.selectionState(for: seat.seatID))
+                    : .unbound,
+                dragAndDropOfferID: seat.dragAndDropOfferID
+            )
+        }
     }
 
     package var offerSnapshots: [DataOfferSnapshot] {
-        store.offerSnapshots
+        (selectionEngine.offerSnapshots + store.offerSnapshots).sortedByRawValue(\.id)
     }
 
     package var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] {
@@ -346,24 +304,29 @@ extension DataTransferManager {
         for (offerID, runtimeOffer) in store.offersByIDForInvariantChecks {
             bindings[offerID] = runtimeOffer.binding
         }
+        for offer in selectionEngine.offerSnapshots {
+            guard
+                let binding = selectionEngine.offerBinding(offer.id)
+                    as? any DataTransferOfferBinding
+            else {
+                preconditionFailure("clipboard offer is not backed by a data-device offer")
+            }
+            bindings[offer.id] = binding
+        }
         return bindings
     }
 
     package var sourceSnapshots: [DataSourceSnapshot] {
-        store.sourceSnapshots
+        (selectionEngine.sourceSnapshots + store.sourceSnapshots).sortedByRawValue(\.id)
     }
 
     package var pendingCallbackError: DataTransferCallbackFailure? {
-        store.callbackFailure
+        selectionEngine.pendingCallbackError
     }
 
     package func throwPendingCallbackErrorIfAny() throws {
         backend.preconditionIsOwnerThread()
-        guard let error = store.takeCallbackFailure() else {
-            return
-        }
-
-        throw error
+        try selectionEngine.throwPendingCallbackErrorIfAny()
     }
 
     package func drainDataTransferEvents() -> [DataTransferEvent] {
@@ -376,31 +339,42 @@ extension DataTransferManager {
         guard !isShutdown else { return }
         isShutdown = true
 
-        for sourceID in Self.sortedSourceIDs(store.sourceIDs) {
-            store.removeSource(sourceID)?.binding.destroy()
-        }
-        for offerID in Self.sortedOfferIDs(store.offerIDs) {
-            store.removeOffer(offerID)?.binding.destroy()
-        }
-        for seatID in Self.sortedSeatIDs(store.boundSeatIDs) {
-            store.removeDeviceBinding(for: seatID)?.release()
-        }
-        discardAllPendingSourceSendRequests()
+        let committedDragState = store.commitShutdown()
+        let committedSelectionState = selectionEngine.commitShutdown()
+        pendingDragMetadataByOfferID.removeAll(keepingCapacity: false)
+        preconditionInvariantsHold()
 
-        store.replaceState(DataTransferState())
-        store.discardCallbackFailures()
+        for source in committedDragState.sources {
+            source.binding.destroy()
+        }
+        for source in committedSelectionState.sources {
+            source.destroy()
+        }
+        for offer in committedDragState.offers {
+            offer.binding.destroy()
+        }
+        for offer in committedSelectionState.offers {
+            offer.binding.destroy()
+        }
+        for device in committedSelectionState.devices {
+            device.release()
+        }
+        DataTransferSourceSendLifecycle.discardRequests(
+            committedSelectionState.pendingSourceSendRequests
+        ) { _, _ in
+            // Teardown cannot surface descriptor-close failures through a closed display.
+        }
     }
 
     package func recordCallbackError(
         _ error: any Error,
         context: DataTransferCallbackContext
     ) {
-        guard !isShutdown else { return }
-        store.recordCallbackFailure(
-            DataTransferCallbackFailure(
-                context: context,
-                error: DataTransferError(callbackBackendError: error)
-            )
-        )
+        selectionEngine.recordCallbackError(error, context: context)
     }
+}
+
+struct PendingDragOfferMetadata {
+    var sourceActions: DragActionSet = []
+    var selectedAction: DragAction?
 }

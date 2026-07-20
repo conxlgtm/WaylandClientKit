@@ -1,7 +1,8 @@
 import Glibc
 import WaylandRaw
 
-package protocol WaylandThreadEventSource: AnyObject {
+package protocol WaylandThreadEventSource: AnyObject, QueueEventLoopSource
+where Failure == any Error {
     var isClosed: Bool { get }
 
     func fileDescriptor() throws -> CInt
@@ -12,6 +13,21 @@ package protocol WaylandThreadEventSource: AnyObject {
     func cancelRead()
 
     func handleEventLoopError(_ error: any Error)
+}
+
+extension WaylandThreadEventSource {
+    package func pollFileDescriptors(
+        _ descriptors: inout [pollfd],
+        timeoutMilliseconds: Int32
+    ) throws -> Int32 {
+        unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+            unsafe Glibc.poll(buffer.baseAddress, nfds_t(buffer.count), timeoutMilliseconds)
+        }
+    }
+
+    package func eventLoopFailed(_ error: RawEventLoopError) -> any Error {
+        WaylandThreadExecutorError.eventLoop(error)
+    }
 }
 
 package enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStringConvertible {

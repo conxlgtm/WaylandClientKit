@@ -159,6 +159,7 @@ let package = Package(
                 "WaylandGraphicsCore",
                 "WaylandGPUPreview",
                 "WaylandRaw",
+                "WaylandRuntime",
             ],
             path: "Sources/WaylandGraphicsPreview",
             swiftSettings: strictMemorySafetySwiftSettings
@@ -296,6 +297,9 @@ let package = Package(
         .testTarget(
             name: "WaylandClientKitToolTests",
             dependencies: ["WaylandClientKitToolSupport"],
+            resources: [
+                .copy("Fixtures")
+            ],
             swiftSettings: librarySwiftSettings
         ),
         .plugin(

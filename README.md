@@ -140,6 +140,7 @@ swift run wck ci required
 swift run wck ci check
 swift run wck examples build
 swift run wck protocols verify-generated
+swift run wck identity verify-generated
 ```
 
 The cheap gate handles fast static checks. The required pull-request gate adds

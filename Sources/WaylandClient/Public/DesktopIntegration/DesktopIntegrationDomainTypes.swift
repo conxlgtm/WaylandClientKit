@@ -116,23 +116,6 @@ public enum WindowIcon: Equatable, Sendable {
     case xrgb8888(WindowIconImage)
 }
 
-public struct WindowDialogID:
-    Hashable,
-    Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue dialogRawValue: UInt64) {
-        rawValue = dialogRawValue
-    }
-
-    public var description: String {
-        "window-dialog-\(rawValue)"
-    }
-}
-
 public struct WindowDialog: Sendable, Hashable, Identifiable {
     public let id: WindowDialogID
     public let childWindowID: WindowID
@@ -175,23 +158,6 @@ public struct WindowDialog: Sendable, Hashable, Identifiable {
     }
 }
 
-public struct IdleInhibitorID:
-    Hashable,
-    Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue inhibitorRawValue: UInt64) {
-        rawValue = inhibitorRawValue
-    }
-
-    public var description: String {
-        "idle-inhibitor-\(rawValue)"
-    }
-}
-
 public struct IdleInhibitor: Sendable, Hashable, Identifiable {
     public let id: IdleInhibitorID
 
@@ -214,23 +180,6 @@ public struct IdleInhibitor: Sendable, Hashable, Identifiable {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ownership)
-    }
-}
-
-public struct KeyboardShortcutsInhibitorID:
-    Hashable,
-    Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue inhibitorRawValue: UInt64) {
-        rawValue = inhibitorRawValue
-    }
-
-    public var description: String {
-        "keyboard-shortcuts-inhibitor-\(rawValue)"
     }
 }
 
@@ -292,23 +241,6 @@ public struct KeyboardShortcutsInhibitorEvent: Equatable, Sendable {
         windowID = eventWindowID
         seatID = eventSeatID
         activity = eventActivity
-    }
-}
-
-public struct ForeignToplevelID:
-    Hashable,
-    Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue toplevelRawValue: UInt64) {
-        rawValue = toplevelRawValue
-    }
-
-    public var description: String {
-        "foreign-toplevel-\(rawValue)"
     }
 }
 

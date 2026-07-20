@@ -9,7 +9,9 @@ extension DisplayCore {
                 throw PointerCaptureError.displayClosed
             }
 
-            return try requireSession().createRelativePointerOnOwnerThread(seatID: seatID)
+            return try requireSession().pointerCaptureManager.createRelativePointer(
+                seatID: seatID
+            )
         }
     }
 
@@ -21,7 +23,9 @@ extension DisplayCore {
                 throw PointerCaptureError.displayClosed
             }
 
-            return try requireSession().createPointerGesturesOnOwnerThread(seatID: seatID)
+            return try requireSession().pointerCaptureManager.createPointerGestures(
+                seatID: seatID
+            )
         }
     }
 
@@ -34,7 +38,7 @@ extension DisplayCore {
     ) throws -> PointerConstraintID {
         try withFatalFailureFinalization {
             let surface = try pointerCaptureWindowSurface(windowID)
-            return try requireSession().lockPointerOnOwnerThread(
+            return try requireSession().pointerCaptureManager.lockPointer(
                 surface: surface,
                 seatID: seatID,
                 cursorHint: cursorHint,
@@ -52,7 +56,7 @@ extension DisplayCore {
     ) throws -> PointerConstraintID {
         try withFatalFailureFinalization {
             let surface = try pointerCaptureWindowSurface(windowID)
-            return try requireSession().confinePointerOnOwnerThread(
+            return try requireSession().pointerCaptureManager.confinePointer(
                 surface: surface,
                 seatID: seatID,
                 region: region,
@@ -86,7 +90,7 @@ extension DisplayCore {
                 throw PointerWarpError.requestFailed(String(describing: error))
             }
 
-            try requireSession().requestPointerWarpOnOwnerThread(
+            try requireSession().pointerCaptureManager.requestPointerWarp(
                 surface: window.rawSurfaceOnOwnerThread,
                 windowSize: geometry.logicalSize,
                 seatID: seatID,
@@ -119,7 +123,7 @@ extension DisplayCore {
                 throw PointerCaptureError.displayClosed
             }
 
-            try requireSession().destroyRelativePointerSubscriptionOnOwnerThread(id)
+            try requireSession().pointerCaptureManager.destroyRelativePointerSubscription(id)
         }
     }
 
@@ -129,7 +133,7 @@ extension DisplayCore {
                 throw PointerCaptureError.displayClosed
             }
 
-            try requireSession().destroyPointerGestureSubscriptionOnOwnerThread(id)
+            try requireSession().pointerCaptureManager.destroyPointerGestureSubscription(id)
         }
     }
 
@@ -139,7 +143,7 @@ extension DisplayCore {
                 throw PointerCaptureError.displayClosed
             }
 
-            try requireSession().destroyPointerConstraintOnOwnerThread(id)
+            try requireSession().pointerCaptureManager.destroyPointerConstraint(id)
         }
     }
 

@@ -193,7 +193,9 @@ jobs:
             pkg-config \
             wayland-protocols
       - name: Verify generated artifacts
-        run: swift run wck protocols verify-generated
+        run: |
+          swift run wck protocols verify-generated
+          swift run wck identity verify-generated
 
   release-build:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}

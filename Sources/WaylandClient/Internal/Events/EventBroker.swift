@@ -1,3 +1,4 @@
+import Synchronization
 import WaylandRuntime
 
 @safe
@@ -209,17 +210,17 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
             continuation: EventWaiter<Element>,
             overflowStrategy: OverflowStrategy<Element>
         ) -> Result<Element?, WaylandDisplayError>? {
+            // Every immediate result is resumed after this method releases the broker lock.
+            if let cancellation = waiter.install(continuation) {
+                return cancellation
+            }
+
             guard var subscriber = subscribers[subscriberID] else {
                 return .success(nil)
             }
 
             switch subscriber.state {
             case .open(var buffer, var drops):
-                if let cancellation = waiter.install(continuation) {
-                    subscribers[subscriberID] = subscriber
-                    return cancellation
-                }
-
                 if !buffer.isEmpty {
                     let element = buffer.popFirst()
                     subscriber.state = .open(buffer: buffer, drops: drops)
@@ -242,15 +243,8 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 subscribers[subscriberID] = subscriber
                 return nil
             case .waiting:
-                if let cancellation = waiter.install(continuation) {
-                    return cancellation
-                }
                 return .failure(.internalInvariantViolation(.eventSubscriberAwaitedTwice))
             case .terminal(let termination):
-                if let cancellation = waiter.install(continuation) {
-                    subscribers[subscriberID] = subscriber
-                    return cancellation
-                }
                 subscribers.removeValue(forKey: subscriberID)
                 return termination.result()
             }
@@ -362,7 +356,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
     private let stream: EventStreamIdentity
     private let capacity: Int
     private let overflowStrategy: OverflowStrategy<Element>
-    private let state = EventBrokerLockedState(BrokerState())
+    private let state = Mutex(BrokerState())
 
     init(
         stream eventStream: EventStreamIdentity,

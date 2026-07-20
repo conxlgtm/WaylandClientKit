@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="example_v1">
+  <interface name="example_manager_v1" version="3">
+    <description summary="example manager">
+      Creates example objects.
+    </description>
+
+    <request name="destroy" type="destructor" since="2"/>
+
+    <request name="create_item">
+      <arg name="item" type="new_id" interface="example_item_v1"/>
+      <arg name="parent" type="object" interface="wl_surface" allow-null="true"/>
+    </request>
+
+    <event name="advertised" since="2">
+      <arg name="flags" type="uint" enum="flags"/>
+    </event>
+
+    <enum name="flags" since="2" bitfield="true">
+      <entry name="alpha" value="0x1"/>
+      <entry name="beta" value="0x2" since="3" deprecated-since="4"/>
+    </enum>
+  </interface>
+
+  <interface name="example_item_v1" version="1">
+    <event name="done" type="destructor"/>
+  </interface>
+</protocol>

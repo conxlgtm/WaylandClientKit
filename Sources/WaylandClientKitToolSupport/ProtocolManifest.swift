@@ -183,6 +183,11 @@ public struct ProtocolTooling {
             ProtocolManifest.self, from: repository.url("protocols/manifest.json"))
     }
 
+    /// Parses every vendored protocol in manifest order.
+    public func loadProtocolIRs() throws -> [WaylandProtocolIR] {
+        try loadProtocolIRs(from: loadManifest())
+    }
+
     public func validateManifest() throws {
         let manifest = try loadManifest()
         var failures: [String] = []
@@ -407,6 +412,25 @@ public struct ProtocolTooling {
             try validateManifest()
         }
         let manifest = try loadManifest()
+        // Parse every input before replacing generated directories. This keeps malformed
+        // XML from leaving a partially regenerated tree behind.
+        let protocolIRs = try loadProtocolIRs(from: manifest)
+        let supportedVersions = try renderSupportedVersions(protocols: protocolIRs)
+        let optionalGlobalDescriptors = try renderOptionalGlobalDescriptors(
+            protocols: protocolIRs
+        )
+        let listenerBridgeArtifacts = try renderListenerBridgeArtifacts(
+            protocols: protocolIRs,
+            manifest: manifest
+        )
+        let registryBindBridgeArtifacts = try renderRegistryBindBridgeArtifacts(
+            protocols: protocolIRs,
+            manifest: manifest
+        )
+        let requestBridgeArtifacts = try renderRequestBridgeArtifacts(
+            protocols: protocolIRs,
+            manifest: manifest
+        )
         let scanner = try RepositoryNixTools(
             repository: repository,
             fileSystem: fileSystem,
@@ -439,8 +463,31 @@ public struct ProtocolTooling {
             try normalizeGeneratedFile(header)
             try normalizeGeneratedFile(code)
         }
+        try writeListenerBridgeArtifacts(listenerBridgeArtifacts, outputRoot: outputRoot)
+        try writeRegistryBindBridgeArtifacts(
+            registryBindBridgeArtifacts,
+            outputRoot: outputRoot
+        )
+        try writeRequestBridgeArtifacts(requestBridgeArtifacts, outputRoot: outputRoot)
+        try writeSupportedVersions(supportedVersions, outputRoot: outputRoot)
+        try writeOptionalGlobalDescriptors(optionalGlobalDescriptors, outputRoot: outputRoot)
 
         diagnostics.success("generated Wayland protocol artifacts")
+    }
+
+    private func loadProtocolIRs(from manifest: ProtocolManifest) throws -> [WaylandProtocolIR] {
+        let parser = WaylandProtocolXMLParser()
+        return try manifest.protocols.map { entry in
+            let url = repository.url(entry.localPath)
+            let protocolIR = try parser.parse(
+                fileSystem.readData(url),
+                source: entry.localPath
+            )
+            diagnostics.verbose(
+                "parsed \(protocolIR.interfaces.count) interfaces from \(entry.localPath)"
+            )
+            return protocolIR
+        }
     }
 
     public func verifyGenerated() throws {
@@ -473,6 +520,20 @@ public struct ProtocolTooling {
             failures.append(
                 contentsOf: try directoryDifferences(
                     expected: expected, actual: actual, label: path))
+        }
+
+        let generatedSwiftPaths = [
+            SupportedVersionsGeneration.outputPath,
+            OptionalGlobalDescriptorsGeneration.outputPath,
+        ]
+        for path in generatedSwiftPaths {
+            let expected = generated.appendingPathComponent(path)
+            let actual = repository.url(path)
+            if !fileSystem.exists(actual) {
+                failures.append("missing generated file: \(path)")
+            } else if try !fileSystem.filesEqual(expected, actual) {
+                failures.append("changed generated file: \(path)")
+            }
         }
 
         guard failures.isEmpty else {

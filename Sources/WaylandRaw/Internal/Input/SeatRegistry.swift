@@ -81,7 +81,7 @@ package final class SeatRegistry {
             return existing
         }
 
-        guard advertisedVersion >= 5 else {
+        guard advertisedVersion >= SupportedVersions.wlSeatMinimum else {
             unsupportedSeatVersionsByGlobalName[globalName] = advertisedVersion
             return nil
         }

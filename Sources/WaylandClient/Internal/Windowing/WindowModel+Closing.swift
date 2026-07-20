@@ -40,7 +40,7 @@ extension WindowModel {
             guard activeState.closeRequest == .none else { return [] }
             activeState.closeRequest = .requested
             lifecycle = .active(activeState)
-        case .closing, .destroyed:
+        case .destroyed:
             return []
         }
 
@@ -51,13 +51,9 @@ extension WindowModel {
         switch lifecycle {
         case .destroyed:
             return []
-        case .closing:
-            return []
         case .created, .roleAssigned, .waitingForInitialConfigure, .active:
             break
         }
-
-        lifecycle = .closing(ClosingWindowState())
 
         var effects: [WindowEffect] = []
         if publishRequest {

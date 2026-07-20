@@ -168,10 +168,19 @@ struct SurfaceRuntime<RoleResources> {
         var metadataObjects = SurfaceMetadataObjects()
     }
 
-    enum Phase {
-        case unassigned(SurfaceObjects)
-        case live(roleResources: RoleResources, SurfaceObjects)
-        case roleDestroyed(SurfaceObjects)
+    private enum RolePhase {
+        case unassigned
+        case live(RoleResources)
+        case destroyed
+    }
+
+    private struct Alive {
+        var rolePhase = RolePhase.unassigned
+        var objects = SurfaceObjects()
+    }
+
+    private enum Storage {
+        case alive(Alive)
         case surfaceDestroyed(retiredBufferPools: [RawSharedMemoryPool])
     }
 
@@ -186,7 +195,7 @@ struct SurfaceRuntime<RoleResources> {
     var tearingControlCapability = SurfaceCapabilityStatus.unavailable
     var colorRepresentationCapability = SurfaceColorRepresentationCapability.unavailable
     var colorCapability = SurfaceColorCapability.unavailable
-    var phase: Phase = .unassigned(SurfaceObjects())
+    private var storage = Storage.alive(Alive())
 
     init(role surfaceRole: SurfaceRuntimeRole, surfaceID runtimeSurfaceID: RawObjectID? = nil) {
         role = surfaceRole
@@ -197,7 +206,9 @@ struct SurfaceRuntime<RoleResources> {
 extension SurfaceRuntime {
     var roleResources: RoleResources? {
         get {
-            guard case .live(let roleResources, _) = phase else {
+            guard case .alive(let alive) = storage,
+                case .live(let roleResources) = alive.rolePhase
+            else {
                 return nil
             }
 
@@ -210,14 +221,7 @@ extension SurfaceRuntime {
 
     var buffers: RawSharedMemoryPool? {
         get {
-            switch phase {
-            case .unassigned(let objects),
-                .live(_, let objects),
-                .roleDestroyed(let objects):
-                objects.buffers
-            case .surfaceDestroyed:
-                nil
-            }
+            surfaceObjects?.buffers
         }
         set {
             guard !isSurfaceDestroyed else {
@@ -232,37 +236,27 @@ extension SurfaceRuntime {
 
     var retiredBufferPools: [RawSharedMemoryPool] {
         get {
-            switch phase {
-            case .unassigned(let objects),
-                .live(_, let objects),
-                .roleDestroyed(let objects):
-                objects.retiredBufferPools
+            switch storage {
+            case .alive(let alive):
+                alive.objects.retiredBufferPools
             case .surfaceDestroyed(let retiredBufferPools):
                 retiredBufferPools
             }
         }
         set {
-            switch phase {
+            switch storage {
             case .surfaceDestroyed:
-                phase = .surfaceDestroyed(retiredBufferPools: newValue)
-            default:
-                updateSurfaceObjects { objects in
-                    objects.retiredBufferPools = newValue
-                }
+                storage = .surfaceDestroyed(retiredBufferPools: newValue)
+            case .alive(var alive):
+                alive.objects.retiredBufferPools = newValue
+                storage = .alive(alive)
             }
         }
     }
 
     var scaleInstallation: SurfaceScaleInstallation {
         get {
-            switch phase {
-            case .unassigned(let objects),
-                .live(_, let objects),
-                .roleDestroyed(let objects):
-                objects.scaleInstallation
-            case .surfaceDestroyed:
-                SurfaceScaleInstallation()
-            }
+            surfaceObjects?.scaleInstallation ?? SurfaceScaleInstallation()
         }
         set {
             updateSurfaceObjects { objects in
@@ -274,16 +268,14 @@ extension SurfaceRuntime {
     var roleReadinessSnapshot: SurfaceRoleReadinessSnapshot {
         let hasRuntime: Bool
         let hasRoleResources: Bool
-        switch phase {
-        case .unassigned:
+        switch storage {
+        case .alive(let alive):
             hasRuntime = true
-            hasRoleResources = false
-        case .live:
-            hasRuntime = true
-            hasRoleResources = true
-        case .roleDestroyed:
-            hasRuntime = true
-            hasRoleResources = false
+            if case .live = alive.rolePhase {
+                hasRoleResources = true
+            } else {
+                hasRoleResources = false
+            }
         case .surfaceDestroyed:
             hasRuntime = false
             hasRoleResources = false
@@ -362,85 +354,35 @@ extension SurfaceRuntime {
     func currentOutputIDs(
         where isStillBound: (RawOutputID) -> Bool = { _ in true }
     ) -> [OutputID] {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.outputMembership.currentOutputIDs(where: isStillBound)
-        case .surfaceDestroyed:
-            []
-        }
+        guard let objects = surfaceObjects else { return [] }
+        return objects.outputMembership.currentOutputIDs(where: isStillBound)
     }
 
     func capabilitySnapshot(
         where isStillBound: (RawOutputID) -> Bool = { _ in true }
     ) -> SurfaceCapabilitySnapshot {
-        let scaleCapability: SurfaceScaleCapability
-        let outputIDs: [OutputID]
-        let presentationFeedback: SurfaceCapabilityStatus
-        let dmabuf: SurfaceDmabufCapability
-        let synchronization: SurfaceSynchronizationCapability
-        let pacing: SurfacePacingCapability
-        let contentType: SurfaceCapabilityStatus
-        let alphaModifier: SurfaceCapabilityStatus
-        let tearingControl: SurfaceCapabilityStatus
-        let colorRepresentation: SurfaceColorRepresentationCapability
-        let color: SurfaceColorCapability
-
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            scaleCapability = objects.scaleInstallation.capability
-            outputIDs = objects.outputMembership.currentOutputIDs(where: isStillBound)
-            presentationFeedback = presentationFeedbackCapability
-            dmabuf = dmabufCapability
-            synchronization = synchronizationCapability
-            pacing = pacingCapability
-            contentType = contentTypeCapability
-            alphaModifier = alphaModifierCapability
-            tearingControl = tearingControlCapability
-            colorRepresentation = colorRepresentationCapability
-            color = colorCapability
-        case .surfaceDestroyed:
-            scaleCapability = .integerOnly
-            outputIDs = []
-            presentationFeedback = .unavailable
-            dmabuf = .unavailable
-            synchronization = .implicitOnly
-            pacing = .unavailable
-            contentType = .unavailable
-            alphaModifier = .unavailable
-            tearingControl = .unavailable
-            colorRepresentation = .unavailable
-            color = .unavailable
+        guard let objects = surfaceObjects else {
+            return destroyedCapabilitySnapshot()
         }
 
         return SurfaceCapabilitySnapshot(
             role: role,
-            outputIDs: outputIDs,
-            fractionalScale: scaleCapability,
-            presentationFeedback: presentationFeedback,
-            dmabuf: dmabuf,
-            synchronization: synchronization,
-            pacing: pacing,
-            contentType: contentType,
-            alphaModifier: alphaModifier,
-            tearingControl: tearingControl,
-            colorRepresentation: colorRepresentation,
-            color: color
+            outputIDs: objects.outputMembership.currentOutputIDs(where: isStillBound),
+            fractionalScale: objects.scaleInstallation.capability,
+            presentationFeedback: presentationFeedbackCapability,
+            dmabuf: dmabufCapability,
+            synchronization: synchronizationCapability,
+            pacing: pacingCapability,
+            contentType: contentTypeCapability,
+            alphaModifier: alphaModifierCapability,
+            tearingControl: tearingControlCapability,
+            colorRepresentation: colorRepresentationCapability,
+            color: colorCapability
         )
     }
 
     var transactionSnapshot: SurfaceTransactionSnapshot {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.transactionState.snapshot
-        case .surfaceDestroyed:
-            SurfaceTransactionState().snapshot
-        }
+        surfaceObjects?.transactionState.snapshot ?? SurfaceTransactionState().snapshot
     }
 
     mutating func recordConfigureReceived(serial: UInt32) {
@@ -474,14 +416,8 @@ extension SurfaceRuntime {
     }
 
     var nextCommitGeneration: UInt64 {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.transactionState.nextCommitGeneration
-        case .surfaceDestroyed:
-            SurfaceTransactionState().nextCommitGeneration
-        }
+        surfaceObjects?.transactionState.nextCommitGeneration
+            ?? SurfaceTransactionState().nextCommitGeneration
     }
 
     @discardableResult
@@ -508,18 +444,8 @@ extension SurfaceRuntime {
     func validateCommittedFrameCandidate(
         generation: UInt64
     ) throws {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            try objects.transactionState.validateCommittedFrameCandidate(
-                generation: generation
-            )
-        case .surfaceDestroyed:
-            try SurfaceTransactionState().validateCommittedFrameCandidate(
-                generation: generation
-            )
-        }
+        let transactionState = surfaceObjects?.transactionState ?? SurfaceTransactionState()
+        try transactionState.validateCommittedFrameCandidate(generation: generation)
     }
 
     mutating func prepareCommittedFrame(
@@ -537,24 +463,31 @@ extension SurfaceRuntime {
     }
 
     mutating func installRoleResources(_ roleResources: RoleResources) throws {
-        switch phase {
-        case .unassigned(let objects):
-            phase = .live(roleResources: roleResources, objects)
-        case .live:
-            throw SurfaceRuntimeError.roleResourcesAlreadyInstalled(role: role)
-        case .roleDestroyed:
-            throw SurfaceRuntimeError.installAfterRoleDestroyed(role: role)
+        switch storage {
+        case .alive(var alive):
+            switch alive.rolePhase {
+            case .unassigned:
+                alive.rolePhase = .live(roleResources)
+                storage = .alive(alive)
+            case .live:
+                throw SurfaceRuntimeError.roleResourcesAlreadyInstalled(role: role)
+            case .destroyed:
+                throw SurfaceRuntimeError.installAfterRoleDestroyed(role: role)
+            }
         case .surfaceDestroyed:
             throw SurfaceRuntimeError.installAfterSurfaceDestroyed
         }
     }
 
     mutating func removeRoleResources() -> RoleResources? {
-        guard case .live(let roleResources, let objects) = phase else {
+        guard case .alive(var alive) = storage,
+            case .live(let roleResources) = alive.rolePhase
+        else {
             return nil
         }
 
-        phase = .roleDestroyed(objects)
+        alive.rolePhase = .destroyed
+        storage = .alive(alive)
         return roleResources
     }
 
@@ -564,115 +497,111 @@ extension SurfaceRuntime {
         }
     }
 
-    mutating func updateScaleInstallation(
-        _ update: (inout SurfaceScaleInstallation) throws -> Bool
-    ) rethrows -> Bool {
-        switch phase {
-        case .unassigned(var objects):
-            let result = try update(&objects.scaleInstallation)
-            phase = .unassigned(objects)
-            return result
-        case .live(let roleResources, var objects):
-            let result = try update(&objects.scaleInstallation)
-            phase = .live(roleResources: roleResources, objects)
-            return result
-        case .roleDestroyed(var objects):
-            let result = try update(&objects.scaleInstallation)
-            phase = .roleDestroyed(objects)
-            return result
-        case .surfaceDestroyed:
-            return false
+    mutating func updateScaleInstallation<Failure: Error>(
+        _ update: (inout SurfaceScaleInstallation) throws(Failure) -> Bool
+    ) throws(Failure) -> Bool {
+        try mutateSurfaceObjects(default: false) { objects throws(Failure) in
+            try update(&objects.scaleInstallation)
         }
     }
 
     mutating func markSurfaceDestroyed() throws {
-        switch phase {
-        case .unassigned(var objects),
-            .roleDestroyed(var objects):
-            guard objects.buffers == nil else {
+        switch storage {
+        case .alive(var alive):
+            if case .live = alive.rolePhase {
+                throw SurfaceRuntimeError.surfaceDestroyedWithLiveRoleResources
+            }
+            guard alive.objects.buffers == nil else {
                 throw SurfaceRuntimeError.surfaceDestroyedWithActiveBufferPool
             }
-            objects.submitConstraintObjects.destroy()
-            objects.metadataObjects.destroy()
-            objects.scaleInstallation.destroy()
-            synchronizationCapability = .implicitOnly
-            pacingCapability = .unavailable
-            contentTypeCapability = .unavailable
-            alphaModifierCapability = .unavailable
-            tearingControlCapability = .unavailable
-            colorRepresentationCapability = .unavailable
-            colorCapability = .unavailable
-            phase = .surfaceDestroyed(retiredBufferPools: objects.retiredBufferPools)
-        case .live:
-            throw SurfaceRuntimeError.surfaceDestroyedWithLiveRoleResources
+            alive.objects.submitConstraintObjects.destroy()
+            alive.objects.metadataObjects.destroy()
+            alive.objects.scaleInstallation.destroy()
+            resetCapabilitiesAfterSurfaceDestruction()
+            storage = .surfaceDestroyed(
+                retiredBufferPools: alive.objects.retiredBufferPools
+            )
         case .surfaceDestroyed:
             return
         }
     }
 
+    /// Returns the live surface-owned objects, or `nil` after surface destruction.
+    var surfaceObjects: SurfaceObjects? {
+        guard case .alive(let alive) = storage else { return nil }
+        return alive.objects
+    }
+
     private var isSurfaceDestroyed: Bool {
-        guard case .surfaceDestroyed = phase else {
+        guard case .surfaceDestroyed = storage else {
             return false
         }
 
         return true
     }
 
+    private func destroyedCapabilitySnapshot() -> SurfaceCapabilitySnapshot {
+        SurfaceCapabilitySnapshot(
+            role: role,
+            outputIDs: [],
+            fractionalScale: .integerOnly,
+            presentationFeedback: .unavailable,
+            dmabuf: .unavailable,
+            synchronization: .implicitOnly,
+            pacing: .unavailable,
+            contentType: .unavailable,
+            alphaModifier: .unavailable,
+            tearingControl: .unavailable,
+            colorRepresentation: .unavailable,
+            color: .unavailable
+        )
+    }
+
+    private mutating func resetCapabilitiesAfterSurfaceDestruction() {
+        synchronizationCapability = .implicitOnly
+        pacingCapability = .unavailable
+        contentTypeCapability = .unavailable
+        alphaModifierCapability = .unavailable
+        tearingControlCapability = .unavailable
+        colorRepresentationCapability = .unavailable
+        colorCapability = .unavailable
+    }
+
     private mutating func replaceLiveRoleResources(with roleResources: RoleResources?) {
-        switch (phase, roleResources) {
-        case (.live(_, let objects), .some(let roleResources)):
-            phase = .live(roleResources: roleResources, objects)
-        case (.live(_, let objects), nil):
-            phase = .roleDestroyed(objects)
-        case (.unassigned, nil),
-            (.roleDestroyed, nil),
-            (.surfaceDestroyed, nil):
-            return
-        case (.unassigned, .some),
-            (.roleDestroyed, .some),
-            (.surfaceDestroyed, .some):
+        guard case .alive(var alive) = storage else { return }
+
+        switch (alive.rolePhase, roleResources) {
+        case (.live, .some(let roleResources)):
+            alive.rolePhase = .live(roleResources)
+        case (.live, nil):
+            alive.rolePhase = .destroyed
+        case (.unassigned, _), (.destroyed, _):
             return
         }
+        storage = .alive(alive)
     }
 
-    mutating func updateSurfaceObjects(
-        _ update: (inout SurfaceObjects) throws -> Void
-    ) rethrows {
-        switch phase {
-        case .unassigned(var objects):
-            try update(&objects)
-            phase = .unassigned(objects)
-        case .live(let roleResources, var objects):
-            try update(&objects)
-            phase = .live(roleResources: roleResources, objects)
-        case .roleDestroyed(var objects):
-            try update(&objects)
-            phase = .roleDestroyed(objects)
-        case .surfaceDestroyed:
-            return
-        }
+    /// Updates live surface objects and commits the changes only when the body succeeds.
+    mutating func updateSurfaceObjects<Failure: Error>(
+        _ update: (inout SurfaceObjects) throws(Failure) -> Void
+    ) throws(Failure) {
+        guard case .alive(var alive) = storage else { return }
+        try update(&alive.objects)
+        storage = .alive(alive)
     }
 
-    mutating func mutateSurfaceObjects<Result>(
+    /// Updates live surface objects and returns a default after surface destruction.
+    ///
+    /// Changes made by a throwing body are discarded because storage is written back
+    /// only after the body returns successfully.
+    mutating func mutateSurfaceObjects<Result, Failure: Error>(
         default defaultResult: Result,
-        _ update: (inout SurfaceObjects) throws -> Result
-    ) rethrows -> Result {
-        switch phase {
-        case .unassigned(var objects):
-            let result = try update(&objects)
-            phase = .unassigned(objects)
-            return result
-        case .live(let roleResources, var objects):
-            let result = try update(&objects)
-            phase = .live(roleResources: roleResources, objects)
-            return result
-        case .roleDestroyed(var objects):
-            let result = try update(&objects)
-            phase = .roleDestroyed(objects)
-            return result
-        case .surfaceDestroyed:
-            return defaultResult
-        }
+        _ update: (inout SurfaceObjects) throws(Failure) -> Result
+    ) throws(Failure) -> Result {
+        guard case .alive(var alive) = storage else { return defaultResult }
+        let result = try update(&alive.objects)
+        storage = .alive(alive)
+        return result
     }
 }
 

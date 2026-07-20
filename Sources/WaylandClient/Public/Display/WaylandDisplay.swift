@@ -7,7 +7,7 @@ public actor WaylandDisplay {
     public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
     public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000
 
-    nonisolated let runtime: WaylandDisplayRuntime
+    nonisolated let lifetimeAnchor: DisplayLifetimeAnchor
     private var lifecycle = WaylandDisplayLifecycle.initializing
     private var cursorAnimationTask: Task<Void, Never>?, cursorAnimationTaskGeneration: UInt64 = 0
 
@@ -16,32 +16,32 @@ public actor WaylandDisplay {
     private var windowCloseObservers: [WindowID: [UUID: WindowCloseObserver]] = [:]
 
     nonisolated public var unownedExecutor: UnownedSerialExecutor {
-        unsafe runtime.executor.asUnownedSerialExecutor()
+        unsafe lifetimeAnchor.executor.asUnownedSerialExecutor()
     }
 
     nonisolated public var events: DisplayEvents {
-        runtime.events
+        lifetimeAnchor.eventHub.displayEvents()
     }
 
     nonisolated public var inputEvents: InputEvents {
-        runtime.inputEvents
+        lifetimeAnchor.eventHub.inputEvents()
     }
 
     nonisolated public var dataTransferEvents: DataTransferEvents {
-        runtime.dataTransferEvents
+        lifetimeAnchor.eventHub.dataTransferEvents()
     }
 
     nonisolated public var diagnostics: DisplayDiagnostics {
-        runtime.diagnostics
+        lifetimeAnchor.eventHub.diagnostics()
     }
 
-    private init(runtime displayRuntime: WaylandDisplayRuntime) {
-        runtime = displayRuntime
+    private init(lifetimeAnchor displayLifetimeAnchor: DisplayLifetimeAnchor) {
+        lifetimeAnchor = displayLifetimeAnchor
     }
 
     isolated deinit {
         cursorAnimationTask?.cancel()
-        runtime.actorDidDeinitialize(lifecycle: &lifecycle)
+        lifetimeAnchor.displayDidDeinitialize(lifecycle: &lifecycle)
     }
 
     private static func openConnection(
@@ -49,8 +49,8 @@ public actor WaylandDisplay {
         cursorConfiguration: CursorConfiguration = .init(),
         discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds
     ) async throws -> WaylandDisplay {
-        let runtime = try WaylandDisplayRuntime(configuration: displayConfiguration)
-        let display = WaylandDisplay(runtime: runtime)
+        let lifetimeAnchor = try DisplayLifetimeAnchor(configuration: displayConfiguration)
+        let display = WaylandDisplay(lifetimeAnchor: lifetimeAnchor)
         try await display.initialize(
             cursorConfiguration: cursorConfiguration,
             discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds,
@@ -252,11 +252,11 @@ public actor WaylandDisplay {
         switch lifecycle {
         case .active(let activeCore, let activeEventSource):
             await notifyAllWindowCloseObservers()
-            runtime.clearEventSource(activeEventSource)
+            lifetimeAnchor.executor.clearEventSource(activeEventSource)
             activeCore.close()
             lifecycle = .closed
         case .primarySelectionTestHarness:
-            runtime.eventHub.finish()
+            lifetimeAnchor.eventHub.finish()
             lifecycle = .closed
         case .initializing, .closed, .abandoned:
             lifecycle = .closed
@@ -293,11 +293,11 @@ public actor WaylandDisplay {
             inputPipelineConfiguration: displayConfiguration.inputPipeline,
             keyboardInterpretationConfiguration: displayConfiguration.keyboardInterpretation
         )
-        let displayCore = DisplayCore(session: session, eventHub: runtime.eventHub)
+        let displayCore = DisplayCore(session: session, eventHub: lifetimeAnchor.eventHub)
         session.setRawInvariantFailureReporter(displayCore)
         let source = DisplayEventSource(core: displayCore)
         lifecycle = .active(core: displayCore, eventSource: source)
-        try runtime.installEventSource(source)
+        try lifetimeAnchor.executor.installEventSource(source)
         updateCursorAnimationTask(for: cursorConfiguration.fallbackCursor)
     }
 
@@ -377,13 +377,13 @@ extension WaylandDisplay {
         primarySelectionHandler makeHandler:
             @Sendable (DisplayEventHub) throws -> Handler
     ) async throws -> (display: WaylandDisplay, handler: Handler) {
-        let runtime = try WaylandDisplayRuntime(
+        let lifetimeAnchor = try DisplayLifetimeAnchor(
             configuration: DisplayConfiguration(
                 applicationID: NonEmptyWaylandString(unchecked: "test-harness")
             )
         )
-        let handler = try makeHandler(runtime.eventHub)
-        let display = WaylandDisplay(runtime: runtime)
+        let handler = try makeHandler(lifetimeAnchor.eventHub)
+        let display = WaylandDisplay(lifetimeAnchor: lifetimeAnchor)
         await display.installPrimarySelectionTestHarness(handler)
         return (display, handler)
     }

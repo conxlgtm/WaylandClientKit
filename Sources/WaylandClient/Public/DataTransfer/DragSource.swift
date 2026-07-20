@@ -80,35 +80,6 @@ public struct DragIconImage: Equatable, Sendable {
     }
 }
 
-public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(_ sourceID: DataSourceID) {
-        rawValue = sourceID.rawValue
-    }
-
-    public var description: String {
-        "drag-source-\(rawValue)"
-    }
-}
-
-public struct ToplevelDragID:
-    Hashable,
-    Sendable,
-    CustomStringConvertible,
-    UInt64WaylandEntityID
-{
-    package let rawValue: UInt64
-
-    package init(rawValue dragRawValue: UInt64) {
-        rawValue = dragRawValue
-    }
-
-    public var description: String {
-        "toplevel-drag-\(rawValue)"
-    }
-}
-
 public struct DragSourceConfiguration: Equatable, Sendable {
     public let payloads: [DataTransferSourcePayload]
     public let actions: DragActionSet

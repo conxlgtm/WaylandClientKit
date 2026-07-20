@@ -259,6 +259,58 @@ struct DataTransferManagerSourceTests {  // swiftlint:disable:this type_body_len
     }
 
     @Test
+    func sourceSendWithNilMIMECloseFailureAttemptsCloseOnce() throws {
+        let backend = RecordingDataTransferBackend()
+        backend.failingCloseDescriptors[204] = 9
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 77)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: nil, fd: 204))
+
+        #expect(backend.closedDescriptors == [204])
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataSource(ClipboardSourceIdentity(source.id)),
+                    error: .closeFileDescriptor(WaylandSystemErrno(unchecked: 9))
+                )
+        )
+    }
+
+    @Test
+    func sourceSendWithEmptyMIMECloseFailureAttemptsCloseOnce() throws {
+        let backend = RecordingDataTransferBackend()
+        backend.failingCloseDescriptors[205] = 9
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 77)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: "", fd: 205))
+
+        #expect(backend.closedDescriptors == [205])
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataSource(ClipboardSourceIdentity(source.id)),
+                    error: .closeFileDescriptor(WaylandSystemErrno(unchecked: 9))
+                )
+        )
+    }
+
+    @Test
     func sourceSendCloseFailureReportsCloseError() throws {
         let backend = RecordingDataTransferBackend()
         backend.failingCloseDescriptors[203] = 9

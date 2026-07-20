@@ -140,6 +140,17 @@ struct PointerConstraintRuntimeTests {
             try runtime.preflight(surfaceID: surfaceID, seatID: seatID)
         }
 
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 3,
+                    seatID: rawSeatID,
+                    event: .locked(rawIdentity, surfaceID: surfaceID)
+                )
+            ) == .activated(id)
+        )
+        #expect(runtime.lifecycle(for: id) == .active)
+
         try runtime.destroyPointerConstraint(id)
         #expect(recorder.constraintDestroyCount == 1)
         #expect(recorder.regionDestroyCount == 1)

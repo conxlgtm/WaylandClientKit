@@ -1,21 +1,51 @@
 import WaylandRaw
 
 extension DataTransferManager {
-    func handleDataOfferEvent(_ event: RawDataOfferEvent, offerID: DataOfferID) {
+    func handleDragOfferEvent(_ event: RawDataOfferEvent, offerID: DataOfferID) {
         guard !isShutdown else { return }
+        defer { preconditionInvariantsHold() }
         do {
             switch event {
             case .offer(let rawMimeType):
                 try handleMIMEType(rawMimeType, offerID: offerID)
             case .sourceActions(let rawActions):
+                if selectionEngine.containsOffer(offerID) {
+                    guard selectionEngine.offerSnapshot(offerID) == nil else { return }
+                    pendingDragMetadataByOfferID[offerID, default: PendingDragOfferMetadata()]
+                        .sourceActions = DragActionSet(rawDataDeviceDNDAction: rawActions)
+                    return
+                }
                 try handleSourceActions(rawActions, offerID: offerID)
             case .action(let rawAction):
+                if selectionEngine.containsOffer(offerID) {
+                    guard selectionEngine.offerSnapshot(offerID) == nil else { return }
+                    pendingDragMetadataByOfferID[offerID, default: PendingDragOfferMetadata()]
+                        .selectedAction = DragAction(rawDataDeviceDNDAction: rawAction)
+                    return
+                }
                 try handleSelectedAction(rawAction, offerID: offerID)
             }
-            preconditionInvariantsHold()
         } catch {
             recordCallbackError(error, context: callbackContext(forOffer: offerID))
         }
+    }
+
+    func handleTransferredOfferEvent(
+        _ event: SelectionEngineOfferEvent,
+        offerID: DataOfferID
+    ) -> Bool {
+        guard store.runtimeOffer(offerID) != nil else { return false }
+        defer { preconditionInvariantsHold() }
+
+        do {
+            switch event {
+            case .mimeType(let rawMIMEType):
+                try handleMIMEType(rawMIMEType, offerID: offerID)
+            }
+        } catch {
+            recordCallbackError(error, context: callbackContext(forOffer: offerID))
+        }
+        return true
     }
 
     private func handleMIMEType(_ rawMimeType: String?, offerID: DataOfferID) throws {
@@ -61,10 +91,14 @@ extension DataTransferManager {
     }
 
     private func callbackContext(forOffer offerID: DataOfferID) -> DataTransferCallbackContext {
+        if selectionEngine.containsOffer(offerID) {
+            return .dataOffer(offerID.clipboardIdentity)
+        }
         if let offer = store.offerSnapshot(offerID), case .dragAndDrop = offer.role {
             return .dragOffer(offerID.dragIdentity)
         }
-
-        return .dataOffer(offerID.clipboardIdentity)
+        return store.runtimeOffer(offerID) == nil
+            ? .dataOffer(offerID.clipboardIdentity)
+            : .dragOffer(offerID.dragIdentity)
     }
 }

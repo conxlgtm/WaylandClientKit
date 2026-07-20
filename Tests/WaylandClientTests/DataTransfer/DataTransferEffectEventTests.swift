@@ -9,21 +9,6 @@ struct DataTransferEffectEventTests {
     private let sourceID = DataSourceID(rawValue: 12)
 
     @Test
-    func selectionPublishEffectsMapToEvents() {
-        #expect(
-            DataTransferEffect.publishSelectionChanged(seatID: seatID, offerID: offerID)
-                .publishedEvent
-                == .clipboardSelectionChanged(
-                    ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
-                )
-        )
-        #expect(
-            DataTransferEffect.publishSourceCancelled(sourceID).publishedEvent
-                == .clipboardSourceCancelled(sourceID.clipboardIdentity)
-        )
-    }
-
-    @Test
     func dragOfferPublishEffectsMapToEvents() {
         let location = DragLocation(x: 1.5, y: 2.5)
         let enter = DataTransferDragEnterTransition(
@@ -121,8 +106,6 @@ struct DataTransferEffectEventTests {
 
     @Test
     func sideEffectsDoNotPublishEvents() {
-        #expect(DataTransferEffect.bindDataDevice(seatID).publishedEvent == nil)
-        #expect(DataTransferEffect.releaseDataDevice(seatID).publishedEvent == nil)
         #expect(DataTransferEffect.destroyOffer(offerID).publishedEvent == nil)
         #expect(DataTransferEffect.destroySource(sourceID).publishedEvent == nil)
         #expect(DataTransferEffect.cancelSource(sourceID).publishedEvent == nil)
@@ -130,14 +113,6 @@ struct DataTransferEffectEventTests {
 
     @Test
     func sideEffectsMapToRuntimeSideEffects() {
-        #expect(
-            DataTransferEffect.bindDataDevice(seatID).runtimeSideEffect
-                == .bindDataDevice(seatID)
-        )
-        #expect(
-            DataTransferEffect.releaseDataDevice(seatID).runtimeSideEffect
-                == .releaseDataDevice(seatID)
-        )
         #expect(
             DataTransferEffect.destroyOffer(offerID).runtimeSideEffect
                 == .destroyOffer(offerID)
@@ -154,14 +129,6 @@ struct DataTransferEffectEventTests {
 
     @Test
     func publishEffectsDoNotMapToRuntimeSideEffects() {
-        #expect(
-            DataTransferEffect.publishSelectionChanged(
-                seatID: seatID,
-                offerID: offerID
-            )
-            .runtimeSideEffect == nil
-        )
-        #expect(DataTransferEffect.publishSourceCancelled(sourceID).runtimeSideEffect == nil)
         #expect(
             DataTransferEffect.publishDragDropped(
                 seatID: seatID,

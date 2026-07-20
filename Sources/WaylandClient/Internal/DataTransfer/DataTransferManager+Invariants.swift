@@ -54,15 +54,11 @@ extension DataTransferManager {
     package func checkInvariantsForTesting() throws {
         backend.preconditionIsOwnerThread()
 
-        let seatsWithDataDevice = Set(
-            store.seatSnapshots
-                .filter(\.hasDataDevice)
-                .map(\.seatID)
-        )
+        let seatsWithDataDevice = Set(store.seatSnapshots.map(\.seatID))
         try checkSeatBindingInvariants(seatsWithDataDevice: seatsWithDataDevice)
         try checkOfferRuntimeInvariants(seatsWithDataDevice: seatsWithDataDevice)
         try checkSourceRuntimeInvariants()
-        try checkSelectionReferenceInvariants()
+        try selectionEngine.checkInvariantsForTesting(externalSourceIDs: store.sourceIDs)
     }
 
     package func preconditionInvariantsHold() {
@@ -78,7 +74,7 @@ extension DataTransferManager {
     private func checkSeatBindingInvariants(
         seatsWithDataDevice: Set<SeatID>
     ) throws {
-        guard store.boundSeatIDs == seatsWithDataDevice else {
+        guard selectionEngine.boundSeatIDs == seatsWithDataDevice else {
             throw DataTransferManagerInvariantViolation.dataDeviceBindingsDoNotMatchSeats
         }
     }
@@ -162,39 +158,6 @@ extension DataTransferManager {
                     expected: sourceID,
                     actual: runtimeSource.binding.id
                 )
-            }
-        }
-        for request in store.pendingSourceSendRequestsForInvariantChecks()
-        where !activeSourceIDs.contains(request.source.sourceID)
-            && !store.detachedSourceSendIDsForInvariantChecks.contains(request.source.sourceID)
-        {
-            throw
-                DataTransferManagerInvariantViolation
-                .pendingSourceSendRequestMissingSource(request.source.sourceID)
-        }
-    }
-
-    private func checkSelectionReferenceInvariants() throws {
-        let activeOfferIDs = Set(store.offerSnapshots.map(\.id))
-        let activeSourceIDs = Set(store.sourceSnapshots.map(\.id))
-
-        for seat in store.seatSnapshots {
-            if let offerID = seat.selectionOfferID, !activeOfferIDs.contains(offerID) {
-                throw
-                    DataTransferManagerInvariantViolation
-                    .seatSelectionReferencesMissingOffer(seat.seatID, offerID)
-            }
-            if let offerID = seat.selectionOfferID,
-                store.offerSnapshot(offerID)?.mimeTypes.isEmpty == true
-            {
-                throw
-                    DataTransferManagerInvariantViolation
-                    .seatSelectionReferencesEmptyOffer(seat.seatID, offerID)
-            }
-            if let sourceID = seat.selectionSourceID, !activeSourceIDs.contains(sourceID) {
-                throw
-                    DataTransferManagerInvariantViolation
-                    .seatSelectionReferencesMissingSource(seat.seatID, sourceID)
             }
         }
     }

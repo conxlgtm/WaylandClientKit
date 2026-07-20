@@ -22,6 +22,12 @@ generate-protocols:
 verify-protocols:
     swift run wck protocols verify-generated
 
+generate-identities:
+    swift run wck identity generate
+
+verify-identities:
+    swift run wck identity verify-generated
+
 doctor:
     swift run wck tools doctor
 

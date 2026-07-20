@@ -528,7 +528,7 @@ struct ExternalImportTransactionTests {
 
     @Test(.timeLimit(.minutes(1)))
     func closeDuringBufferImportDestroysUnpublishedResource() async throws {
-        let barrier = ExternalImportBarrier()
+        let barrier = AsyncTestBarrier()
         let destroyRecorder = ExternalBufferDestroyRecorder()
         let window = try ExternalBufferFakeManagedWindow(
             importBehavior: .succeed,
@@ -573,7 +573,7 @@ struct ExternalImportTransactionTests {
 
     @Test(.timeLimit(.minutes(1)))
     func generationChangeDuringBufferImportRejectsAndDestroysResource() async throws {
-        let barrier = ExternalImportBarrier()
+        let barrier = AsyncTestBarrier()
         let destroyRecorder = ExternalBufferDestroyRecorder()
         let window = try ExternalBufferFakeManagedWindow(
             importBehavior: .succeed,
@@ -622,7 +622,7 @@ struct ExternalImportTransactionTests {
 
     @Test(.timeLimit(.minutes(1)))
     func closeDuringTimelineImportRemovesUnpublishedResource() async throws {
-        let barrier = ExternalImportBarrier()
+        let barrier = AsyncTestBarrier()
         let window = try ExternalBufferFakeManagedWindow(
             importBehavior: .succeed,
             surfaceFeedbackSynchronization: .explicitAvailable(version: 1),
@@ -871,10 +871,12 @@ struct ExternalBufferPresentationFeedbackTests {
                 .pendingReceipts == 1
         )
 
-        async let feedback = submitted.receipt.waitForPresentationFeedback()
+        async let firstFeedback = submitted.receipt.waitForPresentationFeedback()
+        async let secondFeedback = submitted.receipt.waitForPresentationFeedback()
         await window.emitPresentedFeedback(identity.surfacePresentationID)
 
-        let result = await feedback
+        let results = await (firstFeedback, secondFeedback)
+        let result = results.0
         guard
             case .presented(
                 submissionID: let feedbackSubmissionID,
@@ -888,6 +890,7 @@ struct ExternalBufferPresentationFeedbackTests {
         #expect(feedbackSubmissionID == submitted.receipt.id)
         #expect(feedbackBufferID == submitted.buffer.id)
         #expect(presentation.surface == identity.surfacePresentationID)
+        #expect(results.1 == result)
         #expect(await submitted.receipt.waitForPresentationFeedback() == result)
         #expect(
             await storage.externalPresentationFeedbackSnapshotForTesting()
@@ -1029,6 +1032,38 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await window.closeRequests == 1)
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func concurrentBackingCloseWaiterCompletesWithInitiatingClose() async throws {
+        let closeBarrier = AsyncTestBarrier()
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            closeBarrier: closeBarrier
+        )
+        let storage = externalBufferStorage(window: window)
+
+        // swiftlint:disable:next no_unstructured_task
+        let initiatingClose = Task {
+            await storage.closeForTesting()
+        }
+        await closeBarrier.waitUntilSuspended()
+
+        // swiftlint:disable:next no_unstructured_task
+        let joiningClose = Task {
+            await storage.closeForTesting()
+        }
+        for _ in 0..<10 {
+            await Task.yield()
+        }
+
+        await closeBarrier.resume()
+        await initiatingClose.value
+        await joiningClose.value
+        await storage.closeForTesting()
+
+        #expect(try await window.isClosed)
+        #expect(await window.closeRequests == 1)
+    }
+
     @Test
     func firstExternalBufferShowPreparesInitialConfigureBeforeImport() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
@@ -1116,6 +1151,46 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0, 1])
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
+        await storage.closeForTesting()
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func delayedImplicitReleaseFinishesOnlyItsSubmission() async throws {
+        let barrier = AsyncTestBarrier()
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        await storage.setImplicitExternalReleaseHandlerHookForTesting {
+            await barrier.suspend()
+        }
+
+        let firstLease = try await storage.nextFrame()
+        let first = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
+        )
+
+        await window.emitImportedBufferRelease(at: 0)
+        await barrier.waitUntilSuspended()
+
+        let secondLease = try await storage.nextFrame()
+        let secondRenderLease = try await secondLease.reserveExternalBuffer(first.buffer)
+        let secondReceipt = try await secondRenderLease.submit()
+
+        #expect(secondReceipt.id != first.receipt.id)
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 1)
+        await barrier.resume()
+
+        #expect(await first.receipt.waitForRelease() == .released)
+        #expect(await first.receipt.waitForRelease() == .released)
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 1)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        await window.emitImportedBufferRelease(at: 0)
+
+        #expect(await secondReceipt.waitForRelease() == .released)
+        #expect(await secondReceipt.waitForRelease() == .released)
+        #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 0)
         await storage.closeForTesting()
     }
 
@@ -1741,9 +1816,10 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
 
         #expect(releases.0 == .released)
         #expect(releases.1 == .released)
+        #expect(await receipt.waitForRelease() == .released)
         #expect(await storage.externalBufferLifecycleSnapshotForTesting().available == 1)
         #expect(await storage.externalReleaseSnapshotForTesting().pendingReceipts == 0)
-        #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 0)
+        #expect(await externalReleaseMonitorCountReaches(0, storage: storage))
 
         let reuseLease = try await storage.nextFrame()
         let reuseRenderLease = try await reuseLease.reserveExternalBuffer(buffer)
@@ -1800,7 +1876,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         backend.signal(1)
         #expect(await firstReceipt.waitForRelease() == .released)
         #expect(await secondReceipt.waitForRelease() == .released)
-        #expect(await storage.externalReleaseSnapshotForTesting().activeMonitors == 0)
+        #expect(await externalReleaseMonitorCountReaches(0, storage: storage))
         await storage.closeForTesting()
     }
 
@@ -2067,6 +2143,20 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         }
     }
 
+    private func externalReleaseMonitorCountReaches(
+        _ expectedCount: Int,
+        storage: WaylandGraphicsWindowBackingStorage
+    ) async -> Bool {
+        for _ in 0..<10 {
+            if await storage.externalReleaseSnapshotForTesting().activeMonitors == expectedCount {
+                return true
+            }
+            await Task.yield()
+        }
+
+        return await storage.externalReleaseSnapshotForTesting().activeMonitors == expectedCount
+    }
+
     private func unregisterIfAvailable(
         storage: WaylandGraphicsWindowBackingStorage,
         buffer: WaylandGraphicsExternalBuffer
@@ -2096,7 +2186,7 @@ private actor ExternalBufferPresentationHook {
     }
 }
 
-private actor ExternalImportBarrier {
+private actor AsyncTestBarrier {
     private var isSuspended = false
     private var isResumed = false
     private var suspensionWaiters: [CheckedContinuation<Void, Never>] = []
@@ -2147,13 +2237,13 @@ private final class ExternalBufferDestroyRecorder: Sendable {
 }
 
 private struct ExternalImportTestHooks: Sendable {
-    let bufferBarrier: ExternalImportBarrier?
-    let timelineBarrier: ExternalImportBarrier?
+    let bufferBarrier: AsyncTestBarrier?
+    let timelineBarrier: AsyncTestBarrier?
     let destroyRecorder: ExternalBufferDestroyRecorder?
 
     init(
-        bufferBarrier: ExternalImportBarrier? = nil,
-        timelineBarrier: ExternalImportBarrier? = nil,
+        bufferBarrier: AsyncTestBarrier? = nil,
+        timelineBarrier: AsyncTestBarrier? = nil,
         destroyRecorder: ExternalBufferDestroyRecorder? = nil
     ) {
         self.bufferBarrier = bufferBarrier
@@ -2193,6 +2283,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private let includeDistinctDuplicateSurfaceFeedback: Bool
     private let presentationHook: (@Sendable () async -> Void)?
     private let importHooks: ExternalImportTestHooks
+    private let closeBarrier: AsyncTestBarrier?
 
     init(
         windowID backingWindowID: WindowID = WindowID(rawValue: 910),
@@ -2203,7 +2294,8 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         includeDistinctDuplicateSurfaceFeedback includeDistinctFeedbackDuplicates:
             Bool = false,
         presentationHook requestedPresentationHook: (@Sendable () async -> Void)? = nil,
-        importHooks requestedImportHooks: ExternalImportTestHooks = ExternalImportTestHooks()
+        importHooks requestedImportHooks: ExternalImportTestHooks = ExternalImportTestHooks(),
+        closeBarrier requestedCloseBarrier: AsyncTestBarrier? = nil
     ) throws {
         id = backingWindowID
         geometryValue = try testGraphicsSurfaceGeometry()
@@ -2213,6 +2305,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         includeDistinctDuplicateSurfaceFeedback = includeDistinctFeedbackDuplicates
         presentationHook = requestedPresentationHook
         importHooks = requestedImportHooks
+        closeBarrier = requestedCloseBarrier
     }
 
     var geometry: SurfaceGeometry {
@@ -2442,6 +2535,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     func close() async {
         closeRequests += 1
         isWindowClosed = true
+        await closeBarrier?.suspend()
         let observer = closeObserver
         closeObserver = nil
         await observer?()

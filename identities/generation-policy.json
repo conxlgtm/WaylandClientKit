@@ -1,0 +1,229 @@
+{
+  "outputs": [
+    { "id": "client-public", "path": "Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift", "imports": ["WaylandRaw"] },
+    { "id": "client-internal", "path": "Sources/WaylandClient/Internal/Generated/GeneratedInternalIdentityDeclarations.swift", "imports": ["WaylandRaw"] },
+    { "id": "raw", "path": "Sources/WaylandRaw/Generated/GeneratedIdentityDeclarations.swift", "imports": [] },
+    { "id": "graphics-public", "path": "Sources/WaylandGraphicsPreview/Public/Generated/GeneratedPublicIdentityDeclarations.swift", "imports": [] },
+    { "id": "graphics-internal", "path": "Sources/WaylandGraphicsPreview/Internal/Generated/GeneratedInternalIdentityDeclarations.swift", "imports": ["WaylandClient"] }
+  ],
+  "identities": [
+    {
+      "type": "SeatID", "output": "client-public", "access": "public", "rawType": "UInt32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "seatRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt32WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "seat-" }, "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Identifies a seat advertised by the compositor.", "storage": "The compositor-provided numeric seat identity.", "constructor": "Creates a seat identity from its compositor-provided numeric value.", "description": "A stable diagnostic description of the seat." }
+    },
+    {
+      "type": "InputSerial", "output": "client-public", "access": "public", "rawType": "UInt32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "serialRawValue",
+      "conformances": ["ExpressibleByIntegerLiteral", "Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt32WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "serial-" }, "integerLiteral": { "access": "public", "assignDirectly": true }, "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Carries a Wayland input serial supplied by the compositor.", "storage": "The protocol serial value supplied with an input event.", "constructor": "Creates an input serial from a Wayland protocol value.", "description": "A stable diagnostic description of the input serial.", "integerLiteral": "Creates an input serial from an integer literal." }
+    },
+    {
+      "type": "WindowID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "windowRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "window-" }, "auditCategory": "client identity",
+      "documentation": { "summary": "Identifies a top-level window owned by this client.", "description": "A stable diagnostic description of the window." }
+    },
+    {
+      "type": "PopupSurfaceIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "popupID", "constructorType": "PopupID", "constructorExpression": "popupID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "popup-" }, "auditCategory": "public projection",
+      "documentation": { "summary": "Identifies a popup surface without exposing its package-internal ID.", "description": "A stable diagnostic description of the popup surface." }
+    },
+    {
+      "type": "OutputID", "output": "client-public", "access": "public", "rawType": "UInt32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "outputRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "output-" }, "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Identifies an output global advertised by the compositor.", "storage": "The compositor-provided numeric output identity.", "constructor": "Creates an output identity from its compositor-provided numeric value.", "description": "A stable diagnostic description of the output." }
+    },
+    {
+      "type": "OutputManagementHeadID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "headRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "output-head-" }, "auditCategory": "client identity",
+      "documentation": { "summary": "Identifies a head reported by an output-management configuration.", "description": "A stable diagnostic description of the output-management head." }
+    },
+    {
+      "type": "OutputManagementModeID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "modeRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "output-mode-" }, "auditCategory": "client identity",
+      "documentation": { "summary": "Identifies a mode reported for an output-management head.", "description": "A stable diagnostic description of the output-management mode." }
+    },
+    {
+      "type": "TabletID", "output": "client-public", "access": "public", "rawType": "UInt32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "tabletRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "tablet-" }, "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Identifies a tablet device announced by the compositor.", "storage": "The protocol object identity for the tablet device.", "constructor": "Creates a tablet identity from its protocol object value.", "description": "A stable diagnostic description of the tablet device." }
+    },
+    {
+      "type": "TabletToolID", "output": "client-public", "access": "public", "rawType": "UInt32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "toolRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "tablet-tool-" }, "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Identifies a tablet tool announced by the compositor.", "storage": "The protocol object identity for the tablet tool.", "constructor": "Creates a tablet-tool identity from its protocol object value.", "description": "A stable diagnostic description of the tablet tool." }
+    },
+    {
+      "type": "TabletPadID", "output": "client-public", "access": "public", "rawType": "UInt32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "padRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "tablet-pad-" }, "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Identifies a tablet pad announced by the compositor.", "storage": "The protocol object identity for the tablet pad.", "constructor": "Creates a tablet-pad identity from its protocol object value.", "description": "A stable diagnostic description of the tablet pad." }
+    },
+    {
+      "type": "TouchID", "output": "client-public", "access": "public", "rawType": "Int32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "touchIDRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible", "ExpressibleByIntegerLiteral"], "description": { "expression": "String(rawValue)" }, "integerLiteral": { "access": "public", "typealiasAccess": "public" }, "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Identifies one active touch contact within the Wayland touch protocol.", "storage": "The compositor-provided touch contact value.", "constructor": "Creates a touch identity from its protocol contact value.", "description": "The decimal protocol value used to describe the touch contact.", "integerLiteral": "Creates a touch identity from an integer literal.", "integerLiteralType": "The signed protocol value used by touch contact literals." }
+    },
+    {
+      "type": "WaylandProtocolObjectID", "output": "client-public", "access": "public", "rawType": "UInt32", "storageAccess": "public", "constructorAccess": "public", "constructorParameter": "objectRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "" }, "additionalInitializers": [{ "access": "package", "label": "_", "parameter": "objectID", "type": "RawObjectID", "expression": "objectID.value" }], "auditCategory": "raw protocol identity",
+      "documentation": { "summary": "Identifies a Wayland protocol object reported in a public error.", "storage": "The numeric object ID assigned by the Wayland connection.", "constructor": "Creates a protocol object identity from its connection-local value.", "description": "The decimal object ID used for protocol diagnostics." }
+    },
+    {
+      "type": "RelativePointerSubscriptionID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "subscriptionRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "relative-pointer-" }, "auditCategory": "client identity",
+      "documentation": { "summary": "Identifies a client-owned relative-pointer event subscription.", "description": "A stable diagnostic description of the relative-pointer subscription." }
+    },
+    {
+      "type": "PointerGestureSubscriptionID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "subscriptionRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "pointer-gestures-" }, "auditCategory": "client identity",
+      "documentation": { "summary": "Identifies a client-owned pointer-gesture event subscription.", "description": "A stable diagnostic description of the pointer-gesture subscription." }
+    },
+    {
+      "type": "DiagnosticID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "diagnosticRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable"], "auditCategory": "client identity", "documentation": { "summary": "Identifies one diagnostic emitted by a display connection." }
+    },
+    {
+      "type": "ClipboardOfferIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "offerID", "constructorType": "DataOfferID", "constructorExpression": "offerID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "clipboard-offer-" }, "auditCategory": "public projection", "documentation": { "summary": "Identifies a clipboard offer without exposing its shared internal ID.", "description": "A stable diagnostic description of the clipboard offer." }
+    },
+    {
+      "type": "ClipboardSourceIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "sourceID", "constructorType": "DataSourceID", "constructorExpression": "sourceID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "clipboard-source-" }, "auditCategory": "public projection", "documentation": { "summary": "Identifies a clipboard source without exposing its shared internal ID.", "description": "A stable diagnostic description of the clipboard source." }
+    },
+    {
+      "type": "PrimarySelectionOfferIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "offerID", "constructorType": "DataOfferID", "constructorExpression": "offerID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "primary-selection-offer-" }, "auditCategory": "public projection", "documentation": { "summary": "Identifies a primary-selection offer without exposing its shared internal ID.", "description": "A stable diagnostic description of the primary-selection offer." }
+    },
+    {
+      "type": "PrimarySelectionSourceIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "sourceID", "constructorType": "DataSourceID", "constructorExpression": "sourceID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "primary-selection-source-" }, "auditCategory": "public projection", "documentation": { "summary": "Identifies a primary-selection source without exposing its shared internal ID.", "description": "A stable diagnostic description of the primary-selection source." }
+    },
+    {
+      "type": "DragOfferIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "offerID", "constructorType": "DataOfferID", "constructorExpression": "offerID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "drag-offer-" }, "auditCategory": "public projection", "documentation": { "summary": "Identifies a drag-and-drop offer without exposing its shared internal ID.", "description": "A stable diagnostic description of the drag-and-drop offer." }
+    },
+    {
+      "type": "DragSourceIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "sourceID", "constructorType": "DataSourceID", "constructorExpression": "sourceID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "drag-source-" }, "auditCategory": "public projection", "documentation": { "summary": "Identifies a drag source without exposing its shared internal ID.", "description": "A stable diagnostic description of the drag source." }
+    },
+    {
+      "type": "ToplevelDragID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "dragRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "toplevel-drag-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies a client-owned toplevel drag operation.", "description": "A stable diagnostic description of the toplevel drag operation." }
+    },
+    {
+      "type": "WindowDialogID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "dialogRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "window-dialog-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies a client-owned parent-child window dialog relationship.", "description": "A stable diagnostic description of the window dialog relationship." }
+    },
+    {
+      "type": "IdleInhibitorID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "inhibitorRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "idle-inhibitor-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies a client-owned idle inhibitor.", "description": "A stable diagnostic description of the idle inhibitor." }
+    },
+    {
+      "type": "KeyboardShortcutsInhibitorID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "inhibitorRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "keyboard-shortcuts-inhibitor-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies a client-owned keyboard-shortcuts inhibitor.", "description": "A stable diagnostic description of the keyboard-shortcuts inhibitor." }
+    },
+    {
+      "type": "ForeignToplevelID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "toplevelRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "foreign-toplevel-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies a compositor-reported foreign toplevel tracked by this client.", "description": "A stable diagnostic description of the foreign toplevel." }
+    },
+    {
+      "type": "SubsurfaceIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "subsurfaceID", "constructorType": "SubsurfaceID", "constructorExpression": "subsurfaceID.rawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "subsurface-" }, "auditCategory": "public projection", "documentation": { "summary": "Identifies a subsurface without exposing its package-internal ID.", "description": "A stable diagnostic description of the subsurface." }
+    },
+    {
+      "type": "SurfacePresentationIdentity", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "identityRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "presentation-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies one presentation-feedback request for a surface commit.", "description": "A stable diagnostic description of the presentation-feedback request." }
+    },
+    {
+      "type": "SoftwareFrameBufferID", "output": "client-public", "access": "public", "rawType": "UInt64", "storageAccess": "private", "constructorAccess": "internal", "constructorParameter": "bufferRawValue", "attributes": ["@safe"],
+      "conformances": ["Hashable", "Sendable"], "auditCategory": "client identity", "documentation": { "summary": "Identifies a software frame buffer owned by a window backing." }
+    },
+    {
+      "type": "ActivationRequestID", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "requestRawValue",
+      "conformances": ["Hashable", "Sendable"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "extensionConformances": ["CustomStringConvertible"], "description": { "prefix": "activation-request-", "inExtension": true }
+    },
+    {
+      "type": "DataOfferID", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "offerRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "data-offer-" }
+    },
+    {
+      "type": "DataSourceID", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "sourceRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "data-source-" }
+    },
+    {
+      "type": "InputSerialActionID", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "actionRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "input-serial-action-" }
+    },
+    {
+      "type": "PopupID", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "popupRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "sharedIDInExtension": true, "description": { "prefix": "popup-" }
+    },
+    {
+      "type": "SurfaceID", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "surfaceRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "surface-" }, "additionalInitializers": [{ "access": "package", "label": "rawObjectID", "parameter": "objectID", "type": "RawObjectID", "expression": "UInt64(objectID.value)" }]
+    },
+    {
+      "type": "SurfaceSyncTimelineIdentity", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "identity",
+      "conformances": ["Equatable", "Hashable", "Sendable"]
+    },
+    {
+      "type": "SoftwareFrameReservationToken", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "reservationRawValue", "attributes": ["@safe"],
+      "conformances": [], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "software-frame-reservation-" }
+    },
+    {
+      "type": "SubsurfaceID", "output": "client-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "subsurfaceRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "subsurface-" }
+    },
+    {
+      "type": "RawSeatID", "output": "raw", "access": "package", "rawType": "UInt32", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "seatRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "seat-" }
+    },
+    {
+      "type": "RawObjectID", "output": "raw", "access": "package", "rawType": "UInt32", "storageName": "value", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "rawValue",
+      "conformances": ["Hashable", "Sendable", "ExpressibleByIntegerLiteral", "CustomStringConvertible"], "description": { "prefix": "id=" }, "integerLiteral": { "access": "package", "assignDirectly": true }
+    },
+    {
+      "type": "RawTabletIdentity", "output": "raw", "access": "package", "rawType": "RawObjectID", "storageName": "objectID", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "objectID", "constructorParameter": "tabletObjectID",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "expression": "\"tablet-\\(objectID.value)\"" }
+    },
+    {
+      "type": "RawTabletToolIdentity", "output": "raw", "access": "package", "rawType": "RawObjectID", "storageName": "objectID", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "objectID", "constructorParameter": "toolObjectID",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "expression": "\"tablet-tool-\\(objectID.value)\"" }
+    },
+    {
+      "type": "RawTabletPadIdentity", "output": "raw", "access": "package", "rawType": "RawObjectID", "storageName": "objectID", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "objectID", "constructorParameter": "padObjectID",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "expression": "\"tablet-pad-\\(objectID.value)\"" }
+    },
+    {
+      "type": "RawTouchID", "output": "raw", "access": "package", "rawType": "Int32", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "touchIDRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible", "ExpressibleByIntegerLiteral"], "description": { "expression": "String(rawValue)" }, "integerLiteral": { "access": "package", "typealiasAccess": "package" }
+    },
+    {
+      "type": "RawOutputID", "output": "raw", "access": "package", "rawType": "UInt32", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "outputRawValue",
+      "conformances": ["Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "output-" }
+    },
+    {
+      "type": "RawCompositorSessionID", "output": "raw", "access": "package", "rawType": "String", "storageName": "value", "storageAccess": "package", "constructorAccess": "package", "constructorLabel": "_", "constructorParameter": "sessionID",
+      "conformances": ["Equatable", "Hashable", "Sendable"]
+    },
+    {
+      "type": "WaylandGraphicsExternalConfigurationID", "output": "graphics-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "configurationRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "external-configuration-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies one negotiated external-buffer graphics configuration.", "description": "A stable diagnostic description of the external graphics configuration." }
+    },
+    {
+      "type": "WaylandGraphicsExternalBufferID", "output": "graphics-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "bufferRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "external-buffer-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies an external buffer registered with a graphics backing.", "description": "A stable diagnostic description of the registered external buffer." }
+    },
+    {
+      "type": "WaylandGraphicsExternalSubmissionID", "output": "graphics-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "submissionRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "external-submission-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies one external-buffer frame submission.", "description": "A stable diagnostic description of the external frame submission." }
+    },
+    {
+      "type": "WaylandGraphicsExternalSyncTimelineID", "output": "graphics-public", "access": "public", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "timelineRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "CustomStringConvertible"], "description": { "prefix": "external-sync-timeline-" }, "auditCategory": "client identity", "documentation": { "summary": "Identifies an external synchronization timeline imported by a graphics backing.", "description": "A stable diagnostic description of the imported synchronization timeline." }
+    },
+    {
+      "type": "WaylandGraphicsFrameLeaseID", "output": "graphics-internal", "access": "package", "rawType": "UInt64", "storageAccess": "package", "constructorAccess": "package", "constructorParameter": "leaseRawValue",
+      "conformances": ["Equatable", "Hashable", "Sendable", "ExpressibleByIntegerLiteral", "CustomStringConvertible"], "sharedIDConformance": "UInt64WaylandEntityID", "description": { "prefix": "graphics-frame-lease-" }, "integerLiteral": { "access": "package" }
+    }
+  ]
+}

@@ -1,13 +1,5 @@
 import CWaylandProtocols
 
-package struct RawCompositorSessionID: Equatable, Hashable, Sendable {
-    package let value: String
-
-    package init(_ sessionID: String) {
-        value = sessionID
-    }
-}
-
 package struct RawCompositorSessionReason: Equatable, Sendable {
     package let rawValue: UInt32
 

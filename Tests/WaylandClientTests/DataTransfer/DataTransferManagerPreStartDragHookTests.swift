@@ -28,6 +28,28 @@ struct DataTransferManagerPreStartDragHookTests {
         #expect(order == ["before", "start_drag"])
     }
 
+    @Test
+    func failedPreStartPreparationLeavesNoSourceState() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seatID])
+
+        #expect(throws: StartDragPreparationError.stopped) {
+            _ = try manager.startDrag(
+                try startDragRequest { _ in
+                    throw StartDragPreparationError.stopped
+                }
+            )
+        }
+
+        let sourceID = DataSourceID(rawValue: 1)
+        #expect(backend.sourceBinding(for: sourceID)?.destroyCount == 1)
+        #expect(manager.sourceSnapshots.isEmpty)
+        #expect(backend.binding(for: seatID)?.dragStarts.isEmpty == true)
+        #expect(manager.drainDataTransferEvents().isEmpty)
+        try manager.checkInvariantsForTesting()
+    }
+
     private func startDragRequest(
         beforeStartDrag: @escaping (any DataTransferSourceBinding) throws -> Void
     ) throws -> DataTransferStartDragRequest {
@@ -47,4 +69,8 @@ struct DataTransferManagerPreStartDragHookTests {
             data: [.plainText: Data("drag source".utf8)]
         )
     }
+}
+
+private enum StartDragPreparationError: Error, Equatable {
+    case stopped
 }

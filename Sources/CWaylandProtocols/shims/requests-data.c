@@ -286,18 +286,6 @@ static void swl_test_data_device_manager_destroy_record(
 #define swl_data_device_manager_destroy_impl wl_data_device_manager_destroy
 #endif
 
-struct wl_data_source *swl_data_device_manager_create_data_source(
-    struct wl_data_device_manager *manager)
-{
-    return wl_data_device_manager_create_data_source(manager);
-}
-
-struct wl_data_device *swl_data_device_manager_get_data_device(
-    struct wl_data_device_manager *manager, struct wl_seat *seat)
-{
-    return wl_data_device_manager_get_data_device(manager, seat);
-}
-
 void swl_data_source_offer(struct wl_data_source *source, const char *mime_type)
 {
     swl_data_source_offer_impl(source, mime_type);

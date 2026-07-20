@@ -8,26 +8,6 @@ package enum RawTouchEvent: Equatable, Sendable {
     case orientation(RawTouchOrientation)
 }
 
-package struct RawTouchID: Equatable, Hashable, Sendable, CustomStringConvertible,
-    ExpressibleByIntegerLiteral
-{
-    package typealias IntegerLiteralType = Int32
-
-    package let rawValue: Int32
-
-    package init(rawValue touchIDRawValue: Int32) {
-        rawValue = touchIDRawValue
-    }
-
-    package init(integerLiteral value: Int32) {
-        self.init(rawValue: value)
-    }
-
-    package var description: String {
-        String(rawValue)
-    }
-}
-
 package struct RawTouchDown: Equatable, Sendable {
     package let serial: UInt32
     package let time: UInt32

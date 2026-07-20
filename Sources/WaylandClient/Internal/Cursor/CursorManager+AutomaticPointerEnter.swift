@@ -76,14 +76,12 @@ extension CursorManager {
         }
 
         let bufferScale = PositiveInt32(unchecked: 1)
-        attachCursorImage(cursorImage, to: surface, bufferScale: bufferScale)
-
-        let rawResult = backend.setPointerCursor(
-            seatID: seatID,
+        let rawResult = setSurfaceBackedCursor(
+            cursorImage,
+            on: surface,
+            for: seatID,
             serial: explicitSerial,
-            surface: surface,
-            hotspotX: cursorHotspot(cursorImage.hotspotX, bufferScale: bufferScale),
-            hotspotY: cursorHotspot(cursorImage.hotspotY, bufferScale: bufferScale)
+            bufferScale: bufferScale
         )
 
         switch rawResult {
@@ -132,14 +130,12 @@ extension CursorManager {
 
         let bufferScale = PositiveInt32(unchecked: 1)
         let currentFrame = animationState.currentFrame
-        attachCursorImage(currentFrame.image, to: surface, bufferScale: bufferScale)
-
-        let rawResult = backend.setPointerCursor(
-            seatID: seatID,
+        let rawResult = setSurfaceBackedCursor(
+            currentFrame.image,
+            on: surface,
+            for: seatID,
             serial: explicitSerial,
-            surface: surface,
-            hotspotX: cursorHotspot(currentFrame.image.hotspotX, bufferScale: bufferScale),
-            hotspotY: cursorHotspot(currentFrame.image.hotspotY, bufferScale: bufferScale)
+            bufferScale: bufferScale
         )
 
         switch rawResult {
@@ -185,20 +181,12 @@ extension CursorManager {
         let resolved = try automaticResolvedCursor(size: cursorResolution.size)
         let surface = try automaticCursorSurface(for: seatID)
 
-        attachCursorImage(resolved.image, to: surface, bufferScale: cursorResolution.bufferScale)
-
-        let rawResult = backend.setPointerCursor(
-            seatID: seatID,
+        let rawResult = setSurfaceBackedCursor(
+            resolved.image,
+            on: surface,
+            for: seatID,
             serial: explicitSerial,
-            surface: surface,
-            hotspotX: cursorHotspot(
-                resolved.image.hotspotX,
-                bufferScale: cursorResolution.bufferScale
-            ),
-            hotspotY: cursorHotspot(
-                resolved.image.hotspotY,
-                bufferScale: cursorResolution.bufferScale
-            )
+            bufferScale: cursorResolution.bufferScale
         )
 
         switch rawResult {

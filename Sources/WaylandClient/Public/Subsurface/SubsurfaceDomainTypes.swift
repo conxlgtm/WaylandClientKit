@@ -1,15 +1,3 @@
-public struct SubsurfaceIdentity: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(_ subsurfaceID: SubsurfaceID) {
-        rawValue = subsurfaceID.rawValue
-    }
-
-    public var description: String {
-        "subsurface-\(rawValue)"
-    }
-}
-
 public enum SubsurfaceStackingError: Error, Equatable, Sendable, CustomStringConvertible {
     case selfReference(SubsurfaceIdentity)
     case differentParent(subsurface: SubsurfaceIdentity, sibling: SubsurfaceIdentity)
@@ -60,23 +48,6 @@ public struct SubsurfacePresentationFailure: Error, Equatable, Sendable,
 
     public var description: String {
         "subsurface \(subsurfaceID) presentation failed: \(cause.description)"
-    }
-}
-
-package struct SubsurfaceID:
-    UInt64WaylandEntityID,
-    Hashable,
-    Sendable,
-    CustomStringConvertible
-{
-    package let rawValue: UInt64
-
-    package init(rawValue subsurfaceRawValue: UInt64) {
-        rawValue = subsurfaceRawValue
-    }
-
-    package var description: String {
-        "subsurface-\(rawValue)"
     }
 }
 

@@ -39,14 +39,6 @@ public enum DiagnosticSeverity: Equatable, Sendable {
     case error
 }
 
-public struct DiagnosticID: Equatable, Hashable, Sendable {
-    package let rawValue: UInt64
-
-    package init(rawValue diagnosticRawValue: UInt64) {
-        rawValue = diagnosticRawValue
-    }
-}
-
 public struct DisplayDiagnostic: Equatable, Sendable {
     public let id: DiagnosticID
     public let severity: DiagnosticSeverity

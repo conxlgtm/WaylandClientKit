@@ -1,5 +1,12 @@
 # Repository Workflow
 
+## Project Language
+
+Use ordinary project language in branch names, commits, pull requests,
+documentation, comments, and status updates. Do not add tool, assistant, bot,
+worker-role, or language-model references unless the subject specifically
+requires one. Required filenames such as `AGENTS.md` are exempt.
+
 ## Pull Requests
 
 When creating or updating a pull request:

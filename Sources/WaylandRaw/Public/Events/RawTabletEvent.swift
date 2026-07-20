@@ -7,42 +7,6 @@ package enum RawTabletEvent: Equatable, Sendable {
     case pad(RawTabletPadEvent)
 }
 
-package struct RawTabletIdentity: Equatable, Hashable, Sendable, CustomStringConvertible {
-    package let objectID: RawObjectID
-
-    package init(objectID tabletObjectID: RawObjectID) {
-        objectID = tabletObjectID
-    }
-
-    package var description: String {
-        "tablet-\(objectID.value)"
-    }
-}
-
-package struct RawTabletToolIdentity: Equatable, Hashable, Sendable, CustomStringConvertible {
-    package let objectID: RawObjectID
-
-    package init(objectID toolObjectID: RawObjectID) {
-        objectID = toolObjectID
-    }
-
-    package var description: String {
-        "tablet-tool-\(objectID.value)"
-    }
-}
-
-package struct RawTabletPadIdentity: Equatable, Hashable, Sendable, CustomStringConvertible {
-    package let objectID: RawObjectID
-
-    package init(objectID padObjectID: RawObjectID) {
-        objectID = padObjectID
-    }
-
-    package var description: String {
-        "tablet-pad-\(objectID.value)"
-    }
-}
-
 package enum RawTabletDeviceEvent: Equatable, Sendable {
     case name(RawTabletIdentity, String)
     case id(RawTabletIdentity, vendorID: UInt32, productID: UInt32)

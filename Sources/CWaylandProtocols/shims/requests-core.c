@@ -1,6 +1,23 @@
 #include "wayland-client-kit-shims.h"
 #include "generated/core/wayland-client-protocol.h"
 
+#ifdef SWL_ENABLE_TESTING
+#include <pthread.h>
+
+// Live request tests switch these hooks from the test task while requests run
+// on the display thread. This mutex keeps hook changes and captured records in
+// one order that ThreadSanitizer can observe.
+static pthread_mutex_t swl_test_core_request_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+#define SWL_CORE_REQUEST_LOCK() \
+    ((void)pthread_mutex_lock(&swl_test_core_request_mutex))
+#define SWL_CORE_REQUEST_UNLOCK() \
+    ((void)pthread_mutex_unlock(&swl_test_core_request_mutex))
+#else
+#define SWL_CORE_REQUEST_LOCK() ((void)0)
+#define SWL_CORE_REQUEST_UNLOCK() ((void)0)
+#endif
+
 #if defined(WAYLAND_VERSION_MAJOR) && defined(WAYLAND_VERSION_MINOR) && \
     (WAYLAND_VERSION_MAJOR > 1 || (WAYLAND_VERSION_MAJOR == 1 && WAYLAND_VERSION_MINOR >= 23))
 #define SWL_HAS_WL_PROXY_GET_QUEUE 1
@@ -11,6 +28,7 @@
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_core_request_record swl_test_core_request_latest;
 static uint32_t swl_test_core_request_sequence;
+static int swl_test_core_request_forwards_requests;
 
 static struct wl_shm_pool *swl_shm_create_pool_default(
     struct wl_shm *shm,
@@ -262,6 +280,8 @@ static struct wl_shm_pool *swl_test_shm_create_pool_record(
     swl_test_record_core_request(SWL_TEST_CORE_SHM_CREATE_POOL, shm);
     swl_test_core_request_latest.fd = fd;
     swl_test_core_request_latest.size = size;
+    if (swl_test_core_request_forwards_requests)
+        return swl_shm_create_pool_default(shm, fd, size);
     return (struct wl_shm_pool *)0x5101;
 }
 
@@ -279,6 +299,10 @@ static struct wl_buffer *swl_test_shm_pool_create_buffer_record(
     swl_test_core_request_latest.height = height;
     swl_test_core_request_latest.stride = stride;
     swl_test_core_request_latest.format = format;
+    if (swl_test_core_request_forwards_requests) {
+        return swl_shm_pool_create_buffer_default(
+            pool, offset, width, height, stride, format);
+    }
     return (struct wl_buffer *)0x5202;
 }
 
@@ -294,6 +318,8 @@ static void swl_test_surface_attach_record(
     swl_test_core_request_latest.y = y;
     swl_test_core_request_latest.attach_sequence =
         swl_test_core_request_latest.latest_sequence;
+    if (swl_test_core_request_forwards_requests)
+        swl_surface_attach_default(surface, buffer, x, y);
 }
 
 static void swl_test_surface_commit_record(struct wl_surface *surface)
@@ -301,6 +327,8 @@ static void swl_test_surface_commit_record(struct wl_surface *surface)
     swl_test_record_core_request(SWL_TEST_CORE_SURFACE_COMMIT, surface);
     swl_test_core_request_latest.commit_sequence =
         swl_test_core_request_latest.latest_sequence;
+    if (swl_test_core_request_forwards_requests)
+        swl_surface_commit_default(surface);
 }
 
 static void swl_test_surface_damage_record(
@@ -329,6 +357,8 @@ static void swl_test_surface_damage_legacy_record(
 {
     swl_test_surface_damage_record(
         SWL_TEST_CORE_SURFACE_DAMAGE, surface, x, y, width, height);
+    if (swl_test_core_request_forwards_requests)
+        swl_surface_damage_default(surface, x, y, width, height);
 }
 
 static void swl_test_surface_damage_buffer_record(
@@ -340,6 +370,8 @@ static void swl_test_surface_damage_buffer_record(
 {
     swl_test_surface_damage_record(
         SWL_TEST_CORE_SURFACE_DAMAGE_BUFFER, surface, x, y, width, height);
+    if (swl_test_core_request_forwards_requests)
+        swl_surface_damage_buffer_default(surface, x, y, width, height);
 }
 
 static void swl_test_surface_set_region_record(
@@ -364,6 +396,8 @@ static void swl_test_surface_set_opaque_region_record(
 {
     swl_test_surface_set_region_record(
         SWL_TEST_CORE_SURFACE_SET_OPAQUE_REGION, surface, region);
+    if (swl_test_core_request_forwards_requests)
+        swl_surface_set_opaque_region_default(surface, region);
 }
 
 static void swl_test_surface_set_input_region_record(
@@ -372,6 +406,8 @@ static void swl_test_surface_set_input_region_record(
 {
     swl_test_surface_set_region_record(
         SWL_TEST_CORE_SURFACE_SET_INPUT_REGION, surface, region);
+    if (swl_test_core_request_forwards_requests)
+        swl_surface_set_input_region_default(surface, region);
 }
 
 static void swl_test_buffer_destroy_record(struct wl_buffer *buffer)
@@ -379,6 +415,8 @@ static void swl_test_buffer_destroy_record(struct wl_buffer *buffer)
     swl_test_record_core_request(SWL_TEST_CORE_BUFFER_DESTROY, buffer);
     swl_test_core_request_latest.buffer_destroy_sequence =
         swl_test_core_request_latest.latest_sequence;
+    if (swl_test_core_request_forwards_requests)
+        swl_buffer_destroy_default(buffer);
 }
 
 static void swl_test_surface_destroy_record(struct wl_surface *surface)
@@ -386,6 +424,8 @@ static void swl_test_surface_destroy_record(struct wl_surface *surface)
     swl_test_record_core_request(SWL_TEST_CORE_SURFACE_DESTROY, surface);
     swl_test_core_request_latest.surface_destroy_sequence =
         swl_test_core_request_latest.latest_sequence;
+    if (swl_test_core_request_forwards_requests)
+        swl_surface_destroy_default(surface);
 }
 
 static void swl_test_shm_pool_destroy_record(struct wl_shm_pool *pool)
@@ -393,11 +433,15 @@ static void swl_test_shm_pool_destroy_record(struct wl_shm_pool *pool)
     swl_test_record_core_request(SWL_TEST_CORE_SHM_POOL_DESTROY, pool);
     swl_test_core_request_latest.shm_pool_destroy_sequence =
         swl_test_core_request_latest.latest_sequence;
+    if (swl_test_core_request_forwards_requests)
+        swl_shm_pool_destroy_default(pool);
 }
 
 static void swl_test_shm_destroy_record(struct wl_shm *shm)
 {
     swl_test_record_core_request(SWL_TEST_CORE_SHM_DESTROY, shm);
+    if (swl_test_core_request_forwards_requests)
+        swl_shm_destroy_default(shm);
 }
 
 static void swl_test_subcompositor_destroy_record(
@@ -405,6 +449,8 @@ static void swl_test_subcompositor_destroy_record(
 {
     swl_test_record_core_request(
         SWL_TEST_CORE_SUBCOMPOSITOR_DESTROY, subcompositor);
+    if (swl_test_core_request_forwards_requests)
+        swl_subcompositor_destroy_default(subcompositor);
 }
 
 static struct wl_subsurface *swl_test_subcompositor_get_subsurface_record(
@@ -416,6 +462,10 @@ static struct wl_subsurface *swl_test_subcompositor_get_subsurface_record(
         SWL_TEST_CORE_SUBCOMPOSITOR_GET_SUBSURFACE, subcompositor);
     swl_test_core_request_latest.surface = surface;
     swl_test_core_request_latest.parent = parent;
+    if (swl_test_core_request_forwards_requests) {
+        return swl_subcompositor_get_subsurface_default(
+            subcompositor, surface, parent);
+    }
     swl_test_core_request_latest.subsurface = (struct wl_subsurface *)0x5303;
     return swl_test_core_request_latest.subsurface;
 }
@@ -424,6 +474,8 @@ static void swl_test_subsurface_destroy_record(struct wl_subsurface *subsurface)
 {
     swl_test_record_core_request(SWL_TEST_CORE_SUBSURFACE_DESTROY, subsurface);
     swl_test_core_request_latest.subsurface = subsurface;
+    if (swl_test_core_request_forwards_requests)
+        swl_subsurface_destroy_default(subsurface);
 }
 
 static void swl_test_subsurface_set_position_record(
@@ -436,6 +488,8 @@ static void swl_test_subsurface_set_position_record(
     swl_test_core_request_latest.subsurface = subsurface;
     swl_test_core_request_latest.x = x;
     swl_test_core_request_latest.y = y;
+    if (swl_test_core_request_forwards_requests)
+        swl_subsurface_set_position_default(subsurface, x, y);
 }
 
 static void swl_test_subsurface_place_record(
@@ -454,6 +508,8 @@ static void swl_test_subsurface_place_above_record(
 {
     swl_test_subsurface_place_record(
         SWL_TEST_CORE_SUBSURFACE_PLACE_ABOVE, subsurface, sibling);
+    if (swl_test_core_request_forwards_requests)
+        swl_subsurface_place_above_default(subsurface, sibling);
 }
 
 static void swl_test_subsurface_place_below_record(
@@ -462,6 +518,8 @@ static void swl_test_subsurface_place_below_record(
 {
     swl_test_subsurface_place_record(
         SWL_TEST_CORE_SUBSURFACE_PLACE_BELOW, subsurface, sibling);
+    if (swl_test_core_request_forwards_requests)
+        swl_subsurface_place_below_default(subsurface, sibling);
 }
 
 static void swl_test_subsurface_sync_record(
@@ -475,6 +533,8 @@ static void swl_test_subsurface_sync_record(
 static void swl_test_subsurface_set_sync_record(struct wl_subsurface *subsurface)
 {
     swl_test_subsurface_sync_record(SWL_TEST_CORE_SUBSURFACE_SET_SYNC, subsurface);
+    if (swl_test_core_request_forwards_requests)
+        swl_subsurface_set_sync_default(subsurface);
 }
 
 static void swl_test_subsurface_set_desync_record(
@@ -482,16 +542,22 @@ static void swl_test_subsurface_set_desync_record(
 {
     swl_test_subsurface_sync_record(
         SWL_TEST_CORE_SUBSURFACE_SET_DESYNC, subsurface);
+    if (swl_test_core_request_forwards_requests)
+        swl_subsurface_set_desync_default(subsurface);
 }
 
 static struct wl_event_queue *swl_test_proxy_get_queue_raw(void *proxy)
 {
+    if (swl_test_core_request_forwards_requests)
+        return swl_proxy_get_queue_raw_default(proxy);
     (void)proxy;
     return NULL;
 }
 
 static uint32_t swl_test_proxy_get_id(void *proxy)
 {
+    if (swl_test_core_request_forwards_requests)
+        return swl_proxy_get_id_default(proxy);
     (void)proxy;
     return 42;
 }
@@ -518,45 +584,47 @@ static uint32_t swl_test_proxy_get_id(void *proxy)
 #define swl_subsurface_set_desync_impl wl_subsurface_set_desync
 #endif
 
-struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor)
-{
-    return wl_compositor_create_surface(compositor);
-}
-
 struct wl_shm_pool *swl_shm_create_pool(struct wl_shm *shm, int32_t fd, int32_t size)
 {
-    return swl_shm_create_pool_impl(shm, fd, size);
+    SWL_CORE_REQUEST_LOCK();
+    struct wl_shm_pool *pool = swl_shm_create_pool_impl(shm, fd, size);
+    SWL_CORE_REQUEST_UNLOCK();
+    return pool;
 }
 
 struct wl_buffer *swl_shm_pool_create_buffer(
     struct wl_shm_pool *pool, int32_t offset, int32_t width,
     int32_t height, int32_t stride, uint32_t format)
 {
-    return swl_shm_pool_create_buffer_impl(
+    SWL_CORE_REQUEST_LOCK();
+    struct wl_buffer *buffer = swl_shm_pool_create_buffer_impl(
         pool, offset, width, height, stride, format);
-}
-
-struct wl_callback *swl_surface_frame(struct wl_surface *surface)
-{
-    return wl_surface_frame(surface);
+    SWL_CORE_REQUEST_UNLOCK();
+    return buffer;
 }
 
 void swl_surface_attach(
     struct wl_surface *surface, struct wl_buffer *buffer, int32_t x, int32_t y)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_surface_attach_impl(surface, buffer, x, y);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_surface_commit(struct wl_surface *surface)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_surface_commit_impl(surface);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_surface_damage(
     struct wl_surface *surface, int32_t x, int32_t y,
     int32_t width, int32_t height)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_surface_damage_impl(surface, x, y, width, height);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 uint32_t swl_shm_format_xrgb8888(void)
@@ -573,51 +641,27 @@ void swl_surface_damage_buffer(
     struct wl_surface *surface, int32_t x, int32_t y,
     int32_t width, int32_t height)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_surface_damage_buffer_impl(surface, x, y, width, height);
-}
-
-void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale)
-{
-    wl_surface_set_buffer_scale(surface, scale);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_surface_set_opaque_region(
     struct wl_surface *surface,
     struct wl_region *region)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_surface_set_opaque_region_impl(surface, region);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_surface_set_input_region(
     struct wl_surface *surface,
     struct wl_region *region)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_surface_set_input_region_impl(surface, region);
-}
-
-struct wl_pointer *swl_seat_get_pointer(struct wl_seat *seat)
-{
-    return wl_seat_get_pointer(seat);
-}
-
-struct wl_keyboard *swl_seat_get_keyboard(struct wl_seat *seat)
-{
-    return wl_seat_get_keyboard(seat);
-}
-
-struct wl_touch *swl_seat_get_touch(struct wl_seat *seat)
-{
-    return wl_seat_get_touch(seat);
-}
-
-void swl_pointer_set_cursor(
-    struct wl_pointer *pointer,
-    uint32_t serial,
-    struct wl_surface *surface,
-    int32_t hotspot_x,
-    int32_t hotspot_y)
-{
-    wl_pointer_set_cursor(pointer, serial, surface, hotspot_x, hotspot_y);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 uint32_t swl_proxy_get_version(void *proxy)
@@ -628,7 +672,10 @@ uint32_t swl_proxy_get_version(void *proxy)
 uint32_t swl_proxy_get_id(void *proxy)
 {
 #ifdef SWL_ENABLE_TESTING
-    return swl_proxy_get_id_impl(proxy);
+    SWL_CORE_REQUEST_LOCK();
+    uint32_t id = swl_proxy_get_id_impl(proxy);
+    SWL_CORE_REQUEST_UNLOCK();
+    return id;
 #else
     return wl_proxy_get_id((struct wl_proxy *)proxy);
 #endif
@@ -637,7 +684,10 @@ uint32_t swl_proxy_get_id(void *proxy)
 struct wl_event_queue *swl_proxy_get_queue_raw(void *proxy)
 {
 #ifdef SWL_ENABLE_TESTING
-    return swl_proxy_get_queue_raw_impl(proxy);
+    SWL_CORE_REQUEST_LOCK();
+    struct wl_event_queue *queue = swl_proxy_get_queue_raw_impl(proxy);
+    SWL_CORE_REQUEST_UNLOCK();
+    return queue;
 #elif SWL_HAS_WL_PROXY_GET_QUEUE
     return wl_proxy_get_queue((struct wl_proxy *)proxy);
 #else
@@ -663,12 +713,16 @@ void swl_compositor_destroy(struct wl_compositor *compositor)
 
 void swl_shm_destroy(struct wl_shm *shm)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_shm_destroy_impl(shm);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_subcompositor_destroy(struct wl_subcompositor *subcompositor)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_subcompositor_destroy_impl(subcompositor);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 struct wl_subsurface *swl_subcompositor_get_subsurface(
@@ -676,12 +730,18 @@ struct wl_subsurface *swl_subcompositor_get_subsurface(
     struct wl_surface *surface,
     struct wl_surface *parent)
 {
-    return swl_subcompositor_get_subsurface_impl(subcompositor, surface, parent);
+    SWL_CORE_REQUEST_LOCK();
+    struct wl_subsurface *subsurface =
+        swl_subcompositor_get_subsurface_impl(subcompositor, surface, parent);
+    SWL_CORE_REQUEST_UNLOCK();
+    return subsurface;
 }
 
 void swl_subsurface_destroy(struct wl_subsurface *subsurface)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_subsurface_destroy_impl(subsurface);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_subsurface_set_position(
@@ -689,31 +749,41 @@ void swl_subsurface_set_position(
     int32_t x,
     int32_t y)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_subsurface_set_position_impl(subsurface, x, y);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_subsurface_place_above(
     struct wl_subsurface *subsurface,
     struct wl_surface *sibling)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_subsurface_place_above_impl(subsurface, sibling);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_subsurface_place_below(
     struct wl_subsurface *subsurface,
     struct wl_surface *sibling)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_subsurface_place_below_impl(subsurface, sibling);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_subsurface_set_sync(struct wl_subsurface *subsurface)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_subsurface_set_sync_impl(subsurface);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_subsurface_set_desync(struct wl_subsurface *subsurface)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_subsurface_set_desync_impl(subsurface);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_output_destroy(struct wl_output *output)
@@ -721,39 +791,25 @@ void swl_output_destroy(struct wl_output *output)
     wl_output_destroy(output);
 }
 
-void swl_output_release(struct wl_output *output)
-{
-    wl_output_release(output);
-}
-
 void swl_buffer_destroy(struct wl_buffer *buffer)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_buffer_destroy_impl(buffer);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_surface_destroy(struct wl_surface *surface)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_surface_destroy_impl(surface);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_shm_pool_destroy(struct wl_shm_pool *pool)
 {
+    SWL_CORE_REQUEST_LOCK();
     swl_shm_pool_destroy_impl(pool);
-}
-
-void swl_pointer_release(struct wl_pointer *pointer)
-{
-    wl_pointer_release(pointer);
-}
-
-void swl_keyboard_release(struct wl_keyboard *keyboard)
-{
-    wl_keyboard_release(keyboard);
-}
-
-void swl_touch_release(struct wl_touch *touch)
-{
-    wl_touch_release(touch);
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 void swl_seat_destroy(struct wl_seat *seat)
@@ -761,16 +817,12 @@ void swl_seat_destroy(struct wl_seat *seat)
     wl_seat_destroy(seat);
 }
 
-void swl_seat_release(struct wl_seat *seat)
-{
-    wl_seat_release(seat);
-}
-
 #ifdef SWL_ENABLE_TESTING
-void swl_test_core_request_recording_begin(void)
+static void swl_test_core_request_recording_start(int forwards_requests)
 {
     swl_test_core_request_latest = (struct swl_test_core_request_record){0};
     swl_test_core_request_sequence = 0;
+    swl_test_core_request_forwards_requests = forwards_requests;
     swl_shm_create_pool_impl = swl_test_shm_create_pool_record;
     swl_shm_pool_create_buffer_impl = swl_test_shm_pool_create_buffer_record;
     swl_surface_attach_impl = swl_test_surface_attach_record;
@@ -796,8 +848,24 @@ void swl_test_core_request_recording_begin(void)
     swl_proxy_get_id_impl = swl_test_proxy_get_id;
 }
 
+void swl_test_core_request_recording_begin(void)
+{
+    SWL_CORE_REQUEST_LOCK();
+    swl_test_core_request_recording_start(0);
+    SWL_CORE_REQUEST_UNLOCK();
+}
+
+void swl_test_core_request_recording_begin_forwarding(void)
+{
+    SWL_CORE_REQUEST_LOCK();
+    swl_test_core_request_recording_start(1);
+    SWL_CORE_REQUEST_UNLOCK();
+}
+
 void swl_test_core_request_recording_end(void)
 {
+    SWL_CORE_REQUEST_LOCK();
+    swl_test_core_request_forwards_requests = 0;
     swl_shm_create_pool_impl = swl_shm_create_pool_default;
     swl_shm_pool_create_buffer_impl = swl_shm_pool_create_buffer_default;
     swl_surface_attach_impl = swl_surface_attach_default;
@@ -821,10 +889,14 @@ void swl_test_core_request_recording_end(void)
     swl_subsurface_set_desync_impl = swl_subsurface_set_desync_default;
     swl_proxy_get_queue_raw_impl = swl_proxy_get_queue_raw_default;
     swl_proxy_get_id_impl = swl_proxy_get_id_default;
+    SWL_CORE_REQUEST_UNLOCK();
 }
 
 struct swl_test_core_request_record swl_test_core_request_record(void)
 {
-    return swl_test_core_request_latest;
+    SWL_CORE_REQUEST_LOCK();
+    struct swl_test_core_request_record record = swl_test_core_request_latest;
+    SWL_CORE_REQUEST_UNLOCK();
+    return record;
 }
 #endif

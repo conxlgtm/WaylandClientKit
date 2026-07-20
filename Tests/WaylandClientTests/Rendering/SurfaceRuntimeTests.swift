@@ -9,6 +9,17 @@ struct SurfaceRuntimeTests {  // swiftlint:disable:this type_body_length
         let rawValue: Int
     }
 
+    private enum InjectedSurfaceMutationFailure: Error {
+        case expected
+    }
+
+    private func mutateSurfaceObjectsThenFail(
+        _ objects: inout SurfaceRuntime<RoleToken>.SurfaceObjects
+    ) throws(InjectedSurfaceMutationFailure) -> Bool {
+        _ = objects.outputMembership.enter(RawOutputID(rawValue: 2))
+        throw InjectedSurfaceMutationFailure.expected
+    }
+
     @Test
     func roleResourcesMoveIntoDestroyedRolePhase() throws {
         var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
@@ -89,6 +100,21 @@ struct SurfaceRuntimeTests {  // swiftlint:disable:this type_body_length
 
         #expect(result == false)
         #expect(!didRunUpdate)
+    }
+
+    @Test
+    func throwingSurfaceObjectMutationRollsBackChanges() {
+        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+        _ = runtime.enterOutput(RawOutputID(rawValue: 1))
+
+        #expect(throws: InjectedSurfaceMutationFailure.self) {
+            _ = try runtime.mutateSurfaceObjects(
+                default: false,
+                mutateSurfaceObjectsThenFail
+            )
+        }
+
+        #expect(runtime.currentOutputIDs() == [OutputID(rawValue: 1)])
     }
 
     @Test

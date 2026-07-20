@@ -1,14 +1,14 @@
 extension DisplayCore {
     func textInputSession(for seatID: SeatID) throws {
         try withFatalFailureFinalization {
-            try requireSession().prepareTextInputSessionOnOwnerThread(for: seatID)
+            try requireSession().textInputManager.prepareSession(for: seatID)
         }
     }
 
     func enableTextInput(seatID: SeatID, windowID: WindowID) throws {
         try withFatalFailureFinalization {
             _ = try requireOpenWindow(windowID)
-            try requireSession().enableTextInputOnOwnerThread(
+            try requireSession().textInputManager.enable(
                 seatID: seatID,
                 windowID: windowID
             )
@@ -17,7 +17,7 @@ extension DisplayCore {
 
     func disableTextInput(seatID: SeatID) throws {
         try withFatalFailureFinalization {
-            try requireSession().disableTextInputOnOwnerThread(seatID: seatID)
+            try requireSession().textInputManager.disable(seatID: seatID)
         }
     }
 
@@ -26,7 +26,7 @@ extension DisplayCore {
         seatID: SeatID
     ) throws {
         try withFatalFailureFinalization {
-            try requireSession().setTextInputSurroundingTextOnOwnerThread(
+            try requireSession().textInputManager.setSurroundingText(
                 surroundingText,
                 seatID: seatID
             )
@@ -35,7 +35,7 @@ extension DisplayCore {
 
     func setTextInputChangeCause(_ cause: TextInputChangeCause, seatID: SeatID) throws {
         try withFatalFailureFinalization {
-            try requireSession().setTextInputChangeCauseOnOwnerThread(
+            try requireSession().textInputManager.setTextChangeCause(
                 cause,
                 seatID: seatID
             )
@@ -48,7 +48,7 @@ extension DisplayCore {
         seatID: SeatID
     ) throws {
         try withFatalFailureFinalization {
-            try requireSession().setTextInputContentTypeOnOwnerThread(
+            try requireSession().textInputManager.setContentType(
                 hints: hints,
                 purpose: purpose,
                 seatID: seatID
@@ -58,7 +58,7 @@ extension DisplayCore {
 
     func setTextInputCursorRectangle(_ rect: LogicalRect, seatID: SeatID) throws {
         try withFatalFailureFinalization {
-            try requireSession().setTextInputCursorRectangleOnOwnerThread(
+            try requireSession().textInputManager.setCursorRectangle(
                 rect,
                 seatID: seatID
             )
@@ -67,19 +67,19 @@ extension DisplayCore {
 
     func commitTextInput(seatID: SeatID) throws {
         try withFatalFailureFinalization {
-            try requireSession().commitTextInputOnOwnerThread(seatID: seatID)
+            try requireSession().textInputManager.commit(seatID: seatID)
         }
     }
 
     func showTextInputPanel(seatID: SeatID) throws {
         try withFatalFailureFinalization {
-            try requireSession().showTextInputPanelOnOwnerThread(seatID: seatID)
+            try requireSession().textInputManager.showInputPanel(seatID: seatID)
         }
     }
 
     func hideTextInputPanel(seatID: SeatID) throws {
         try withFatalFailureFinalization {
-            try requireSession().hideTextInputPanelOnOwnerThread(seatID: seatID)
+            try requireSession().textInputManager.hideInputPanel(seatID: seatID)
         }
     }
 

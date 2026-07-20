@@ -2,84 +2,35 @@ import WaylandRaw
 
 extension SurfaceRuntime {
     var hasContentTypeObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.metadataObjects.hasContentType
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.metadataObjects.hasContentType ?? false
     }
 
     var hasAlphaModifierObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.metadataObjects.hasAlphaModifier
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.metadataObjects.hasAlphaModifier ?? false
     }
 
     var hasTearingControlObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.metadataObjects.hasTearingControl
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.metadataObjects.hasTearingControl ?? false
     }
 
     var hasColorRepresentationObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.metadataObjects.hasColorRepresentation
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.metadataObjects.hasColorRepresentation ?? false
     }
 
     var hasColorManagementObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.metadataObjects.hasColorManagement
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.metadataObjects.hasColorManagement ?? false
     }
 
     func hasColorDescription(
         _ reference: SurfaceColorDescriptionReference
     ) -> Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.metadataObjects.hasColorDescription(reference)
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.metadataObjects.hasColorDescription(reference) ?? false
     }
 
     func tracksColorDescription(
         _ reference: SurfaceColorDescriptionReference
     ) -> Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.metadataObjects.tracksColorDescription(reference)
-        case .surfaceDestroyed:
-            false
-        }
+        surfaceObjects?.metadataObjects.tracksColorDescription(reference) ?? false
     }
 
     mutating func setContentTypeCapability(_ capability: SurfaceCapabilityStatus) {
@@ -169,30 +120,14 @@ extension SurfaceRuntime {
     mutating func applyCommitMetadata(
         _ metadata: SurfaceCommitMetadata
     ) throws(SurfaceCommitMetadataError) {
-        switch phase {
-        case .unassigned(let objects):
-            try objects.metadataObjects.apply(metadata)
-        case .live(_, let objects):
-            try objects.metadataObjects.apply(metadata)
-        case .roleDestroyed(let objects):
-            try objects.metadataObjects.apply(metadata)
-        case .surfaceDestroyed:
-            return
-        }
+        guard let objects = surfaceObjects else { return }
+        try objects.metadataObjects.apply(metadata)
     }
 
     func preflightCommitMetadata(
         _ metadata: SurfaceCommitMetadata
     ) throws(SurfaceCommitMetadataError) {
-        switch phase {
-        case .unassigned(let objects):
-            _ = try objects.metadataObjects.preflight(metadata)
-        case .live(_, let objects):
-            _ = try objects.metadataObjects.preflight(metadata)
-        case .roleDestroyed(let objects):
-            _ = try objects.metadataObjects.preflight(metadata)
-        case .surfaceDestroyed:
-            return
-        }
+        guard let objects = surfaceObjects else { return }
+        _ = try objects.metadataObjects.preflight(metadata)
     }
 }

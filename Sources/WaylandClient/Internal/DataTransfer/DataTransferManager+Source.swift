@@ -2,8 +2,7 @@ import WaylandRaw
 
 extension DataTransferManager {
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
-        backend.preconditionIsOwnerThread()
-        return store.drainSourceSendRequests()
+        selectionEngine.drainSourceSendRequests()
     }
 
     package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
@@ -20,39 +19,14 @@ extension DataTransferManager {
     ) throws -> DataSourceSnapshot {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
-
-        let deviceBinding = try selectionDeviceBinding(for: seatID)
-        let sourceID = allocateSourceID()
-        let callbackIdentity = DataSourceCallbackIdentity.selection(
-            sourceID.clipboardIdentity
-        )
-        let sourceBinding = try createDataSourceBinding(
-            sourceID: sourceID,
-            callbackIdentity: callbackIdentity
-        )
-        do {
-            for mimeType in payloads.mimeTypes {
-                sourceBinding.offer(mimeType: mimeType)
-            }
-            try store.insertSource(
-                binding: sourceBinding,
-                payloads: payloads,
-                sourceID: sourceID
-            )
-            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
-            try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
-            deviceBinding.setSelection(source: sourceBinding, serial: serial)
-            preconditionInvariantsHold()
-        } catch {
-            sourceBinding.destroy()
-            store.removeSource(sourceID)
-            throw error
+        guard store.seatSnapshot(seatID) != nil else {
+            throw DataTransferError.unknownSeat(seatID)
         }
-
-        guard let source = store.sourceSnapshot(sourceID) else {
-            throw DataTransferError.unknownSourceIdentity(sourceID.clipboardIdentity)
-        }
-
+        let source = try selectionEngine.setSelectionSource(
+            seatID: seatID,
+            payloads: payloads,
+            serial: serial
+        )
         preconditionInvariantsHold()
         return source
     }
@@ -64,7 +38,7 @@ extension DataTransferManager {
             throw DataTransferError.invalidDragActionSet(rawValue: request.actions.rawValue)
         }
         let deviceBinding = try selectionDeviceBinding(for: request.seatID)
-        let sourceID = allocateSourceID()
+        let sourceID = selectionEngine.allocateSourceID()
         guard deviceBinding.protocolVersion >= RawVersion(3) else {
             throw DataTransferError.dragSourceActionNegotiationUnavailable(
                 sourceID.dragIdentity
@@ -80,18 +54,21 @@ extension DataTransferManager {
             }
             sourceBinding.setDragActions(request.actions)
             try request.beforeStartDrag?(sourceBinding)
-            try store.insertSource(
+            let sourceRecord = try RuntimeDataSource(
+                id: sourceID,
                 binding: sourceBinding,
-                payloads: request.payloads,
-                sourceID: sourceID
+                payloads: request.payloads
             )
             try apply(
-                .dragSourceCreated(
-                    id: sourceID,
-                    seatID: request.seatID,
-                    mimeTypes: request.payloads.mimeTypes,
-                    actions: request.actions
-                )
+                [
+                    .dragSourceCreated(
+                        id: sourceID,
+                        seatID: request.seatID,
+                        mimeTypes: request.payloads.mimeTypes,
+                        actions: request.actions
+                    )
+                ],
+                insertingSources: [sourceRecord]
             )
             deviceBinding.startDrag(
                 source: sourceBinding,
@@ -105,7 +82,6 @@ extension DataTransferManager {
         } catch {
             iconBinding?.destroy()
             sourceBinding.destroy()
-            store.removeSource(sourceID)
             throw error
         }
 
@@ -134,10 +110,10 @@ extension DataTransferManager {
     ) throws {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
-
-        let deviceBinding = try selectionDeviceBinding(for: seatID)
-        deviceBinding.setSelection(source: nil, serial: serial)
-        try apply(.selectionSourceChanged(seatID: seatID, sourceID: nil))
+        guard store.seatSnapshot(seatID) != nil else {
+            throw DataTransferError.unknownSeat(seatID)
+        }
+        try selectionEngine.clearSelectionSource(seatID: seatID, serial: serial)
         preconditionInvariantsHold()
     }
 
@@ -149,29 +125,24 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
 
-        guard let seat = store.seatSnapshot(seatID) else {
+        guard store.seatSnapshot(seatID) != nil else {
             throw DataTransferError.unknownSeat(seatID)
         }
-        guard seat.selectionSourceID == sourceID else {
-            throw DataTransferError.sourceCancelled
-        }
-
-        let deviceBinding = try selectionDeviceBinding(for: seatID)
-        deviceBinding.setSelection(source: nil, serial: serial)
-        try apply(.selectionSourceChanged(seatID: seatID, sourceID: nil))
+        try selectionEngine.clearSelectionSource(
+            id: sourceID,
+            seatID: seatID,
+            serial: serial
+        )
         preconditionInvariantsHold()
     }
 
     private func selectionDeviceBinding(
         for seatID: SeatID
     ) throws -> any DataTransferDeviceBinding {
-        guard let seat = store.seatSnapshot(seatID) else {
+        guard store.seatSnapshot(seatID) != nil else {
             throw DataTransferError.unknownSeat(seatID)
         }
-        guard seat.hasDataDevice else {
-            throw DataTransferError.missingDataDevice(seatID)
-        }
-        guard let deviceBinding = store.deviceBinding(for: seatID) else {
+        guard let deviceBinding = selectionEngine.deviceBindingForDrag(seatID: seatID) else {
             throw DataTransferError.missingDataDevice(seatID)
         }
 
@@ -396,39 +367,24 @@ extension DataTransferManager {
             guard let source = store.sourceSnapshot(sourceID) else {
                 throw callbackIdentity.unknownSourceError
             }
-            guard source.mimeTypes.contains(mimeType) else {
-                throw DataTransferError.mimeTypeUnavailable(mimeType)
-            }
-            guard
-                let data = store.sourcePayloadData(
-                    sourceID: sourceID,
-                    mimeType: mimeType
-                )
-            else {
-                throw DataTransferError.sourceDataUnavailable(mimeType)
-            }
 
             let requestSource = try writeSource(
                 for: sourceID,
                 callbackIdentity: callbackIdentity
             )
-            store.appendSourceSendRequest(
-                try DataTransferSourceSendRequest(
-                    source: requestSource,
-                    mimeType: mimeType,
-                    descriptor: descriptor,
-                    data: data,
-                    descriptorIO: backend.sourceDescriptorIO
-                )
+            let prepared = try PreparedDataTransferSourceSend(
+                source: requestSource,
+                snapshot: source,
+                data: store.sourcePayloadData(
+                    sourceID: sourceID,
+                    mimeType: mimeType
+                ),
+                mimeType: mimeType,
+                descriptor: descriptor,
+                descriptorIO: backend.sourceDescriptorIO
             )
-            eventQueue.append(
-                .sourceSendRequested(
-                    DataTransferSourceTransferEvent(
-                        source: requestSource.diagnosticSource,
-                        mimeType: mimeType
-                    )
-                )
-            )
+            selectionEngine.appendSourceSendRequest(prepared.request)
+            eventQueue.append(prepared.event)
         } catch {
             try closeSourceSendDescriptor(descriptor)
             throw error
@@ -449,17 +405,17 @@ extension DataTransferManager {
         )
     }
 
-    package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
+    func discardSourceSendRequests(_ requests: [DataTransferSourceSendRequest]) {
         DataTransferSourceSendLifecycle.discardRequests(
-            store.removeSourceSendRequests(for: sourceID),
+            requests,
             recordError: recordSourceSendDiscardError
         )
     }
 
-    func discardAllPendingSourceSendRequests() {
-        DataTransferSourceSendLifecycle.discardRequests(
-            store.drainSourceSendRequests()
-        ) { _, _ in
+    func discardSourceSendRequestsDuringShutdown(
+        _ requests: [DataTransferSourceSendRequest]
+    ) {
+        DataTransferSourceSendLifecycle.discardRequests(requests) { _, _ in
             // Discard-all runs during teardown, so pending close failures cannot be routed.
         }
     }
@@ -472,9 +428,5 @@ extension DataTransferManager {
             error,
             context: .sourceWrite(request.source.diagnosticSource)
         )
-    }
-
-    private func allocateSourceID() -> DataSourceID {
-        sourceIDs.next()
     }
 }

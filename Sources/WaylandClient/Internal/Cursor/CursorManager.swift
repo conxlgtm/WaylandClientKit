@@ -287,14 +287,12 @@ package final class CursorManager: RawInputEventObserving {
         let cursorImage = try backend.cursorImage(from: image)
         let bufferScale = PositiveInt32(unchecked: 1)
 
-        attachCursorImage(cursorImage, to: surface, bufferScale: bufferScale)
-
-        let rawResult = backend.setPointerCursor(
-            seatID: seatID,
+        let rawResult = setSurfaceBackedCursor(
+            cursorImage,
+            on: surface,
+            for: seatID,
             serial: serial,
-            surface: surface,
-            hotspotX: cursorHotspot(cursorImage.hotspotX, bufferScale: bufferScale),
-            hotspotY: cursorHotspot(cursorImage.hotspotY, bufferScale: bufferScale)
+            bufferScale: bufferScale
         )
 
         switch rawResult {
@@ -326,14 +324,12 @@ package final class CursorManager: RawInputEventObserving {
         let bufferScale = PositiveInt32(unchecked: 1)
         let currentFrame = state.currentFrame
 
-        attachCursorImage(currentFrame.image, to: surface, bufferScale: bufferScale)
-
-        let rawResult = backend.setPointerCursor(
-            seatID: seatID,
+        let rawResult = setSurfaceBackedCursor(
+            currentFrame.image,
+            on: surface,
+            for: seatID,
             serial: serial,
-            surface: surface,
-            hotspotX: cursorHotspot(currentFrame.image.hotspotX, bufferScale: bufferScale),
-            hotspotY: cursorHotspot(currentFrame.image.hotspotY, bufferScale: bufferScale)
+            bufferScale: bufferScale
         )
 
         switch rawResult {
@@ -397,14 +393,12 @@ package final class CursorManager: RawInputEventObserving {
     {
         let surface = try cursorSurface(for: seatID)
 
-        attachCursorImage(resolved.image, to: surface, bufferScale: bufferScale)
-
-        let rawResult = backend.setPointerCursor(
-            seatID: seatID,
+        let rawResult = setSurfaceBackedCursor(
+            resolved.image,
+            on: surface,
+            for: seatID,
             serial: serial,
-            surface: surface,
-            hotspotX: cursorHotspot(resolved.image.hotspotX, bufferScale: bufferScale),
-            hotspotY: cursorHotspot(resolved.image.hotspotY, bufferScale: bufferScale)
+            bufferScale: bufferScale
         )
 
         switch rawResult {
@@ -575,15 +569,14 @@ package final class CursorManager: RawInputEventObserving {
                 cursorStateBySeat[seatID] = seatState
                 continue
             }
-            let bufferScale = PositiveInt32(unchecked: 1)
-            attachCursorImage(advance.frame.image, to: surface, bufferScale: bufferScale)
             guard let serial = seatState.focus.enterSerial else { continue }
-            let rawResult = backend.setPointerCursor(
-                seatID: seatID,
+            let bufferScale = PositiveInt32(unchecked: 1)
+            let rawResult = setSurfaceBackedCursor(
+                advance.frame.image,
+                on: surface,
+                for: seatID,
                 serial: serial,
-                surface: surface,
-                hotspotX: cursorHotspot(advance.frame.image.hotspotX, bufferScale: bufferScale),
-                hotspotY: cursorHotspot(advance.frame.image.hotspotY, bufferScale: bufferScale)
+                bufferScale: bufferScale
             )
             guard case .set = rawResult else {
                 throw cursorRequestFailure(
@@ -622,18 +615,24 @@ package final class CursorManager: RawInputEventObserving {
         surface.commit()
     }
 
-    package func attachCursorImage(
+    /// Commits an image to a cursor surface and applies it to the seat at the requested scale.
+    package func setSurfaceBackedCursor(
         _ image: CursorImage,
-        to surface: CursorManagerSurface,
+        on surface: CursorManagerSurface,
+        for seatID: RawSeatID,
+        serial: UInt32,
         bufferScale: PositiveInt32
-    ) {
+    ) -> RawPointerCursorResult {
         surface.setBufferScale(bufferScale.rawValue)
         surface.attach(image)
         surface.commit()
-    }
-
-    package func cursorHotspot(_ hotspot: Int32, bufferScale: PositiveInt32) -> Int32 {
-        hotspot / bufferScale.rawValue
+        return backend.setPointerCursor(
+            seatID: seatID,
+            serial: serial,
+            surface: surface,
+            hotspotX: image.hotspotX / bufferScale.rawValue,
+            hotspotY: image.hotspotY / bufferScale.rawValue
+        )
     }
 
     private func cursorRequestFailure(

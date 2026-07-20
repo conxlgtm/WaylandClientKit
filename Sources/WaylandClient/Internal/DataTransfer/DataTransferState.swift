@@ -1,5 +1,3 @@
-// swiftlint:disable file_length
-
 import WaylandRaw
 
 package struct DataTransferState: Equatable, Sendable {
@@ -52,7 +50,6 @@ package struct DataTransferState: Equatable, Sendable {
         }
 
         try validateOfferAndSourceSeats()
-        try validateSelectionReferences()
         try validateDragReferences()
     }
 
@@ -63,7 +60,7 @@ package struct DataTransferState: Equatable, Sendable {
             .map { seat in
                 DataTransferSeatSnapshot(
                     seatID: seat.seatID,
-                    device: seat.device,
+                    device: .unbound,
                     dragAndDropOfferID: activeDragOffers[seat.seatID]
                 )
             }
@@ -98,7 +95,7 @@ package struct DataTransferState: Equatable, Sendable {
 
         return DataTransferSeatSnapshot(
             seatID: seat.seatID,
-            device: seat.device,
+            device: .unbound,
             dragAndDropOfferID: activeDragOffers[seat.seatID]
         )
     }
@@ -106,6 +103,15 @@ package struct DataTransferState: Equatable, Sendable {
     package func reduce(_ action: DataTransferAction) throws -> DataTransferTransitionPlan {
         var next = self
         let effects = try next.apply(action)
+        return DataTransferTransitionPlan(state: next, effects: effects)
+    }
+
+    package func reduce(_ actions: [DataTransferAction]) throws -> DataTransferTransitionPlan {
+        var next = self
+        var effects: [DataTransferEffect] = []
+        for action in actions {
+            effects.append(contentsOf: try next.apply(action))
+        }
         return DataTransferTransitionPlan(state: next, effects: effects)
     }
 }
@@ -119,31 +125,21 @@ extension DataTransferState {
         switch action {
         case .seatAvailable(let seatID):
             return applySeatAvailable(seatID)
-        case .dataDeviceBound(let seatID):
-            return try applyDataDeviceBound(seatID)
         case .seatRemoved(let seatID):
             return applySeatRemoved(seatID)
-        case .offerCreated(let id, let role):
-            return try applyOfferCreated(id: id, role: role)
+        case .dragOfferCreated(let id, let seatID):
+            return try applyDragOfferCreated(id: id, seatID: seatID)
         case .offerMimeType(let id, let mimeType):
             return try applyOfferMimeType(id: id, mimeType: mimeType)
-        case .selectionChanged(let seatID, let offerID):
-            return try applySelectionChanged(seatID: seatID, offerID: offerID)
         case .offerSourceActions, .offerSelectedAction, .dragAccepted,
             .dragActionsRequested, .dragEntered, .dragMotion, .dragLeft, .dragDropped,
             .dragFinished, .dragCancelled:
             return try applyDragAndDrop(action)
-        case .sourceCreated(let id, let seatID, let mimeTypes):
-            return try applySourceCreated(
-                id: id,
-                role: .selection(seatID: seatID),
-                mimeTypes: mimeTypes
-            )
         case .dragSourceCreated, .dragSourceTargetChanged, .dragSourceActionChanged,
             .dragSourceDropPerformed, .dragSourceFinished, .dragSourceInvalidFinished:
             return try applyDragSource(action)
-        case .selectionSourceChanged, .sourceCancelled:
-            return try applySelectionSource(action)
+        case .sourceCancelled(let sourceID):
+            return applySourceCancelled(sourceID)
         }
     }
 
@@ -153,25 +149,11 @@ extension DataTransferState {
         }
 
         seats[seatID] = SeatState(seatID: seatID)
-        return [.bindDataDevice(seatID)]
-    }
-
-    private mutating func applyDataDeviceBound(_ seatID: SeatID) throws -> [DataTransferEffect] {
-        guard var seat = seats[seatID] else {
-            throw DataTransferError.unknownSeat(seatID)
-        }
-
-        guard !seat.hasDataDevice else {
-            return []
-        }
-
-        seat.bindDataDevice()
-        seats[seatID] = seat
         return []
     }
 
     private mutating func applySeatRemoved(_ seatID: SeatID) -> [DataTransferEffect] {
-        guard let seat = seats.removeValue(forKey: seatID) else {
+        guard seats.removeValue(forKey: seatID) != nil else {
             return []
         }
 
@@ -185,14 +167,10 @@ extension DataTransferState {
             .sortedByRawValue()
 
         var effects: [DataTransferEffect] = []
-        if seat.hasDataDevice {
-            effects.append(.releaseDataDevice(seatID))
-        }
         activeDragOffers[seatID] = nil
-        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
 
         for offerID in offerIDsForSeat {
-            appendSelectionOfferCleanup(offerID, to: &effects)
+            appendDragOfferCleanup(offerID, to: &effects)
         }
         for sourceID in sourceIDsForSeat {
             appendSourceCleanup(sourceID, to: &effects)
@@ -201,16 +179,16 @@ extension DataTransferState {
         return effects
     }
 
-    private mutating func applyOfferCreated(
+    private mutating func applyDragOfferCreated(
         id: DataOfferID,
-        role: DataOfferRole
+        seatID: SeatID
     ) throws -> [DataTransferEffect] {
         guard offers[id] == nil else {
             throw DataTransferError.duplicateOffer
         }
-        _ = try boundSeat(role.seatID)
+        _ = try boundSeat(seatID)
 
-        offers[id] = OfferState(id: id, role: role)
+        offers[id] = OfferState(id: id, role: .dragAndDrop(seatID: seatID))
         return []
     }
 
@@ -230,132 +208,38 @@ extension DataTransferState {
             return []
         }
 
-        switch offer.role {
-        case .selection(let seatID) where seats[seatID]?.selection == .remoteOffer(id):
-            return [.publishSelectionChanged(seatID: seatID, offerID: id)]
-        case .dragAndDrop(let seatID) where activeDragOffers[seatID] == id:
+        if case .dragAndDrop(let seatID) = offer.role, activeDragOffers[seatID] == id {
             return [.publishDragOfferChanged(seatID: seatID, offerID: id)]
-        default:
-            return []
         }
+        return []
     }
 
-    private mutating func applySelectionChanged(
-        seatID: SeatID,
-        offerID: DataOfferID?
-    ) throws -> [DataTransferEffect] {
-        guard var seat = seats[seatID] else {
-            throw DataTransferError.unknownSeat(seatID)
-        }
-        guard seat.hasDataDevice else {
-            throw DataTransferError.missingDataDevice(seatID)
-        }
-        if let offerID {
-            guard let offer = offers[offerID] else {
-                throw DataTransferError.unknownOffer
-            }
-            guard case .selection(seatID) = offer.role else {
-                throw DataTransferError.unknownOffer
-            }
-            guard offer.snapshot != nil else {
-                throw DataTransferError.emptyDataOffer
-            }
-        }
-
-        let nextSelection = ClipboardSelectionState.fromRemoteOffer(offerID)
-        guard seat.selection != nextSelection else {
-            return []
-        }
-
-        var effects: [DataTransferEffect] = []
-        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
-        try seat.setSelection(nextSelection)
-        seats[seatID] = seat
-        effects.append(.publishSelectionChanged(seatID: seatID, offerID: offerID))
-        return effects
-    }
-
-    private mutating func applySourceCreated(
+    private mutating func applyDragSourceCreated(
         id: DataSourceID,
-        role: DataSourceRole,
-        mimeTypes: [MIMEType]
+        seatID: SeatID,
+        mimeTypes: [MIMEType],
+        actions: DragActionSet
     ) throws -> [DataTransferEffect] {
         guard sources[id] == nil else {
             throw DataTransferError.duplicateSource
         }
-        _ = try boundSeat(role.seatID)
+        _ = try boundSeat(seatID)
 
-        sources[id] = try SourceState(id: id, role: role, mimeTypes: mimeTypes)
+        sources[id] = try SourceState(
+            id: id,
+            role: .dragAndDrop(seatID: seatID, actions: try DragSourceActions(actions)),
+            mimeTypes: mimeTypes
+        )
         return []
-    }
-
-    private mutating func applySelectionSourceChanged(
-        seatID: SeatID,
-        sourceID: DataSourceID?
-    ) throws -> [DataTransferEffect] {
-        guard var seat = seats[seatID] else {
-            throw DataTransferError.unknownSeat(seatID)
-        }
-        guard seat.hasDataDevice else {
-            throw DataTransferError.missingDataDevice(seatID)
-        }
-        if let sourceID {
-            guard let source = sources[sourceID] else {
-                throw DataTransferError.unknownSource
-            }
-            guard source.seatID == seatID else {
-                throw DataTransferError.unknownSource
-            }
-            guard case .selection = source.role else {
-                throw DataTransferError.unknownSource
-            }
-        }
-
-        let nextSelection = ClipboardSelectionState.fromOwnedSource(sourceID)
-        guard seat.selection != nextSelection else {
-            return []
-        }
-
-        var effects: [DataTransferEffect] = []
-        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
-        try seat.setSelection(nextSelection)
-        seats[seatID] = seat
-        return effects
-    }
-
-    private mutating func applySelectionSource(
-        _ action: DataTransferAction
-    ) throws -> [DataTransferEffect] {
-        switch action {
-        case .selectionSourceChanged(let seatID, let sourceID):
-            return try applySelectionSourceChanged(seatID: seatID, sourceID: sourceID)
-        case .sourceCancelled(let sourceID):
-            return try applySourceCancelled(sourceID)
-        default:
-            return []
-        }
     }
 
     private mutating func applySourceCancelled(
         _ sourceID: DataSourceID
-    ) throws -> [DataTransferEffect] {
-        guard let source = sources.removeValue(forKey: sourceID) else {
+    ) -> [DataTransferEffect] {
+        guard sources.removeValue(forKey: sourceID) != nil else {
             return []
         }
-
-        if case .selection = source.role {
-            if var seat = seats[source.seatID], seat.selection == .ownedSource(sourceID) {
-                try seat.setSelection(.none)
-                seats[source.seatID] = seat
-            }
-            return [.cancelSource(sourceID), .publishSourceCancelled(sourceID)]
-        }
-
-        if case .dragAndDrop = source.role {
-            return [.cancelSource(sourceID), .publishDragSourceCancelled(sourceID)]
-        }
-
-        return [.cancelSource(sourceID)]
+        return [.cancelSource(sourceID), .publishDragSourceCancelled(sourceID)]
     }
 
     private mutating func applyDragSource(
@@ -363,10 +247,11 @@ extension DataTransferState {
     ) throws -> [DataTransferEffect] {
         switch action {
         case .dragSourceCreated(let id, let seatID, let mimeTypes, let actions):
-            return try applySourceCreated(
+            return try applyDragSourceCreated(
                 id: id,
-                role: .dragAndDrop(seatID: seatID, actions: try DragSourceActions(actions)),
-                mimeTypes: mimeTypes
+                seatID: seatID,
+                mimeTypes: mimeTypes,
+                actions: actions
             )
         case .dragSourceTargetChanged(let id, let mimeType):
             return try applyDragSourceTargetChanged(id: id, mimeType: mimeType)
@@ -445,48 +330,15 @@ extension DataTransferState {
         guard let seat = seats[seatID] else {
             throw DataTransferError.unknownSeat(seatID)
         }
-        guard seat.hasDataDevice else {
-            throw DataTransferError.missingDataDevice(seatID)
-        }
 
         return seat
-    }
-
-    private func validateSelectionReferences() throws {
-        for seat in seats.values {
-            if seat.selection.hasAnySelection {
-                guard seat.hasDataDevice else {
-                    throw DataTransferError.missingDataDevice(seat.seatID)
-                }
-            }
-
-            if let offerID = seat.selection.offerID {
-                guard let offer = offers[offerID],
-                    case .selection(seat.seatID) = offer.role
-                else {
-                    throw DataTransferError.unknownOffer
-                }
-                guard offer.snapshot != nil else {
-                    throw DataTransferError.emptyDataOffer
-                }
-            }
-
-            if let sourceID = seat.selection.sourceID {
-                guard let source = sources[sourceID],
-                    source.seatID == seat.seatID,
-                    case .selection = source.role
-                else {
-                    throw DataTransferError.unknownSource
-                }
-            }
-        }
     }
 
     private func validateDragReferences() throws {
         var referencedOfferIDs: Set<DataOfferID> = []
         for (seatID, offerID) in activeDragOffers {
-            guard let seat = seats[seatID], seat.hasDataDevice else {
-                throw DataTransferError.missingDataDevice(seatID)
+            guard seats[seatID] != nil else {
+                throw DataTransferError.unknownSeat(seatID)
             }
             guard let offer = offers[offerID],
                 case .dragAndDrop(seatID) = offer.role
@@ -514,35 +366,18 @@ extension DataTransferState {
 
     private func validateOfferAndSourceSeats() throws {
         for offer in offers.values {
+            guard case .dragAndDrop = offer.role else {
+                throw DataTransferError.unknownOffer
+            }
             _ = try boundSeat(offer.role.seatID)
         }
 
         for source in sources.values {
+            guard case .dragAndDrop = source.role else {
+                throw DataTransferError.unknownSource
+            }
             _ = try boundSeat(source.seatID)
         }
-    }
-
-    private mutating func appendSelectionOfferCleanup(
-        _ offerID: DataOfferID?,
-        seatID: SeatID,
-        to effects: inout [DataTransferEffect]
-    ) {
-        guard let offerID, offers[offerID]?.role.seatID == seatID else {
-            return
-        }
-
-        appendSelectionOfferCleanup(offerID, to: &effects)
-    }
-
-    private mutating func appendSelectionOfferCleanup(
-        _ offerID: DataOfferID?,
-        to effects: inout [DataTransferEffect]
-    ) {
-        guard let offerID, offers.removeValue(forKey: offerID) != nil else {
-            return
-        }
-
-        effects.append(.destroyOffer(offerID))
     }
 
     mutating func appendDragOfferCleanup(
@@ -556,63 +391,15 @@ extension DataTransferState {
         effects.append(.destroyOffer(offerID))
     }
 
-    private mutating func appendSelectionSourceCleanup(
-        _ sourceID: DataSourceID?,
-        seatID: SeatID,
-        to effects: inout [DataTransferEffect]
-    ) {
-        guard let sourceID, sources[sourceID]?.seatID == seatID else {
-            return
-        }
-
-        appendSelectionSourceCleanup(sourceID, to: &effects)
-    }
-
-    private mutating func appendSelectionSourceCleanup(
-        _ sourceID: DataSourceID?,
-        to effects: inout [DataTransferEffect]
-    ) {
-        guard let sourceID,
-            let source = sources[sourceID],
-            case .selection = source.role
-        else {
-            return
-        }
-
-        _ = sources.removeValue(forKey: sourceID)
-        effects.append(.cancelSource(sourceID))
-        effects.append(.publishSourceCancelled(sourceID))
-    }
-
     private mutating func appendSourceCleanup(
         _ sourceID: DataSourceID?,
         to effects: inout [DataTransferEffect]
     ) {
-        guard let sourceID, let source = sources.removeValue(forKey: sourceID) else {
+        guard let sourceID, sources.removeValue(forKey: sourceID) != nil else {
             return
         }
 
         effects.append(.cancelSource(sourceID))
-        switch source.role {
-        case .selection:
-            effects.append(.publishSourceCancelled(sourceID))
-        case .dragAndDrop:
-            effects.append(.publishDragSourceCancelled(sourceID))
-        }
-    }
-
-    private mutating func appendSelectionCleanup(
-        _ selection: ClipboardSelectionState,
-        seatID: SeatID,
-        to effects: inout [DataTransferEffect]
-    ) {
-        switch selection {
-        case .none:
-            return
-        case .remoteOffer(let offerID):
-            appendSelectionOfferCleanup(offerID, seatID: seatID, to: &effects)
-        case .ownedSource(let sourceID):
-            appendSelectionSourceCleanup(sourceID, seatID: seatID, to: &effects)
-        }
+        effects.append(.publishDragSourceCancelled(sourceID))
     }
 }

@@ -1,23 +1,14 @@
 import WaylandRaw
 
 package protocol PrimarySelectionDeviceBinding: AnyObject {
-    func setSelection(source: (any PrimarySelectionSourceBinding)?, serial: InputSerial)
+    func setSelection(
+        source: (any DataTransferSourceResourceBinding)?,
+        serial: InputSerial
+    )
     func release()
 }
 
-package protocol PrimarySelectionOfferBinding: AnyObject, DataTransferReceiveBinding {
-    func receive(mimeType: MIMEType, fd: Int32)
-    func destroy()
-}
-
-package protocol PrimarySelectionSourceBinding: AnyObject {
-    var id: DataSourceID { get }
-
-    func offer(mimeType: MIMEType)
-    func destroy()
-}
-
-package protocol PrimarySelectionControllerBackend: AnyObject, DataTransferReceivePipeBackend {
+package protocol PrimarySelectionControllerBackend: AnyObject, DataTransferOfferReceiveBackend {
     func preconditionIsOwnerThread()
     func bindPrimarySelectionDevice(
         for seatID: SeatID,
@@ -27,150 +18,14 @@ package protocol PrimarySelectionControllerBackend: AnyObject, DataTransferRecei
         handle: RawPrimarySelectionOfferHandle,
         id: DataOfferID,
         onEvent: @escaping (RawPrimarySelectionOfferEvent) -> Void
-    ) throws -> any PrimarySelectionOfferBinding
+    ) throws -> any DataTransferOfferResourceBinding
     func createPrimarySelectionSource(
         id: DataSourceID,
         onEvent: @escaping (RawPrimarySelectionSourceEvent) -> Void
-    ) throws -> any PrimarySelectionSourceBinding
-    func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
+    ) throws -> any DataTransferSourceResourceBinding
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
 
     var sourceDescriptorIO: DataTransferSourceDescriptorIO { get }
 
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult
-}
-
-enum RuntimePrimarySelectionOffer {
-    case pending(
-        handle: RawPrimarySelectionOfferHandle,
-        binding: any PrimarySelectionOfferBinding,
-        seatID: SeatID,
-        mimeTypes: [MIMEType]
-    )
-    case active(
-        handle: RawPrimarySelectionOfferHandle,
-        binding: any PrimarySelectionOfferBinding,
-        snapshot: DataOfferSnapshot
-    )
-
-    var handle: RawPrimarySelectionOfferHandle {
-        switch self {
-        case .pending(let handle, _, _, _), .active(let handle, _, _):
-            handle
-        }
-    }
-
-    var binding: any PrimarySelectionOfferBinding {
-        switch self {
-        case .pending(_, let binding, _, _), .active(_, let binding, _):
-            binding
-        }
-    }
-
-    var pendingSeatID: SeatID? {
-        guard case .pending(_, _, let seatID, _) = self else {
-            return nil
-        }
-
-        return seatID
-    }
-
-    var pendingMIMETypes: [MIMEType] {
-        guard case .pending(_, _, _, let mimeTypes) = self else {
-            return []
-        }
-
-        return mimeTypes
-    }
-
-    var snapshot: DataOfferSnapshot? {
-        guard case .active(_, _, let snapshot) = self else {
-            return nil
-        }
-
-        return snapshot
-    }
-
-    mutating func appendMIMETypeIfNew(_ mimeType: MIMEType) throws -> Bool {
-        switch self {
-        case .pending(let handle, let binding, let seatID, var mimeTypes):
-            guard !mimeTypes.contains(mimeType) else {
-                return false
-            }
-
-            mimeTypes.append(mimeType)
-            self = .pending(
-                handle: handle,
-                binding: binding,
-                seatID: seatID,
-                mimeTypes: mimeTypes
-            )
-            return true
-        case .active(let handle, let binding, let snapshot):
-            guard !snapshot.mimeTypes.contains(mimeType) else {
-                return false
-            }
-
-            self = .active(
-                handle: handle,
-                binding: binding,
-                snapshot: try DataOfferSnapshot(
-                    id: snapshot.id,
-                    role: snapshot.role,
-                    mimeTypes: snapshot.mimeTypes + [mimeType]
-                )
-            )
-            return true
-        }
-    }
-
-    mutating func markActive(id offerID: DataOfferID) throws {
-        guard case .pending(let handle, let binding, let seatID, let mimeTypes) = self else {
-            return
-        }
-
-        self = .active(
-            handle: handle,
-            binding: binding,
-            snapshot: try DataOfferSnapshot(
-                id: offerID,
-                role: .selection(seatID: seatID),
-                mimeTypes: mimeTypes
-            )
-        )
-    }
-}
-
-struct RuntimePrimarySelectionSource {
-    let binding: any PrimarySelectionSourceBinding
-    let payloads: DataTransferSourcePayloadSet
-    let snapshot: DataSourceSnapshot
-
-    init(
-        id sourceID: DataSourceID,
-        seatID sourceSeatID: SeatID,
-        binding sourceBinding: any PrimarySelectionSourceBinding,
-        payloads sourcePayloads: DataTransferSourcePayloadSet
-    ) throws {
-        guard sourceBinding.id == sourceID else {
-            throw DataTransferManagerInvariantViolation.sourceBindingIDMismatch(
-                expected: sourceID,
-                actual: sourceBinding.id
-            )
-        }
-
-        binding = sourceBinding
-        payloads = sourcePayloads
-        snapshot = try DataSourceSnapshot(
-            id: sourceID,
-            seatID: sourceSeatID,
-            mimeTypes: sourcePayloads.mimeTypes
-        )
-    }
-}
-
-enum PrimarySelectionSelectionState: Equatable {
-    case none
-    case remoteOffer(DataOfferID)
-    case ownedSource(DataSourceID)
 }

@@ -1,0 +1,338 @@
+{
+  "interfaces": {
+    "ext_foreign_toplevel_list_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true
+    },
+    "wl_compositor": {
+      "globalBinding": "required",
+      "maximumSupportedVersion": 6
+    },
+    "wl_data_device_manager": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 3,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindDataDeviceManagerIfPresent",
+        "bindingOrder": 6,
+        "propertyName": "dataDeviceManager",
+        "wrapperTypeName": "OptionalDataDeviceManager"
+      }
+    },
+    "wl_output": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 4
+    },
+    "wl_seat": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 10,
+      "minimumRequiredVersion": 5
+    },
+    "wl_shm": {
+      "globalBinding": "required",
+      "maximumSupportedVersion": 1
+    },
+    "wl_subcompositor": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1
+    },
+    "wp_alpha_modifier_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindAlphaModifierManagerIfPresent",
+        "bindingOrder": 14,
+        "propertyName": "alphaModifierManager",
+        "wrapperTypeName": "OptionalAlphaModifierManager"
+      }
+    },
+    "wp_color_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 2,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindColorManagerIfPresent",
+        "bindingOrder": 17,
+        "propertyName": "colorManager",
+        "wrapperTypeName": "OptionalColorManager"
+      }
+    },
+    "wp_color_representation_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindColorRepresentationManagerIfPresent",
+        "bindingOrder": 16,
+        "propertyName": "colorRepresentationManager",
+        "wrapperTypeName": "OptionalColorRepresentationManager"
+      }
+    },
+    "wp_commit_timing_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindCommitTimingManagerIfPresent",
+        "bindingOrder": 12,
+        "propertyName": "commitTimingManager",
+        "wrapperTypeName": "OptionalCommitTimingManager"
+      }
+    },
+    "wp_content_type_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindContentTypeManagerIfPresent",
+        "bindingOrder": 13,
+        "propertyName": "contentTypeManager",
+        "wrapperTypeName": "OptionalContentTypeManager"
+      }
+    },
+    "wp_cursor_shape_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 2,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindCursorShapeManagerIfPresent",
+        "bindingOrder": 5,
+        "propertyName": "cursorShapeManager",
+        "wrapperTypeName": "OptionalCursorShapeManager"
+      }
+    },
+    "wp_fifo_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindFifoManagerIfPresent",
+        "bindingOrder": 11,
+        "propertyName": "fifoManager",
+        "wrapperTypeName": "OptionalFifoManager"
+      }
+    },
+    "wp_fractional_scale_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindFractionalScaleManagerIfPresent",
+        "bindingOrder": 4,
+        "propertyName": "fractionalScaleManager",
+        "wrapperTypeName": "OptionalFractionalScaleManager"
+      }
+    },
+    "wp_linux_drm_syncobj_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindLinuxDrmSyncobjManagerIfPresent",
+        "bindingOrder": 10,
+        "propertyName": "linuxDrmSyncobjManager",
+        "wrapperTypeName": "OptionalLinuxDrmSyncobjManager"
+      }
+    },
+    "wp_pointer_warp_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindPointerWarpIfPresent",
+        "bindingOrder": 21,
+        "propertyName": "pointerWarp",
+        "wrapperTypeName": "OptionalPointerWarp"
+      }
+    },
+    "wp_presentation": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 2,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindPresentationIfPresent",
+        "bindingOrder": 3,
+        "propertyName": "presentation",
+        "wrapperTypeName": "OptionalPresentation"
+      }
+    },
+    "wp_tearing_control_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindTearingControlManagerIfPresent",
+        "bindingOrder": 15,
+        "propertyName": "tearingControlManager",
+        "wrapperTypeName": "OptionalTearingControlManager"
+      }
+    },
+    "wp_viewporter": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindViewporterIfPresent",
+        "bindingOrder": 2,
+        "propertyName": "viewporter",
+        "wrapperTypeName": "OptionalViewporter"
+      }
+    },
+    "xdg_activation_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindXDGActivationIfPresent",
+        "bindingOrder": 19,
+        "propertyName": "xdgActivation",
+        "wrapperTypeName": "OptionalXDGActivation"
+      }
+    },
+    "xdg_session_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindCompositorSessionManagerIfPresent",
+        "bindingOrder": 20,
+        "propertyName": "compositorSessionManager",
+        "wrapperTypeName": "OptionalCompositorSessionManager"
+      }
+    },
+    "xdg_system_bell_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true
+    },
+    "xdg_toplevel_drag_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true
+    },
+    "xdg_toplevel_icon_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindXDGToplevelIconManagerIfPresent",
+        "bindingOrder": 18,
+        "propertyName": "xdgToplevelIconManager",
+        "wrapperTypeName": "OptionalXDGToplevelIconManager"
+      }
+    },
+    "xdg_wm_base": {
+      "globalBinding": "required",
+      "maximumSupportedVersion": 7
+    },
+    "xdg_wm_dialog_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true
+    },
+    "zwlr_output_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 4,
+      "reportsCapability": true
+    },
+    "zwp_idle_inhibit_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true
+    },
+    "zwp_keyboard_shortcuts_inhibit_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true
+    },
+    "zwp_linux_dmabuf_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 5,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindLinuxDmabufIfPresent",
+        "bindingOrder": 9,
+        "propertyName": "linuxDmabuf",
+        "wrapperTypeName": "OptionalLinuxDmabuf"
+      }
+    },
+    "zwp_pointer_constraints_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindPointerConstraintsIfPresent",
+        "bindingOrder": 24,
+        "propertyName": "pointerConstraints",
+        "wrapperTypeName": "OptionalPointerConstraints"
+      }
+    },
+    "zwp_pointer_gestures_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 3,
+      "reportsCapability": true
+    },
+    "zwp_primary_selection_device_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindPrimarySelectionDeviceManagerIfPresent",
+        "bindingOrder": 7,
+        "propertyName": "primarySelectionDeviceManager",
+        "wrapperTypeName": "OptionalPrimarySelectionDeviceManager"
+      }
+    },
+    "zwp_relative_pointer_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindRelativePointerManagerIfPresent",
+        "bindingOrder": 23,
+        "propertyName": "relativePointerManager",
+        "wrapperTypeName": "OptionalRelativePointerManager"
+      }
+    },
+    "zwp_tablet_manager_v2": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 2,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindTabletManagerIfPresent",
+        "bindingOrder": 22,
+        "propertyName": "tabletManager",
+        "wrapperTypeName": "OptionalTabletManager"
+      }
+    },
+    "zwp_text_input_manager_v3": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 2,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindTextInputManagerIfPresent",
+        "bindingOrder": 8,
+        "propertyName": "textInputManager",
+        "wrapperTypeName": "OptionalTextInputManager"
+      }
+    },
+    "zxdg_decoration_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 2,
+      "minimumRequiredVersion": 1,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindXDGDecorationManagerIfPresent",
+        "bindingOrder": 0,
+        "propertyName": "xdgDecorationManager",
+        "wrapperTypeName": "OptionalXDGDecorationManager"
+      }
+    },
+    "zxdg_output_manager_v1": {
+      "globalBinding": "optional",
+      "maximumSupportedVersion": 3,
+      "minimumRequiredVersion": 2,
+      "reportsCapability": true,
+      "retainedOptionalGlobal": {
+        "bindingMethodName": "bindXDGOutputManagerIfPresent",
+        "bindingOrder": 1,
+        "propertyName": "xdgOutputManager",
+        "wrapperTypeName": "OptionalXDGOutputManager"
+      }
+    }
+  }
+}
