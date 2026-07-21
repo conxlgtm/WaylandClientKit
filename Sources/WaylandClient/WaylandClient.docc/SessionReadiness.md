@@ -9,10 +9,7 @@ through ``WaylandCapabilities/compositorSessionManagement``. It does not expose
 a transient session object or event snapshot because replacement can occur after
 initial discovery.
 
-## When To Use This
-
-Use a restoration snapshot when a framework wants to save enough platform state
-to recreate windows on a later launch:
+A restoration snapshot contains platform state useful for recreating a window:
 
 - current window title
 - app ID
@@ -21,8 +18,7 @@ to recreate windows on a later launch:
 - output membership
 - toplevel state and manager capability facts
 
-Do not use the snapshot as a cross-process window identity. ``WindowID`` is a
-managed-window identity for the current display connection.
+``WindowID`` is connection-local, not a cross-process window identity.
 
 ## Capability Gates
 
@@ -43,59 +39,17 @@ Compositor session management is optional and capability-gated by
 advertisement fact, not a usable session handle. Local app restoration remains
 framework-owned.
 
-## Public APIs
-
-```swift
-let window = try await display.createTopLevelWindow(
-    configuration: WindowConfiguration(
-        title: "Document",
-        initialWidth: 800,
-        initialHeight: 600
-    )
-)
-
-try await window.show { frame in
-    frame.withXRGB8888Rows { _, pixels in
-        for index in 0..<pixels.count {
-            unsafe pixels[unchecked: index] = 0x0020_2020
-        }
-    }
-}
-
-let snapshot = try await window.restorationSnapshot
-print(snapshot.title ?? "")
-print(snapshot.geometry.logicalSize)
-```
-
 Persist framework-owned state under `XDG_STATE_HOME` or the platform state root
-your app chooses. Ignore relative `XDG_STATE_HOME` values and fall back to the
-platform state root, because XDG base-directory environment paths must be
-absolute. WaylandClientKit does not encode scene or document state.
+chosen by the app. Relative `XDG_STATE_HOME` values are invalid and fall back to
+the platform state root. WaylandClientKit does not encode scene or document
+state.
 
-## Expected Errors
+Snapshots requested before initial configure, or after closure, produce the
+corresponding typed lifecycle error. Activation can also be unavailable, time
+out, or be rejected by compositor policy.
 
-Capturing a restoration snapshot before the initial configure produces the same
-typed map-before-configure error as ``Window/stateSnapshot``. Capturing after a
-window or display is closed produces the normal closed or stale-handle errors.
-Activation requests can fail when `xdg_activation_v1` is unavailable, the token
-request times out, or compositor policy rejects the focus transfer.
-
-## Framework Policy
-
-WaylandClientKit owns:
-
-- public window identity facts
-- lifecycle and close events
-- geometry, scale, outputs, decoration mode, and activation hooks
-
-The framework owns:
-
-- scene IDs
-- document IDs
-- save prompts
-- state encoding and migration
-- reopen policy
-- exact UI shown during restore or shutdown
+WaylandClientKit owns window facts and lifecycle events. Frameworks own scene
+and document identity, persistence, migration, reopen policy, and restore UI.
 
 See [SessionStateSmoke](../../../Examples/SessionStateSmoke/main.swift) for a
 runnable app-owned state example.

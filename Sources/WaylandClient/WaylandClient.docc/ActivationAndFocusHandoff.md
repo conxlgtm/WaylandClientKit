@@ -9,9 +9,8 @@ activation errors at request time because a startup global can disappear.
 
 Request tokens through ``WaylandDisplay/requestActivationToken(_:timeoutMilliseconds:)``
 or ``Window/requestActivationToken(appID:serialContext:timeoutMilliseconds:)``.
-The returned ``ActivationToken`` is opaque. Do not parse it, store unrelated
-app state in it, or treat receipt as proof that a future activate request will
-focus a window.
+The returned ``ActivationToken`` is only for activation requests. It is not an
+app-state container or a guarantee that the compositor will focus a window.
 
 When activation follows a user action, pass the same ``SeatID`` and
 ``InputSerial`` from that input event:
@@ -27,7 +26,5 @@ let token = try await window.requestActivationToken(
 try await window.activate(using: token)
 ```
 
-WaylandClientKit validates that activation requests target managed windows on the
-owning display and keeps raw `xdg_activation_v1` proxies out of public API.
-Frameworks remain responsible for app launch, command routing, and any visible
-focus or attention policy.
+WaylandClientKit validates target ownership. Frameworks remain responsible for
+app launch, command routing, and visible focus or attention policy.
