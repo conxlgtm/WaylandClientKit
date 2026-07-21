@@ -16,8 +16,7 @@ WaylandClientKit is pre-foundation, so source-breaking changes are possible.
   submission experiments.
 
 Both products are baseline and audit tracked under the
-[compatibility policy](docs/compatibility-policy.md). Versioning is documented
-in [Versioning](docs/versioning.md).
+[compatibility policy](docs/compatibility-policy.md).
 
 ## Scope
 
