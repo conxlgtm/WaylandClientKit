@@ -1,7 +1,7 @@
 # Contributing
 
-WaylandClientKit is an experimental Linux Wayland client package. Keep changes
-small and protocol-shaped.
+WaylandClientKit is an experimental Linux Wayland client package. Focused,
+protocol-shaped changes are easiest to review.
 
 Follow the [Code of Conduct](CODE_OF_CONDUCT.md). Use [Support](SUPPORT.md) for
 questions and issue routing. Report vulnerabilities according to

@@ -23,18 +23,12 @@ in [Versioning](docs/versioning.md).
 
 Current public coverage includes:
 
-- display connection and owner-thread lifecycle
-- xdg-shell windows, popups, dialogs, and subsurfaces
-- software frames, damage, regions, scale, and presentation feedback
-- pointer, keyboard, touch, tablet, gestures, pointer capture, and pointer warp
-- xkbcommon key interpretation, compose, and dead-key text
-- clipboard, primary selection, drag-and-drop, and drag icons
-- text input through `zwp_text_input_v3`
-- cursor themes, cursor-shape requests, custom cursors, and cursor animation
-- desktop integration for icons, idle inhibition, activation, system bell,
-  shortcut inhibition, and toplevel drag
-- output topology and wlroots output-management preview snapshots
-- preview graphics submission with software fallback reporting
+- display, window, popup, dialog, and subsurface lifecycle
+- software drawing, damage, scale, regions, and presentation feedback
+- pointer, keyboard, touch, tablet, gesture, cursor, and text input
+- clipboard, primary selection, and drag-and-drop
+- desktop and output integration
+- preview GPU submission with explicit software fallback reporting
 
 See the [Support Matrix](docs/support-matrix.md) for protocol-level status.
 
@@ -89,19 +83,16 @@ files.
 - [Compositor Matrix](docs/compositor-matrix.md)
 - [Release Checklist](docs/release.md)
 
-## Examples
-
 Examples are separate Swift package targets. Run one from the repository root:
 
 ```bash
 swift run --package-path Examples WaylandClientKitDemo
 ```
 
-Use [Which API Should I Use?](docs/which-api-should-i-use.md) to find a target
-for a specific feature, or build all examples with `swift run wck examples
-build`.
+The [API chooser](docs/which-api-should-i-use.md) links features to examples.
+Build every example with `swift run wck examples build`.
 
-## Project Policies
+## Policies
 
 Read [Contributing](CONTRIBUTING.md), [Support](SUPPORT.md), and the
 [Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities according to
