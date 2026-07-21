@@ -1,54 +1,27 @@
 # Contributing
 
-WaylandClientKit is an experimental Linux Wayland client package. Keep changes small, protocol-shaped, and easy to verify.
+WaylandClientKit is an experimental Linux Wayland client package. Keep changes
+small and protocol-shaped.
 
-## Community
-
-Contributors are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
-For support channels and issue routing, see [Support](SUPPORT.md).
-
-## Security Reports
-
-Do not open public issues for vulnerabilities. Follow [SECURITY.md](SECURITY.md)
-and use GitHub private vulnerability reporting if available, or contact the
-maintainer privately at <wck.197t1@simplelogin.fr>.
+Follow the [Code of Conduct](CODE_OF_CONDUCT.md). Use [Support](SUPPORT.md) for
+questions and issue routing. Report vulnerabilities according to
+[Security](SECURITY.md), not through public issues.
 
 ## Environment
 
-Swift 6.3.2 or newer must already be installed.
-`swift run wck bootstrap check` verifies Swift and Linux system dependencies.
-It does not install or switch Swift toolchains.
-Set `SWIFT_BIN=/path/to/swift` for custom toolchain resolution.
-
-CI currently validates dynamic glibc Linux on Ubuntu Noble with shared
-Wayland, XKB, and cursor libraries resolved through `pkg-config`. Package-manager
-rows are dependency hints for contributors. Musl, static Linux SDK builds, and
-static linking need dedicated CI before they are treated as supported.
-
-On openSUSE, Swift 6.3.2 SwiftPM may need a compatibility `libxml2.so.2`.
-Project Swift wrappers load `$SWIFT_COMPAT_LIBS` when present, defaulting to
-`$HOME/.local/share/swift-compat-libs`.
-
-Core build requirements:
-
-- Swift 6.3.2 or newer
-- `clang`
-- `pkg-config`
-- `gbm`
-- `libdrm`
-- `wayland-client`
-- `wayland-cursor`
-- `xkbcommon`
-
-Install distro packages explicitly, or print the package-manager command for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, Alpine, or Gentoo systems.
-For Nix/NixOS, use `nix develop`.
-Bootstrap commands print installation guidance only. They do not mutate the machine.
+Swift 6.3.2 or newer is required. Install the packages listed in
+[Linux Dependencies](docs/linux-dependencies.md), or use `nix develop` on NixOS.
 
 ```bash
+swift run wck tools toolchain-smoke
 swift run wck bootstrap check
-swift run wck bootstrap install-command --package-manager dnf
-swift run wck bootstrap install-command --package-manager nix
 ```
+
+These commands report missing tools and libraries. They do not install packages
+or switch Swift toolchains. Set `SWIFT_BIN=/path/to/swift` to select a toolchain.
+
+CI tests dynamic glibc Linux with shared libraries resolved through
+`pkg-config`. Musl, static Linux SDK builds, and static linking are not supported.
 
 ## Local Checks
 
@@ -60,7 +33,7 @@ swift run wck tools toolchain-smoke
 swift run wck ci check
 ```
 
-Under a real Wayland session, also run:
+Under a Wayland session, also run the relevant live checks and examples:
 
 ```bash
 swift run wck smoke live
@@ -68,108 +41,72 @@ swift run wck smoke integration
 swift run --package-path Examples WaylandClientKitDemo
 ```
 
-For a private headless Weston compositor, run:
+For a private Weston compositor:
 
 ```bash
 swift run wck smoke headless -- wck smoke integration
 ```
 
-SwiftPM command plugins wrap the same checks:
+See [Linux Live Wayland Testing](docs/live-wayland-testing.md) for environment
+variables, optional-protocol skips, and compositor evidence.
 
-```bash
-swift package wck-check
-swift package wck-release-check
-swift package wck-generate-protocols
-swift package wck-verify-generated
-swift package wck-bootstrap-check
-```
+## Protocol Changes
 
-See [Linux live Wayland testing](docs/live-wayland-testing.md) for the live
-test contract, package commands, and optional protocol skip policy.
-See [Tooling Ownership](docs/tooling.md) for the command ownership model,
-dependency policy, and wrapper rules.
-
-## Protocol Generation
-
-Protocol XML lives under `protocols/`. Generated C and header artifacts live under `Sources/CWaylandProtocols/`.
-
-Regenerate only through:
+Protocol XML lives under `protocols/`. Generated C and header files live under
+`Sources/CWaylandProtocols/`. Do not edit generated files directly.
 
 ```bash
 swift run wck bootstrap maintainer-check
 swift run wck protocols generate
-```
-
-Verify generated outputs with:
-
-```bash
 swift run wck protocols verify-generated
+swift run wck shims verify
 ```
 
-Do not edit generated files directly.
+A protocol addition must include its vendored XML, generated files, C shims, raw
+Swift wrappers, public docs when applicable, and tests. If those pieces cannot
+ship together, defer the protocol.
 
-## Adding A Protocol
-
-Protocol additions must update these together:
-
-- vendored XML,
-- generated artifacts,
-- C shim declarations and implementations,
-- raw Swift wrappers,
-- public overlay docs when the protocol is surfaced publicly,
-- tests,
-- and generated/shim verification checks.
-
-If a protocol cannot be covered end to end in one change, keep it out of the
-experimental baseline.
-
-## C Shims
-
-Swift should call project-owned C shims, not generated inline protocol helpers directly. When adding or removing a Swift-facing shim, update:
-
-- `Sources/CWaylandProtocols/include/wayland-client-kit-shims.h`
-- `Sources/CWaylandProtocols/shims/`
-- `swift run wck shims verify`
-- listener smoke tests where applicable.
+See [Protocol Generation](docs/generation.md) for manifests, policies, and output
+paths.
 
 ## Public API
 
-Use the narrowest access level that works.
+Use the narrowest access level that works: `private`, `internal`, `package`, then
+`public`.
 
-Preferred order:
+`WaylandClient` is the main public product. Keep raw protocol details out of it.
+When a public declaration changes, update the public API baseline, public API
+audit, DocC, tests, and user-facing docs required by the
+[Compatibility Policy](docs/compatibility-policy.md).
 
-```text
-private
-internal
-package
-public
-```
+`WaylandGraphicsPreview` may expose only the narrow, move-only interop values
+allowed by that policy. Raw Wayland, GBM, EGL, and DRM objects remain internal.
 
-`WaylandClient` is the primary public overlay. `WaylandRaw` is intentionally protocol-shaped and less stable. Keep raw details out of `WaylandClient` unless they are part of the documented experimental API.
+## Safety
 
-When a pull request adds, removes, or changes public `WaylandClient` declarations, update `docs/public-api-audit.md`.
-If behavior appears in README support lists, update architecture and roadmap docs in the same change.
+New unsafe code must document:
 
-## Safety Review
+- the owner of the underlying object
+- the permitted thread or executor
+- transfer and invalidation rules
+- deinitialization behavior
 
-Any new unsafe surface must explain the ownership invariant that makes it valid.
-If the unsafe-token allowlist changes, describe why in the pull request.
-Prefer scoped borrowed values, validated domain values, and package-internal C shims over raw pointer exposure.
+Update the strict memory-safety audit when unsafe-token or unchecked
+`Sendable` use changes. Prefer scoped borrows, validated domain values, and
+package-internal C shims over raw pointer exposure.
 
-## Dependency Policy
+## Dependencies
 
-Runtime and library products should avoid external SwiftPM dependencies unless
-they are deliberately approved for the public product graph. Tooling targets may
-use external dependencies when they materially improve maintainability.
-`Package.resolved` is committed intentionally, and dependency updates require
-the relevant `swift run wck ci ...` validation. `swift run wck ci cheap` checks
-that tool-only dependencies do not leak into `WaylandClient` or
-`WaylandGraphicsPreview`.
+Public library products must not acquire external SwiftPM dependencies without a
+documented review of the public product graph. Tool targets may use external
+packages when the pull request names the maintenance benefit.
 
-## Scope Rule
+Commit `Package.resolved` changes and run the validation appropriate to the
+dependency. `swift run wck ci cheap` checks that tool-only dependencies do not
+enter `WaylandClient` or `WaylandGraphicsPreview`.
 
-Cut breadth before correctness.
+## Scope
 
-Do not expand GPU rendering, cursor animation, output management, data transfer,
-text input, IME/input-method behavior, widgets, or multi-threaded queues as
-incidental side work. Those belong in dedicated roadmap stories.
+Do not add GPU rendering, cursor animation, output management, data transfer,
+text input, widgets, or multithreaded queues as incidental work. Submit those as
+separate changes with their own tests and documentation.
