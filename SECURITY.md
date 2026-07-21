@@ -8,10 +8,9 @@ is explicitly documented.
 
 ## Reporting a Vulnerability
 
-Please do not open public issues for vulnerabilities.
-
-Use GitHub private vulnerability reporting if available, or contact the
-maintainer privately at <wck.197t1@simplelogin.fr>.
+Please use GitHub private vulnerability reporting if available, or contact the
+maintainer at <wck.197t1@simplelogin.fr>. A private report gives the project time
+to investigate before details are public.
 
 Include:
 

@@ -53,7 +53,8 @@ variables, optional-protocol skips, and compositor evidence.
 ## Protocol Changes
 
 Protocol XML lives under `protocols/`. Generated C and header files live under
-`Sources/CWaylandProtocols/`. Do not edit generated files directly.
+`Sources/CWaylandProtocols/`. Generated files are updated through the commands
+below rather than by direct edits.
 
 ```bash
 swift run wck bootstrap maintainer-check
@@ -62,9 +63,9 @@ swift run wck protocols verify-generated
 swift run wck shims verify
 ```
 
-A protocol addition must include its vendored XML, generated files, C shims, raw
-Swift wrappers, public docs when applicable, and tests. If those pieces cannot
-ship together, defer the protocol.
+A complete protocol addition includes its vendored XML, generated files, C
+shims, raw Swift wrappers, public docs when applicable, and tests. Protocols can
+wait until those pieces are ready to ship together.
 
 See [Protocol Generation](docs/generation.md) for manifests, policies, and output
 paths.
@@ -84,7 +85,7 @@ allowed by that policy. Raw Wayland, GBM, EGL, and DRM objects remain internal.
 
 ## Safety
 
-New unsafe code must document:
+New unsafe code needs documentation for:
 
 - the owner of the underlying object
 - the permitted thread or executor
@@ -97,9 +98,9 @@ package-internal C shims over raw pointer exposure.
 
 ## Dependencies
 
-Public library products must not acquire external SwiftPM dependencies without a
-documented review of the public product graph. Tool targets may use external
-packages when the pull request names the maintenance benefit.
+External SwiftPM dependencies in public library products require a documented
+review of the public product graph. Tool targets may use external packages when
+the pull request names the maintenance benefit.
 
 Commit `Package.resolved` changes and run the validation appropriate to the
 dependency. `swift run wck ci cheap` checks that tool-only dependencies do not
@@ -107,6 +108,6 @@ enter `WaylandClient` or `WaylandGraphicsPreview`.
 
 ## Scope
 
-Do not add GPU rendering, cursor animation, output management, data transfer,
-text input, widgets, or multithreaded queues as incidental work. Submit those as
-separate changes with their own tests and documentation.
+GPU rendering, cursor animation, output management, data transfer, text input,
+widgets, and multithreaded queues work best as separate changes with their own
+tests and documentation.

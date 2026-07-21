@@ -69,8 +69,8 @@ interface. The message must name that interface, for example:
 Skipping presentation-time live test: compositor did not advertise wp_presentation.
 ```
 
-An advertised protocol that fails its request or callback path is a test
-failure, not a skip.
+An advertised protocol that fails its request or callback path is reported as a
+test failure.
 
 ## Recording Evidence
 

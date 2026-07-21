@@ -60,10 +60,10 @@ Record the compositor name, version, advertised protocols, runtime path, and
 results in [Compositor Matrix](compositor-matrix.md). Weston-only results do not
 establish compatibility with Mutter, KWin, or wlroots compositors.
 
-Graphics preview claims require the runtime-path block from `smoke gpu-preview`,
+Graphics preview claims include the runtime-path block from `smoke gpu-preview`,
 the managed-GPU example result when available, exact missing interfaces, and any
-advertised-but-broken path. Do not claim an active managed GPU path without a
-successful live compositor run.
+advertised-but-broken path. An active managed GPU result requires a successful
+live compositor run.
 
 See [Linux Live Wayland Testing](live-wayland-testing.md) for command behavior
 and optional-protocol skips.
@@ -79,5 +79,5 @@ and optional-protocol skips.
 7. Confirm protocol generation produces no diff.
 8. Tag the checkpoint.
 
-Do not tag after a failed required command or with unreviewed public API,
-generated-file, shim, documentation, or compositor-evidence changes.
+A tag can wait until required commands pass and public API, generated-file, shim,
+documentation, and compositor-evidence changes have been reviewed.

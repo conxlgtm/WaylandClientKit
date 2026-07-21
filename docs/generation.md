@@ -1,7 +1,7 @@
 # Protocol Generation
 
-Do not edit generated files directly. Change vendored XML or policy metadata,
-run the generator, and review the diff.
+Generated files are updated through vendored XML or policy metadata. Run the
+generator and review its diff rather than editing generated output directly.
 
 ## Inputs And Policies
 

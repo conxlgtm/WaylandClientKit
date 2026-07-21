@@ -15,7 +15,8 @@ version, and logs.
 
 ## Security
 
-Do not file public security issues. Follow [SECURITY.md](SECURITY.md).
+Report security issues through the private channels in
+[SECURITY.md](SECURITY.md).
 
 ## Feature And Protocol Requests
 
