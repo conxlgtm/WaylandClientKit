@@ -34,8 +34,9 @@ protocol. It does depend on normal window lifecycle:
 - capture ``Window/restorationSnapshot`` after configure
 
 Activation is optional and capability-gated by
-``WaylandCapabilities/xdgActivation``. Activation tokens can help request focus
-for a restored window, but they are not restore tokens.
+``WaylandCapabilities/xdgActivation``.
+Activation tokens are compositor-mediated focus or raise requests, not restore
+tokens or session identifiers.
 
 Compositor session management is optional and capability-gated by
 ``WaylandCapabilities/compositorSessionManagement``. The capability is an
@@ -96,6 +97,5 @@ The framework owns:
 - reopen policy
 - exact UI shown during restore or shutdown
 
-See [Session Readiness](../../../docs/session-readiness.md) and
-[SessionStateSmoke](../../../Examples/SessionStateSmoke/main.swift) for a
+See [SessionStateSmoke](../../../Examples/SessionStateSmoke/main.swift) for a
 runnable app-owned state example.

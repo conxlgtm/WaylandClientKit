@@ -10,9 +10,8 @@ Compatibility tiers and required review process are defined in
 
 The minimal DocC catalog for this boundary lives in
 `Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
-Identity taxonomy, raw-value visibility, and display-owned handle semantics are
-tracked in [`identity-model.md`](identity-model.md) and the generated
-[`identity-visibility.md`](identity-visibility.md) table.
+The generated [`identity-visibility.md`](identity-visibility.md) table tracks
+public identity constructors and stored-value access.
 
 ## Products
 

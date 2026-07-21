@@ -120,7 +120,8 @@ Protocol additions must update these together:
 - tests,
 - and generated/shim verification checks.
 
-If a protocol cannot be covered end to end in one change, keep it out of the experimental baseline and add it to `docs/roadmap.md`.
+If a protocol cannot be covered end to end in one change, keep it out of the
+experimental baseline.
 
 ## C Shims
 

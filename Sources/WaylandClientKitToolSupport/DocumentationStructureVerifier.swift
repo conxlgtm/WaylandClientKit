@@ -18,7 +18,6 @@ public struct DocumentationStructureVerifier {
         "CONTRIBUTING.md",
         "docs/compatibility-policy.md",
         "docs/compositor-matrix.md",
-        "docs/documentation-map.md",
         "docs/documentation-symbol-coverage.json",
         "docs/generation.md",
         "docs/getting-started.md",
@@ -26,7 +25,6 @@ public struct DocumentationStructureVerifier {
         "docs/public-api-audit.md",
         "docs/public-api-baseline.md",
         "docs/release.md",
-        "docs/session-readiness.md",
         "docs/strict-memory-safety-audit.md",
         "docs/tooling.md",
         "docs/which-api-should-i-use.md",
@@ -66,11 +64,11 @@ public struct DocumentationStructureVerifier {
             phrase: "docs/which-api-should-i-use.md",
             description: "README links to API chooser"),
         RequiredPhrase(
-            path: "docs/session-readiness.md",
+            path: "Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md",
             phrase: "XDG_STATE_HOME",
             description: "session readiness documents app-owned state root"),
         RequiredPhrase(
-            path: "docs/session-readiness.md",
+            path: "Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md",
             phrase: "Activation tokens are compositor-mediated focus or raise requests",
             description: "session readiness separates activation from restoration"),
         RequiredPhrase(
