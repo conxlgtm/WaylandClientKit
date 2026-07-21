@@ -1366,13 +1366,9 @@ public struct WaylandGraphicsWindowBacking: Sendable {
 
     /// Imports a renderer-owned DRM syncobj timeline for explicit external submissions.
     ///
-    /// The descriptor is consumed by WCK and either transferred to the compositor
-    /// or closed on failure. The returned timeline is scoped to this backing,
-    /// and timeline points are valid only for submissions on this same backing.
-    /// WCK keeps the compositor mapping alive until backing close; dropping the
-    /// Swift value does not unregister the timeline. Renderers may import once
-    /// per native source timeline and reuse later points without per-frame
-    /// imports.
+    /// WCK consumes the descriptor, transferring it to the compositor or closing
+    /// it on failure. The timeline remains scoped to this backing and available
+    /// for later points until the backing closes.
     public func importExternalSyncTimeline(
         _ fileDescriptor: consuming OwnedFileDescriptor
     ) async throws -> WaylandGraphicsExternalSyncTimeline {
