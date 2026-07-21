@@ -21,15 +21,11 @@ let backing = try await display.createGraphicsWindowBacking(
 )
 ```
 
-## What The Backing Owns
-
 WaylandClientKit owns the frame lease state, software frame presentation, internal
 managed GPU setup, presentation-feedback request plumbing, and runtime-path
 updates. Callers choose whether fallback is acceptable for a given frame path.
 
 ## Errors
 
-Expect `WaylandGraphicsError.windowClosed`, `WaylandGraphicsError.backingClosed`,
-`WaylandGraphicsError.frameLeaseActive`, `WaylandGraphicsError.frameLeaseConsumed`,
-unavailable reasons, fallback requirements, invalid damage, unsupported metadata,
-unsupported pacing, and typed submission failures.
+Errors cover closed windows or backings, lease state, availability, fallback
+requirements, invalid damage, unsupported options, and submission failures.

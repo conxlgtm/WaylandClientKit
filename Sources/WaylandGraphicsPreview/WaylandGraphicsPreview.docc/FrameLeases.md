@@ -7,10 +7,8 @@ through a ``WaylandGraphicsWindowBacking``.
 
 Call ``WaylandGraphicsWindowBacking/nextFrame()`` to obtain a lease. Inspect
 ``WaylandGraphicsFrameLease/contract`` before rendering; it contains the current
-surface generation, authoritative geometry, external-buffer candidate facts, and
-synchronization availability for the frame. External-buffer candidate facts
-include selected format, modifier, alpha interpretation, scanout preference, and
-render-node device identity bytes for renderer-side allocation.
+surface generation, authoritative geometry, buffer candidates, synchronization,
+and render-device identity.
 
 Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)``,
 ``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``, or by reserving a
@@ -30,21 +28,16 @@ frame. On active managed GPU backing, the clear is rendered through internal GPU
 preview code. On software backing or fallback, WaylandClientKit fills a
 `SoftwareFrame`.
 
-External-buffer submission registers renderer-owned descriptors, reserves
-registered buffers, submits render leases, and awaits release receipts. The
-renderer owns allocation and rendering; WCK owns import, commit, release
-tracking, and reuse gating.
+For external buffers, the renderer owns allocation and rendering; WCK owns
+import, commit, release tracking, and reuse gating.
 
 Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
 describe optional metadata and logical damage. WaylandClientKit validates metadata
 and damage before consuming the lease for commit work.
 
-## Errors And Policy
-
 WaylandClientKit owns lease state, retry behavior after pre-commit failures,
-post-commit terminal state, and buffer release/reuse. Frameworks own frame
-scheduling and whether a failure should retry, fall back, or close the view.
+post-commit terminal state, and buffer reuse. Frameworks own frame scheduling
+and failure policy.
 
-A frame contract generation changes when WCK observes different surface geometry.
-Callers should discard work produced for stale geometry and request another frame
-instead of forcing old-size content through the current lease.
+A contract generation changes with surface geometry. Work for stale geometry
+belongs to a new frame rather than the current lease.

@@ -22,16 +22,8 @@ The path includes backing, dmabuf advertisement, surface feedback, render-node
 selection, GBM, EGL, dmabuf import, buffer lifecycle, explicit sync, pacing,
 metadata, and presentation feedback.
 
-Do not treat `dmabuf.advertised` as active GPU. Managed GPU is active only after
-a real GPU-backed frame submission succeeds and the result reports active
-backing.
-
-## Public APIs
-
-- ``WaylandGraphicsRuntimePath``
-- ``WaylandGraphicsRuntimeStatus``
-- ``WaylandGraphicsFrameResult/runtimePath``
-- ``WaylandGraphicsFrameResult/backing``
+`dmabuf.advertised` alone does not indicate active GPU use. Managed GPU becomes
+active after a GPU-backed submission succeeds and reports active backing.
 
 ## Example
 
