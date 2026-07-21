@@ -213,11 +213,10 @@ pass`.
 
 ## Diagonal Cursor Policy
 
-Decision for this checkpoint: do not add public diagonal `PointerCursor` presets
-yet. Keep theme-specific cursor names in examples and docs, with a known
-fallback such as `.crosshair`, until the same names are verified across
-GNOME/Mutter, KDE/KWin, Sway/wlroots, and Weston. Static custom cursor images
-are available when an app or framework owns the pixels and hotspot.
+Public diagonal `PointerCursor` presets wait until the same theme names are
+verified across GNOME/Mutter, KDE/KWin, Sway/wlroots, and Weston. Examples and
+docs use theme-specific names with a known fallback such as `.crosshair`.
+Static custom cursors remain available for app-owned pixels and hotspots.
 
 Names to test:
 
@@ -228,9 +227,9 @@ Names to test:
 - `nwse-resize`
 - `nesw-resize`
 
-If multiple compositor/theme families resolve the same names consistently, add
-public presets and update the public API baseline. If not, keep
-`PointerCursor(name:)` plus fallback guidance as the public shape.
+Consistent results across compositor and theme families can support public
+presets and a baseline update. Otherwise, `PointerCursor(name:)` and its
+fallback guidance remain the public shape.
 
 ## Graphics Preview Evidence
 

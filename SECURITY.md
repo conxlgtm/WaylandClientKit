@@ -3,14 +3,13 @@
 ## Supported Versions
 
 WaylandClientKit is pre-foundation and does not yet publish stable release
-branches. Please report vulnerabilities against `main` unless a release branch
-is explicitly documented.
+branches. Reports apply to `main` unless a release branch is documented.
 
 ## Reporting a Vulnerability
 
-Please use GitHub private vulnerability reporting if available, or contact the
-maintainer at <wck.197t1@simplelogin.fr>. A private report gives the project time
-to investigate before details are public.
+Private reports are welcome through GitHub vulnerability reporting or
+<wck.197t1@simplelogin.fr>. This gives the project time to investigate before
+details are public.
 
 Include:
 

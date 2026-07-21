@@ -17,5 +17,5 @@ WaylandClientKit uses SemVer-shaped tags, but it is pre-foundation.
 
 The first public tag is `0.1.0`.
 
-Do not use `1.0.0` until the foundation contract is documented, tested, and
-supported by release evidence.
+`1.0.0` begins when the foundation contract is documented, tested, and backed
+by release evidence.
