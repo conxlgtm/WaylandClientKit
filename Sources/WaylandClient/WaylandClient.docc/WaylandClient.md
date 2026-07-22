@@ -59,7 +59,6 @@ targets.
 
 ### Input
 
-- <doc:InputAndTextInput>
 - <doc:PointerCapture>
 - <doc:TabletInput>
 - ``InputEvent``

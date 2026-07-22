@@ -10,9 +10,8 @@ Compatibility tiers and required review process are defined in
 
 The minimal DocC catalog for this boundary lives in
 `Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
-Identity taxonomy, raw-value visibility, and display-owned handle semantics are
-tracked in [`identity-model.md`](identity-model.md) and the generated
-[`identity-visibility.md`](identity-visibility.md) table.
+The generated [`identity-visibility.md`](identity-visibility.md) table tracks
+public identity constructors and stored-value access.
 
 ## Products
 
@@ -674,7 +673,7 @@ These are not expected to become public product API:
 
 ## Access Level Rules
 
-Use the narrowest access level that works:
+The narrowest suitable access level is:
 
 ```text
 private
@@ -683,15 +682,16 @@ package
 public
 ```
 
-Use `package` for cross-target implementation details.
+`package` covers cross-target implementation details.
 
-Use `public` only for downstream package API.
+`public` is reserved for downstream package API.
 
 ## Sendable Review
 
 Public event payloads are value-shaped and can be `Sendable`.
 
-Do not add `@unchecked Sendable` without a documented exception and review. Current lint rules reject it.
+`@unchecked Sendable` requires a documented exception and review. Current lint
+rules reject unrecorded uses.
 
 ## Development Contract
 

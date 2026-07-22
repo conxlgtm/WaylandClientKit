@@ -16,7 +16,6 @@ value types.
 
 ### Start Here
 
-- <doc:GraphicsPreviewOverview>
 - <doc:ManagedGraphicsBacking>
 - <doc:FrameLeases>
 - <doc:ExternalBufferSubmission>

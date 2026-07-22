@@ -12,7 +12,7 @@ are not part of the current support contract.
 
 ## Capability Checks
 
-The build dependency source of truth is the system capability surface:
+A supported build requires these capabilities:
 
 - Swift 6.3.2 or newer
 - `clang`

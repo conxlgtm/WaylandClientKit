@@ -31,9 +31,8 @@ final class CallbackBox<Owner: AnyObject> {
 
     /// Returns an unretained opaque pointer to this callback box.
     ///
-    /// The caller must ensure this `CallbackBox` remains alive for the
-    /// entire duration the returned pointer is stored in C. Failure to
-    /// do so is undefined behavior.
+    /// The pointer is valid while C stores it only if this `CallbackBox` remains
+    /// alive for the same period.
     @safe
     func toOpaque() -> UnsafeMutableRawPointer {
         unsafe UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
@@ -67,8 +66,7 @@ final class CallbackBoxStorage<Owner: AnyObject> {
 
     /// Returns an unretained opaque pointer while this storage keeps the box alive.
     ///
-    /// Raw wrappers should strongly retain `CallbackBoxStorage` for exactly as long
-    /// as the returned pointer is registered with C listener state.
+    /// The pointer remains valid while this storage is retained by the raw wrapper.
     @safe var opaquePointer: UnsafeMutableRawPointer {
         box.toOpaque()
     }

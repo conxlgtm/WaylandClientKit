@@ -16,21 +16,15 @@ gesture facts.
 
 Relative motion events arrive through ``InputEvents`` as
 `PointerEvent.relativeMotion`. Constraint lifecycle transitions arrive through
-`PointerEvent.constraintLifecycle`. One-shot terminal transitions are reported
-as `PointerConstraintLifecycleEvent.defunctOneShot`, which means WaylandClientKit
-has already destroyed the protocol object and callers do not need to destroy
-the handle. Persistent terminal transitions are reported as
-`PointerConstraintLifecycleEvent.inactivePersistent`, which means the protocol
-object remains valid and may later become active again.
+`PointerEvent.constraintLifecycle`. `defunctOneShot` means the protocol object
+has been destroyed. `inactivePersistent` remains valid and may become active
+again.
 Gesture events arrive through ``InputEvents`` as `PointerEvent.gesture`. Swipe,
 pinch, and hold payloads preserve protocol serials, event times, finger counts,
-deltas, scale, rotation, and cancellation state. WaylandClientKit does not turn
-these facts into higher-level swipe, magnification, rotation, or scroll policy.
+deltas, scale, rotation, and cancellation state.
 
-Pointer capture is still application policy. WaylandClientKit does not decide when a
-game mode starts, how the user exits pointer lock, what cursor is shown, or how
-motion maps to a camera or gesture. It exposes the protocol facts and manages
-proxy lifetime for windows, seats, and display shutdown.
+Applications decide when capture starts, how users leave it, which cursor is
+shown, and how motion maps to app behavior.
 
 Pointer warp is also compositor policy. The request requires an input serial and
 is scoped to the caller's managed window, seat pointer, and logical surface
@@ -55,20 +49,6 @@ try await window.requestPointerWarp(
     serial: eventSerial
 )
 ```
-
-## Public APIs
-
-- ``Window/relativePointer(seatID:)``
-- ``Window/lockPointer(seatID:cursorHint:region:lifetime:)``
-- ``Window/confinePointer(seatID:region:lifetime:)``
-- ``Window/requestPointerWarp(seatID:position:serial:)``
-- ``WaylandDisplay/pointerGestures(seatID:)``
-- ``RelativePointerSubscription``
-- ``PointerGestureSubscription``
-- ``PointerGestureEvent``
-- ``PointerConstraint``
-- ``PointerConstraintLifecycleEvent``
-- ``PointerWarpError``
 
 ## Example
 

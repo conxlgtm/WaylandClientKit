@@ -13,17 +13,10 @@ pixels.
 Data-transfer events use their own stream so clipboard, primary selection, and
 drag lifecycles can be observed independently from pointer and keyboard input.
 Offers are external compositor state and can become stale between advertisement
-and receive or read. WaylandClientKit reports stale or unknown offers as typed
-failures or diagnostics so clients can log the compositor behavior, ignore
-unsupported private MIME types, and keep cleanup paths crash-free.
+and use. Stale or unknown offers produce typed failures or diagnostics.
 
-Source-side transfers are observable through ``DataTransferEvent`` values. When
-another client requests bytes from a published clipboard, primary selection, or
-drag source, WaylandClientKit emits a source-send request event with the source
-identity and MIME type. A later source-write success event means the payload was
-written to the compositor-provided descriptor. If writing fails, WaylandClientKit
-publishes a `DataTransferDiagnosticOperation.sourceWriteFailed` diagnostic
-instead.
+``DataTransferEvent`` reports source send requests and successful writes. Failed
+writes publish a `DataTransferDiagnosticOperation.sourceWriteFailed` diagnostic.
 
 ## Capability Gates
 
@@ -31,26 +24,9 @@ Regular clipboard and drag-and-drop use `wl_data_device_manager`. Primary
 selection uses `zwp_primary_selection_device_manager_v1` and is focus-sensitive
 selection state, not a second regular clipboard.
 
-## Public APIs
-
-- ``ClipboardOffer``
-- ``ClipboardSource``
-- ``PrimarySelectionOffer``
-- ``PrimarySelectionSource``
-- ``DragOffer``
-- ``DragSource``
-- ``DragIcon``
-- ``DragIconImage``
-- ``DataTransferEvent``
-- ``DataTransferEvents``
-- ``DataTransferSourceTransferEvent``
-- ``DataTransferDiagnostic``
-
-## Errors And Policy
-
 WaylandClientKit owns offer/source lifetime, descriptor cleanup, stale-offer
 diagnostics, and typed callback failures. Frameworks own MIME negotiation,
-application clipboard policy, drag visuals, and which drop actions are useful.
+clipboard policy, drag visuals, and drop-action policy.
 
 ## Example
 

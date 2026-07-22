@@ -1,36 +1,18 @@
 # Diagnostics And Display Failures
 
-``DisplayDiagnostic`` reports recoverable degraded behavior, dropped diagnostic
-notices, input diagnostics, window diagnostics, data-transfer diagnostics, and
-text-input diagnostics.
+``DisplayDiagnostic`` reports recoverable degraded behavior and
+feature-specific diagnostics.
 
-``WaylandDisplayError`` covers stream termination and fatal display/runtime
-failures. Applications should treat diagnostics as observable state and display
-errors as control-flow termination for the affected stream.
+``WaylandDisplayError`` covers fatal display or runtime failures and terminates
+the affected stream.
 
-No public control flow requires parsing diagnostic message strings. Use typed
-diagnostic payloads and operations instead.
+Public control flow uses typed payloads and operations rather than message
+strings.
 
-WaylandClientKit's repository error taxonomy records which conditions use
-feature-specific public errors, display errors, or diagnostics.
-
-## Public APIs
-
-- ``DisplayDiagnostics``
-- ``DisplayDiagnostic``
-- ``DisplayDiagnosticPayload``
-- ``WindowDiagnostic``
-- ``InputDiagnostic``
-- ``WaylandDisplay/diagnostics``
-
-## Errors And Policy
-
-WaylandClientKit owns diagnostic publication, typed payloads, and stream finishing.
-Applications and frameworks own logging policy, user-facing recovery decisions,
-and whether a diagnostic should be escalated into app-specific control flow.
+WaylandClientKit owns publication and stream completion. Applications own
+logging and recovery policy.
 
 ## Example
 
-`WaylandClientKitDemo` in `Examples/WaylandClientKitDemo` prints basic input and display
-state. Smoke examples publish feature-specific diagnostics when optional
-protocols are unavailable or rejected.
+`WaylandClientKitDemo` in `Examples/WaylandClientKitDemo` prints basic input and
+display state.

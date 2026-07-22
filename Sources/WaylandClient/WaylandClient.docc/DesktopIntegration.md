@@ -5,21 +5,13 @@ outside the core drawing path: window icons, idle inhibition, xdg-dialog hints,
 keyboard shortcut inhibition, toplevel-drag start, read-only foreign toplevel
 facts, and system bell.
 
-## When To Use This
-
-Use a window icon when the compositor or shell can display app identity. Use
-idle inhibition while visible activity such as media playback should keep the
-screen awake. Use `createDialog(parent:modal:)` to expose the protocol fact that
-one toplevel is a dialog relative to another toplevel. Use keyboard shortcut
-inhibition only for seat/window-scoped full-screen or capture-heavy modes, and
-watch display events for `keyboardShortcutsInhibitorChanged` because the
-compositor can activate or deactivate the request. Use `startToplevelDrag` when
-a drag source should move detachable toplevel content. Use
-``WaylandDisplay/foreignToplevelListSnapshot(timeoutMilliseconds:)`` for
-read-only, connection-local facts about compositor-known toplevels. Foreign
-titles and app IDs are optional, privacy-sensitive compositor facts. Use system
-bell for compositor-mediated attention feedback rather than playing sound
-directly from WaylandClientKit.
+Window icons carry app identity. Idle inhibition keeps the screen awake during
+visible activity. Dialog hints relate toplevels. Shortcut inhibition serves
+seat- and window-scoped capture modes, with lifecycle changes reported through
+display events. Toplevel drag moves detachable content. Foreign toplevel
+snapshots provide read-only, connection-local facts; titles and app IDs are
+optional and privacy-sensitive. System bell requests compositor-mediated
+attention feedback.
 
 ## Capability Gates
 
@@ -40,31 +32,8 @@ Check ``WaylandDisplay/capabilities()`` first, but still handle request-time
 errors because startup globals can disappear and compositor policy can reject
 or ignore a request.
 
-## Public APIs
-
-- ``WindowIcon``
-- ``WindowIconName``
-- ``WindowIconImage``
-- ``IdleInhibitor``
-- ``WindowDialog``
-- ``KeyboardShortcutsInhibitor``
-- ``ToplevelDrag``
-- ``StartedToplevelDrag``
-- ``Window/setIcon(_:)``
-- ``Window/inhibitIdle()``
-- ``Window/createDialog(parent:modal:)``
-- ``Window/inhibitKeyboardShortcuts(seatID:)``
-- ``Window/startToplevelDrag(source:seatID:serial:icon:offset:)``
-- ``WaylandDisplay/foreignToplevelListSnapshot(timeoutMilliseconds:)``
-- ``WaylandDisplay/ringSystemBell()``
-- ``Window/ringSystemBell()``
-
-## Errors And Policy
-
-WaylandClientKit owns protocol request validation and typed unavailable errors.
-Frameworks own app identity, icon asset selection, idle policy, modal event
-filtering, sheet/alert/document-modal behavior, shortcut policy, drag/drop
-policy, foreign-window privacy policy, and user-visible attention policy.
+WaylandClientKit validates requests and reports typed availability errors.
+Frameworks own asset, idle, modal, shortcut, drag, privacy, and attention policy.
 
 ## Examples
 

@@ -6,13 +6,9 @@ same public frame submission can present through software.
 If explicit synchronization has already been configured or activated on the
 surface, implicit software fallback is not safe and the submission fails with a
 typed unavailable reason instead.
-When FIFO or commit-timing pacing is requested, software fallback applies the
-same pacing submit constraint when the compositor supports it. Missing pacing
-protocols are reported as typed runtime fallback facts instead of being silently
-ignored.
-FIFO pacing still uses barrier sequencing on software commits: the first
-FIFO-paced software frame primes the barrier, and later FIFO-paced frames wait
-and set the next barrier.
+Software fallback keeps supported FIFO or commit-timing constraints. Missing
+protocols produce runtime fallback facts. FIFO primes one commit, then waits and
+sets the next barrier.
 
 ## Policies
 
@@ -23,10 +19,8 @@ and set the next barrier.
   unavailable/failure reason instead of falling back.
 - `WaylandGraphicsPresentationPolicy.software` never attempts GPU presentation.
 
-`WaylandGraphicsPresentationPolicy.externalGPU(fallback:)` is reserved for
-renderer-owned external-buffer presentation. Normal clear/software submissions
-do not become software submissions unless the external path has actually
-entered its requested software fallback.
+`externalGPU(fallback:)` is for renderer-owned buffers. Clear or software
+submissions use software only after that path enters its requested fallback.
 
 Use ``WaylandGraphicsFrameResult/backing`` and
 ``WaylandGraphicsRuntimePath/fallback`` to tell whether a submitted frame used
@@ -34,11 +28,8 @@ fallback.
 
 ## Reasons
 
-``WaylandGraphicsReason`` describes both fallback and unavailable outcomes. It
-can report missing dmabuf, missing surface feedback, no compatible
-format, no render node, GBM/EGL setup failure, dmabuf import or compositor
-commit failure, missing explicit sync, unsupported pacing, metadata or
-presentation-feedback requirements, or forced software.
+``WaylandGraphicsReason`` covers missing capabilities, incompatible formats,
+setup or commit failures, unsupported requirements, and forced software.
 
 ## Example
 

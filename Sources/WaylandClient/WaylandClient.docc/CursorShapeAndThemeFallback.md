@@ -16,11 +16,8 @@ Cursor diagnostics are reported through the input diagnostic path.
 focused surface's outputs. `PointerCursorScalePolicy.maximumOutputScale` uses
 the largest known output scale.
 
-WaylandClientKit currently provides built-in presets for default arrow, text,
-pointer, crosshair, horizontal resize, vertical resize, and hidden cursors.
-Diagonal resize cursors are intentionally not built in yet because portable
-theme-name behavior still needs evidence across KDE, GNOME, Sway/wlroots, and
-Weston.
+Built-in presets cover the default arrow, text, pointer, crosshair, horizontal
+and vertical resize, and hidden cursors. Diagonal resize remains theme-specific.
 
 Static software cursor images are supported through ``PointerCursorImage`` and
 ``PointerCursor/image(_:)``. Images use one XRGB8888 pixel array, a declared
@@ -33,12 +30,9 @@ the same XRGB8888 image format and hotspot validation as a static custom cursor
 image. Frame durations must be positive, and empty animations are rejected before
 any cursor request is sent.
 
-Animation starts only after the animated cursor is the current desired cursor.
-Replacing it with a theme cursor, hidden cursor, static custom cursor, or another
-cursor stops the previous animation. Pointer leave pauses frame attachment for
-that seat until pointer focus returns. Seat removal and display close stop
-animation and release cursor frame buffers through the normal cursor-surface
-cleanup path.
+Animation starts when the animated cursor becomes current. Replacing it stops
+the animation; pointer leave pauses it. Seat removal and display close release
+its buffers.
 
 Frameworks implementing client-side resize chrome can use custom cursor names
 when they have theme-specific policy:
@@ -50,10 +44,8 @@ let bottomLeft = try? PointerCursor(name: "sw-resize")
 let bottomRight = try? PointerCursor(name: "se-resize")
 ```
 
-Treat these names as best-effort theme requests. If a cursor cannot be resolved,
-fall back to an existing built-in such as ``PointerCursor/crosshair`` or keep the
-current cursor until the framework has compositor/theme evidence for a better
-choice.
+Theme names are best-effort. An unresolved name can fall back to a built-in such
+as ``PointerCursor/crosshair`` or leave the current cursor unchanged.
 
 ## Capability Gate
 
@@ -63,24 +55,10 @@ Theme-backed and custom image cursors use managed cursor surfaces and
 no pointer focus, a theme name cannot be resolved, or compositor policy rejects
 the cursor path.
 
-## Public APIs
-
-- ``PointerCursor``
-- ``PointerCursorImage``
-- ``PointerCursorFrame``
-- ``AnimatedPointerCursor``
-- ``WaylandDisplay/setPointerCursor(_:)``
-- ``CursorConfiguration``
-- ``CursorRequestResult``
-
-## Errors And Policy
-
-WaylandClientKit owns cursor request routing, fallback attempts, and diagnostics.
-Frameworks own cursor policy, hit testing, resize affordances, and deciding
-which cursor to request for a given interaction.
+WaylandClientKit owns request routing, fallback attempts, and diagnostics.
+Frameworks own hit testing and cursor policy.
 
 ## Examples
 
-See `CursorPolicySmoke` in `Examples/CursorPolicySmoke`,
-`CustomCursorSmoke` in `Examples/CustomCursorSmoke`, and
-`CursorAnimationSmoke` in `Examples/CursorAnimationSmoke`.
+See `CursorPolicySmoke`, `CustomCursorSmoke`, and `CursorAnimationSmoke` in
+`Examples/`.

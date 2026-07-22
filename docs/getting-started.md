@@ -1,8 +1,5 @@
 # Getting Started
 
-This path builds one tiny Wayland client and points you at the next examples to
-read.
-
 ## 1. Install Dependencies
 
 On Nix/NixOS, enter the project shell:
@@ -28,7 +25,7 @@ WaylandClientKit currently requires Swift 6.3.2 or newer.
 swift build --disable-index-store
 ```
 
-Maintainers can run the same normal branch gate that CI uses:
+The local CI gate is:
 
 ```bash
 swift run wck ci check
@@ -42,7 +39,7 @@ Under a Wayland session:
 swift run wayland-client-kit-smoke
 ```
 
-For the broader live smoke path:
+Additional live checks are available through:
 
 ```bash
 swift run wck smoke live
@@ -116,29 +113,14 @@ constraint lifecycle events. Use `display.events` for display/window/output
 lifecycle, `display.dataTransferEvents` for clipboard and drag lifecycles, and
 `display.diagnostics` for nonfatal diagnostics such as event overflow.
 
-WaylandClientKit preserves Wayland identities and typed events for application
-and framework routing.
-
 ## 6. Close Cleanly
 
 Close windows you own with `await window.close()`. Leaving the
 `WaylandDisplay.withConnection` body closes the display and retires managed
-resources. Treat compositor errors and missing optional protocols as normal
-runtime facts, not as proof that the client has become unusable.
+resources. Applications can handle compositor errors and absent optional
+protocols as runtime conditions.
 
-## Next Examples
+## Next Example
 
-- [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) for a simple
-  drawing and input loop.
-- [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) for a small
-  framework-host style loop above `WaylandClient`.
-- [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) for saving and
-  restoring app-owned window facts with `XDG_STATE_HOME`.
-- [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift)
-  for frame callbacks and presentation feedback.
-- [TextInputSmoke](../Examples/TextInputSmoke/main.swift) for compositor IME
-  text input.
-- [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) for clipboard
-  and drag-and-drop paths.
-- [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift) for the
-  preview graphics API.
+[Which API Should I Use?](which-api-should-i-use.md) links each feature to a
+runnable example.
