@@ -81,8 +81,8 @@ public struct DocumentationStructureVerifier {
             description: "graphics preview root states raw GPU handles are not public"),
         RequiredPhrase(
             path: "Sources/WaylandClient/WaylandClient.docc/TextInputLifecycle.md",
-            phrase: "disable() finalizes",
-            description: "text input docs mention disable semantics"),
+            phrase: "sends the protocol disable request followed by",
+            description: "text input docs describe protocol-correct disable semantics"),
     ]
 
     public let repository: Repository

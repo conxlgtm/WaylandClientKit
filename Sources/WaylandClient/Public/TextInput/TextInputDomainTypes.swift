@@ -302,67 +302,90 @@ public struct TextInputFocusEvent: Equatable, Sendable {
     }
 }
 
-public struct TextInputPreeditEvent: Equatable, Sendable {
-    public let seatID: SeatID
+public struct TextInputCommitSerial:
+    RawRepresentable,
+    Equatable,
+    Hashable,
+    Sendable
+{
+    public let rawValue: UInt32
+
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+}
+
+public struct TextInputPreedit: Equatable, Sendable {
     public let text: String
     public let cursorBegin: Int32
     public let cursorEnd: Int32
     public let hints: [TextInputPreeditHint]
 
     public init(
-        seatID eventSeatID: SeatID,
-        text eventText: String,
-        cursorBegin eventCursorBegin: Int32,
-        cursorEnd eventCursorEnd: Int32,
-        hints eventHints: [TextInputPreeditHint]
+        text: String,
+        cursorBegin: Int32,
+        cursorEnd: Int32,
+        hints: [TextInputPreeditHint]
     ) {
-        seatID = eventSeatID
-        text = eventText
-        cursorBegin = eventCursorBegin
-        cursorEnd = eventCursorEnd
-        hints = eventHints
+        self.text = text
+        self.cursorBegin = cursorBegin
+        self.cursorEnd = cursorEnd
+        self.hints = hints
     }
 }
 
-public struct TextInputCommitEvent: Equatable, Sendable {
-    public let seatID: SeatID
-    public let text: String
-
-    public init(seatID eventSeatID: SeatID, text eventText: String) {
-        seatID = eventSeatID
-        text = eventText
-    }
-}
-
-public struct TextInputDeleteSurroundingTextEvent: Equatable, Sendable {
-    public let seatID: SeatID
+public struct TextInputDeletion: Equatable, Sendable {
     public let beforeLength: UInt32
     public let afterLength: UInt32
 
     public init(
-        seatID eventSeatID: SeatID,
-        beforeLength eventBeforeLength: UInt32,
-        afterLength eventAfterLength: UInt32
+        beforeLength: UInt32,
+        afterLength: UInt32
     ) {
-        seatID = eventSeatID
-        beforeLength = eventBeforeLength
-        afterLength = eventAfterLength
+        self.beforeLength = beforeLength
+        self.afterLength = afterLength
     }
 }
 
 public struct TextInputActionEvent: Equatable, Sendable {
-    public let seatID: SeatID
     public let action: TextInputAction
     public let serial: UInt32
 
+    public init(action: TextInputAction, serial: UInt32) {
+        self.action = action
+        self.serial = serial
+    }
+}
+
+public struct TextInputTransaction: Equatable, Sendable {
+    public let seatID: SeatID
+    public let target: InputEventTarget
+    public let serial: TextInputCommitSerial
+    public let matchesLatestCommit: Bool
+
+    public let preedit: TextInputPreedit?
+    public let deletion: TextInputDeletion?
+    public let committedText: String?
+    public let action: TextInputActionEvent?
+
     public init(
-        seatID eventSeatID: SeatID,
-        action eventAction: TextInputAction,
-        serial eventSerial: UInt32
+        seatID: SeatID,
+        target: InputEventTarget,
+        serial: TextInputCommitSerial,
+        matchesLatestCommit: Bool,
+        preedit: TextInputPreedit?,
+        deletion: TextInputDeletion?,
+        committedText: String?,
+        action: TextInputActionEvent?
     ) {
-        seatID = eventSeatID
-        action = eventAction
-        serial = eventSerial
+        self.seatID = seatID
+        self.target = target
+        self.serial = serial
+        self.matchesLatestCommit = matchesLatestCommit
+        self.preedit = preedit
+        self.deletion = deletion
+        self.committedText = committedText
+        self.action = action
     }
 }
 
@@ -378,16 +401,6 @@ public struct TextInputLanguageEvent: Equatable, Sendable {
     public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {
         seatID = eventSeatID
         language = eventLanguage
-    }
-}
-
-public struct TextInputDoneEvent: Equatable, Sendable {
-    public let seatID: SeatID
-    public let serial: UInt32
-
-    public init(seatID eventSeatID: SeatID, serial eventSerial: UInt32) {
-        seatID = eventSeatID
-        serial = eventSerial
     }
 }
 
@@ -419,11 +432,7 @@ public enum TextInputDiagnosticOperation: Equatable, Sendable {
 public enum TextInputEvent: Equatable, Sendable {
     case entered(TextInputFocusEvent)
     case left(TextInputFocusEvent)
-    case preedit(TextInputPreeditEvent)
-    case committed(TextInputCommitEvent)
-    case deleteSurroundingText(TextInputDeleteSurroundingTextEvent)
-    case action(TextInputActionEvent)
+    case transaction(TextInputTransaction)
     case language(TextInputLanguageEvent)
-    case done(TextInputDoneEvent)
     case diagnostic(TextInputDiagnostic)
 }

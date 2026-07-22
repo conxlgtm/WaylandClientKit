@@ -237,8 +237,17 @@ struct WaylandPresentationAPISurfaceTests {
         func inspectEvent(_ event: SurfacePresentationFeedback) -> SurfacePresentationIdentity {
             event.surface
         }
+        func inspectWindowEvent(_ event: WindowPresentationEvent) -> WindowID {
+            event.windowID
+        }
+        func inspectDisplayEvent(_ event: DisplayEvent) -> WindowPresentationEvent? {
+            guard case .presentation(let presentation) = event else { return nil }
+            return presentation
+        }
         _ = inspectFeedback
         _ = inspectEvent
+        _ = inspectWindowEvent
+        _ = inspectDisplayEvent
 
         func usePresentationFeedbackAPI(window: Window) async throws {
             let events = window.presentationEvents
@@ -364,32 +373,33 @@ struct WaylandTextInputAPISurfaceTests {
             kind: .prediction
         )
         let seatID = SeatID(rawValue: 3)
-        let event = TextInputEvent.preedit(
-            TextInputPreeditEvent(
-                seatID: seatID,
+        let serial = TextInputCommitSerial(rawValue: 4)
+        let transaction = TextInputTransaction(
+            seatID: seatID,
+            target: .focusless,
+            serial: serial,
+            matchesLatestCommit: true,
+            preedit: TextInputPreedit(
                 text: "pre",
                 cursorBegin: 0,
                 cursorEnd: 3,
                 hints: [preeditHint]
-            )
+            ),
+            deletion: TextInputDeletion(beforeLength: 1, afterLength: 2),
+            committedText: "committed",
+            action: TextInputActionEvent(action: .submit, serial: 5)
         )
+        let event = TextInputEvent.transaction(transaction)
+        let displayEvent = DisplayEvent.textInput(event)
 
         #expect(hints.contains(.completion))
         #expect(purpose == .email)
         #expect(TextInputChangeCause.other.rawValue == 1)
         #expect(TextInputAction.submit.rawValue == 1)
-        #expect(
-            event
-                == .preedit(
-                    TextInputPreeditEvent(
-                        seatID: seatID,
-                        text: "pre",
-                        cursorBegin: 0,
-                        cursorEnd: 3,
-                        hints: [preeditHint]
-                    )
-                )
-        )
+        #expect(serial.rawValue == 4)
+        #expect(transaction.action?.serial == 5)
+        #expect(displayEvent == .textInput(event))
+        #expect(event == .transaction(transaction))
 
         func useTextInputAPI(
             display: WaylandDisplay,
@@ -409,8 +419,9 @@ struct WaylandTextInputAPISurfaceTests {
             try await session.setTextChangeCause(.other)
             try await session.setContentType(hints: hints, purpose: purpose)
             try await session.setCursorRectangle(rect)
-            try await session.commit()
-            try await session.disable()
+            let commitSerial: TextInputCommitSerial = try await session.commit()
+            let disableSerial: TextInputCommitSerial? = try await session.disable()
+            _ = (commitSerial, disableSerial)
             _ = try await iterator.next()
         }
 

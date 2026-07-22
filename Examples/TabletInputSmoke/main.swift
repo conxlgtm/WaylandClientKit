@@ -9,7 +9,7 @@ enum TabletInputSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.TabletInputSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 64,
+                eventCapacity: 64,
                 inputEventCapacity: 256,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,

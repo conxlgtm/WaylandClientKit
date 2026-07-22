@@ -30,7 +30,7 @@ final class DisplayEventHub: Sendable {
         diagnosticIDGenerator = idGenerator
         displayBroker = TypedEventBroker<DisplayEvent>(
             stream: .displayEvents,
-            capacity: configuration.displayEventCapacity.rawValue
+            capacity: configuration.eventCapacity.rawValue
         )
         inputBroker = TypedEventBroker<InputEvent>(
             stream: .inputEvents,
@@ -94,6 +94,12 @@ final class DisplayEventHub: Sendable {
             publishInput(inputEvent)
         case .diagnostic(let diagnostic):
             publishDiagnostic(diagnostic)
+        case .textInput(let textInputEvent):
+            publishTextInput(textInputEvent)
+        case .dataTransfer(let dataTransferEvent):
+            publishDataTransfer(dataTransferEvent)
+        case .presentation(let presentationEvent):
+            publishPresentation(presentationEvent)
         case .windowCloseRequested, .windowClosed, .popupDismissed, .popupClosed,
             .redrawRequested, .popupRedrawRequested, .outputChanged, .outputRemoved,
             .windowOutputsChanged, .keyboardShortcutsInhibitorChanged:
@@ -102,6 +108,7 @@ final class DisplayEventHub: Sendable {
     }
 
     func publishInput(_ inputEvent: InputEvent) {
+        displayBroker.publish(.input(inputEvent))
         switch inputEvent.kind {
         case .diagnostic(let diagnostic):
             let displayDiagnostic = makeDisplayDiagnostic(
@@ -117,17 +124,18 @@ final class DisplayEventHub: Sendable {
             }
         case .seat, .pointer, .keyboard, .touch, .tablet:
             guard !inputBroker.isTerminal else { return }
-            displayBroker.publish(.input(inputEvent))
         }
 
         inputBroker.publish(inputEvent)
     }
 
     func publishDataTransfer(_ event: DataTransferEvent) {
+        displayBroker.publish(.dataTransfer(event))
         dataTransferBroker.publish(event)
     }
 
     func publishTextInput(_ event: TextInputEvent) {
+        displayBroker.publish(.textInput(event))
         if case .diagnostic(let diagnostic) = event {
             publishTextInputDiagnostic(diagnostic)
         }
@@ -136,6 +144,7 @@ final class DisplayEventHub: Sendable {
     }
 
     func publishPresentation(_ event: WindowPresentationEvent) {
+        displayBroker.publish(.presentation(event))
         presentationBroker.publish(event)
     }
 

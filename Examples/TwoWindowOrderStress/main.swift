@@ -12,7 +12,7 @@ enum TwoWindowOrderStress {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.TwoWindowOrderStress",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 128,
+                eventCapacity: 128,
                 inputEventCapacity: 4_096,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,

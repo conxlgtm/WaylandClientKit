@@ -10,7 +10,7 @@ enum SystemBellSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.SystemBellSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 32,
+                eventCapacity: 32,
                 inputEventCapacity: 16,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,

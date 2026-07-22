@@ -12,7 +12,7 @@ extension WaylandDisplay {
         try requireCore().enableTextInput(seatID: seatID, windowID: windowID)
     }
 
-    package func disableTextInput(seatID: SeatID) throws {
+    package func disableTextInput(seatID: SeatID) throws -> TextInputCommitSerial? {
         try requireCore().disableTextInput(seatID: seatID)
     }
 
@@ -48,7 +48,7 @@ extension WaylandDisplay {
         try requireCore().setTextInputCursorRectangle(rect, seatID: seatID)
     }
 
-    package func commitTextInput(seatID: SeatID) throws {
+    package func commitTextInput(seatID: SeatID) throws -> TextInputCommitSerial {
         try requireCore().commitTextInput(seatID: seatID)
     }
 

@@ -15,7 +15,7 @@ extension DisplayCore {
         }
     }
 
-    func disableTextInput(seatID: SeatID) throws {
+    func disableTextInput(seatID: SeatID) throws -> TextInputCommitSerial? {
         try withFatalFailureFinalization {
             try requireSession().textInputManager.disable(seatID: seatID)
         }
@@ -65,7 +65,7 @@ extension DisplayCore {
         }
     }
 
-    func commitTextInput(seatID: SeatID) throws {
+    func commitTextInput(seatID: SeatID) throws -> TextInputCommitSerial {
         try withFatalFailureFinalization {
             try requireSession().textInputManager.commit(seatID: seatID)
         }

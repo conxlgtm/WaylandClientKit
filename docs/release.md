@@ -6,6 +6,31 @@ documentation, support status, and compositor evidence must agree before a tag.
 Review [Compatibility Policy](compatibility-policy.md) for public API changes and
 [Compositor Matrix](compositor-matrix.md) for runtime claims.
 
+## Current Checkpoint Migration
+
+This checkpoint contains source-breaking `WaylandClient` changes:
+
+- Replace `EventStreamConfiguration.displayEventCapacity` and
+  `PositiveInt.defaultDisplayEventCapacity` with `eventCapacity` and
+  `defaultEventCapacity`. The capacity now controls the complete
+  `WaylandDisplay.events` feed.
+- Replace the fragmented `TextInputEvent.preedit`, `committed`,
+  `deleteSurroundingText`, `action`, and `done` cases with one
+  `TextInputEvent.transaction`. Read the seat, target, done serial, match state,
+  and optional compositor changes from `TextInputTransaction`.
+  `TextInputPreeditEvent` becomes the nested `TextInputPreedit`,
+  `TextInputDeleteSurroundingTextEvent` becomes `TextInputDeletion`, committed
+  text moves directly onto the transaction, and `TextInputDoneEvent` is replaced
+  by the transaction serial. Nested preedit, deletion, and action payloads no
+  longer repeat the seat ID.
+- Account for the serial results from `TextInputSession.commit()` and
+  `TextInputSession.disable()`. Disable now sends its own commit and returns
+  `nil` only when the session is already inactive or disabled.
+- Update exhaustive `DisplayEvent` switches for the new `textInput`,
+  `dataTransfer`, and `presentation` cases. `WaylandDisplay.events` is now the
+  complete cross-family ordered feed; specialized streams remain
+  family-ordered convenience views.
+
 ## Required Gates
 
 Run from a clean working tree:

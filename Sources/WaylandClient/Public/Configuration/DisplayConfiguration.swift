@@ -1,12 +1,12 @@
 public struct EventStreamConfiguration: Equatable, Sendable {
-    public var displayEventCapacity: PositiveInt
+    public var eventCapacity: PositiveInt
     public var inputEventCapacity: PositiveInt
     public var textInputEventCapacity: PositiveInt
     public var dataTransferEventCapacity: PositiveInt
     public var presentationEventCapacity: PositiveInt
 
     public init(
-        displayEventCapacity displayCapacity: PositiveInt = .defaultDisplayEventCapacity,
+        eventCapacity: PositiveInt = .defaultEventCapacity,
         inputEventCapacity inputCapacity: PositiveInt = .defaultInputEventCapacity,
         textInputEventCapacity textInputCapacity: PositiveInt = .defaultTextInputEventCapacity,
         dataTransferEventCapacity dataTransferCapacity: PositiveInt =
@@ -14,7 +14,7 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         presentationEventCapacity presentationCapacity: PositiveInt =
             .defaultPresentationEventCapacity
     ) {
-        displayEventCapacity = displayCapacity
+        self.eventCapacity = eventCapacity
         inputEventCapacity = inputCapacity
         textInputEventCapacity = textInputCapacity
         dataTransferEventCapacity = dataTransferCapacity
@@ -22,14 +22,14 @@ public struct EventStreamConfiguration: Equatable, Sendable {
     }
 
     public init(
-        displayEventCapacity displayCapacity: Int,
+        eventCapacity: Int,
         inputEventCapacity inputCapacity: Int,
         textInputEventCapacity textInputCapacity: Int,
         dataTransferEventCapacity dataTransferCapacity: Int,
         presentationEventCapacity presentationCapacity: Int
     ) throws {
         try self.init(
-            displayEventCapacity: PositiveInt(displayCapacity),
+            eventCapacity: PositiveInt(eventCapacity),
             inputEventCapacity: PositiveInt(inputCapacity),
             textInputEventCapacity: PositiveInt(textInputCapacity),
             dataTransferEventCapacity: PositiveInt(dataTransferCapacity),

@@ -19,7 +19,7 @@ struct DisplayEventHubTests {
     @Test
     func displaySubscriberOverflowTerminatesOnlyThatSubscriber() async throws {
         let hub = DisplayEventHub(
-            configuration: EventStreamConfiguration(displayEventCapacity: try PositiveInt(1))
+            configuration: EventStreamConfiguration(eventCapacity: try PositiveInt(1))
         )
         let firstStream = hub.displayEvents()
         let secondStream = hub.displayEvents()
@@ -38,7 +38,7 @@ struct DisplayEventHubTests {
     @Test
     func displaySubscriberOverflowUsesConfiguredCapacity() async throws {
         let hub = DisplayEventHub(
-            configuration: EventStreamConfiguration(displayEventCapacity: try PositiveInt(1))
+            configuration: EventStreamConfiguration(eventCapacity: try PositiveInt(1))
         )
         let stream = hub.displayEvents()
         var iterator = stream.makeAsyncIterator()
@@ -80,6 +80,7 @@ struct DisplayEventHubTests {
             severity: .degraded,
             payload: .input(diagnostic)
         )
+        await expectNext(.input(inputEvent), from: &displayIterator)
         await expectNext(.diagnostic(expectedDiagnostic), from: &displayIterator)
         await expectInputNext(inputEvent, from: &inputIterator)
     }
@@ -108,6 +109,7 @@ struct DisplayEventHubTests {
             severity: .error,
             payload: .input(diagnostic)
         )
+        await expectNext(.input(inputEvent), from: &displayIterator)
         await expectNext(.diagnostic(expectedDiagnostic), from: &displayIterator)
     }
 }
@@ -273,6 +275,7 @@ struct DisplayEventHubFailureTests {
         hub.publishInput(inputEvent)
         hub.publish(.redrawRequested(WindowID(rawValue: 9)))
 
+        await expectNext(.input(inputEvent), from: &displayIterator)
         await expectNext(
             .diagnostic(
                 DisplayDiagnostic(

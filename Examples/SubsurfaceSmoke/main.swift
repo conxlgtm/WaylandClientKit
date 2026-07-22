@@ -10,7 +10,7 @@ enum SubsurfaceSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.SubsurfaceSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 64,
+                eventCapacity: 64,
                 inputEventCapacity: 16,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,

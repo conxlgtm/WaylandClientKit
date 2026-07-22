@@ -49,6 +49,7 @@ Intentionally public:
 - `PresentationTimestamp`
 - `PresentationSequence`
 - `PresentationFeedbackFlags`
+- `WindowPresentationEvent`
 - `WindowPresentationEvents`
 - `DisplayEvent`
 - `EventStreamConfiguration`
@@ -143,13 +144,13 @@ Intentionally public:
 - `TextInputPreeditHintKind`
 - `TextInputPreeditHint`
 - `TextInputFocusEvent`
-- `TextInputPreeditEvent`
-- `TextInputCommitEvent`
-- `TextInputDeleteSurroundingTextEvent`
+- `TextInputCommitSerial`
+- `TextInputPreedit`
+- `TextInputDeletion`
 - `TextInputActionEvent`
+- `TextInputTransaction`
 - `TextInputLanguage`
 - `TextInputLanguageEvent`
-- `TextInputDoneEvent`
 - `TextInputDiagnostic`
 - `TextInputDiagnosticOperation`
 - `TextInputEvent`
@@ -475,8 +476,12 @@ Notes:
   display/input event streams are passive subscribers and do not drive Wayland dispatch.
 - Display streams terminate normally on explicit close and terminate with
   `WaylandDisplayError` on fatal display failure or per-subscriber overflow.
-- `EventStreamConfiguration` controls display, input, text-input, data-transfer,
-  and presentation stream capacities independently.
+- `EventStreamConfiguration.eventCapacity` controls the complete display event
+  feed. Input, text-input, data-transfer, and presentation convenience streams
+  have independent capacities.
+- `WaylandDisplay.events` contains every event family and is the only public
+  stream that preserves ordering across families. Specialized streams preserve
+  order only within their own family.
 - Nonterminal runtime degradation is surfaced through `DisplayEvent.diagnostic`.
   Input-specific diagnostics also remain available on `inputEvents`.
 - `Window` is the ergonomic async handle. Windows are still addressable by `WindowID`,
@@ -567,15 +572,19 @@ Notes:
   constructor for a simple XRGB8888 drag icon payload.
 - `TextInputSession` is seat-scoped. Enabling text input targets a managed
   window, request methods require an enabled or focused session, and `commit()`
-  sends the protocol commit request. `TextInputSurroundingText` supports both
-  protocol UTF-8 byte offsets and Swift `String.Index` construction. `disable()`
-  finalizes the disable request, callers should commit pending enabled-state
-  changes before disabling and should not call `commit()` after `disable()`.
+  returns the wrapping serial assigned after the protocol commit request succeeds.
+  `TextInputSurroundingText` supports both protocol UTF-8 byte offsets and Swift
+  `String.Index` construction. `disable()` sends disable and commit in order,
+  returns that commit serial, then marks the lifecycle disabled. A repeated
+  disable returns `nil`, and callers must not call `commit()` after disabling.
   Input-panel show/hide requests are v2 hints and can be ignored by the
   compositor.
-  `WaylandDisplay.textInputEvents` is separate from `inputEvents`, and
-  text-input diagnostics can publish on both text-input and display diagnostic
-  streams.
+  Completed compositor changes publish as a single `TextInputTransaction`
+  carrying the current target and whether its serial matches the latest commit.
+  Action payloads preserve their independent protocol serial. Clients apply stale
+  transactions in full; the match only associates them with client request state.
+  Text-input events appear on both `WaylandDisplay.events` and `textInputEvents`;
+  text-input diagnostics also appear on the display diagnostic stream.
 - `WaylandCapabilities` is a registry-discovery snapshot. It lets applications
   branch before requesting optional features, but request APIs still throw typed
   availability errors because Wayland globals can be removed after discovery.

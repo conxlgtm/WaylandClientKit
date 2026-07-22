@@ -7,10 +7,16 @@ struct DisplayEventHubTextInputTests {
     @Test
     func textInputEventsAreDeliveredOnDedicatedStream() async {
         let hub = DisplayEventHub()
-        let expected = TextInputEvent.committed(
-            TextInputCommitEvent(
+        let expected = TextInputEvent.transaction(
+            TextInputTransaction(
                 seatID: SeatID(rawValue: 2),
-                text: "input"
+                target: .focusless,
+                serial: TextInputCommitSerial(rawValue: 1),
+                matchesLatestCommit: true,
+                preedit: nil,
+                deletion: nil,
+                committedText: "input",
+                action: nil
             )
         )
         var iterator = hub.textInputEvents().makeAsyncIterator()
@@ -38,10 +44,10 @@ struct DisplayEventHubTextInputTests {
         var inputIterator = hub.inputEvents().makeAsyncIterator()
 
         hub.publishTextInput(
-            .committed(TextInputCommitEvent(seatID: .init(rawValue: 2), text: "a"))
+            textInputTransaction(text: "a", serial: 1)
         )
         hub.publishTextInput(
-            .committed(TextInputCommitEvent(seatID: .init(rawValue: 2), text: "b"))
+            textInputTransaction(text: "b", serial: 2)
         )
         hub.publishInput(
             InputEvent(
@@ -59,6 +65,26 @@ struct DisplayEventHubTextInputTests {
         } catch {
             Issue.record("Expected input stream to remain active, got \(error)")
         }
+    }
+
+    @Test
+    func overflowingTextInputSubscriberDoesNotTerminateAnotherSubscriber() async throws {
+        let hub = DisplayEventHub(
+            configuration: EventStreamConfiguration(
+                textInputEventCapacity: try PositiveInt(1)
+            )
+        )
+        var overflowingIterator = hub.textInputEvents().makeAsyncIterator()
+        var activeIterator = hub.textInputEvents().makeAsyncIterator()
+        let first = textInputTransaction(text: "a", serial: 1)
+        let second = textInputTransaction(text: "b", serial: 2)
+
+        hub.publishTextInput(first)
+        await expectTextInputNext(first, from: &activeIterator)
+        hub.publishTextInput(second)
+
+        await expectTextInputOverflow(from: &overflowingIterator, capacity: 1)
+        await expectTextInputNext(second, from: &activeIterator)
     }
 
     @Test
@@ -89,6 +115,21 @@ struct DisplayEventHubTextInputTests {
             Issue.record("Expected promoted text-input diagnostic, got \(error)")
         }
     }
+}
+
+private func textInputTransaction(text: String, serial: UInt32) -> TextInputEvent {
+    .transaction(
+        TextInputTransaction(
+            seatID: SeatID(rawValue: 2),
+            target: .focusless,
+            serial: TextInputCommitSerial(rawValue: serial),
+            matchesLatestCommit: true,
+            preedit: nil,
+            deletion: nil,
+            committedText: text,
+            action: nil
+        )
+    )
 }
 
 private func expectTextInputNext(

@@ -97,6 +97,11 @@ targets.
 - ``TextInputSession``
 - ``TextInputEvents``
 - ``TextInputEvent``
+- ``TextInputTransaction``
+- ``TextInputCommitSerial``
+- ``TextInputPreedit``
+- ``TextInputDeletion``
+- ``TextInputActionEvent``
 - ``TextInputContentHints``
 - ``TextInputContentPurpose``
 - ``TextInputError``
@@ -124,6 +129,7 @@ targets.
 
 - <doc:EventStreamsAndOverflow>
 - ``DisplayEvents``
+- ``DisplayEvent``
 - ``InputEvents``
 - ``TextInputEvents``
 - ``DataTransferEvents``
@@ -140,6 +146,7 @@ targets.
 
 - <doc:PresentationFeedbackAndFrameCallbacks>
 - ``WindowPresentationEvents``
+- ``WindowPresentationEvent``
 - ``PresentationFeedback``
 
 ### Diagnostics

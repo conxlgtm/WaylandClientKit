@@ -22,6 +22,13 @@
       "storageVisibility": "package"
     },
     {
+      "type": "TextInputCommitSerial",
+      "category": "raw protocol identity",
+      "constructor": "public",
+      "storage": "rawValue",
+      "storageVisibility": "public"
+    },
+    {
       "type": "WaylandGraphicsExternalPresentationFeedbackIdentity",
       "category": "public projection",
       "constructor": "package",

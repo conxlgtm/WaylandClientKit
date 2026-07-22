@@ -10,7 +10,7 @@ enum TextInputSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.TextInputSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 64,
+                eventCapacity: 64,
                 inputEventCapacity: 128,
                 textInputEventCapacity: 128,
                 dataTransferEventCapacity: 16,
@@ -21,7 +21,7 @@ enum TextInputSmoke {
             log("feature: text-input")
             log("capability: \(availabilityDescription(capabilities.textInput))")
             log("text-input capability \(availabilityDescription(capabilities.textInput))")
-            log("text-input lifecycle disable finalizes; do not commit after disable")
+            log("text-input lifecycle disable commits automatically; do not commit after disable")
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
@@ -98,6 +98,8 @@ enum TextInputSmoke {
                 return
             case .diagnostic(let diagnostic):
                 log("display diagnostic \(diagnostic)")
+            case .textInput(let event):
+                log("display text-input \(textInputDescription(event))")
             default:
                 break
             }
@@ -187,11 +189,11 @@ enum TextInputSmoke {
             )
             try await session.setSurroundingText(surroundingText)
             try await session.setCursorRectangle(try textCursorRectangle())
-            try await session.commit()
+            let serial = try await session.commit()
             await showInputPanelIfAvailable(session)
             await state.activate(session)
             log("operation: enable-text-input pass")
-            log("text-input enabled seat=\(seatID)")
+            log("text-input enabled seat=\(seatID) commitSerial=\(serial.rawValue)")
         } catch {
             log("operation: enable-text-input failed")
             log("text-input enable failed seat=\(seatID) error=\(error)")
@@ -205,9 +207,12 @@ enum TextInputSmoke {
         guard let session = await state.removeSession(for: seatID) else { return }
         do {
             await hideInputPanelIfAvailable(session)
-            try await session.disable()
+            let serial = try await session.disable()
             log("operation: disable-text-input pass")
-            log("text-input disabled seat=\(seatID)")
+            log(
+                "text-input disabled seat=\(seatID) "
+                    + "commitSerial=\(serial?.rawValue.description ?? "none")"
+            )
         } catch {
             log("operation: disable-text-input failed")
             log("text-input disable failed seat=\(seatID) error=\(error)")
@@ -218,9 +223,12 @@ enum TextInputSmoke {
         for session in await state.removeAllSessions() {
             do {
                 await hideInputPanelIfAvailable(session)
-                try await session.disable()
+                let serial = try await session.disable()
                 log("operation: disable-text-input pass")
-                log("text-input disabled seat=\(session.seatID)")
+                log(
+                    "text-input disabled seat=\(session.seatID) "
+                        + "commitSerial=\(serial?.rawValue.description ?? "none")"
+                )
             } catch {
                 log("operation: disable-text-input failed")
                 log("text-input disable failed seat=\(session.seatID) error=\(error)")
@@ -288,7 +296,8 @@ enum TextInputSmoke {
                 try await session.setTextChangeCause(.other)
                 try await session.setSurroundingText(surroundingText)
                 try await session.setCursorRectangle(try textCursorRectangle())
-                try await session.commit()
+                let serial = try await session.commit()
+                log("text-input refreshed seat=\(session.seatID) commitSerial=\(serial.rawValue)")
             } catch {
                 log("text-input refresh failed seat=\(session.seatID) error=\(error)")
             }
@@ -355,18 +364,14 @@ enum TextInputSmoke {
             "entered seat=\(focus.seatID) target=\(focus.target)"
         case .left(let focus):
             "left seat=\(focus.seatID) target=\(focus.target)"
-        case .preedit(let preedit):
-            "preedit seat=\(preedit.seatID) text=\(preedit.text)"
-        case .committed(let commit):
-            "committed seat=\(commit.seatID) text=\(commit.text)"
-        case .deleteSurroundingText(let delete):
-            "delete seat=\(delete.seatID) before=\(delete.beforeLength) after=\(delete.afterLength)"
-        case .action(let action):
-            "action seat=\(action.seatID) action=\(action.action.rawValue) serial=\(action.serial)"
+        case .transaction(let transaction):
+            "transaction seat=\(transaction.seatID) target=\(transaction.target) "
+                + "serial=\(transaction.serial.rawValue) "
+                + "matchesLatestCommit=\(transaction.matchesLatestCommit) "
+                + "preedit=\(transaction.preedit?.text ?? "none") "
+                + "committed=\(transaction.committedText ?? "none")"
         case .language(let language):
             "language seat=\(language.seatID) value=\(languageDescription(language.language))"
-        case .done(let done):
-            "done seat=\(done.seatID) serial=\(done.serial)"
         case .diagnostic(let diagnostic):
             "diagnostic seat=\(diagnostic.seatID.map(String.init(describing:)) ?? "none") "
                 + "operation=\(diagnostic.operation) message=\(diagnostic.message)"
@@ -430,15 +435,16 @@ private actor TextInputSmokeState {
     func recordTextInput(_ event: TextInputEvent) {
         current.sequence += 1
         switch event {
-        case .preedit(let preedit):
-            current.preeditText = preedit.text
-        case .committed(let commit):
-            current.textInputText += commit.text
+        case .transaction(let transaction):
             current.preeditText = ""
-            current.commitCount += 1
-        case .deleteSurroundingText:
-            current.preeditText = ""
-        case .entered, .left, .action, .language, .done, .diagnostic:
+            if let committedText = transaction.committedText {
+                current.textInputText += committedText
+                current.commitCount += 1
+            }
+            if let preedit = transaction.preedit {
+                current.preeditText = preedit.text
+            }
+        case .entered, .left, .language, .diagnostic:
             break
         }
     }

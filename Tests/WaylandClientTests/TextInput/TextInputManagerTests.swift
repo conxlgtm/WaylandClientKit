@@ -44,8 +44,11 @@ struct TextInputManagerTests {
         try manager.setCursorRectangle(rect, seatID: seatID)
         try manager.showInputPanel(seatID: seatID)
         try manager.hideInputPanel(seatID: seatID)
-        try manager.commit(seatID: seatID)
-        try manager.disable(seatID: seatID)
+        let commitSerial = try manager.commit(seatID: seatID)
+        let disableSerial = try manager.disable(seatID: seatID)
+
+        #expect(commitSerial == TextInputCommitSerial(rawValue: 1))
+        #expect(disableSerial == TextInputCommitSerial(rawValue: 2))
 
         #expect(
             backend.binding(for: seatID)?.operations == [
@@ -58,6 +61,7 @@ struct TextInputManagerTests {
                 .hideInputPanel,
                 .commit,
                 .disable,
+                .commit,
             ]
         )
     }
@@ -129,13 +133,16 @@ struct TextInputManagerTests {
         let seatID = SeatID(rawValue: 15)
 
         try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 31))
-        try manager.disable(seatID: seatID)
-        try manager.disable(seatID: seatID)
+        let firstSerial = try manager.disable(seatID: seatID)
+        let secondSerial = try manager.disable(seatID: seatID)
 
+        #expect(firstSerial == TextInputCommitSerial(rawValue: 1))
+        #expect(secondSerial == nil)
         #expect(
             backend.binding(for: seatID)?.operations == [
                 .enable,
                 .disable,
+                .commit,
             ]
         )
     }
@@ -147,8 +154,23 @@ struct TextInputManagerTests {
         let seatID = SeatID(rawValue: 18)
 
         try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 35))
-        try manager.disable(seatID: seatID)
+        let binding = try #require(backend.binding(for: seatID))
+        var lifecyclesDuringRequests: [TextInputSessionLifecycle] = []
+        binding.onOperation = { operation in
+            guard operation == .disable || operation == .commit else { return }
+            lifecyclesDuringRequests.append(manager.lifecycle(for: seatID))
+        }
+        let serial = try manager.disable(seatID: seatID)
+        binding.onOperation = nil
 
+        #expect(serial == TextInputCommitSerial(rawValue: 1))
+        #expect(
+            lifecyclesDuringRequests == [
+                .enabled(windowID: WindowID(rawValue: 35)),
+                .enabled(windowID: WindowID(rawValue: 35)),
+            ]
+        )
+        #expect(manager.lifecycle(for: seatID) == .disabled)
         #expect(
             throws: TextInputError.inactiveSession(
                 seatID: seatID,
@@ -161,6 +183,7 @@ struct TextInputManagerTests {
             backend.binding(for: seatID)?.operations == [
                 .enable,
                 .disable,
+                .commit,
             ]
         )
         #expect(
@@ -183,11 +206,15 @@ struct TextInputManagerTests {
         let seatID = SeatID(rawValue: 16)
 
         try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 32))
+        let firstBinding = try #require(backend.binding(for: seatID))
+        #expect(try manager.commit(seatID: seatID) == TextInputCommitSerial(rawValue: 1))
+        backend.emit(.commitString("discarded"), seatID: seatID)
         manager.removeSeat(seatID)
 
         #expect(
-            backend.binding(for: seatID)?.operations == [
+            firstBinding.operations == [
                 .enable,
+                .commit,
                 .destroy,
             ]
         )
@@ -205,6 +232,16 @@ struct TextInputManagerTests {
         #expect(throws: TextInputError.unknownSeat(seatID)) {
             try manager.commit(seatID: seatID)
         }
+
+        try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 32))
+        #expect(backend.boundSeatIDs == [seatID, seatID])
+        #expect(try manager.commit(seatID: seatID) == TextInputCommitSerial(rawValue: 1))
+        backend.emit(.done(serial: 1), seatID: seatID)
+        guard case .transaction(let transaction) = manager.drainEvents().last else {
+            Issue.record("expected completed text-input transaction")
+            return
+        }
+        #expect(transaction.committedText == nil)
     }
 
     @Test
@@ -234,36 +271,6 @@ struct TextInputManagerTests {
         #expect(throws: TextInputError.unavailable) {
             try manager.prepareSession(for: seatID)
         }
-    }
-
-    @Test
-    func rawEventsPublishResolvedTargets() throws {
-        let backend = RecordingTextInputBackend()
-        let seatID = SeatID(rawValue: 11)
-        let windowID = WindowID(rawValue: 21)
-        let manager = TextInputManager(backend: backend) { surfaceID in
-            surfaceID == RawObjectID(42)
-                ? .surface(.window(windowID))
-                : .unmanagedSurface
-        }
-
-        try manager.prepareSession(for: seatID)
-        backend.emit(.enter(surfaceID: RawObjectID(42)), seatID: seatID)
-        backend.emit(.commitString("text"), seatID: seatID)
-        backend.emit(.done(serial: 55), seatID: seatID)
-
-        #expect(
-            manager.drainEvents() == [
-                .entered(
-                    TextInputFocusEvent(
-                        seatID: seatID,
-                        target: .surface(.window(windowID))
-                    )
-                ),
-                .committed(TextInputCommitEvent(seatID: seatID, text: "text")),
-                .done(TextInputDoneEvent(seatID: seatID, serial: 55)),
-            ]
-        )
     }
 
     @Test
@@ -316,7 +323,7 @@ struct TextInputManagerTests {
 }
 // swiftlint:enable type_body_length
 
-private final class RecordingTextInputBackend: TextInputManagerBackend {
+final class RecordingTextInputBackend: TextInputManagerBackend {
     var boundSeatIDs: [SeatID] = []
     var failingSeatIDs: Set<SeatID> = []
 
@@ -352,7 +359,7 @@ private final class RecordingTextInputBackend: TextInputManagerBackend {
     }
 }
 
-private final class RecordingTextInputBinding: TextInputBinding {
+final class RecordingTextInputBinding: TextInputBinding {
     enum Operation: Equatable {
         case enable
         case disable
@@ -369,53 +376,59 @@ private final class RecordingTextInputBinding: TextInputBinding {
     let seatID: SeatID
     var protocolVersion: UInt32 = 2
     private(set) var operations: [Operation] = []
+    var onOperation: ((Operation) -> Void)?
 
     init(seatID bindingSeatID: SeatID) {
         seatID = bindingSeatID
     }
 
     func enable() {
-        operations.append(.enable)
+        record(.enable)
     }
 
     func disable() {
-        operations.append(.disable)
+        record(.disable)
     }
 
     func setSurroundingText(_ text: String, cursor: Int32, anchor: Int32) {
-        operations.append(
+        record(
             .setSurroundingText(text, cursor: cursor, anchor: anchor)
         )
     }
 
     func setTextChangeCause(_ cause: TextInputChangeCause) {
-        operations.append(.setTextChangeCause(cause))
+        record(.setTextChangeCause(cause))
     }
 
     func setContentType(
         hints: TextInputContentHints,
         purpose: TextInputContentPurpose
     ) {
-        operations.append(.setContentType(hints: hints, purpose: purpose))
+        record(.setContentType(hints: hints, purpose: purpose))
     }
 
     func setCursorRectangle(_ rect: LogicalRect) {
-        operations.append(.setCursorRectangle(rect))
+        record(.setCursorRectangle(rect))
     }
 
     func commit() {
-        operations.append(.commit)
+        record(.commit)
     }
 
     func showInputPanel() {
-        operations.append(.showInputPanel)
+        record(.showInputPanel)
     }
 
     func hideInputPanel() {
-        operations.append(.hideInputPanel)
+        record(.hideInputPanel)
     }
 
     func destroy() {
-        operations.append(.destroy)
+        record(.destroy)
+    }
+
+    private func record(_ operation: Operation) {
+        operations.append(operation)
+        onOperation?(operation)
     }
 }

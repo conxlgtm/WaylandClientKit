@@ -10,7 +10,7 @@ enum ClientSideResizeChrome {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.ClientSideResizeChrome",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 128,
+                eventCapacity: 128,
                 inputEventCapacity: 128,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,

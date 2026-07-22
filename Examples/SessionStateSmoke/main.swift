@@ -16,7 +16,7 @@ enum SessionStateSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.SessionStateSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 64,
+                eventCapacity: 64,
                 inputEventCapacity: 64,
                 textInputEventCapacity: 8,
                 dataTransferEventCapacity: 8,

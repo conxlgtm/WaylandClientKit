@@ -27,6 +27,7 @@
     {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"TabletID"},
     {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"TabletPadID"},
     {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"TabletToolID"},
+    {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"TextInputCommitSerial"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"ToplevelDragID"},
     {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"TouchID"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"WaylandGraphicsExternalBufferID"},
