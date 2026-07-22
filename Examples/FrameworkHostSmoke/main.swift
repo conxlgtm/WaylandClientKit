@@ -7,7 +7,7 @@ enum FrameworkHostSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.FrameworkHostSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 64,
+                eventCapacity: 64,
                 inputEventCapacity: 64,
                 textInputEventCapacity: 32,
                 dataTransferEventCapacity: 16,
@@ -80,7 +80,7 @@ enum FrameworkHostSmoke {
                 if await state.consumeNeedsRedraw() {
                     try await window.requestRedraw()
                 }
-            case .input:
+            case .input, .textInput, .dataTransfer, .presentation:
                 break
             case .diagnostic(let diagnostic):
                 log("display diagnostic \(diagnostic)")
@@ -218,12 +218,15 @@ actor FrameworkHostState {
         switch event {
         case .entered, .left:
             break
-        case .committed:
-            current.counter += 1
-            redrawNeeded = true
-        case .preedit:
-            redrawNeeded = true
-        case .deleteSurroundingText, .action, .language, .done, .diagnostic:
+        case .transaction(let transaction):
+            if transaction.committedText != nil {
+                current.counter += 1
+            }
+            redrawNeeded =
+                transaction.preedit != nil
+                || transaction.deletion != nil
+                || transaction.committedText != nil
+        case .language, .diagnostic:
             break
         }
     }

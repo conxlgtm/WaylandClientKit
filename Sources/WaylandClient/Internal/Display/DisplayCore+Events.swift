@@ -96,6 +96,9 @@ private func isOutputChange(_ event: DisplayEvent) -> Bool {
     case .outputChanged, .outputRemoved:
         true
     case .input,
+        .textInput,
+        .dataTransfer,
+        .presentation,
         .diagnostic,
         .windowCloseRequested,
         .windowClosed,

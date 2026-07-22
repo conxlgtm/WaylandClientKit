@@ -7,7 +7,7 @@ enum XDGActivationSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.XDGActivationSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 16,
+                eventCapacity: 16,
                 inputEventCapacity: 16,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,

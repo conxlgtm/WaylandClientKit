@@ -131,7 +131,7 @@ func withPublicConnection(
         cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
         discoveryTimeoutMilliseconds: publicIntegrationTimeoutMilliseconds,
         eventStreamConfiguration: EventStreamConfiguration(
-            displayEventCapacity: try PositiveInt(64),
+            eventCapacity: try PositiveInt(64),
             inputEventCapacity: try PositiveInt(64),
             dataTransferEventCapacity: try PositiveInt(64)
         ),

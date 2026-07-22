@@ -1,6 +1,4 @@
 public enum DisplayEvent: Equatable, Sendable {
-    case input(InputEvent)
-    case diagnostic(DisplayDiagnostic)
     case windowCloseRequested(WindowID)
     case windowClosed(WindowID)
     case popupDismissed(PopupLifecycleEvent)
@@ -11,6 +9,12 @@ public enum DisplayEvent: Equatable, Sendable {
     case outputRemoved(OutputID)
     case windowOutputsChanged(WindowOutputMembershipEvent)
     case keyboardShortcutsInhibitorChanged(KeyboardShortcutsInhibitorEvent)
+
+    case input(InputEvent)
+    case textInput(TextInputEvent)
+    case dataTransfer(DataTransferEvent)
+    case presentation(WindowPresentationEvent)
+    case diagnostic(DisplayDiagnostic)
 }
 
 public struct PopupLifecycleEvent: Equatable, Sendable {
@@ -145,6 +149,9 @@ package struct InternalEventSubscriptionIterator<Element: Sendable>: AsyncIterat
     }
 }
 
+/// The complete event feed for a display.
+///
+/// This is the only stream that preserves ordering across event families.
 @safe
 public struct DisplayEvents: AsyncSequence, Sendable {
     public typealias Element = DisplayEvent
@@ -183,6 +190,10 @@ public struct DisplayEventsIterator: AsyncIteratorProtocol {
     }
 }
 
+/// The display's input-only convenience stream.
+///
+/// This stream preserves input order, but not ordering relative to other event
+/// families. Use ``DisplayEvents`` when cross-family ordering matters.
 @safe
 public struct InputEvents: AsyncSequence, Sendable {
     public typealias Element = InputEvent
@@ -221,6 +232,11 @@ public struct InputEventsIterator: AsyncIteratorProtocol {
     }
 }
 
+/// The display's data-transfer-only convenience stream.
+///
+/// This stream preserves data-transfer order, but not ordering relative to
+/// other event families. Use ``DisplayEvents`` when cross-family ordering
+/// matters.
 @safe
 public struct DataTransferEvents: AsyncSequence, Sendable {
     public typealias Element = DataTransferEvent
@@ -259,6 +275,10 @@ public struct DataTransferEventsIterator: AsyncIteratorProtocol {
     }
 }
 
+/// The display's text-input-only convenience stream.
+///
+/// This stream preserves text-input order, but not ordering relative to other
+/// event families. Use ``DisplayEvents`` when cross-family ordering matters.
 @safe
 public struct TextInputEvents: AsyncSequence, Sendable {
     public typealias Element = TextInputEvent
@@ -297,6 +317,10 @@ public struct TextInputEventsIterator: AsyncIteratorProtocol {
     }
 }
 
+/// The display's diagnostic-only convenience stream.
+///
+/// This stream preserves diagnostic order, but not ordering relative to other
+/// event families. Use ``DisplayEvents`` when cross-family ordering matters.
 @safe
 public struct DisplayDiagnostics: AsyncSequence, Sendable {
     public typealias Element = DisplayDiagnostic

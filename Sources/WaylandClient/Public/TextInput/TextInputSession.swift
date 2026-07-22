@@ -18,7 +18,8 @@ public struct TextInputSession: Sendable, Hashable {
         try await display.enableTextInput(seatID: seatID, windowID: window.id)
     }
 
-    public func disable() async throws {
+    @discardableResult
+    public func disable() async throws -> TextInputCommitSerial? {
         try await display.disableTextInput(seatID: seatID)
     }
 
@@ -50,7 +51,8 @@ public struct TextInputSession: Sendable, Hashable {
         try await display.setTextInputCursorRectangle(rect, seatID: seatID)
     }
 
-    public func commit() async throws {
+    @discardableResult
+    public func commit() async throws -> TextInputCommitSerial {
         try await display.commitTextInput(seatID: seatID)
     }
 

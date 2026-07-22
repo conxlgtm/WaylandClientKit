@@ -68,11 +68,11 @@ public struct PresentationFeedback: Equatable, Sendable {
     }
 }
 
-package struct WindowPresentationEvent: Equatable, Sendable {
-    package let windowID: WindowID
-    package let feedback: SurfacePresentationFeedback
+public struct WindowPresentationEvent: Equatable, Sendable {
+    public let windowID: WindowID
+    public let feedback: SurfacePresentationFeedback
 
-    package init(
+    public init(
         windowID eventWindowID: WindowID,
         feedback eventFeedback: SurfacePresentationFeedback
     ) {
@@ -81,6 +81,11 @@ package struct WindowPresentationEvent: Equatable, Sendable {
     }
 }
 
+/// A window-scoped presentation-feedback convenience stream.
+///
+/// This stream preserves presentation order for its window, but not ordering
+/// relative to other event families. Use ``DisplayEvents`` when cross-family
+/// ordering matters.
 @safe
 public struct WindowPresentationEvents: AsyncSequence, Sendable {
     public typealias Element = SurfacePresentationFeedback

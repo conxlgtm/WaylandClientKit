@@ -108,10 +108,14 @@ when your app policy decides to produce it.
 
 ## 5. Read Input And Events
 
-Use `display.inputEvents` for pointer, keyboard, touch, relative pointer, and
-constraint lifecycle events. Use `display.events` for display/window/output
-lifecycle, `display.dataTransferEvents` for clipboard and drag lifecycles, and
-`display.diagnostics` for nonfatal diagnostics such as event overflow.
+Use `display.events` for the complete ordered feed of display/window/output,
+input, text-input, data-transfer, presentation, and diagnostic events. It is the
+only stream that preserves ordering across event families.
+
+Specialized streams such as `display.inputEvents`,
+`display.textInputEvents`, `display.dataTransferEvents`,
+`display.diagnostics`, and `window.presentationEvents` remain useful when an
+application needs only one family. They preserve order within that family.
 
 ## 6. Close Cleanly
 

@@ -8,7 +8,7 @@ struct WaylandFrameworkHostClientTests {
     @Test
     func frameworkHostPublicTypesCoverWindowEventAndGraphicsBoundaries() throws {
         let streams = try EventStreamConfiguration(
-            displayEventCapacity: 32,
+            eventCapacity: 32,
             inputEventCapacity: 32,
             textInputEventCapacity: 16,
             dataTransferEventCapacity: 16,
@@ -130,7 +130,7 @@ struct WaylandFrameworkHostClientTests {
             cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
             discoveryTimeoutMilliseconds: 5_000,
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 64,
+                eventCapacity: 64,
                 inputEventCapacity: 64,
                 textInputEventCapacity: 32,
                 dataTransferEventCapacity: 32,

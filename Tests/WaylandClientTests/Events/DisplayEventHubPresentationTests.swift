@@ -20,23 +20,26 @@ struct DisplayEventHubPresentationTests {
         var iterator = hub.windowPresentationEvents(
             windowID: WindowID(rawValue: 2)
         ).makeAsyncIterator()
+        var displayIterator = hub.displayEvents().makeAsyncIterator()
 
-        hub.publishPresentation(
-            WindowPresentationEvent(
-                windowID: WindowID(rawValue: 1),
-                feedback: .discarded(SurfacePresentationIdentity(rawValue: 99))
-            )
+        let otherWindowEvent = WindowPresentationEvent(
+            windowID: WindowID(rawValue: 1),
+            feedback: .discarded(SurfacePresentationIdentity(rawValue: 99))
         )
-        hub.publishPresentation(
-            WindowPresentationEvent(
-                windowID: WindowID(rawValue: 2),
-                feedback: expected
-            )
+        let expectedWindowEvent = WindowPresentationEvent(
+            windowID: WindowID(rawValue: 2),
+            feedback: expected
         )
+        hub.publishPresentation(otherWindowEvent)
+        hub.publishPresentation(expectedWindowEvent)
 
         do {
             let event = try await iterator.next()
             #expect(event == expected)
+            let firstDisplayEvent = try await displayIterator.next()
+            let secondDisplayEvent = try await displayIterator.next()
+            #expect(firstDisplayEvent == .presentation(otherWindowEvent))
+            #expect(secondDisplayEvent == .presentation(expectedWindowEvent))
         } catch {
             Issue.record("Expected presentation event, got \(error)")
         }

@@ -33,6 +33,7 @@ Run `swift run wck identity verify --update` after reviewing an intentional iden
 | `TabletID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `TabletPadID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `TabletToolID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
+| `TextInputCommitSerial` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/TextInput/TextInputDomainTypes.swift` |
 | `ToplevelDragID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `TouchID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `WaylandGraphicsExternalBufferID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandGraphicsPreview/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |

@@ -10,7 +10,7 @@ enum TwoWindowFrameworkHost {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.TwoWindowFrameworkHost",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 128,
+                eventCapacity: 128,
                 inputEventCapacity: 128,
                 textInputEventCapacity: 64,
                 dataTransferEventCapacity: 16,
@@ -278,8 +278,9 @@ extension TextInputEvent {
         switch self {
         case .entered(let focus), .left(let focus):
             focus.target.windowID
-        case .preedit, .committed, .deleteSurroundingText, .action, .language, .done,
-            .diagnostic:
+        case .transaction(let transaction):
+            transaction.target.windowID
+        case .language, .diagnostic:
             nil
         }
     }

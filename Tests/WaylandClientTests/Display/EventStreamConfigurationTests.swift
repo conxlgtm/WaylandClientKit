@@ -15,7 +15,7 @@ struct EventStreamConfigurationTests {
     func configurationsUseOneCapacityDomainValue() throws {
         let minimum = try PositiveInt(1)
         let eventStreams = EventStreamConfiguration(
-            displayEventCapacity: minimum,
+            eventCapacity: minimum,
             inputEventCapacity: minimum,
             textInputEventCapacity: minimum,
             dataTransferEventCapacity: minimum,
@@ -28,7 +28,7 @@ struct EventStreamConfigurationTests {
         )
         let diagnostics = DiagnosticsConfiguration(capacity: minimum)
 
-        #expect(eventStreams.displayEventCapacity == minimum)
+        #expect(eventStreams.eventCapacity == minimum)
         #expect(eventStreams.inputEventCapacity == minimum)
         #expect(eventStreams.textInputEventCapacity == minimum)
         #expect(eventStreams.dataTransferEventCapacity == minimum)

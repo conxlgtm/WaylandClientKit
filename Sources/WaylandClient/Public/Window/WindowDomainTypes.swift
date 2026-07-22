@@ -96,7 +96,7 @@ public struct PositiveInt: Equatable, Comparable, Sendable, CustomStringConverti
         lhs.rawValue < rhs.rawValue
     }
 
-    public static let defaultDisplayEventCapacity = PositiveInt(unchecked: 256)
+    public static let defaultEventCapacity = PositiveInt(unchecked: 256)
     public static let defaultInputEventCapacity = PositiveInt(unchecked: 1_024)
     public static let defaultTextInputEventCapacity = PositiveInt(unchecked: 512)
     public static let defaultDataTransferEventCapacity = PositiveInt(unchecked: 256)

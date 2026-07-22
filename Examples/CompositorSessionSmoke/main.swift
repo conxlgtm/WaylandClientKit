@@ -9,7 +9,7 @@ enum CompositorSessionSmoke {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.CompositorSessionSmoke",
             eventStreamConfiguration: try EventStreamConfiguration(
-                displayEventCapacity: 32,
+                eventCapacity: 32,
                 inputEventCapacity: 16,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,
