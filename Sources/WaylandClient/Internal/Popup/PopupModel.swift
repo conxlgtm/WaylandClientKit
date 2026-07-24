@@ -5,6 +5,7 @@ package enum PopupEvent: Equatable, Sendable {
     case frameBecameReady(bufferAvailability: RedrawBufferAvailability)
     case bufferBecameAvailable(bufferAvailability: RedrawBufferAvailability)
     case redrawRequestConsumed(bufferAvailability: RedrawBufferAvailability)
+    case redrawRequestCanceled(bufferAvailability: RedrawBufferAvailability)
     case presentationStarted(PopupPresentationRequest)
     case presentationBlockedByBuffer
     case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
@@ -122,6 +123,8 @@ package struct PopupModel: Equatable, Sendable {
             return reduceRedraw(.bufferBecameAvailable, bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed(let bufferAvailability):
             return try reduceRedrawRequestConsumed(bufferAvailability: bufferAvailability)
+        case .redrawRequestCanceled(let bufferAvailability):
+            return reduceRedraw(.redrawRequestCanceled, bufferAvailability: bufferAvailability)
         case .presentationStarted(let request):
             return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer:

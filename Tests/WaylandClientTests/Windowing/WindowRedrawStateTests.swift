@@ -33,6 +33,34 @@ struct WindowRedrawStateTests {
     }
 
     @Test
+    func canceledRedrawRepublishesLatestDirtyGeneration() {
+        var state = WindowRedrawState()
+
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        let leasedGeneration = state.generationForCurrentDraw
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+
+        #expect(state.generationForCurrentDraw == leasedGeneration + 1)
+        #expect(
+            state.reduce(.redrawRequestCanceled, bufferAvailability: .available)
+                == [.publishRedrawRequested]
+        )
+        #expect(state.hasOutstandingRedrawRequest)
+    }
+
+    @Test
+    func canceledRedrawDoesNotRepublishAfterRequestWasConsumed() {
+        var state = WindowRedrawState()
+
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailability: .available)
+
+        #expect(state.reduce(.redrawRequestCanceled, bufferAvailability: .available).isEmpty)
+        #expect(state.isDirty)
+        #expect(!state.hasOutstandingRedrawRequest)
+    }
+
+    @Test
     func staticContentDoesNotPublishAgainWhenFrameBecomesReady() {
         var state = WindowRedrawState()
 
@@ -311,6 +339,8 @@ private struct RedrawTraceModel {
         case .redrawRequestConsumed:
             consumeRedrawRequest()
             return []
+        case .redrawRequestCanceled:
+            return cancelRedrawRequest(bufferAvailability: bufferAvailability)
         case .drawBlockedByBuffer:
             markDrawBlockedByBuffer()
             return []
@@ -344,6 +374,15 @@ private struct RedrawTraceModel {
         if case .frameReady(hasOutstandingRequest: true) = pacing {
             pacing = .frameReady(hasOutstandingRequest: false)
         }
+    }
+
+    private mutating func cancelRedrawRequest(
+        bufferAvailability: RedrawBufferAvailability
+    ) -> [WindowRedrawEffect] {
+        guard case .frameReady(hasOutstandingRequest: true) = pacing else { return [] }
+
+        pacing = .frameReady(hasOutstandingRequest: false)
+        return publishIfNeeded(bufferAvailability: bufferAvailability)
     }
 
     private mutating func markDrawBlockedByBuffer() {

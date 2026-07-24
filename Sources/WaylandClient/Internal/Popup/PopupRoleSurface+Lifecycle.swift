@@ -251,8 +251,11 @@ extension PopupRoleSurface {
     }
 
     package func redrawBufferAvailability() throws -> RedrawBufferAvailability {
-        surfaceRuntime.redrawBufferAvailability(
-            matching: try currentSurfaceGeometry().bufferSize.rawSize
+        try RedrawBufferAvailability.resolvingPendingConfigure(
+            configureState.hasPendingSurfaceConfigure,
+            currentBufferAvailability: surfaceRuntime.redrawBufferAvailability(
+                matching: try currentSurfaceGeometry().bufferSize.rawSize
+            )
         )
     }
 
@@ -315,6 +318,8 @@ extension PopupRoleSurface {
             .bufferBecameAvailable(bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed:
             .redrawRequestConsumed(bufferAvailability: bufferAvailability)
+        case .redrawRequestCanceled:
+            .redrawRequestCanceled(bufferAvailability: bufferAvailability)
         case .drawBlockedByBuffer:
             .presentationBlockedByBuffer
         case .presented(let generation):

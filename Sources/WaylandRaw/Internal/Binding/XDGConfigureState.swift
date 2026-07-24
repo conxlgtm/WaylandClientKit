@@ -168,6 +168,16 @@ package final class XDGConfigureState {
         recoverablePhase.hasReceivedInitialConfigure
     }
 
+    /// Whether a complete surface configure is waiting to be consumed.
+    package var hasPendingSurfaceConfigure: Bool {
+        switch recoverablePhase {
+        case .collectingInitial, .collecting:
+            false
+        case .ready:
+            true
+        }
+    }
+
     package init(initialSize: TopLevelSize = .unspecified) {
         phase = .collectingInitial(
             XDGConfigureCollection(

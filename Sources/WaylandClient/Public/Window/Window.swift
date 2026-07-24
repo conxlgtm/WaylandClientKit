@@ -440,4 +440,8 @@ public struct Window: Sendable, Hashable {
             timeoutMilliseconds: timeoutMilliseconds
         )
     }
+
+    package func cancelGraphicsPreviewPresentation() async {
+        await display.cancelGraphicsPreviewPresentation(for: id)
+    }
 }

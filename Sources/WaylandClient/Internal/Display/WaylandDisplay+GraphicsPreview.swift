@@ -294,6 +294,14 @@ extension DisplayCore {
         }
     }
 
+    func cancelGraphicsPreviewPresentation(for windowID: WindowID) {
+        withFatalFailureFinalization {
+            guard let window = surfaces.window(windowID) else { return }
+
+            window.cancelGraphicsPreviewPresentationOnOwnerThread()
+        }
+    }
+
     func presentGraphicsPreviewBuffer(
         _ buffer: RawSurfaceBuffer,
         on windowID: WindowID,

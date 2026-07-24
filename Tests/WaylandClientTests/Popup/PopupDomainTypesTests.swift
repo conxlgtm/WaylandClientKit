@@ -114,20 +114,48 @@ struct PopupDomainTypesTests {
     func popupConfigureStateLatchesPlacementAndAcksOnlyAfterSurfaceConfigure() throws {
         let state = PopupConfigureState()
 
+        #expect(!state.hasPendingSurfaceConfigure)
         state.handlePopupConfigure(
             RawXDGPopupConfigure(x: 4, y: 8, width: 120, height: 64)
         )
         #expect(!state.hasReceivedInitialConfigure)
+        #expect(!state.hasPendingSurfaceConfigure)
         #expect(state.consumeLatestConfigure() == nil)
 
         let sequence = try #require(state.handleSurfaceConfigure(serial: 99).configure)
 
         #expect(state.hasReceivedInitialConfigure)
+        #expect(state.hasPendingSurfaceConfigure)
         #expect(sequence.serial == 99)
         #expect(sequence.placement.origin == LogicalOffset(x: 4, y: 8))
         #expect(sequence.placement.size == (try PositiveLogicalSize(width: 120, height: 64)))
         #expect(state.consumeLatestConfigure() == sequence)
+        #expect(!state.hasPendingSurfaceConfigure)
         #expect(state.consumeLatestConfigure() == nil)
+    }
+
+    @Test
+    func pendingPopupConfigurePublishesRedrawWithoutOldBuffer() throws {
+        let configureState = PopupConfigureState()
+        configureState.handlePopupConfigure(
+            RawXDGPopupConfigure(x: 4, y: 8, width: 120, height: 64)
+        )
+        _ = try #require(configureState.handleSurfaceConfigure(serial: 99).configure)
+        var redraw = WindowRedrawState()
+        let availability = RedrawBufferAvailability.resolvingPendingConfigure(
+            configureState.hasPendingSurfaceConfigure,
+            currentBufferAvailability: {
+                Issue.record("The old popup buffer pool should not be checked.")
+                return .unavailable
+            }()
+        )
+
+        let effects = redraw.reduce(
+            .contentInvalidated,
+            bufferAvailability: availability
+        )
+
+        #expect(effects == [.publishRedrawRequested])
     }
 
     @Test

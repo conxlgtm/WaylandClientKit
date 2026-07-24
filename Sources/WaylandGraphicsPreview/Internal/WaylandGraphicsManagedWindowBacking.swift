@@ -11,6 +11,9 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         timeoutMilliseconds: Int32
     ) async throws -> SurfaceGeometry
 
+    /// Cancels presentation state reserved for a frame that produced no work.
+    func cancelGraphicsPreviewPresentation() async
+
     func requestGraphicsPreviewSurfaceFeedback(
         timeoutMilliseconds: Int32
     ) async throws -> SurfaceCapabilitySnapshot
@@ -63,6 +66,10 @@ extension WaylandGraphicsManagedWindow {
         timeoutMilliseconds _: Int32
     ) async throws -> SurfaceGeometry {
         try await geometry
+    }
+
+    package func cancelGraphicsPreviewPresentation() async {
+        // Alternate managed windows may not retain presentation state between calls.
     }
 
     package func requestGraphicsPreviewSurfaceFeedback(

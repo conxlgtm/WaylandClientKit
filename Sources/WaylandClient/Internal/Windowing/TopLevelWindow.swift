@@ -788,8 +788,12 @@ package final class TopLevelWindow {
     }
 
     private func resetTransientState() {
+        surfaceRuntime.resetTransientTransactionState()
+        resetTransientPresentationState()
+    }
+
+    private func resetTransientPresentationState() {
         do {
-            surfaceRuntime.resetTransientTransactionState()
             _ = try model.reduce(.transientStateReset)
         } catch let error as ClientError {
             reportCallbackFailure(operation: .transientStateReset, error: error)
@@ -1154,8 +1158,11 @@ extension TopLevelWindow {
     }
 
     private func redrawBufferAvailability() throws -> RedrawBufferAvailability {
-        surfaceRuntime.redrawBufferAvailability(
-            matching: try currentSurfaceGeometry().bufferSize.rawSize
+        try RedrawBufferAvailability.resolvingPendingConfigure(
+            configureState.hasPendingSurfaceConfigure,
+            currentBufferAvailability: surfaceRuntime.redrawBufferAvailability(
+                matching: try currentSurfaceGeometry().bufferSize.rawSize
+            )
         )
     }
 
@@ -1300,6 +1307,28 @@ extension TopLevelWindow {
         }
 
         return try currentSurfaceGeometry()
+    }
+
+    /// Cancels the redraw request held by a graphics frame that wasn't submitted.
+    ///
+    /// A newer invalidation is republished. Surface transaction state and software
+    /// presentations are left intact because they may belong to other frames.
+    package func cancelGraphicsPreviewPresentationOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+
+        do {
+            try interpretWindowEffects(
+                model.reduce(
+                    .graphicsPreviewPresentationCanceled(
+                        bufferAvailability: try redrawBufferAvailability()
+                    )
+                )
+            )
+        } catch let error as ClientError {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+        } catch {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+        }
     }
 
     package var stateSnapshotOnOwnerThread: WindowStateSnapshot {

@@ -10,6 +10,7 @@ enum WindowRedrawEvent: Equatable, Sendable {
     case frameBecameReady
     case bufferBecameAvailable
     case redrawRequestConsumed
+    case redrawRequestCanceled
     case drawBlockedByBuffer
     case presented(generation: UInt64)
     case transientStateReset
@@ -29,6 +30,21 @@ package enum RedrawBufferAvailability: Equatable, Sendable {
 
     var isAvailable: Bool {
         self == .available
+    }
+
+    /// Resolves whether a redraw can start before it consumes a pending configure.
+    ///
+    /// A complete configure supersedes the current geometry, so the old buffer pool
+    /// cannot decide whether the next frame can be drawn.
+    package static func resolvingPendingConfigure(
+        _ hasPendingSurfaceConfigure: Bool,
+        currentBufferAvailability: @autoclosure () throws -> Self
+    ) rethrows -> Self {
+        guard !hasPendingSurfaceConfigure else {
+            return .available
+        }
+
+        return try currentBufferAvailability()
     }
 }
 
@@ -94,6 +110,8 @@ struct WindowRedrawState: Equatable, Sendable {
         case .redrawRequestConsumed:
             markRedrawRequestConsumed()
             effects = []
+        case .redrawRequestCanceled:
+            effects = cancelRedrawRequest(bufferAvailability: bufferAvailability)
         case .drawBlockedByBuffer:
             markDrawBlockedByBuffer()
             effects = []
@@ -132,6 +150,17 @@ extension WindowRedrawState {
         if case .frameReady(.outstanding) = pacing {
             pacing = .frameReady(.none)
         }
+    }
+
+    private mutating func cancelRedrawRequest(
+        bufferAvailability: RedrawBufferAvailability
+    ) -> [WindowRedrawEffect] {
+        guard case .frameReady(.outstanding) = pacing else {
+            return []
+        }
+
+        pacing = .frameReady(.none)
+        return publishIfNeeded(bufferAvailability: bufferAvailability)
     }
 
     private mutating func markDrawBlockedByBuffer() {

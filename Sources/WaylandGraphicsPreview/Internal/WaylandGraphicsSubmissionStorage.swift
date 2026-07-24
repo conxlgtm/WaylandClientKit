@@ -1638,7 +1638,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 geometry: geometry
             )
         } catch {
-            releaseExternalBufferReservationsAndCancelLease(leaseID: leaseID)
+            await cancel(leaseID: leaseID)
             throw error
         }
         let operation = try leaseState.prepareSubmission(leaseID: leaseID)
@@ -1709,7 +1709,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 geometry: geometry
             )
         } catch {
-            releaseExternalBufferReservationsAndCancelLease(leaseID: leaseID)
+            await cancel(leaseID: leaseID)
             throw error
         }
         let operation = try leaseState.prepareSubmission(leaseID: leaseID)
@@ -1856,13 +1856,6 @@ package actor WaylandGraphicsWindowBackingStorage {
         leaseID: WaylandGraphicsFrameLeaseID
     ) {
         externalBufferRegistry.releaseReservations(leaseID: leaseID)
-    }
-
-    private func releaseExternalBufferReservationsAndCancelLease(
-        leaseID: WaylandGraphicsFrameLeaseID
-    ) {
-        releaseExternalBufferReservations(leaseID: leaseID)
-        _ = leaseState.cancel(leaseID: leaseID)
     }
 
     private func markExternalBufferSubmitted(
@@ -2047,9 +2040,13 @@ package actor WaylandGraphicsWindowBackingStorage {
         )
     }
 
-    func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
-        if leaseState.cancel(leaseID: leaseID) {
-            releaseExternalBufferReservations(leaseID: leaseID)
+    func cancel(leaseID: WaylandGraphicsFrameLeaseID) async {
+        let shouldCancelPresentation = leaseState.hasSubmittedFrame
+        guard leaseState.cancel(leaseID: leaseID) else { return }
+
+        releaseExternalBufferReservations(leaseID: leaseID)
+        if shouldCancelPresentation {
+            await window.cancelGraphicsPreviewPresentation()
         }
     }
 

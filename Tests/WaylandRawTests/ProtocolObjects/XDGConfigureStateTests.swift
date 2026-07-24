@@ -34,6 +34,22 @@ struct XDGConfigureStateTests {
         _ = state.consumeLatestConfigure()
         #expect(state.hasReceivedInitialConfigure)
     }
+
+    @Test
+    func pendingSurfaceConfigureFollowsConsumption() {
+        let state = XDGConfigureState()
+
+        #expect(!state.hasPendingSurfaceConfigure)
+        state.handleTopLevelConfigure(width: 800, height: 600)
+        #expect(!state.hasPendingSurfaceConfigure)
+
+        _ = state.handleSurfaceConfigure(serial: 1)
+        #expect(state.hasPendingSurfaceConfigure)
+
+        _ = state.consumeLatestConfigure()
+        #expect(!state.hasPendingSurfaceConfigure)
+    }
+
     @Test
     func decorationConfigureIsConsumedBySurfaceConfigure() {
         let state = XDGConfigureState()

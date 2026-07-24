@@ -12,6 +12,9 @@ package enum WindowEvent: Equatable, Sendable {
     case frameBecameReady(bufferAvailability: RedrawBufferAvailability)
     case bufferBecameAvailable(bufferAvailability: RedrawBufferAvailability)
     case redrawRequestConsumed(bufferAvailability: RedrawBufferAvailability)
+    case graphicsPreviewPresentationCanceled(
+        bufferAvailability: RedrawBufferAvailability
+    )
     case presentationStarted(PresentationRequest)
     case presentationBlockedByBuffer
     case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
