@@ -206,6 +206,42 @@ struct WindowModelPresentationTests {  // swiftlint:disable:this type_body_lengt
     }
 
     @Test
+    func graphicsPreviewCancellationRepublishesNewerConfigure() throws {
+        var model = try activePublishedModel()
+
+        #expect(
+            try model.reduce(.configureReceived(configure(width: 1_024, height: 768, serial: 2)))
+                == [.ackConfigure(2)]
+        )
+        #expect(
+            try model.reduce(
+                .graphicsPreviewPresentationCanceled(bufferAvailability: .available)
+            ) == [.publishRedrawRequested(windowID)]
+        )
+        #expect(model.redraw.isDirty)
+        #expect(model.redraw.hasOutstandingRedrawRequest)
+    }
+
+    @Test
+    func graphicsPreviewCancellationLeavesSoftwarePresentationActive() throws {
+        var (model, request) = try activeModelWithStartedPresentation()
+
+        #expect(
+            try model.reduce(.configureReceived(configure(width: 1_024, height: 768, serial: 2)))
+                == [.ackConfigure(2)]
+        )
+        #expect(model.redraw.hasOutstandingRedrawRequest)
+
+        #expect(
+            try model.reduce(
+                .graphicsPreviewPresentationCanceled(bufferAvailability: .available)
+            ).isEmpty
+        )
+        #expect(model.presentation == .drawing(request: request))
+        #expect(model.redraw.hasOutstandingRedrawRequest)
+    }
+
+    @Test
     func presentationStartRequiresIssuedRequest() throws {
         var model = try activePublishedModel()
         let request = PresentationRequest(

@@ -87,6 +87,10 @@ package struct WindowModel: Equatable, Sendable {
             return reduceRedraw(.bufferBecameAvailable, bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed(let bufferAvailability):
             return try reduceRedrawRequestConsumed(bufferAvailability: bufferAvailability)
+        case .graphicsPreviewPresentationCanceled(let bufferAvailability):
+            return reduceGraphicsPreviewPresentationCanceled(
+                bufferAvailability: bufferAvailability
+            )
         case .presentationStarted(let request):
             return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer: return try reducePresentationBlockedByBuffer()
@@ -370,6 +374,27 @@ extension WindowModel {
         return updateActiveWindowStateIfPresent { activeState in
             Self.mapRedrawEffects(
                 activeState.redraw.reduce(event, bufferAvailability: bufferAvailability),
+                in: activeState,
+                windowID: windowID
+            )
+        }
+    }
+
+    private mutating func reduceGraphicsPreviewPresentationCanceled(
+        bufferAvailability: RedrawBufferAvailability
+    ) -> [WindowEffect] {
+        guard !isClosed else { return [] }
+        let windowID = id
+        return updateActiveWindowStateIfPresent { activeState in
+            guard activeState.presentation.isIdle else {
+                return []
+            }
+
+            return Self.mapRedrawEffects(
+                activeState.redraw.reduce(
+                    .redrawRequestCanceled,
+                    bufferAvailability: bufferAvailability
+                ),
                 in: activeState,
                 windowID: windowID
             )

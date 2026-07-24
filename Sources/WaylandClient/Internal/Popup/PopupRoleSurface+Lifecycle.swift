@@ -315,6 +315,8 @@ extension PopupRoleSurface {
             .bufferBecameAvailable(bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed:
             .redrawRequestConsumed(bufferAvailability: bufferAvailability)
+        case .redrawRequestCanceled:
+            .redrawRequestCanceled(bufferAvailability: bufferAvailability)
         case .drawBlockedByBuffer:
             .presentationBlockedByBuffer
         case .presented(let generation):

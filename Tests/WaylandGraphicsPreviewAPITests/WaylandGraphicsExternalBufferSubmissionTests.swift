@@ -1070,6 +1070,37 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         await storage.closeForTesting()
     }
 
+    @Test
+    func preflightFailureAfterSubmissionResetsPresentationOnce() async throws {
+        let window = try ExternalBufferFakeManagedWindow()
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(presentationPolicy: .software)
+        )
+        let firstLease = try await storage.nextFrame()
+        _ = try await firstLease.submit(.clearColor(.black))
+        let failedLease = try await storage.nextFrame()
+        let invalidDamage = WaylandGraphicsDamageRegion(
+            rects: [try LogicalRect(x: 101, y: 0, width: 20, height: 10)]
+        )
+        let frame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(
+                color: .black,
+                metadata: WaylandGraphicsFrameMetadata(damage: invalidDamage)
+            )
+        )
+
+        await #expect(throws: WaylandGraphicsError.invalidDamageRegion) {
+            _ = try await failedLease.submit(frame)
+        }
+        #expect(await window.cancelPresentationRequests == 1)
+
+        await failedLease.cancel()
+        #expect(await window.cancelPresentationRequests == 1)
+
+        await storage.closeForTesting()
+    }
+
     @Test(.timeLimit(.minutes(1)))
     func backingCloseDoesNotJoinItsReentrantWindowCloseObserver() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)

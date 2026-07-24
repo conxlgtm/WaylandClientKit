@@ -1326,10 +1326,24 @@ extension TopLevelWindow {
 
     /// Cancels the redraw request held by a graphics frame that wasn't submitted.
     ///
-    /// Surface transaction state belongs to earlier committed frames and is left intact.
+    /// A newer invalidation is republished. Surface transaction state and software
+    /// presentations are left intact because they may belong to other frames.
     package func cancelGraphicsPreviewPresentationOnOwnerThread() {
         connection.preconditionIsOwnerThread()
-        resetTransientPresentationState()
+
+        do {
+            try interpretWindowEffects(
+                model.reduce(
+                    .graphicsPreviewPresentationCanceled(
+                        bufferAvailability: try redrawBufferAvailability()
+                    )
+                )
+            )
+        } catch let error as ClientError {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+        } catch {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+        }
     }
 
     package var stateSnapshotOnOwnerThread: WindowStateSnapshot {
