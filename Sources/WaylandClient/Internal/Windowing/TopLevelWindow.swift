@@ -788,8 +788,12 @@ package final class TopLevelWindow {
     }
 
     private func resetTransientState() {
+        surfaceRuntime.resetTransientTransactionState()
+        resetTransientPresentationState()
+    }
+
+    private func resetTransientPresentationState() {
         do {
-            surfaceRuntime.resetTransientTransactionState()
             _ = try model.reduce(.transientStateReset)
         } catch let error as ClientError {
             reportCallbackFailure(operation: .transientStateReset, error: error)
@@ -1318,6 +1322,14 @@ extension TopLevelWindow {
         }
 
         return try currentSurfaceGeometry()
+    }
+
+    /// Cancels the redraw request held by a graphics frame that wasn't submitted.
+    ///
+    /// Surface transaction state belongs to earlier committed frames and is left intact.
+    package func cancelGraphicsPreviewPresentationOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+        resetTransientPresentationState()
     }
 
     package var stateSnapshotOnOwnerThread: WindowStateSnapshot {

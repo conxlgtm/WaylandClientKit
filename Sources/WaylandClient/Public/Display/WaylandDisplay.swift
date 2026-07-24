@@ -195,6 +195,12 @@ public actor WaylandDisplay {
         try requireCore().requestRedraw(windowID)
     }
 
+    package func cancelGraphicsPreviewPresentation(for windowID: WindowID) {
+        guard case .active(let core, _) = lifecycle else { return }
+
+        core.cancelGraphicsPreviewPresentation(for: windowID)
+    }
+
     package func requestPresentationFeedback(_ windowID: WindowID) throws {
         try requireCore().requestPresentationFeedback(windowID)
     }

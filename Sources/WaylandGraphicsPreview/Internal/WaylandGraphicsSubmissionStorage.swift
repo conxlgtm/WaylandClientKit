@@ -2047,9 +2047,13 @@ package actor WaylandGraphicsWindowBackingStorage {
         )
     }
 
-    func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
-        if leaseState.cancel(leaseID: leaseID) {
-            releaseExternalBufferReservations(leaseID: leaseID)
+    func cancel(leaseID: WaylandGraphicsFrameLeaseID) async {
+        let shouldCancelPresentation = leaseState.hasSubmittedFrame
+        guard leaseState.cancel(leaseID: leaseID) else { return }
+
+        releaseExternalBufferReservations(leaseID: leaseID)
+        if shouldCancelPresentation {
+            await window.cancelGraphicsPreviewPresentation()
         }
     }
 

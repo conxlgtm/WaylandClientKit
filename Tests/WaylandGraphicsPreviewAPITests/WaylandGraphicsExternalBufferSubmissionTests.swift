@@ -1018,6 +1018,58 @@ struct ExternalBufferPresentationFeedbackTests {
 // swiftlint:disable type_body_length
 @Suite
 struct WaylandGraphicsExternalBufferLifecycleTests {
+    @Test
+    func firstUnusedLeaseCancelDoesNotResetPresentation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        await lease.cancel()
+
+        #expect(await window.cancelPresentationRequests == 0)
+        await storage.closeForTesting()
+    }
+
+    @Test
+    func unusedLeaseCancelAfterSubmissionResetsPresentation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let submitted = try await registerAndSubmitTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor(),
+            schedule: presentationFeedbackSchedule()
+        )
+        let feedbackIdentity = try #require(
+            submitted.receipt.presentationFeedbackIdentity
+        )
+        let unusedLease = try await storage.nextFrame()
+
+        await unusedLease.cancel()
+
+        #expect(await window.cancelPresentationRequests == 1)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+        #expect(await window.pendingPresentationFeedbackHandlerCount() == 1)
+
+        async let feedback = submitted.receipt.waitForPresentationFeedback()
+        await window.emitDiscardedFeedback(feedbackIdentity.surfacePresentationID)
+        #expect(
+            await feedback
+                == .discarded(
+                    submissionID: submitted.receipt.id,
+                    bufferID: submitted.buffer.id,
+                    identity: feedbackIdentity.surfacePresentationID
+                )
+        )
+
+        async let release = submitted.receipt.waitForRelease()
+        await window.emitImportedBufferRelease(at: 0)
+        #expect(await release == .released)
+
+        await storage.closeForTesting()
+    }
+
     @Test(.timeLimit(.minutes(1)))
     func backingCloseDoesNotJoinItsReentrantWindowCloseObserver() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
@@ -2277,6 +2329,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         [SurfacePresentationIdentity: @Sendable (SurfacePresentationFeedback) -> Void] = [:]
     private var nextPresentationFeedbackIdentityRawValue: UInt64 = 1
     private(set) var preparePresentationRequests = 0
+    private(set) var cancelPresentationRequests = 0
     private var importedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
     private var removedSyncTimelineIdentities: [SurfaceSyncTimelineIdentity] = []
     private var surfaceFeedbackSynchronization: SurfaceSynchronizationCapability?
@@ -2310,10 +2363,6 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 
     var geometry: SurfaceGeometry {
         get async throws { geometryValue }
-    }
-
-    func setGeometry(_ geometry: SurfaceGeometry) {
-        geometryValue = geometry
     }
 
     func setSurfaceFeedbackSynchronization(
@@ -2539,6 +2588,16 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         let observer = closeObserver
         closeObserver = nil
         await observer?()
+    }
+}
+
+extension ExternalBufferFakeManagedWindow {
+    func setGeometry(_ geometry: SurfaceGeometry) {
+        geometryValue = geometry
+    }
+
+    func cancelGraphicsPreviewPresentation() {
+        cancelPresentationRequests += 1
     }
 }
 
