@@ -1158,27 +1158,12 @@ extension TopLevelWindow {
     }
 
     private func redrawBufferAvailability() throws -> RedrawBufferAvailability {
-        try Self.resolveRedrawBufferAvailability(
-            hasPendingSurfaceConfigure: configureState.hasPendingSurfaceConfigure,
+        try RedrawBufferAvailability.resolvingPendingConfigure(
+            configureState.hasPendingSurfaceConfigure,
             currentBufferAvailability: surfaceRuntime.redrawBufferAvailability(
                 matching: try currentSurfaceGeometry().bufferSize.rawSize
             )
         )
-    }
-
-    /// Resolves whether a redraw can start before it consumes a pending configure.
-    ///
-    /// A complete configure supersedes the current geometry, so the old buffer pool
-    /// cannot decide whether the next frame can be drawn.
-    package static func resolveRedrawBufferAvailability(
-        hasPendingSurfaceConfigure: Bool,
-        currentBufferAvailability: @autoclosure () throws -> RedrawBufferAvailability
-    ) rethrows -> RedrawBufferAvailability {
-        guard !hasPendingSurfaceConfigure else {
-            return .available
-        }
-
-        return try currentBufferAvailability()
     }
 
     // swiftlint:disable:next cyclomatic_complexity

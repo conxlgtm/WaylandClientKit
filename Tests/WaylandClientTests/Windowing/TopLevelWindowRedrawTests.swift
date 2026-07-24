@@ -7,8 +7,8 @@ struct TopLevelWindowRedrawTests {
     @Test
     func pendingConfigurePublishesRedrawWithoutOldBuffer() {
         var redraw = WindowRedrawState()
-        let availability = TopLevelWindow.resolveRedrawBufferAvailability(
-            hasPendingSurfaceConfigure: true,
+        let availability = RedrawBufferAvailability.resolvingPendingConfigure(
+            true,
             currentBufferAvailability: {
                 Issue.record("The old buffer pool should not be checked.")
                 return .unavailable
@@ -26,8 +26,8 @@ struct TopLevelWindowRedrawTests {
     @Test
     func unavailableBufferWithoutPendingConfigureWaits() {
         var redraw = WindowRedrawState()
-        let availability = TopLevelWindow.resolveRedrawBufferAvailability(
-            hasPendingSurfaceConfigure: false,
+        let availability = RedrawBufferAvailability.resolvingPendingConfigure(
+            false,
             currentBufferAvailability: .unavailable
         )
 

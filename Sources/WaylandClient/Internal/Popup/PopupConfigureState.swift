@@ -58,6 +58,19 @@ package final class PopupConfigureState {
         recoverablePhase.hasReceivedInitialConfigure
     }
 
+    /// Whether a complete surface configure is waiting to be consumed.
+    package var hasPendingSurfaceConfigure: Bool {
+        switch recoverablePhase {
+        case .ready:
+            true
+        case .waitingForInitialPopupConfigure,
+            .pendingInitialRolePayload,
+            .waitingForPopupConfigure,
+            .pendingRolePayload:
+            false
+        }
+    }
+
     package init() {
         // Starts with no popup configure payload.
     }

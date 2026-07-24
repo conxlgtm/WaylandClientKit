@@ -31,6 +31,21 @@ package enum RedrawBufferAvailability: Equatable, Sendable {
     var isAvailable: Bool {
         self == .available
     }
+
+    /// Resolves whether a redraw can start before it consumes a pending configure.
+    ///
+    /// A complete configure supersedes the current geometry, so the old buffer pool
+    /// cannot decide whether the next frame can be drawn.
+    package static func resolvingPendingConfigure(
+        _ hasPendingSurfaceConfigure: Bool,
+        currentBufferAvailability: @autoclosure () throws -> Self
+    ) rethrows -> Self {
+        guard !hasPendingSurfaceConfigure else {
+            return .available
+        }
+
+        return try currentBufferAvailability()
+    }
 }
 
 struct WindowRedrawState: Equatable, Sendable {
