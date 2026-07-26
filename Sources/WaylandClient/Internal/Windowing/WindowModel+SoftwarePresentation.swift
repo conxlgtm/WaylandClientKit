@@ -4,7 +4,10 @@ extension WindowModel {
 
         return activeState.presentation == .drawing(request: request)
             && activeState.configure == request.configuration
-            && activeState.redraw.generationForCurrentDraw == request.generation
+            && activeState.redraw.matchesCurrentContent(
+                generation: request.generation,
+                identity: request.redrawIdentity
+            )
     }
 
     mutating func reduceSoftwarePresentationSuperseded(

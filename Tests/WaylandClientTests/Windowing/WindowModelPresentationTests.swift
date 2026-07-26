@@ -14,7 +14,8 @@ struct WindowModelPresentationTests {  // swiftlint:disable:this type_body_lengt
         let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = PresentationRequest(
             generation: 1,
-            configuration: try #require(model.currentConfiguration)
+            configuration: try #require(model.currentConfiguration),
+            redrawIdentity: model.redraw.identityForCurrentDraw
         )
 
         #expect(effects == [.performSoftwarePresent(request)])

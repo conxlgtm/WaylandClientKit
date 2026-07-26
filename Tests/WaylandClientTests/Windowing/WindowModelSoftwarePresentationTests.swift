@@ -150,6 +150,13 @@ extension WindowModelPresentationTests {
         var (model, request) = try activeModelWithStartedPresentation()
 
         #expect(model.isCurrentSoftwarePresentation(request))
+        let collidingRequest = PresentationRequest(
+            generation: request.generation,
+            configuration: request.configuration
+        )
+        #expect(collidingRequest.generation == request.generation)
+        #expect(collidingRequest.configuration == request.configuration)
+        #expect(!model.isCurrentSoftwarePresentation(collidingRequest))
 
         _ = try model.reduce(.contentInvalidated(bufferAvailability: .available))
         #expect(!model.isCurrentSoftwarePresentation(request))
@@ -161,6 +168,23 @@ extension WindowModelPresentationTests {
             )
         )
         #expect(!model.isCurrentSoftwarePresentation(request))
+    }
+
+    @Test
+    func wrappedGenerationDoesNotReuseContentIdentity() {
+        var redraw = WindowRedrawState()
+        let previousIdentity = redraw.identityForCurrentDraw
+
+        _ = redraw.reduce(.presented(generation: .max), bufferAvailability: .available)
+        _ = redraw.reduce(.contentInvalidated, bufferAvailability: .unavailable)
+
+        #expect(redraw.generationForCurrentDraw == 0)
+        #expect(
+            !redraw.matchesCurrentContent(
+                generation: 0,
+                identity: previousIdentity
+            )
+        )
     }
 
     @Test

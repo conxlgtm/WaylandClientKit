@@ -53,6 +53,17 @@ package enum WindowEffect: Equatable, Sendable {
 package struct PresentationRequest: Equatable, Sendable {
     let generation: UInt64
     let configuration: ResolvedWindowConfiguration
+    let redrawIdentity: WindowRedrawContentIdentity
+
+    init(
+        generation: UInt64,
+        configuration: ResolvedWindowConfiguration,
+        redrawIdentity: WindowRedrawContentIdentity = .initial
+    ) {
+        self.generation = generation
+        self.configuration = configuration
+        self.redrawIdentity = redrawIdentity
+    }
 
     var summary: WindowPresentationRequestSummary {
         WindowPresentationRequestSummary(

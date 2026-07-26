@@ -252,7 +252,8 @@ extension WindowModel {
             let generation = activeState.redraw.generationForCurrentDraw
             let request = PresentationRequest(
                 generation: generation,
-                configuration: activeState.configure
+                configuration: activeState.configure,
+                redrawIdentity: activeState.redraw.identityForCurrentDraw
             )
             activeState.presentation = .requested(request: request)
             return [.performSoftwarePresent(request)]
