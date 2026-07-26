@@ -9,139 +9,32 @@
     @Suite
     struct WindowSoftwarePresentationCommitSequenceTests {
         @Test(arguments: ManagedPresentationOperation.allCases)
-        func managedSubmissionRequestsPresentationFeedbackBeforeCommit(
+        func pointOfNoReturnMarksBufferBusyBeforeProtocolRequests(
             operation: ManagedPresentationOperation
-        ) throws {
+        ) {
             var events: [CommitSequenceEvent] = []
             let identity = SurfacePresentationIdentity(rawValue: 7)
 
-            let returnedIdentity = try WindowSoftwarePresentationCommitSequence.perform {
+            let returnedIdentity = WindowSoftwarePresentationCommitSequence.perform {
+                events.append(.markDrawingBufferBusy)
+            } requestFrameCallback: {
                 events.append(.frameCallback)
             } requestPresentationFeedback: {
                 events.append(.presentationFeedback(operation))
                 return identity
             } commit: {
                 events.append(.commit(operation))
-            } cancelFrameCallback: {
-                events.append(.cancelFrameCallback)
-            } cleanupAfterFailure: { identity in
-                if let identity {
-                    events.append(.cancelPresentationFeedback(identity))
-                }
-                events.append(.discardDrawingBuffer)
             }
 
             #expect(returnedIdentity == identity)
             #expect(
                 events == [
+                    .markDrawingBufferBusy,
                     .frameCallback,
                     .presentationFeedback(operation),
                     .commit(operation),
                 ]
             )
-        }
-
-        @Test
-        func frameCallbackRequestFailureSkipsFeedbackAndCommit() {
-            var events: [CommitSequenceEvent] = []
-
-            do {
-                try WindowSoftwarePresentationCommitSequence.perform {
-                    events.append(.frameCallback)
-                    throw InjectedFrameCallbackFailure()
-                } requestPresentationFeedback: {
-                    events.append(.presentationFeedback(.show))
-                    return SurfacePresentationIdentity(rawValue: 3)
-                } commit: {
-                    events.append(.commit(.show))
-                } cancelFrameCallback: {
-                    events.append(.cancelFrameCallback)
-                } cleanupAfterFailure: { identity in
-                    if let identity {
-                        events.append(.cancelPresentationFeedback(identity))
-                    }
-                    events.append(.discardDrawingBuffer)
-                }
-                Issue.record("expected frame callback request failure")
-            } catch is InjectedFrameCallbackFailure {
-                #expect(events == [.frameCallback, .discardDrawingBuffer])
-            } catch {
-                Issue.record("unexpected error: \(error)")
-            }
-        }
-
-        @Test
-        func presentationFeedbackRequestFailureDoesNotCommitFrame() {
-            var events: [CommitSequenceEvent] = []
-
-            do {
-                try WindowSoftwarePresentationCommitSequence.perform {
-                    events.append(.frameCallback)
-                } requestPresentationFeedback: {
-                    events.append(.presentationFeedback(.show))
-                    throw InjectedPresentationFeedbackFailure()
-                } commit: {
-                    events.append(.commit(.show))
-                } cancelFrameCallback: {
-                    events.append(.cancelFrameCallback)
-                } cleanupAfterFailure: { identity in
-                    if let identity {
-                        events.append(.cancelPresentationFeedback(identity))
-                    }
-                    events.append(.discardDrawingBuffer)
-                }
-                Issue.record("expected presentation feedback request failure")
-            } catch is InjectedPresentationFeedbackFailure {
-                #expect(
-                    events == [
-                        .frameCallback,
-                        .presentationFeedback(.show),
-                        .cancelFrameCallback,
-                        .discardDrawingBuffer,
-                    ]
-                )
-            } catch {
-                Issue.record("unexpected error: \(error)")
-            }
-        }
-
-        @Test
-        func commitFailureCancelsPresentationFeedback() {
-            var events: [CommitSequenceEvent] = []
-            let identity = SurfacePresentationIdentity(rawValue: 9)
-
-            do {
-                try WindowSoftwarePresentationCommitSequence.perform {
-                    events.append(.frameCallback)
-                } requestPresentationFeedback: {
-                    events.append(.presentationFeedback(.redraw))
-                    return identity
-                } commit: {
-                    events.append(.commit(.redraw))
-                    throw InjectedCommitFailure()
-                } cancelFrameCallback: {
-                    events.append(.cancelFrameCallback)
-                } cleanupAfterFailure: { cancelledIdentity in
-                    if let cancelledIdentity {
-                        events.append(.cancelPresentationFeedback(cancelledIdentity))
-                    }
-                    events.append(.discardDrawingBuffer)
-                }
-                Issue.record("expected commit failure")
-            } catch is InjectedCommitFailure {
-                #expect(
-                    events == [
-                        .frameCallback,
-                        .presentationFeedback(.redraw),
-                        .commit(.redraw),
-                        .cancelFrameCallback,
-                        .cancelPresentationFeedback(identity),
-                        .discardDrawingBuffer,
-                    ]
-                )
-            } catch {
-                Issue.record("unexpected error: \(error)")
-            }
         }
     }
 
@@ -252,7 +145,10 @@
             #expect(!hasPendingRegistration)
             #expect(!pool.hasBusyBuffers)
             #expect(pool.hasFreeBuffers)
+            #expect(unsafe swl_test_core_request_record().frame_sequence == 0)
             #expect(unsafe swl_test_core_request_record().attach_sequence == 0)
+            #expect(unsafe swl_test_core_request_record().damage_sequence == 0)
+            #expect(unsafe swl_test_presentation_request_record().call_count == 0)
             #expect(unsafe swl_test_core_request_record().commit_sequence == 0)
         }
 
@@ -425,16 +321,11 @@
     }
 
     private enum CommitSequenceEvent: Equatable {
+        case markDrawingBufferBusy
         case frameCallback
         case presentationFeedback(ManagedPresentationOperation)
         case commit(ManagedPresentationOperation)
-        case cancelFrameCallback
-        case cancelPresentationFeedback(SurfacePresentationIdentity)
-        case discardDrawingBuffer
     }
 
-    private struct InjectedPresentationFeedbackFailure: Error {}
-    private struct InjectedFrameCallbackFailure: Error {}
-    private struct InjectedCommitFailure: Error {}
     private struct InjectedDrawFailure: Error {}
 #endif

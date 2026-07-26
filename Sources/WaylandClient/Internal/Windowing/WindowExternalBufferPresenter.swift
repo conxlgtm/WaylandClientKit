@@ -13,10 +13,6 @@ struct WindowExternalBufferPresentationRequest {
 }
 
 enum WindowExternalBufferPresenter {
-    private enum PresentationError: Error {
-        case missingCommitPlan
-    }
-
     static func present<RoleResources>(
         _ request: WindowExternalBufferPresentationRequest,
         runtime: inout SurfaceRuntime<RoleResources>,
@@ -76,24 +72,24 @@ enum WindowExternalBufferPresenter {
         commitPlan: SurfaceCommitPlan,
         presentationFeedbackIdentity: SurfacePresentationIdentity?
     ) {
-        var committedPlan: SurfaceCommitPlan?
-        let feedbackIdentity = try WindowSoftwarePresentationCommitSequence.perform {
-            try requestFrameCallback()
-        } requestPresentationFeedback: {
-            try requestPresentationFeedback()
-        } commit: {
-            committedPlan = try commit()
-        } cancelFrameCallback: {
+        try requestFrameCallback()
+
+        let feedbackIdentity: SurfacePresentationIdentity?
+        do {
+            feedbackIdentity = try requestPresentationFeedback()
+        } catch {
             cancelFrameCallback()
-        } cleanupAfterFailure: { feedbackIdentity in
+            throw error
+        }
+
+        do {
+            return (try commit(), feedbackIdentity)
+        } catch {
+            cancelFrameCallback()
             if let feedbackIdentity {
                 cancelPresentationFeedback(feedbackIdentity)
             }
+            throw error
         }
-
-        guard let committedPlan else {
-            throw PresentationError.missingCommitPlan
-        }
-        return (committedPlan, feedbackIdentity)
     }
 }

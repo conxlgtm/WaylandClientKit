@@ -13,6 +13,20 @@
     @Suite(.serialized)
     struct SurfaceRuntimeSubmitTests {  // swiftlint:disable:this type_body_length
         @Test
+        func reservingPendingFrameCallbackFailsBeforeRequestCreation() throws {
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+            try runtime.requestFrameCallback(generation: 17)
+
+            #expect(throws: SurfaceTransactionError.frameCallbackAlreadyPending(generation: 17)) {
+                try SurfaceFrameCommitter.reserveFrameCallback(
+                    runtime: &runtime,
+                    generation: 18
+                )
+            }
+            #expect(runtime.transactionSnapshot.pendingFrameCallbackGeneration == 17)
+        }
+
+        @Test
         func submitCapabilitySnapshotPublishesSynchronizationAndPacingFacts() {
             var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
 
@@ -191,6 +205,62 @@
                     .frameCallback,
                     .presentationFeedback,
                     .cancelFrameCallback,
+                ]
+            )
+        }
+
+        @Test
+        func externalBufferFrameCallbackFailureSkipsLaterOperations() {
+            var events: [ExternalBufferPresentationEvent] = []
+
+            #expect(throws: InjectedExternalFrameFailure.self) {
+                _ = try WindowExternalBufferPresenter.performCommitSequence {
+                    events.append(.frameCallback)
+                    throw InjectedExternalFrameFailure()
+                } requestPresentationFeedback: {
+                    events.append(.presentationFeedback)
+                    return SurfacePresentationIdentity(rawValue: 32)
+                } commit: {
+                    events.append(.commit)
+                    return try testSurfaceCommitPlan()
+                } cancelFrameCallback: {
+                    events.append(.cancelFrameCallback)
+                } cancelPresentationFeedback: { cancelledIdentity in
+                    events.append(.cancelPresentationFeedback(cancelledIdentity))
+                }
+            }
+
+            #expect(events == [.frameCallback])
+        }
+
+        @Test
+        func externalBufferCommitFailureCancelsFrameAndFeedback() {
+            var events: [ExternalBufferPresentationEvent] = []
+            let identity = SurfacePresentationIdentity(rawValue: 33)
+
+            #expect(throws: InjectedExternalCommitFailure.self) {
+                _ = try WindowExternalBufferPresenter.performCommitSequence {
+                    events.append(.frameCallback)
+                } requestPresentationFeedback: {
+                    events.append(.presentationFeedback)
+                    return identity
+                } commit: {
+                    events.append(.commit)
+                    throw InjectedExternalCommitFailure()
+                } cancelFrameCallback: {
+                    events.append(.cancelFrameCallback)
+                } cancelPresentationFeedback: { cancelledIdentity in
+                    events.append(.cancelPresentationFeedback(cancelledIdentity))
+                }
+            }
+
+            #expect(
+                events == [
+                    .frameCallback,
+                    .presentationFeedback,
+                    .commit,
+                    .cancelFrameCallback,
+                    .cancelPresentationFeedback(identity),
                 ]
             )
         }
@@ -633,6 +703,8 @@
     }
 
     private struct InjectedExternalFeedbackFailure: Error {}
+    private struct InjectedExternalFrameFailure: Error {}
+    private struct InjectedExternalCommitFailure: Error {}
 
 // swiftlint:enable closure_body_length
 #endif

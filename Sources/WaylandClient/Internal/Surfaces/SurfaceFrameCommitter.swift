@@ -70,6 +70,24 @@ package struct StagedSurfaceFrameCommit {
 }
 
 enum SurfaceFrameCommitter {
+    static func reserveFrameCallback<RoleResources>(
+        runtime: inout SurfaceRuntime<RoleResources>,
+        generation: UInt64
+    ) throws {
+        try runtime.requestFrameCallback(generation: generation)
+    }
+
+    static func requestReservedFrameCallback(
+        on surface: RawSurface,
+        onFrame: @escaping () -> Void
+    ) -> FrameCallbackRegistration {
+        do {
+            return try surface.requestFrame(onDone: onFrame)
+        } catch {
+            preconditionFailure("Reserved frame callback request failed: \(error)")
+        }
+    }
+
     static func requestFrameCallback<RoleResources>(
         on surface: RawSurface,
         runtime: inout SurfaceRuntime<RoleResources>,
@@ -134,8 +152,6 @@ enum SurfaceFrameCommitter {
             plan: preparedCommit.plan,
             payload: preparedCommit.payload.committedPayload
         )
-        try preparedCommit.submitConstraints?.apply()
-        preparedCommit.metadata?.apply()
         return StagedSurfaceFrameCommit(
             preparedCommit: preparedCommit,
             committedFrame: committedFrame
@@ -157,6 +173,7 @@ enum SurfaceFrameCommitter {
         runtime: inout SurfaceRuntime<RoleResources>
     ) -> SurfaceCommitPlan {
         let preparedCommit = stagedCommit.preparedCommit
+        applyPreflightedCommitState(preparedCommit)
         preparedCommit.surface.setBufferScale(preparedCommit.plan.bufferScale)
         preparedCommit.scaleInstallation.applyViewportDestinationIfNeeded(
             preparedCommit.plan.viewportDestination
@@ -172,6 +189,17 @@ enum SurfaceFrameCommitter {
         runtime.recordValidatedCommittedFrame(stagedCommit.committedFrame)
         runtime.markSubmitConstraintsCommitted()
         return preparedCommit.plan
+    }
+
+    private static func applyPreflightedCommitState(
+        _ preparedCommit: PreparedSurfaceFrameCommit
+    ) {
+        do {
+            try preparedCommit.submitConstraints?.apply()
+        } catch {
+            preconditionFailure("Preflighted surface submit constraints failed: \(error)")
+        }
+        preparedCommit.metadata?.apply()
     }
 
     private static func apply(_ damage: SurfaceDamageExtent, to surface: RawSurface) {
