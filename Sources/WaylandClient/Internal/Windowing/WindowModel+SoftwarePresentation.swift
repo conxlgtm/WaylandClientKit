@@ -11,6 +11,20 @@ extension WindowModel {
         _ generation: UInt64,
         _ bufferAvailability: RedrawBufferAvailability
     ) throws -> [WindowEffect] {
+        try reduceUncommittedSoftwarePresentation(generation, bufferAvailability)
+    }
+
+    mutating func reduceSoftwarePresentationFailed(
+        _ generation: UInt64,
+        _ bufferAvailability: RedrawBufferAvailability
+    ) throws -> [WindowEffect] {
+        try reduceUncommittedSoftwarePresentation(generation, bufferAvailability)
+    }
+
+    private mutating func reduceUncommittedSoftwarePresentation(
+        _ generation: UInt64,
+        _ bufferAvailability: RedrawBufferAvailability
+    ) throws -> [WindowEffect] {
         let windowID = id
         return try transitionActiveWindowState { activeState in
             try Self.requireActivePresentation(

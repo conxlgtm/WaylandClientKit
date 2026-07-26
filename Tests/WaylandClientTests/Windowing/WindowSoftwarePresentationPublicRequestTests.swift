@@ -25,6 +25,7 @@
                 try await exerciseRepeatedSupersessions(window, displayEvents)
                 try await exerciseCancellation(window, displayEvents)
                 try await exercisePreparationFailure(window, displayEvents)
+                try await exerciseDrawFailure(window, displayEvents)
                 #expect(try await window.needsRedraw)
                 try await exerciseClose(window)
             }
@@ -154,6 +155,30 @@
                 Issue.record("expected preparation failure")
             } catch is InjectedSoftwarePreparationFailure {
                 // The original preparation error must remain observable.
+            }
+        }
+    }
+
+    private func exerciseDrawFailure(
+        _ window: Window,
+        _ displayEvents: DisplayEvents
+    ) async throws {
+        _ = try await softwareRedrawEvent(
+            for: window,
+            in: displayEvents,
+            phase: "draw-failure replacement"
+        ) {
+            do {
+                _ = try await window.redraw(
+                    requestPresentationFeedback: true,
+                    preparing: { _ in () },
+                    { _, _ in
+                        throw InjectedSoftwareDrawFailure()
+                    }
+                )
+                Issue.record("expected draw failure")
+            } catch let failure as WindowSoftwareDrawFailure {
+                #expect(failure.underlying is InjectedSoftwareDrawFailure)
             }
         }
     }
@@ -316,4 +341,5 @@
 
     private struct UnexpectedSoftwarePresentationDraw: Error {}
     private struct InjectedSoftwarePreparationFailure: Error {}
+    private struct InjectedSoftwareDrawFailure: Error {}
 #endif

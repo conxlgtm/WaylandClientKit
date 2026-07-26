@@ -77,6 +77,24 @@ extension WindowModelPresentationTests {
     }
 
     @Test
+    func failedSoftwarePresentationRepublishesItsUncommittedGeneration() throws {
+        var (model, request) = try activeModelWithStartedPresentation()
+
+        #expect(
+            try model.reduce(
+                .softwarePresentationFailed(
+                    generation: request.generation,
+                    bufferAvailability: .available
+                )
+            ) == [.publishRedrawRequested(windowID)]
+        )
+        #expect(model.presentation == .idle)
+        #expect(model.redraw.isDirty)
+        #expect(model.redraw.generationForCurrentDraw == request.generation)
+        #expect(model.redraw.hasOutstandingRedrawRequest)
+    }
+
+    @Test
     func supersededSoftwarePresentationWaitsWhenNoBufferIsAvailable() throws {
         var (model, request) = try activeModelWithStartedPresentation()
 

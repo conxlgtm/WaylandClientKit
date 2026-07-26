@@ -77,8 +77,7 @@ package struct WindowModel: Equatable, Sendable {
             return try reduceInitialCommitSent()
         case .published:
             return try reducePublished()
-        case .configureReceived(let sequence):
-            return try reduceConfigureReceived(sequence)
+        case .configureReceived(let sequence): return try reduceConfigureReceived(sequence)
         case .contentInvalidated(let bufferAvailability):
             return reduceRedraw(.contentInvalidated, bufferAvailability: bufferAvailability)
         case .frameBecameReady(let bufferAvailability):
@@ -92,6 +91,8 @@ package struct WindowModel: Equatable, Sendable {
         case .presentationStarted(let request):
             return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer: return try reducePresentationBlockedByBuffer()
+        case .softwarePresentationFailed(let generation, let availability):
+            return try reduceSoftwarePresentationFailed(generation, availability)
         case .softwarePresentationSuperseded(let generation, let availability):
             return try reduceSoftwarePresentationSuperseded(generation, availability)
         case .presentationSucceeded(let generation, let bufferAvailability):

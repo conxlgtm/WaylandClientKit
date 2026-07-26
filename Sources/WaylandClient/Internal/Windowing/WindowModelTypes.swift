@@ -17,6 +17,10 @@ package enum WindowEvent: Equatable, Sendable {
     )
     case presentationStarted(PresentationRequest)
     case presentationBlockedByBuffer
+    case softwarePresentationFailed(
+        generation: UInt64,
+        bufferAvailability: RedrawBufferAvailability
+    )
     case softwarePresentationSuperseded(
         generation: UInt64,
         bufferAvailability: RedrawBufferAvailability

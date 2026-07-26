@@ -470,10 +470,7 @@ package final class TopLevelWindow {
             )
             return .reserved(reservedFrame.reservation)
         } catch let failure as WindowSoftwarePresentationFailure {
-            failActivePresentation(
-                generation: request.generation,
-                error: failure.presentationError
-            )
+            failSoftwarePresentationIfStillActive(generation: request.generation)
             throw failure.underlying
         } catch {
             failPresentationIfStillActive(
@@ -603,10 +600,7 @@ package final class TopLevelWindow {
             try interpretSoftwarePresentationFollowUp(result.followUp)
             return result.outcome
         } catch let failure as WindowSoftwarePresentationFailure {
-            failActivePresentation(
-                generation: request.generation,
-                error: failure.presentationError
-            )
+            failSoftwarePresentationIfStillActive(generation: request.generation)
             if case .userDraw = failure.presentationError {
                 throw WindowSoftwareDrawFailure(underlying: failure.underlying)
             }
@@ -698,9 +692,8 @@ package final class TopLevelWindow {
             }
         } catch let failure as WindowSoftwarePresentationFailure {
             pendingReservation.reservedFrame.drawingBuffer.discard()
-            failActivePresentation(
-                generation: pendingReservation.request.generation,
-                error: failure.presentationError
+            failSoftwarePresentationIfStillActive(
+                generation: pendingReservation.request.generation
             )
             if case .userDraw = failure.presentationError {
                 throw WindowSoftwareDrawFailure(underlying: failure.underlying)
@@ -708,9 +701,8 @@ package final class TopLevelWindow {
             throw failure.underlying
         } catch {
             pendingReservation.reservedFrame.drawingBuffer.discard()
-            failPresentationIfStillActive(
-                generation: pendingReservation.request.generation,
-                error: .surfaceCommit(String(describing: error))
+            failSoftwarePresentationIfStillActive(
+                generation: pendingReservation.request.generation
             )
             throw error
         }
@@ -774,11 +766,8 @@ package final class TopLevelWindow {
         guard let followUp else { return }
 
         switch followUp {
-        case .fail(let generation, let error):
-            failActivePresentation(
-                generation: generation,
-                error: error
-            )
+        case .fail(let generation, _):
+            failSoftwarePresentationIfStillActive(generation: generation)
         case .blockedByBuffer:
             try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
         case .resetTransientState:
@@ -809,6 +798,27 @@ package final class TopLevelWindow {
             generation: generation,
             error: error
         )
+    }
+
+    private func failSoftwarePresentationIfStillActive(generation: UInt64) {
+        guard case .drawing(let request) = model.presentation,
+            request.generation == generation
+        else {
+            return
+        }
+
+        do {
+            try interpretWindowEffects(
+                model.reduce(
+                    .softwarePresentationFailed(
+                        generation: generation,
+                        bufferAvailability: .available
+                    )
+                )
+            )
+        } catch {
+            preconditionFailure("Unexpected software-presentation failure error: \(error)")
+        }
     }
 
     private func failActivePresentation(
