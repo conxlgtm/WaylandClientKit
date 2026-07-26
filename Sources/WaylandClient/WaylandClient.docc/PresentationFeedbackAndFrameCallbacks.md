@@ -24,6 +24,15 @@ presentation feedback.
 WaylandClientKit owns requests, event correlation, and stream termination.
 Frameworks own animation, frame budgeting, and fallback scheduling.
 
+For asynchronously prepared software frames, pass
+`requestPresentationFeedback: true` to
+``Window/show(damage:timeoutMilliseconds:requestPresentationFeedback:preparing:_:)``
+or ``Window/redraw(damage:requestPresentationFeedback:preparing:_:)``. The
+feedback object is requested inside the same callback-feedback-commit sequence
+as the accepted frame. Superseded, deferred, and closed attempts request neither
+feedback nor a frame callback and do not commit. Requesting feedback throws when
+the compositor does not provide presentation-time support.
+
 ## Example
 
 See `PresentationFeedbackAnimation` in `Examples/PresentationFeedbackAnimation`.

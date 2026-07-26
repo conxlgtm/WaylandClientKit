@@ -448,6 +448,25 @@ extension SurfaceRuntime {
         try transactionState.validateCommittedFrameCandidate(generation: generation)
     }
 
+    func committedFrameCandidate(
+        generation: UInt64,
+        plan: SurfaceCommitPlan,
+        payload: SurfaceCommittedPayload = .buffer
+    ) throws -> SurfaceCommittedFrame {
+        let transactionState = surfaceObjects?.transactionState ?? SurfaceTransactionState()
+        return try transactionState.committedFrameCandidate(
+            generation: generation,
+            plan: plan,
+            payload: payload
+        )
+    }
+
+    mutating func recordValidatedCommittedFrame(_ committedFrame: SurfaceCommittedFrame) {
+        updateSurfaceObjects { objects in
+            objects.transactionState.recordValidatedCommittedFrame(committedFrame)
+        }
+    }
+
     mutating func prepareCommittedFrame(
         generation: UInt64,
         plan: SurfaceCommitPlan,

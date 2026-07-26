@@ -430,9 +430,11 @@ package final class TopLevelWindow {
         return presentationRequest
     }
 
-    private func reserveSoftwareFrameForCurrentRedraw() throws -> SoftwareFrameReservation? {
-        guard !model.isClosed else { return nil }
-        guard let request = try consumeSoftwarePresentationRequest() else { return nil }
+    private func reserveSoftwareFrameForCurrentRedraw()
+        throws -> WindowSoftwareFrameReservationOutcome
+    {
+        guard !model.isClosed else { return .closed }
+        guard let request = try consumeSoftwarePresentationRequest() else { return .deferred }
 
         try interpretWindowEffects(
             model.reduce(.presentationStarted(request))
@@ -454,7 +456,9 @@ package final class TopLevelWindow {
                 hasPendingFrameRegistration: pendingFrameRegistration != nil
             )
             try interpretSoftwarePresentationFollowUp(result.followUp)
-            guard let reservedFrame = result.reservedFrame else { return nil }
+            guard let reservedFrame = result.reservedFrame else {
+                return model.isClosed ? .closed : .deferred
+            }
 
             softwarePresentationCoordinator.register(
                 PendingSoftwareFrameReservation(
@@ -464,7 +468,7 @@ package final class TopLevelWindow {
                 ),
                 for: reservedFrame.reservation.reservationID
             )
-            return reservedFrame.reservation
+            return .reserved(reservedFrame.reservation)
         } catch let failure as WindowSoftwarePresentationFailure {
             failActivePresentation(
                 generation: request.generation,
@@ -646,32 +650,29 @@ package final class TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest?,
+        makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws -> RedrawOutcome {
+    ) throws -> SoftwarePresentationOutcome {
         guard !model.isClosed else {
             cancelSoftwareFrameReservation(reservation)
-            return .skippedClosed
+            return .closed
         }
-        guard
-            let pendingReservation = softwarePresentationCoordinator.take(
-                reservation.reservationID
-            )
-        else {
-            throw ClientError.invalidWindowState(
-                .message("software frame reservation is not active")
-            )
+        guard let pendingReservation = softwarePresentationCoordinator.take(reservation) else {
+            return model.isClosed ? .closed : .superseded
         }
 
         do {
             _ = try consumeLatestConfigureIfAvailable()
-            guard try currentSurfaceGeometry() == pendingReservation.geometry else {
-                pendingReservation.reservedFrame.drawingBuffer.discard()
-                resetTransientState()
-                try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
-                return .skippedPendingFrame
+            let currentGeometry = try currentSurfaceGeometry()
+            guard !model.isClosed,
+                model.isCurrentSoftwarePresentation(pendingReservation.request),
+                currentGeometry == pendingReservation.geometry,
+                !Task.isCancelled
+            else {
+                return try supersedeSoftwarePresentation(pendingReservation)
             }
 
+            let presentationFeedback = try makePresentationFeedback()
             let result = try softwarePresenter().presentReserved(
                 pendingReservation.reservedFrame,
                 context: WindowSoftwarePresentationContext(
@@ -687,7 +688,14 @@ package final class TopLevelWindow {
                 pendingFrameRegistration: &pendingFrameRegistration
             )
             try interpretSoftwarePresentationFollowUp(result.followUp)
-            return result.outcome
+            switch result.outcome {
+            case .presented:
+                return .presented
+            case .skippedClosed:
+                return .closed
+            case .skippedPendingFrame, .waitingForBuffer:
+                return .deferred
+            }
         } catch let failure as WindowSoftwarePresentationFailure {
             pendingReservation.reservedFrame.drawingBuffer.discard()
             failActivePresentation(
@@ -708,10 +716,52 @@ package final class TopLevelWindow {
         }
     }
 
+    private func supersedeSoftwarePresentation(
+        _ pendingReservation: PendingSoftwareFrameReservation
+    ) throws -> SoftwarePresentationOutcome {
+        pendingReservation.reservedFrame.drawingBuffer.discard()
+        guard !model.isClosed,
+            case .drawing(let activeRequest) = model.presentation,
+            activeRequest == pendingReservation.request
+        else {
+            return model.isClosed ? .closed : .superseded
+        }
+
+        try interpretWindowEffects(
+            model.reduce(
+                .softwarePresentationSuperseded(
+                    generation: pendingReservation.request.generation,
+                    bufferAvailability: .available
+                )
+            )
+        )
+        return .superseded
+    }
+
     private func cancelSoftwareFrameReservation(_ reservation: SoftwareFrameReservation) {
-        guard softwarePresentationCoordinator.cancel(reservation.reservationID) else { return }
-        resetTransientState()
-        publishDeferredRedrawAfterReservationCancellation()
+        guard let pendingReservation = softwarePresentationCoordinator.cancel(reservation) else {
+            return
+        }
+        pendingReservation.reservedFrame.drawingBuffer.discard()
+        guard !model.isClosed,
+            case .drawing(let activeRequest) = model.presentation,
+            activeRequest == pendingReservation.request
+        else {
+            return
+        }
+
+        do {
+            try interpretWindowEffects(
+                model.reduce(
+                    .softwarePresentationSuperseded(
+                        generation: pendingReservation.request.generation,
+                        bufferAvailability: .available
+                    )
+                )
+            )
+        } catch {
+            preconditionFailure("Unexpected software-presentation cancellation error: \(error)")
+        }
     }
 
     private func cancelAllSoftwareFrameReservations() {
@@ -1920,7 +1970,7 @@ extension TopLevelWindow {
 
     package func reserveShowSoftwareFrameOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS
-    ) throws -> SoftwareFrameReservation? {
+    ) throws -> WindowSoftwareFrameReservationOutcome {
         connection.preconditionIsOwnerThread()
 
         if model.currentConfiguration == nil {
@@ -1974,10 +2024,12 @@ extension TopLevelWindow {
         )
     }
 
-    package func reserveRedrawSoftwareFrameOnOwnerThread() throws -> SoftwareFrameReservation? {
+    package func reserveRedrawSoftwareFrameOnOwnerThread()
+        throws -> WindowSoftwareFrameReservationOutcome
+    {
         connection.preconditionIsOwnerThread()
 
-        guard !model.isClosed else { return nil }
+        guard !model.isClosed else { return .closed }
 
         _ = try consumeLatestConfigureIfAvailable()
         return try reserveSoftwareFrameForCurrentRedraw()
@@ -1988,17 +2040,17 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest? = { nil },
         _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
+    ) throws -> SoftwarePresentationOutcome {
         connection.preconditionIsOwnerThread()
 
-        _ = try submitReservedSoftwareFrame(
+        return try submitReservedSoftwareFrame(
             reservation,
             submitConstraints: submitConstraints,
             metadata: metadata,
             damage: damage,
-            presentationFeedback: presentationFeedback,
+            makePresentationFeedback: makePresentationFeedback,
             draw
         )
     }

@@ -196,7 +196,7 @@
         }
 
         @Test
-        func frameCommitterDoesNotRecordFrameWhenSubmitConstraintsFail() async throws {
+        func frameCommitterRejectsUnavailableSubmitConstraintsDuringPreparation() async throws {
             try await CoreRequestRecordingGate.withExclusiveRecording {
                 swl_test_core_request_recording_begin()
                 defer { swl_test_core_request_recording_end() }
@@ -205,17 +205,12 @@
                 defer { surface.destroy() }
                 var runtime = try configuredRuntime()
                 runtime.setExplicitSynchronizationActive()
-                let preparedCommit = try preparedCommit(
-                    surface: surface,
-                    runtime: &runtime,
-                    constraints: explicitConstraints(timeline: 77, acquire: 2, release: 3),
-                    payload: .buffer(try testSurfaceBuffer(pointer: 0x5702))
-                )
-
                 #expect(throws: SurfaceSubmitConstraintError.explicitSyncUnavailable) {
-                    try SurfaceFrameCommitter.commit(
-                        preparedCommit,
-                        runtime: &runtime
+                    try preparedCommit(
+                        surface: surface,
+                        runtime: &runtime,
+                        constraints: explicitConstraints(timeline: 77, acquire: 2, release: 3),
+                        payload: .buffer(try testSurfaceBuffer(pointer: 0x5702))
                     )
                 }
                 #expect(runtime.transactionSnapshot.lastCommittedFrame == nil)

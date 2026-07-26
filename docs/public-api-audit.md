@@ -40,6 +40,7 @@ Intentionally public:
 - `SoftwareFrameBufferID`
 - `SoftwareFrameBuffer`
 - `SoftwareFrameReservation`
+- `SoftwarePresentationOutcome`
 - `SoftwareFrameGeometry`
 - `PositivePixelSize`
 - `SoftwareFrame`
@@ -210,6 +211,14 @@ Current user-facing contract:
   spans, stride, and geometry without exposing raw Wayland or SHM handles.
   `SoftwareFrameReservation` lets async preparation observe the selected
   software buffer identity and geometry before the final scoped draw borrow.
+  Async `Window.show(preparing:_:)` and `Window.redraw(preparing:_:)` calls are
+  latest-wins transactions and return `SoftwarePresentationOutcome`. After
+  preparation resumes, the library revalidates the exact reservation, window,
+  configure, authoritative geometry, redraw generation, and task cancellation.
+  A stale attempt is discarded without drawing, requesting a frame callback or
+  presentation feedback, or committing the surface. Its replacement redraw is
+  published once through normal pacing. Presentation feedback requested by the
+  async API belongs to the same eventual surface commit.
 - Window sizes are logical surface sizes. `SurfaceGeometry` records the
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.

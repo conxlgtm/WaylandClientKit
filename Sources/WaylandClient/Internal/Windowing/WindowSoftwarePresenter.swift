@@ -17,6 +17,12 @@ struct WindowSoftwareFrameReservationResult {
     let followUp: WindowSoftwarePresentationFollowUp?
 }
 
+package enum WindowSoftwareFrameReservationOutcome: Equatable, Sendable {
+    case reserved(SoftwareFrameReservation)
+    case deferred
+    case closed
+}
+
 enum WindowSoftwarePresentationFollowUp {
     case fail(generation: UInt64, PresentationError)
     case blockedByBuffer
@@ -461,9 +467,13 @@ struct WindowSoftwarePresenter {
         drawingBuffer: inout RawBuffer.DrawingBuffer
     ) throws {
         do {
-            _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
-            try SurfaceFrameCommitter.commit(
+            let stagedCommit = try SurfaceFrameCommitter.stage(
                 context.preparedCommit,
+                runtime: &runtime
+            )
+            _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
+            SurfaceFrameCommitter.commit(
+                stagedCommit,
                 runtime: &runtime
             )
         } catch {
@@ -517,9 +527,13 @@ struct WindowSoftwarePresenter {
         drawingBuffer: RawBuffer.ReservedDrawingBuffer
     ) throws {
         do {
-            _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
-            try SurfaceFrameCommitter.commit(
+            let stagedCommit = try SurfaceFrameCommitter.stage(
                 context.preparedCommit,
+                runtime: &runtime
+            )
+            _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
+            SurfaceFrameCommitter.commit(
+                stagedCommit,
                 runtime: &runtime
             )
         } catch {

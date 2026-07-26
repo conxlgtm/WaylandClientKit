@@ -59,6 +59,18 @@ static struct wp_presentation_feedback *swl_test_presentation_feedback_record(
     return feedback;
 }
 
+static struct wp_presentation_feedback *
+swl_test_presentation_feedback_record_forwarding(
+    struct wp_presentation *presentation,
+    struct wl_surface *surface)
+{
+    struct wp_presentation_feedback *feedback =
+        swl_presentation_feedback_default(presentation, surface);
+    swl_test_record_presentation_request(
+        SWL_TEST_PRESENTATION_FEEDBACK, presentation, surface, feedback);
+    return feedback;
+}
+
 static void swl_test_presentation_destroy_record(
     struct wp_presentation *presentation)
 {
@@ -105,6 +117,17 @@ void swl_test_presentation_request_recording_begin(void)
     swl_presentation_destroy_impl = swl_test_presentation_destroy_record;
     swl_presentation_feedback_destroy_impl =
         swl_test_presentation_feedback_destroy_record;
+}
+
+void swl_test_presentation_request_recording_begin_forwarding(void)
+{
+    swl_test_presentation_request_latest =
+        (struct swl_test_presentation_request_record){0};
+    swl_presentation_feedback_impl =
+        swl_test_presentation_feedback_record_forwarding;
+    swl_presentation_destroy_impl = swl_presentation_destroy_default;
+    swl_presentation_feedback_destroy_impl =
+        swl_presentation_feedback_destroy_default;
 }
 
 void swl_test_presentation_request_recording_end(void)

@@ -163,6 +163,19 @@ extension WindowRedrawState {
         return publishIfNeeded(bufferAvailability: bufferAvailability)
     }
 
+    mutating func supersedeSoftwarePresentation(
+        bufferAvailability: RedrawBufferAvailability
+    ) -> [WindowRedrawEffect] {
+        switch pacing {
+        case .frameReady(.outstanding), .waitingForBuffer:
+            pacing = .frameReady(.none)
+        case .frameReady(.none), .waitingForFrame:
+            break
+        }
+
+        return publishIfNeeded(bufferAvailability: bufferAvailability)
+    }
+
     private mutating func markDrawBlockedByBuffer() {
         guard isDirty else { return }
         pacing = .waitingForBuffer

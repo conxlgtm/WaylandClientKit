@@ -89,6 +89,7 @@ struct SurfaceSubmitConstraintObjects {
         case .implicit:
             return nil
         case .explicit(let acquire, let release):
+            guard acquire != nil || release != nil else { return nil }
             guard let synchronization else {
                 throw .explicitSyncUnavailable
             }

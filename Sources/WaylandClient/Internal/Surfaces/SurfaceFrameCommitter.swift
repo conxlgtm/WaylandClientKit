@@ -59,9 +59,14 @@ package struct PreparedSurfaceFrameCommit {
     let scaleInstallation: SurfaceScaleInstallation
     let generation: UInt64
     let plan: SurfaceCommitPlan
-    let submitConstraints: SurfaceSubmitConstraints
-    let metadata: SurfaceCommitMetadata
+    let submitConstraints: ResolvedSurfaceSubmitConstraints?
+    let metadata: ResolvedSurfaceCommitMetadata?
     let payload: SurfaceCommitPayload
+}
+
+package struct StagedSurfaceFrameCommit {
+    let preparedCommit: PreparedSurfaceFrameCommit
+    let committedFrame: SurfaceCommittedFrame
 }
 
 enum SurfaceFrameCommitter {
@@ -107,14 +112,33 @@ enum SurfaceFrameCommitter {
             payload: request.payload
         )
         try request.metadata.validate(capabilities: runtime.capabilitySnapshot())
+        let submitConstraints = try runtime.resolvedSubmitConstraints(request.submitConstraints)
+        let metadata = try runtime.resolvedCommitMetadata(request.metadata)
         return PreparedSurfaceFrameCommit(
             surface: request.surface,
             scaleInstallation: request.scaleInstallation,
             generation: request.generation,
             plan: plan,
-            submitConstraints: request.submitConstraints,
-            metadata: request.metadata,
+            submitConstraints: submitConstraints,
+            metadata: metadata,
             payload: request.payload
+        )
+    }
+
+    static func stage<RoleResources>(
+        _ preparedCommit: PreparedSurfaceFrameCommit,
+        runtime: inout SurfaceRuntime<RoleResources>
+    ) throws -> StagedSurfaceFrameCommit {
+        let committedFrame = try runtime.committedFrameCandidate(
+            generation: preparedCommit.generation,
+            plan: preparedCommit.plan,
+            payload: preparedCommit.payload.committedPayload
+        )
+        try preparedCommit.submitConstraints?.apply()
+        preparedCommit.metadata?.apply()
+        return StagedSurfaceFrameCommit(
+            preparedCommit: preparedCommit,
+            committedFrame: committedFrame
         )
     }
 
@@ -123,8 +147,16 @@ enum SurfaceFrameCommitter {
         _ preparedCommit: PreparedSurfaceFrameCommit,
         runtime: inout SurfaceRuntime<RoleResources>
     ) throws -> SurfaceCommitPlan {
-        try runtime.applySubmitConstraints(preparedCommit.submitConstraints)
-        try runtime.applyCommitMetadata(preparedCommit.metadata)
+        let stagedCommit = try stage(preparedCommit, runtime: &runtime)
+        return commit(stagedCommit, runtime: &runtime)
+    }
+
+    @discardableResult
+    static func commit<RoleResources>(
+        _ stagedCommit: StagedSurfaceFrameCommit,
+        runtime: inout SurfaceRuntime<RoleResources>
+    ) -> SurfaceCommitPlan {
+        let preparedCommit = stagedCommit.preparedCommit
         preparedCommit.surface.setBufferScale(preparedCommit.plan.bufferScale)
         preparedCommit.scaleInstallation.applyViewportDestinationIfNeeded(
             preparedCommit.plan.viewportDestination
@@ -137,11 +169,7 @@ enum SurfaceFrameCommitter {
             break
         }
         preparedCommit.surface.commit()
-        try runtime.prepareCommittedFrame(
-            generation: preparedCommit.generation,
-            plan: preparedCommit.plan,
-            payload: preparedCommit.payload.committedPayload
-        )
+        runtime.recordValidatedCommittedFrame(stagedCommit.committedFrame)
         runtime.markSubmitConstraintsCommitted()
         return preparedCommit.plan
     }

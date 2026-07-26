@@ -92,12 +92,6 @@ void swl_seat_release(
     wl_seat_release(object);
 }
 
-struct wl_callback *swl_surface_frame(
-    struct wl_surface *object)
-{
-    return wl_surface_frame(object);
-}
-
 void swl_surface_set_buffer_scale(
     struct wl_surface *object,
     int32_t request_scale)

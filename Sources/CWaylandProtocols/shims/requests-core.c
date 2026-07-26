@@ -58,6 +58,12 @@ static void swl_surface_attach_default(
     wl_surface_attach(surface, buffer, x, y);
 }
 
+static struct wl_callback *swl_surface_frame_default(
+    struct wl_surface *surface)
+{
+    return wl_surface_frame(surface);
+}
+
 static void swl_surface_commit_default(struct wl_surface *surface)
 {
     wl_surface_commit(surface);
@@ -199,6 +205,8 @@ static void (*swl_surface_attach_impl)(
     struct wl_buffer *buffer,
     int32_t x,
     int32_t y) = swl_surface_attach_default;
+static struct wl_callback *(*swl_surface_frame_impl)(
+    struct wl_surface *surface) = swl_surface_frame_default;
 static void (*swl_surface_commit_impl)(struct wl_surface *surface) =
     swl_surface_commit_default;
 static void (*swl_surface_damage_impl)(
@@ -320,6 +328,17 @@ static void swl_test_surface_attach_record(
         swl_test_core_request_latest.latest_sequence;
     if (swl_test_core_request_forwards_requests)
         swl_surface_attach_default(surface, buffer, x, y);
+}
+
+static struct wl_callback *swl_test_surface_frame_record(
+    struct wl_surface *surface)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SURFACE_FRAME, surface);
+    swl_test_core_request_latest.frame_sequence =
+        swl_test_core_request_latest.latest_sequence;
+    if (swl_test_core_request_forwards_requests)
+        return swl_surface_frame_default(surface);
+    return (struct wl_callback *)0x5404;
 }
 
 static void swl_test_surface_commit_record(struct wl_surface *surface)
@@ -565,6 +584,7 @@ static uint32_t swl_test_proxy_get_id(void *proxy)
 #define swl_shm_create_pool_impl wl_shm_create_pool
 #define swl_shm_pool_create_buffer_impl wl_shm_pool_create_buffer
 #define swl_surface_attach_impl wl_surface_attach
+#define swl_surface_frame_impl wl_surface_frame
 #define swl_surface_commit_impl wl_surface_commit
 #define swl_surface_damage_impl wl_surface_damage
 #define swl_surface_damage_buffer_impl wl_surface_damage_buffer
@@ -609,6 +629,14 @@ void swl_surface_attach(
     SWL_CORE_REQUEST_LOCK();
     swl_surface_attach_impl(surface, buffer, x, y);
     SWL_CORE_REQUEST_UNLOCK();
+}
+
+struct wl_callback *swl_surface_frame(struct wl_surface *surface)
+{
+    SWL_CORE_REQUEST_LOCK();
+    struct wl_callback *callback = swl_surface_frame_impl(surface);
+    SWL_CORE_REQUEST_UNLOCK();
+    return callback;
 }
 
 void swl_surface_commit(struct wl_surface *surface)
@@ -826,6 +854,7 @@ static void swl_test_core_request_recording_start(int forwards_requests)
     swl_shm_create_pool_impl = swl_test_shm_create_pool_record;
     swl_shm_pool_create_buffer_impl = swl_test_shm_pool_create_buffer_record;
     swl_surface_attach_impl = swl_test_surface_attach_record;
+    swl_surface_frame_impl = swl_test_surface_frame_record;
     swl_surface_commit_impl = swl_test_surface_commit_record;
     swl_surface_damage_impl = swl_test_surface_damage_legacy_record;
     swl_surface_damage_buffer_impl = swl_test_surface_damage_buffer_record;
@@ -869,6 +898,7 @@ void swl_test_core_request_recording_end(void)
     swl_shm_create_pool_impl = swl_shm_create_pool_default;
     swl_shm_pool_create_buffer_impl = swl_shm_pool_create_buffer_default;
     swl_surface_attach_impl = swl_surface_attach_default;
+    swl_surface_frame_impl = swl_surface_frame_default;
     swl_surface_commit_impl = swl_surface_commit_default;
     swl_surface_damage_impl = swl_surface_damage_default;
     swl_surface_damage_buffer_impl = swl_surface_damage_buffer_default;

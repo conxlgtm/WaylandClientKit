@@ -1,8 +1,8 @@
 {
   "products" : {
     "WaylandClient" : {
-      "documented" : 146,
-      "eligible" : 1521
+      "documented" : 151,
+      "eligible" : 1526
     },
     "WaylandGraphicsPreview" : {
       "documented" : 32,

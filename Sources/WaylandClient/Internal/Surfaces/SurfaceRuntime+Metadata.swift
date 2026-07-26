@@ -127,7 +127,13 @@ extension SurfaceRuntime {
     func preflightCommitMetadata(
         _ metadata: SurfaceCommitMetadata
     ) throws(SurfaceCommitMetadataError) {
-        guard let objects = surfaceObjects else { return }
-        _ = try objects.metadataObjects.preflight(metadata)
+        _ = try resolvedCommitMetadata(metadata)
+    }
+
+    func resolvedCommitMetadata(
+        _ metadata: SurfaceCommitMetadata
+    ) throws(SurfaceCommitMetadataError) -> ResolvedSurfaceCommitMetadata? {
+        guard let objects = surfaceObjects else { return nil }
+        return try objects.metadataObjects.preflight(metadata)
     }
 }

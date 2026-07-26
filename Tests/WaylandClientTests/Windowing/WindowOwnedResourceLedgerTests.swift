@@ -57,6 +57,19 @@ struct WindowOwnedResourceLedgerTests {
     }
 
     @Test
+    func mismatchedResourceDoesNotConsumeMatchingIdentity() throws {
+        let log = RetirementLog()
+        let ledger = makeLedger(log)
+        ledger.insert(Resource(id: 1), for: 7)
+
+        #expect(ledger.take(7) { $0.id == 2 } == nil)
+        #expect(ledger.count == 1)
+        #expect(try #require(ledger.take(7) { $0.id == 1 }).id == 1)
+        #expect(ledger.isEmpty)
+        #expect(log.ids.isEmpty)
+    }
+
+    @Test
     func connectionFailureCleanupRetiresAllResourcesOnce() {
         let log = RetirementLog()
         let ledger = makeLedger(log)

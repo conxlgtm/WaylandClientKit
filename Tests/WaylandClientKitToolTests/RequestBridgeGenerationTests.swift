@@ -40,14 +40,15 @@ struct RequestBridgeGenerationTests {
         let names = Set(bridges.map(\.functionName))
 
         #expect(policy.interfaces.count == 38)
-        #expect(bridges.count == 61)
+        #expect(bridges.count == 60)
         #expect(names.contains("swl_compositor_create_surface"))
-        #expect(names.contains("swl_surface_frame"))
+        #expect(!names.contains("swl_surface_frame"))
         #expect(names.contains("swl_seat_get_pointer"))
         #expect(names.contains("swl_data_device_manager_create_data_source"))
         #expect(names.contains("swl_primary_selection_device_manager_get_device"))
         #expect(!names.contains("swl_wl_compositor_create_surface"))
         #expect(!names.contains("swl_wl_data_device_manager_create_data_source"))
+        #expect(policy.interfaces["wl_surface"]?.handwrittenByDefault == .testRecording)
         #expect(
             policy.interfaces["wp_linux_drm_syncobj_manager_v1"]?
                 .handwrittenRequests["import_timeline"] == .failureInjection

@@ -314,6 +314,11 @@ public actor WaylandDisplay {
 
         return core
     }
+
+    func coreIfActive() -> DisplayCore? {
+        guard case .active(let core, _) = lifecycle else { return nil }
+        return core
+    }
 }
 
 extension WaylandDisplay {

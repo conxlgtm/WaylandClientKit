@@ -30,6 +30,11 @@ This checkpoint contains source-breaking `WaylandClient` changes:
   `dataTransfer`, and `presentation` cases. `WaylandDisplay.events` is now the
   complete cross-family ordered feed; specialized streams remain
   family-ordered convenience views.
+- Update async software drawing calls for the new `SoftwarePresentationOutcome`
+  result. `Window.show(preparing:_:)` and `Window.redraw(preparing:_:)` now
+  distinguish presented, superseded, deferred, and closed attempts, revalidate
+  prepared generations before drawing, and accept an atomic
+  `requestPresentationFeedback` option.
 
 ## Required Gates
 

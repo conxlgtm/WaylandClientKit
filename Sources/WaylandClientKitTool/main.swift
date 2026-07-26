@@ -1183,6 +1183,7 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
 
     let filters = [
         "WindowControlPublicRequestTests",
+        "WindowSoftwarePresentationPublicRequestTests",
         "WindowDragSourcePublicRequestTests",
         "SubsurfacePublicRequestTests",
         "DesktopIntegrationPublicRequestTests",
@@ -1436,6 +1437,7 @@ private func runFoundationCheck(context: ToolContext) throws {
 private func requestTestEnvironment() -> [String: String] {
     [
         "WAYLAND_CLIENT_KIT_ENABLE_WINDOW_CONTROL_REQUEST_TESTS": "1",
+        "WAYLAND_CLIENT_KIT_ENABLE_SOFTWARE_PRESENTATION_REQUEST_TESTS": "1",
         "WAYLAND_CLIENT_KIT_ENABLE_DND_SOURCE_REQUEST_TESTS": "1",
         "WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS": "1",
         "WAYLAND_CLIENT_KIT_ENABLE_DESKTOP_REQUEST_TESTS": "1",
