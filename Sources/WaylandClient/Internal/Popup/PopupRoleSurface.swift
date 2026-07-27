@@ -339,14 +339,18 @@ extension PopupRoleSurface {
         try surfaceRuntime.acknowledgeConfigure(serial: serial)
     }
 
-    package func requestSurfaceFrameCallback(
-        generation: UInt64,
-        onFrame: @escaping () -> Void
-    ) throws -> FrameCallbackRegistration {
-        try SurfaceFrameCommitter.requestFrameCallback(
-            on: surface,
+    package func reserveSurfaceFrameCallback(generation: UInt64) throws {
+        try SurfaceFrameCommitter.reserveFrameCallback(
             runtime: &surfaceRuntime,
-            generation: generation,
+            generation: generation
+        )
+    }
+
+    package func requestReservedSurfaceFrameCallback(
+        onFrame: @escaping () -> Void
+    ) -> FrameCallbackRegistration {
+        SurfaceFrameCommitter.requestReservedFrameCallback(
+            on: surface,
             onFrame: onFrame
         )
     }

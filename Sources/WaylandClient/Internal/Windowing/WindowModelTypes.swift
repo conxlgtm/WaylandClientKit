@@ -94,10 +94,35 @@ package struct PreviewBufferPresentationResult: Equatable, Sendable {
             throw PreviewBufferPresentationResultError.invalidGeneration(commitGeneration)
         }
 
+        self.init(
+            validatedGeneration: commitGeneration,
+            commitPlan: surfaceCommitPlan,
+            capabilities: surfaceCapabilities,
+            presentationFeedbackIdentity: feedbackIdentity
+        )
+    }
+
+    private init(
+        validatedGeneration commitGeneration: UInt64,
+        commitPlan surfaceCommitPlan: SurfaceCommitPlan,
+        capabilities surfaceCapabilities: SurfaceCapabilitySnapshot,
+        presentationFeedbackIdentity feedbackIdentity: SurfacePresentationIdentity?
+    ) {
         generation = commitGeneration
         commitPlan = surfaceCommitPlan
         capabilities = surfaceCapabilities
         presentationFeedbackIdentity = feedbackIdentity
+    }
+
+    package func withPresentationFeedbackIdentity(
+        _ feedbackIdentity: SurfacePresentationIdentity?
+    ) -> Self {
+        Self(
+            validatedGeneration: generation,
+            commitPlan: commitPlan,
+            capabilities: capabilities,
+            presentationFeedbackIdentity: feedbackIdentity
+        )
     }
 }
 

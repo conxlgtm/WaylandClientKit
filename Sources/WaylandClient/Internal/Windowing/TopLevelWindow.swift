@@ -85,6 +85,59 @@ private struct SoftwarePresentationSuccessStagingContext {
     }
 }
 
+private struct StagedExternalBufferPresentationSuccess {
+    let model: WindowModel
+    let result: PreviewBufferPresentationResult
+    let publishesRedrawRequest: Bool
+}
+
+private struct ExternalSuccessStagingContext {
+    let model: WindowModel
+    let windowID: WindowID
+    let bufferAvailability: RedrawBufferAvailability
+    let capabilities: SurfaceCapabilitySnapshot
+
+    func stage(
+        generation: UInt64,
+        commitPlan: SurfaceCommitPlan
+    ) throws -> StagedExternalBufferPresentationSuccess {
+        var stagedModel = model
+        let effects = try stagedModel.reduce(
+            .externalPresentationSucceeded(
+                generation: generation,
+                bufferAvailability: bufferAvailability
+            )
+        )
+        var publishesRedrawRequest = false
+        for effect in effects {
+            guard case .publishRedrawRequested(let effectWindowID) = effect,
+                effectWindowID == windowID,
+                !publishesRedrawRequest
+            else {
+                throw ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(
+                        .invalidTransition(
+                            from: "external presentation success staging",
+                            event: "unexpected effect \(effect)"
+                        )
+                    )
+                )
+            }
+            publishesRedrawRequest = true
+        }
+        return try StagedExternalBufferPresentationSuccess(
+            model: stagedModel,
+            result: PreviewBufferPresentationResult(
+                generation: generation,
+                commitPlan: commitPlan,
+                capabilities: capabilities
+            ),
+            publishesRedrawRequest: publishesRedrawRequest
+        )
+    }
+}
+
 // swiftlint:disable:next type_body_length
 package final class TopLevelWindow {
     package static let defaultConfigureTimeoutMS: Int32 = 1_000
@@ -1600,6 +1653,13 @@ extension TopLevelWindow {
         try ensureSubmitConstraintObjectsInstalled(for: submitConstraints)
         try ensureMetadataObjectsInstalled(for: metadata)
         try surfaceRuntime.preflightCommitMetadata(metadata)
+        let successStagingContext = ExternalSuccessStagingContext(
+            model: model,
+            windowID: id,
+            bufferAvailability: bufferAvailability,
+            capabilities: surfaceRuntime.capabilitySnapshot()
+        )
+        var stagedSuccess: StagedExternalBufferPresentationSuccess?
         let presentationRequest = WindowExternalBufferPresentationRequest(
             buffer: buffer,
             surface: surface,
@@ -1614,30 +1674,35 @@ extension TopLevelWindow {
         }
         let presentation = try WindowExternalBufferPresenter.present(
             presentationRequest,
+            stageSuccess: { commitPlan in
+                stagedSuccess = try successStagingContext.stage(
+                    generation: generation,
+                    commitPlan: commitPlan
+                )
+            },
             runtime: &surfaceRuntime,
             pendingFrameRegistration: &pendingFrameRegistration
         )
-        do {
-            try interpretWindowEffects(
-                model.reduce(
-                    .externalPresentationSucceeded(
-                        generation: generation,
-                        bufferAvailability: bufferAvailability
-                    )
-                )
-            )
-        } catch {
-            pendingFrameRegistration = nil
-            surfaceRuntime.cancelFrameCallback()
-            throw error
+        guard let stagedSuccess else {
+            preconditionFailure("Committed external presentation is missing staged success state")
         }
 
-        return try PreviewBufferPresentationResult(
-            generation: generation,
-            commitPlan: presentation.commitPlan,
-            capabilities: surfaceRuntime.capabilitySnapshot(),
-            presentationFeedbackIdentity: presentation.presentationFeedbackIdentity
+        return installExternalPresentationSuccess(
+            stagedSuccess,
+            feedbackIdentity: presentation.presentationFeedbackIdentity
         )
+    }
+
+    private func installExternalPresentationSuccess(
+        _ stagedSuccess: StagedExternalBufferPresentationSuccess,
+        feedbackIdentity: SurfacePresentationIdentity?
+    ) -> PreviewBufferPresentationResult {
+        let result = stagedSuccess.result.withPresentationFeedbackIdentity(feedbackIdentity)
+        model = stagedSuccess.model
+        if stagedSuccess.publishesRedrawRequest {
+            onRedrawRequested?()
+        }
+        return result
     }
 
     package func importPreviewSynchronizationTimelineOnOwnerThread(

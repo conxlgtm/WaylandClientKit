@@ -1,3 +1,52 @@
+struct StagedPopupPresentationSuccess {
+    let model: PopupModel
+    let publishesRedrawRequest: Bool
+}
+
+struct PopupPresentationSuccessStagingContext {
+    let model: PopupModel
+    let parentWindowID: WindowID
+
+    func stage(
+        generation: UInt64,
+        bufferAvailability: RedrawBufferAvailability
+    ) throws -> StagedPopupPresentationSuccess {
+        var stagedModel = model
+        let effects = try stagedModel.reduce(
+            .presentationSucceeded(
+                generation: generation,
+                bufferAvailability: bufferAvailability
+            )
+        )
+        let expectedEvent = PopupLifecycleEvent(
+            popup: stagedModel.id,
+            parentWindowID: parentWindowID
+        )
+        var publishesRedrawRequest = false
+        for effect in effects {
+            guard case .publishRedrawRequested(let event) = effect,
+                event == expectedEvent,
+                !publishesRedrawRequest
+            else {
+                throw ClientError.window(
+                    parentWindowID,
+                    .invalidLifecycleTransition(
+                        .invalidTransition(
+                            from: "popup presentation success staging",
+                            event: "unexpected effect \(effect)"
+                        )
+                    )
+                )
+            }
+            publishesRedrawRequest = true
+        }
+        return StagedPopupPresentationSuccess(
+            model: stagedModel,
+            publishesRedrawRequest: publishesRedrawRequest
+        )
+    }
+}
+
 extension PopupRoleSurface {
     // swiftlint:disable:next function_body_length
     func performSoftwarePresent(
@@ -70,11 +119,7 @@ extension PopupRoleSurface {
             }
 
             do {
-                pendingFrameRegistration = try requestSurfaceFrameCallback(
-                    generation: request.generation
-                ) { [weak self] in
-                    self?.handleFrameDone()
-                }
+                try reserveSurfaceFrameCallback(generation: request.generation)
             } catch {
                 failActivePresentation(
                     generation: request.generation,
@@ -84,10 +129,17 @@ extension PopupRoleSurface {
                 throw error
             }
 
+            let stagedCommit: StagedSurfaceFrameCommit
+            let stagedSuccess: StagedPopupPresentationSuccess
             do {
-                let stagedCommit = try stageSurfaceFrameCommit(preparedCommit)
-                _ = drawingBuffer.markBusy(commitGeneration: request.generation)
-                commitSurfaceFrame(stagedCommit)
+                stagedCommit = try stageSurfaceFrameCommit(preparedCommit)
+                stagedSuccess = try PopupPresentationSuccessStagingContext(
+                    model: model,
+                    parentWindowID: parentWindowID
+                ).stage(
+                    generation: request.generation,
+                    bufferAvailability: try redrawBufferAvailability()
+                )
             } catch {
                 pendingFrameRegistration = nil
                 cancelSurfaceFrameCallback()
@@ -95,14 +147,15 @@ extension PopupRoleSurface {
                 throw error
             }
 
-            try interpretPopupEffects(
-                model.reduce(
-                    .presentationSucceeded(
-                        generation: request.generation,
-                        bufferAvailability: try redrawBufferAvailability()
-                    )
-                )
-            )
+            _ = drawingBuffer.markBusy(commitGeneration: request.generation)
+            pendingFrameRegistration = requestReservedSurfaceFrameCallback { [weak self] in
+                self?.handleFrameDone()
+            }
+            commitSurfaceFrame(stagedCommit)
+            model = stagedSuccess.model
+            if stagedSuccess.publishesRedrawRequest {
+                onRedrawRequested?()
+            }
             return .presented
         } catch {
             failPresentationIfStillActive(

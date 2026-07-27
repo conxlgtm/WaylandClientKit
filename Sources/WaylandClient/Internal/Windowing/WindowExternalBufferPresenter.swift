@@ -15,6 +15,7 @@ struct WindowExternalBufferPresentationRequest {
 enum WindowExternalBufferPresenter {
     static func present<RoleResources>(
         _ request: WindowExternalBufferPresentationRequest,
+        stageSuccess: (SurfaceCommitPlan) throws -> Void,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
     ) throws -> (
@@ -33,63 +34,71 @@ enum WindowExternalBufferPresenter {
             ),
             runtime: &runtime,
         )
-
-        return try performCommitSequence(
-            requestFrameCallback: {
-                pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
-                    on: request.surface,
-                    runtime: &runtime,
-                    generation: request.generation,
-                    onFrame: request.onFrameDone
-                )
-            },
-            requestPresentationFeedback: {
-                try request.presentationFeedback?.request()
-            },
-            commit: {
-                try SurfaceFrameCommitter.commit(
-                    preparedCommit,
-                    runtime: &runtime
-                )
-            },
-            cancelFrameCallback: {
-                pendingFrameRegistration = nil
-                runtime.cancelFrameCallback()
-            },
-            cancelPresentationFeedback: { feedbackIdentity in
-                request.presentationFeedback?.cancel(feedbackIdentity)
-            }
+        try SurfaceFrameCommitter.reserveFrameCallback(
+            runtime: &runtime,
+            generation: request.generation
         )
+
+        do {
+            return try performCommitSequence(
+                {
+                    let stagedCommit = try SurfaceFrameCommitter.stage(
+                        preparedCommit,
+                        runtime: &runtime
+                    )
+                    try stageSuccess(stagedCommit.preparedCommit.plan)
+                    return stagedCommit
+                },
+                requestFrameCallback: {
+                    pendingFrameRegistration =
+                        SurfaceFrameCommitter.requestReservedFrameCallback(
+                            on: request.surface,
+                            onFrame: request.onFrameDone
+                        )
+                },
+                requestPresentationFeedback: {
+                    requestPresentationFeedbackAtPointOfNoReturn(request.presentationFeedback)
+                },
+                commit: { stagedCommit in
+                    SurfaceFrameCommitter.commit(
+                        stagedCommit,
+                        runtime: &runtime
+                    )
+                }
+            )
+        } catch {
+            pendingFrameRegistration = nil
+            runtime.cancelFrameCallback()
+            throw error
+        }
     }
 
-    static func performCommitSequence(
-        requestFrameCallback: () throws -> Void,
-        requestPresentationFeedback: () throws -> SurfacePresentationIdentity?,
-        commit: () throws -> SurfaceCommitPlan,
-        cancelFrameCallback: () -> Void,
-        cancelPresentationFeedback: (SurfacePresentationIdentity) -> Void
-    ) throws -> (
+    static func performCommitSequence<StagedCommit>(
+        _ stageSuccess: () throws -> StagedCommit,
+        requestFrameCallback: () -> Void,
+        requestPresentationFeedback: () -> SurfacePresentationIdentity?,
+        commit: (StagedCommit) -> SurfaceCommitPlan
+    ) rethrows -> (
         commitPlan: SurfaceCommitPlan,
         presentationFeedbackIdentity: SurfacePresentationIdentity?
     ) {
-        try requestFrameCallback()
+        let stagedCommit = try stageSuccess()
+        requestFrameCallback()
+        let feedbackIdentity = requestPresentationFeedback()
+        return (commit(stagedCommit), feedbackIdentity)
+    }
 
-        let feedbackIdentity: SurfacePresentationIdentity?
-        do {
-            feedbackIdentity = try requestPresentationFeedback()
-        } catch {
-            cancelFrameCallback()
-            throw error
-        }
+    private static func requestPresentationFeedbackAtPointOfNoReturn(
+        _ presentationFeedback: WindowPresentationFeedbackCommitRequest?
+    ) -> SurfacePresentationIdentity? {
+        guard let presentationFeedback else { return nil }
 
         do {
-            return (try commit(), feedbackIdentity)
+            return try presentationFeedback.request()
         } catch {
-            cancelFrameCallback()
-            if let feedbackIdentity {
-                cancelPresentationFeedback(feedbackIdentity)
-            }
-            throw error
+            preconditionFailure(
+                "Prepared presentation feedback request failed: \(error)"
+            )
         }
     }
 }
