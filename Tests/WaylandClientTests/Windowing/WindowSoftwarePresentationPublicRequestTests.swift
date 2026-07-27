@@ -2,9 +2,8 @@
     import CWaylandProtocols
     import Foundation
     import Testing
+    import WaylandClient
     import WaylandTestSupport
-
-    @testable import WaylandClient
 
     @Suite(
         .enabled(
@@ -19,6 +18,39 @@
         .serialized
     )
     struct WindowSoftwarePresentationPublicRequestTests {
+        @Test
+        func forwardingPresentationRecorderRecordsAndRestores() async throws {
+            try await withReadySoftwarePresentationConnection { window, _ in
+                swl_test_core_request_recording_begin_forwarding()
+                defer { swl_test_core_request_recording_end() }
+
+                swl_test_presentation_request_recording_begin_forwarding()
+                let outcome: SoftwarePresentationOutcome
+                do {
+                    defer { swl_test_presentation_request_recording_end() }
+                    outcome = try await window.redraw(
+                        requestPresentationFeedback: true,
+                        preparing: { _ in () },
+                        { _, frame in
+                            fillSoftwareFrame(frame, color: 0x0034_4424)
+                        }
+                    )
+                    let record = unsafe swl_test_presentation_request_record()
+                    #expect(unsafe record.call_count == 1)
+                    #expect(unsafe record.kind == SWL_TEST_PRESENTATION_FEEDBACK)
+                    #expect(unsafe record.feedback != nil)
+                }
+                #expect(outcome == .presented)
+
+                let recordedCallCount = unsafe swl_test_presentation_request_record().call_count
+                try await window.requestPresentationFeedback()
+                #expect(
+                    unsafe swl_test_presentation_request_record().call_count
+                        == recordedCallCount
+                )
+            }
+        }
+
         @Test
         func rejectedPreparationsIssueNoSurfaceTransactionRequests() async throws {
             try await withRecordedSoftwarePresentationConnection { window, displayEvents in
@@ -35,6 +67,20 @@
     private func withRecordedSoftwarePresentationConnection(
         _ operation: @Sendable (Window, DisplayEvents) async throws -> Void
     ) async throws {
+        try await withReadySoftwarePresentationConnection { window, displayEvents in
+            swl_test_core_request_recording_begin_forwarding()
+            swl_test_presentation_request_recording_begin_forwarding()
+            defer { swl_test_presentation_request_recording_end() }
+            defer { swl_test_core_request_recording_end() }
+
+            try await operation(window, displayEvents)
+            expectNoSurfaceTransactionRequests()
+        }
+    }
+
+    private func withReadySoftwarePresentationConnection(
+        _ operation: @Sendable (Window, DisplayEvents) async throws -> Void
+    ) async throws {
         try await CoreRequestRecordingGate.withExclusiveRecording {
             try await PresentationRequestRecordingGate.withExclusiveRecording {
                 try await withSoftwarePresentationConnection { display, window in
@@ -47,14 +93,7 @@
                         in: displayEvents,
                         phase: "initial redraw request"
                     )
-
-                    swl_test_core_request_recording_begin_forwarding()
-                    swl_test_presentation_request_recording_begin_forwarding()
-                    defer { swl_test_presentation_request_recording_end() }
-                    defer { swl_test_core_request_recording_end() }
-
                     try await operation(window, displayEvents)
-                    expectNoSurfaceTransactionRequests()
                 }
             }
         }
