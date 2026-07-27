@@ -42,6 +42,12 @@
                 }
                 #expect(outcome == .presented)
 
+                let coreRecord = unsafe swl_test_core_request_record()
+                #expect(unsafe coreRecord.frame_sequence > 0)
+                #expect(unsafe coreRecord.frame_sequence < coreRecord.attach_sequence)
+                #expect(unsafe coreRecord.attach_sequence < coreRecord.damage_sequence)
+                #expect(unsafe coreRecord.damage_sequence < coreRecord.commit_sequence)
+
                 let recordedCallCount = unsafe swl_test_presentation_request_record().call_count
                 try await window.requestPresentationFeedback()
                 #expect(
