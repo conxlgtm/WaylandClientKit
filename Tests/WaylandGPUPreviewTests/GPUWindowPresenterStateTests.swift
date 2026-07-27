@@ -1829,12 +1829,9 @@ struct ManagedGPUPreviewStoragePreparationTests {
             managedGPUBacking: backing
         )
 
-        _ = try await storage.nextFrame()
+        let lease = try await storage.nextFrame()
         await window.clearEvents()
-        let result = try await storage.submit(
-            leaseID: 1,
-            frame: .clearColor(.black)
-        )
+        let result = try await lease.submit(.clearColor(.black))
 
         #expect(await window.eventSnapshot() == [.preparePresentation, .geometry])
         #expect(backing.submittedGeometries == [configuredGeometry])
@@ -1871,8 +1868,8 @@ struct ManagedGPUPreviewStoragePreparationTests {
             managedGPUBacking: backing
         )
 
-        _ = try await storage.nextFrame()
-        _ = try await storage.submit(leaseID: 1, frame: .clearColor(.black))
+        let firstLease = try await storage.nextFrame()
+        _ = try await firstLease.submit(.clearColor(.black))
 
         await window.setConfiguredGeometry(leaseGeometry)
         await window.clearEvents()

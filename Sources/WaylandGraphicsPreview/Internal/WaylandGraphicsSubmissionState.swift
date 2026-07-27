@@ -105,6 +105,10 @@ package enum WaylandGraphicsFrameSubmissionOperation: Equatable, Sendable {
     }
 }
 
+package enum WaylandGraphicsFrameLeaseInvariantError: Error, Equatable, Sendable {
+    case staleOrConsumedAuthority
+}
+
 package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
     package enum State: Equatable, Sendable {
         case open(OpenState)
@@ -216,10 +220,10 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         case .closed:
             throw WaylandGraphicsError.backingClosed
         case .submitting:
-            throw WaylandGraphicsError.frameLeaseConsumed
+            throw WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority
         case .open(let openState):
             guard openState.activeLeaseID == leaseID else {
-                throw WaylandGraphicsError.frameLeaseConsumed
+                throw WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority
             }
 
             let operation: WaylandGraphicsFrameSubmissionOperation
@@ -246,10 +250,10 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         case .closed:
             throw WaylandGraphicsError.backingClosed
         case .submitting:
-            throw WaylandGraphicsError.frameLeaseConsumed
+            throw WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority
         case .open(let openState):
             guard openState.activeLeaseID == leaseID else {
-                throw WaylandGraphicsError.frameLeaseConsumed
+                throw WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority
             }
 
             return openState.hasSubmittedFrame ? .redraw : .show
@@ -261,10 +265,10 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         case .closed:
             throw WaylandGraphicsError.backingClosed
         case .submitting:
-            throw WaylandGraphicsError.frameLeaseConsumed
+            throw WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority
         case .open(let openState):
             guard openState.activeLeaseID == leaseID else {
-                throw WaylandGraphicsError.frameLeaseConsumed
+                throw WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority
             }
         }
     }
@@ -274,7 +278,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         case .closed:
             throw WaylandGraphicsError.backingClosed
         case .open:
-            throw WaylandGraphicsError.frameLeaseConsumed
+            throw WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority
         case .submitting(let submissionState):
             state = .open(
                 OpenState(

@@ -162,8 +162,13 @@ struct GPUPreviewLiveCapabilityTests {
 
             await backing.close()
 
-            await expectGraphicsError(.backingClosed) {
-                try await lease.submit(.clearColor(.black))
+            do {
+                _ = try await lease.submit(.clearColor(.black))
+                Issue.record("Expected WaylandGraphicsError.backingClosed")
+            } catch let error as WaylandGraphicsError {
+                #expect(error == .backingClosed)
+            } catch {
+                Issue.record("Expected WaylandGraphicsError.backingClosed, got \(error)")
             }
         }
     }
@@ -182,12 +187,17 @@ struct GPUPreviewLiveCapabilityTests {
             )
             let lease = try await backing.nextFrame()
 
-            await expectGraphicsError(.backingClosed) {
-                try await lease.submitForTesting(
+            do {
+                _ = try await lease.submitForTesting(
                     .clearColor(.black)
                 ) {
                     await backing.close()
                 }
+                Issue.record("Expected WaylandGraphicsError.backingClosed")
+            } catch let error as WaylandGraphicsError {
+                #expect(error == .backingClosed)
+            } catch {
+                Issue.record("Expected WaylandGraphicsError.backingClosed, got \(error)")
             }
         }
     }
@@ -206,12 +216,17 @@ struct GPUPreviewLiveCapabilityTests {
             )
             let failedLease = try await backing.nextFrame()
 
-            await expectGraphicsError(.unsupportedPacing) {
-                try await failedLease.submitForTestingBeforeSubmissionEffect(
+            do {
+                _ = try await failedLease.submitForTestingBeforeSubmissionEffect(
                     .clearColor(.black)
                 ) {
                     throw WaylandGraphicsError.unsupportedPacing
                 }
+                Issue.record("Expected WaylandGraphicsError.unsupportedPacing")
+            } catch let error as WaylandGraphicsError {
+                #expect(error == .unsupportedPacing)
+            } catch {
+                Issue.record("Expected WaylandGraphicsError.unsupportedPacing, got \(error)")
             }
 
             let retryLease = try await backing.nextFrame()

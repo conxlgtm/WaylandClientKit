@@ -370,7 +370,7 @@ private struct InjectedUnexpectedSubmissionError: Error, CustomStringConvertible
     }
 }
 
-private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
+actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     nonisolated let id = WindowID(rawValue: 700)
 
     private let geometryValue: SurfaceGeometry

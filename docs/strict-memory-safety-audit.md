@@ -17,6 +17,7 @@ below.
 | `DataTransferSourceWriter` | One writer state and worker thread | Its condition-protected state may cross the writer thread boundary | Each queued write owns its data and descriptor until completion or cancellation | Draining or cancellation removes the queued request and closes the descriptor once | Shutdown wakes and joins the worker before state is released |
 | Raw dma-buf, GBM, and EGL wrappers | The importing graphics backing or render target | Setup and rendering paths with their documented owner-thread or lock boundary | Owned descriptors, proxies, and graphics objects stay in their wrapper until transfer | Move-only descriptor values transfer ownership into import. Destroy or retirement invalidates the wrapper | Wrapper teardown releases the native object when normal retirement was missed |
 | External-buffer release and presentation registries | The graphics backing storage | Registry locks protect lookup state. Completion happens after unlocking | A registry entry retains its completion cell until a terminal result | Release, failure, or backing close removes the entry before completing waiters | Backing close completes every remaining receipt and cancels its monitor task |
+| `WaylandGraphicsLeaseLifetime` | One active frame or external-render permission | A move-only lease may cross executors; cleanup runs on the backing actor | `NSLock` protects the one-shot armed state, while lease ID and actor storage are immutable | A terminal operation disarms the token before awaiting. External reservation creates a new token for the transferred authority | Lease or token `deinit` atomically claims abandonment and schedules actor cancellation after unlocking |
 
 ## Shared Memory and Borrowed Buffers
 
@@ -365,6 +366,37 @@ Tests:
   `DataTransferSourceWriterShutdownTests`, and
   `DataTransferSourceWriterSourceCancellationTests` cover source-side write
   job descriptor release and cancellation behavior.
+
+## Graphics Lease Lifetime Boundary
+
+Remaining unsafe constructs:
+
+- `WaylandGraphicsLeaseLifetime` is a private `@unchecked Sendable` reference
+  retained by each move-only frame or external-buffer render lease. It carries
+  an immutable lease ID and backing actor reference plus one lock-protected
+  armed bit so abandonment can cross executor boundaries.
+
+Audit invariant:
+
+- `isArmed` is read or changed only while holding the private `NSLock`.
+  `disarm()` and `abandon()` therefore choose at most one cleanup owner.
+- Terminal consuming operations disarm before their first suspension. The
+  library explicitly cancels actor state if a terminal operation throws because
+  the caller can no longer recover the consumed lease.
+- External-buffer reservation disarms the frame token and returns a render lease
+  with a new token holding the sole remaining frame authority.
+- Abandonment captures only the immutable lease ID and backing actor after the
+  lock is released, then schedules cancellation on that actor. No lock is held
+  across asynchronous work.
+
+Tests:
+
+- `WaylandGraphicsLeaseLifetimeTests` covers frame-lease abandonment plus
+  submission, cancellation, and abandonment races with backing close.
+- `WaylandGraphicsExternalBufferSubmissionTests` covers render-lease
+  cancellation and abandonment, authority transfer, and terminal external-buffer
+  cleanup. `WaylandGraphicsSubmissionFailureTests` covers terminal frame failure
+  cleanup and acquisition of replacement authority.
 
 ## linux-dmabuf Boundary
 

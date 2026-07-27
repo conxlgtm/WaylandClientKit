@@ -34,7 +34,7 @@ struct WaylandGraphicsFrameLeaseStateTests {
         #expect(
             try leaseState.prepareSubmission(leaseID: leaseID) == .show
         )
-        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+        #expect(throws: WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority) {
             try leaseState.prepareSubmission(leaseID: leaseID)
         }
     }
@@ -45,7 +45,7 @@ struct WaylandGraphicsFrameLeaseStateTests {
         let leaseID = try leaseState.issueLease()
         _ = try leaseState.prepareSubmission(leaseID: leaseID)
 
-        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+        #expect(throws: WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority) {
             try leaseState.prepareSubmission(leaseID: leaseID)
         }
     }
@@ -55,7 +55,7 @@ struct WaylandGraphicsFrameLeaseStateTests {
         var leaseState = WaylandGraphicsFrameLeaseState()
         _ = try leaseState.issueLease()
 
-        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+        #expect(throws: WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority) {
             try leaseState.prepareSubmission(leaseID: 999)
         }
     }
@@ -106,7 +106,7 @@ struct WaylandGraphicsFrameLeaseStateTests {
     func finishSubmissionWithoutInFlightSubmissionIsRejected() {
         var leaseState = WaylandGraphicsFrameLeaseState()
 
-        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+        #expect(throws: WaylandGraphicsFrameLeaseInvariantError.staleOrConsumedAuthority) {
             try leaseState.finishSubmission()
         }
     }

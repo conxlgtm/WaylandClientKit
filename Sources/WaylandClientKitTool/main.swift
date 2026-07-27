@@ -1067,6 +1067,42 @@ private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) t
     }
 }
 
+private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws {
+    let packagePath = context.repository.url(
+        "IntegrationTests/InvalidGraphicsLeaseClient"
+    ).path
+    let targets = [
+        ("FrameLeaseCopyClient", "frameLease"),
+        ("FrameLeaseTransferClient", "frameLease"),
+        ("RenderLeaseCopyClient", "renderLease"),
+    ]
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "waylandclientkit-invalid-graphics-leases"
+    )
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+
+    for (target, variableName) in targets {
+        let result = try context.swift.runSwift(
+            [
+                "build", "--disable-index-store", "--package-path", packagePath,
+                "--scratch-path", scratch.path, "--target", target,
+            ],
+            repository: context.repository,
+            environment: try compilerFilterEnvironment(context: context),
+            requireSuccess: false
+        )
+        guard result.exitCode != 0 else {
+            throw ToolError("invalid graphics lease client unexpectedly compiled \(target)")
+        }
+        let diagnostics = result.stdout + result.stderr
+        guard diagnostics.contains("'\(variableName)' consumed more than once") else {
+            throw ToolError(
+                "invalid graphics lease client failed before move-only ownership was checked"
+            )
+        }
+    }
+}
+
 private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) throws {
     let packagePath = context.repository.url(
         "IntegrationTests/InvalidManagedIdentityClient"
@@ -1363,6 +1399,7 @@ private func runRequired(context: ToolContext) throws {
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
     try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
+    try verifyGraphicsLeaseOwnershipIsEnforced(context: context)
     try verifyManagedIdentityConstructionIsRejected(context: context)
     try verifyMissingApplicationIdentityIsRejected(context: context)
 }

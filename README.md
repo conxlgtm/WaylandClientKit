@@ -65,8 +65,9 @@ swift run wck identity verify-generated
 ```
 
 `ci cheap` runs static checks. `ci required` adds the public API baseline,
-strict build, unit tests, external integration packages, and the expected-failure
-graphics policy client. `ci check` also verifies Markdown and DocC.
+strict build, unit tests, external integration packages, and expected-failure
+clients for invalid graphics policy and graphics-lease copying or reuse. `ci check`
+also verifies Markdown and DocC.
 
 See [Tooling](docs/tooling.md) and
 [Protocol Generation](docs/generation.md) for command ownership and generated

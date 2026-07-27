@@ -391,6 +391,15 @@ Current preview contract:
 - Backing close is nonthrowing because it only joins deterministic resource
   retirement. External buffer planes use one initializer with a defaulted zero
   plane index.
+- Frame and external-buffer render leases are move-only single-use authority.
+  Their inspection properties borrow; submit, cancel, and external reservation
+  operations consume. External reservation transfers the only frame authority
+  into the returned render lease. Failed terminal operations and abandoned
+  leases release their frame and buffer ownership inside WCK.
+- `WaylandGraphicsError.frameLeaseActive` remains a public coordination error
+  for requesting another frame while a lease is unfinished. Duplicate or stale
+  lease use is no longer valid source, so the former public
+  `frameLeaseConsumed` case is now a package-internal state-machine invariant.
 - The managed preview submission path can create a window backing, lease a
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame

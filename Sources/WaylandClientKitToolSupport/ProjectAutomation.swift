@@ -437,6 +437,7 @@ public struct SwiftCommandResolver {
             "IntegrationTests/GraphicsPreviewClient/Package.swift",
             "IntegrationTests/FrameworkHostClient/Package.swift",
             "IntegrationTests/TinyUIPrototype/Package.swift",
+            "IntegrationTests/InvalidGraphicsLeaseClient/Package.swift",
             "IntegrationTests/InvalidManagedIdentityClient/Package.swift",
             "IntegrationTests/InvalidApplicationIdentityClient/Package.swift",
         ]
@@ -449,6 +450,7 @@ public struct SwiftCommandResolver {
             "IntegrationTests/GraphicsPreviewClient/Tests",
             "IntegrationTests/FrameworkHostClient/Tests",
             "IntegrationTests/TinyUIPrototype/Tests",
+            "IntegrationTests/InvalidGraphicsLeaseClient/Sources",
             "IntegrationTests/InvalidManagedIdentityClient/Sources",
             "IntegrationTests/InvalidApplicationIdentityClient/Sources",
         ]
@@ -930,7 +932,20 @@ public struct PublicAPIAuditor {
         let report = try SemanticPublicAPIBaseline(fileSystem: context.fileSystem).render(
             symbolGraphs: verifier.publicProductSymbolGraphs()
         )
-        return "# WaylandClientKit Semantic Public API Report\n\n\(report)"
+        let ownershipReport = try SourceOwnershipAPIBaseline(
+            fileSystem: context.fileSystem,
+            runner: context.runner,
+            swiftCompilerExecutable: context.swift.swiftCompilerExecutable(
+                environment: context.runner.environment
+            )
+        ).render(
+            moduleSources: Dictionary(
+                uniqueKeysWithValues: DocCVerifier.publicProducts.map { product in
+                    (product.moduleName, context.repository.url("Sources/\(product.moduleName)"))
+                }
+            )
+        )
+        return "# WaylandClientKit Semantic Public API Report\n\n\(report)\n\(ownershipReport)"
     }
 
     public func verify(update: Bool, environment: [String: String] = [:]) throws {
@@ -954,7 +969,8 @@ public struct PublicAPIAuditor {
             # WaylandClientKit Public API Baseline
 
             This baseline records compiler-emitted public symbols and relationships for
-            vended library products. Source locations and formatting are excluded, while
+            vended library products, plus compiler-checked ownership markers omitted by
+            Swift symbol graphs. Source locations and formatting are excluded, while
             continuation-line signature changes remain visible. Preview products are
             included so source-breaking preview API drift is reviewed.
 

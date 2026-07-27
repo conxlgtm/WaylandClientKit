@@ -384,8 +384,9 @@ struct ExternalSoftwareFallbackLifecycleTests {
             )
         )
         let externalLease = try await storage.nextFrame()
+        let externalContract = externalLease.contract
         let configurationID = try #require(
-            externalLease.contract.recommendedExternalConfigurationID
+            externalContract.recommendedExternalConfigurationID
         )
         let buffer = try await registerTestExternalBuffer(
             storage: storage,
@@ -398,7 +399,7 @@ struct ExternalSoftwareFallbackLifecycleTests {
         let fallbackLease = try await storage.nextFrame()
         let runtimePath = await storage.runtimePathSnapshotForTesting()
 
-        #expect(fallbackLease.contract.generation != externalLease.contract.generation)
+        #expect(fallbackLease.contract.generation != externalContract.generation)
         #expect(fallbackLease.contract.externalBufferConfigurations.isEmpty)
         #expect(runtimePath.backing == .fallback(.surfaceFeedbackUnavailable))
         #expect(runtimePath.surfaceFeedback == .failed(.surfaceFeedbackUnavailable))
@@ -420,7 +421,7 @@ struct ExternalSoftwareFallbackLifecycleTests {
         do {
             _ = try await storage.registerExternalBuffer(
                 try testExternalDescriptor(),
-                contract: externalLease.contract,
+                contract: externalContract,
                 configurationID: configurationID
             )
             Issue.record("expected stale external contract rejection")
@@ -430,7 +431,6 @@ struct ExternalSoftwareFallbackLifecycleTests {
             Issue.record("unexpected error: \(error)")
         }
 
-        await fallbackLease.cancel()
         await storage.closeForTesting()
         #expect(destroyRecorder.count == 1)
     }
@@ -449,6 +449,7 @@ struct ExternalSoftwareFallbackLifecycleTests {
             )
         )
         let externalLease = try await storage.nextFrame()
+        let externalGeneration = externalLease.contract.generation
         let buffer = try await registerTestExternalBuffer(
             storage: storage,
             lease: externalLease,
@@ -460,7 +461,7 @@ struct ExternalSoftwareFallbackLifecycleTests {
         await window.setSurfaceFeedbackSynchronization(nil)
         let fallbackLease = try await storage.nextFrame()
 
-        #expect(fallbackLease.contract.generation != externalLease.contract.generation)
+        #expect(fallbackLease.contract.generation != externalGeneration)
         #expect(fallbackLease.contract.externalBufferConfigurations.isEmpty)
         #expect(await storage.externalBufferLifecycleSnapshotForTesting().retiring == 1)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
@@ -489,7 +490,6 @@ struct ExternalSoftwareFallbackLifecycleTests {
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
         #expect(destroyRecorder.count == 1)
 
-        await fallbackLease.cancel()
         await storage.closeForTesting()
         #expect(destroyRecorder.count == 1)
     }
@@ -690,13 +690,23 @@ struct ExternalBufferSyncTests {
         let acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization =
             .drmSyncobj(acquirePoint)
 
-        await #expect(
-            throws: WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
-        ) {
+        do {
             _ = try await renderLease.submit(
                 acquireSynchronization: acquireSynchronization
             )
+            Issue.record("expected unavailable external synchronization")
+        } catch {
+            #expect(
+                (error as? WaylandGraphicsError)
+                    == WaylandGraphicsError.unavailable(
+                        .externalSynchronizationUnavailable
+                    )
+            )
         }
+
+        let replacementLease = try await storage.nextFrame()
+        let replacementRenderLease = try await replacementLease.reserveExternalBuffer(buffer)
+        await replacementRenderLease.cancel()
 
         await storage.closeForTesting()
     }
@@ -726,11 +736,17 @@ struct ExternalBufferSyncTests {
         let acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization =
             .drmSyncobj(acquirePoint)
 
-        await #expect(
-            throws: WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
-        ) {
+        do {
             _ = try await renderLease.submit(
                 acquireSynchronization: acquireSynchronization
+            )
+            Issue.record("expected unavailable external synchronization")
+        } catch {
+            #expect(
+                (error as? WaylandGraphicsError)
+                    == WaylandGraphicsError.unavailable(
+                        .externalSynchronizationUnavailable
+                    )
             )
         }
 
@@ -833,11 +849,20 @@ struct ExternalBufferSyncTests {
             descriptor: try testExternalDescriptor()
         )
         let renderLease = try await lease.reserveExternalBuffer(buffer)
-        await #expect(
-            throws: WaylandGraphicsError.unavailable(.externalSynchronizationUnavailable)
-        ) {
+        let acquireSynchronization = WaylandGraphicsExternalAcquireSynchronization.drmSyncobj(
+            acquirePoint
+        )
+        do {
             _ = try await renderLease.submit(
-                acquireSynchronization: .drmSyncobj(acquirePoint)
+                acquireSynchronization: acquireSynchronization
+            )
+            Issue.record("expected unavailable external synchronization")
+        } catch {
+            #expect(
+                (error as? WaylandGraphicsError)
+                    == WaylandGraphicsError.unavailable(
+                        .externalSynchronizationUnavailable
+                    )
             )
         }
 
@@ -1003,7 +1028,7 @@ struct ExternalBufferPresentationFeedbackTests {
             _ = try await blockedLease.reserveExternalBuffer(submitted.buffer)
             Issue.record("presentation feedback must not release external buffer")
         } catch WaylandGraphicsError.externalBufferUnavailable {
-            await blockedLease.cancel()
+            // Failed reservation consumed and released the frame permission.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -1090,13 +1115,19 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             )
         )
 
-        await #expect(throws: WaylandGraphicsError.invalidDamageRegion) {
+        do {
             _ = try await failedLease.submit(frame)
+            Issue.record("expected invalid damage rejection")
+        } catch {
+            #expect(
+                (error as? WaylandGraphicsError) == WaylandGraphicsError.invalidDamageRegion
+            )
         }
         #expect(await window.cancelPresentationRequests == 1)
 
-        await failedLease.cancel()
-        #expect(await window.cancelPresentationRequests == 1)
+        let recoveryLease = try await storage.nextFrame()
+        await recoveryLease.cancel()
+        #expect(await window.cancelPresentationRequests == 2)
 
         await storage.closeForTesting()
     }
@@ -1397,29 +1428,6 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
-    func reserveAfterLeaseCancelDoesNotSubmitExternalBuffer() async throws {
-        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
-        let storage = externalBufferStorage(window: window)
-        let lease = try await storage.nextFrame()
-        let buffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: lease,
-            descriptor: try testExternalDescriptor()
-        )
-
-        await lease.cancel()
-
-        do {
-            _ = try await lease.reserveExternalBuffer(buffer)
-            Issue.record("expected consumed lease failure")
-        } catch WaylandGraphicsError.frameLeaseConsumed {
-            #expect(await window.importRequests == 1)
-        } catch {
-            Issue.record("unexpected error: \(error)")
-        }
-    }
-
-    @Test
     func submitAfterBackingCloseDoesNotImportExternalBuffer() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
@@ -1546,7 +1554,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             _ = try await blockedLease.reserveExternalBuffer(buffer)
             Issue.record("expected registered external buffer to remain busy")
         } catch WaylandGraphicsError.externalBufferUnavailable {
-            await blockedLease.cancel()
+            // Failed reservation consumed and released the frame permission.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -1565,57 +1573,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
-    func frameLeaseCancelReleasesReservedExternalBuffer() async throws {
-        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
-        let storage = externalBufferStorage(window: window)
-        let firstLease = try await storage.nextFrame()
-        let buffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: firstLease,
-            descriptor: try testExternalDescriptor(
-                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
-                offset: 0,
-                fd: testOwnedFileDescriptor()
-            )
-        )
-
-        _ = try await firstLease.reserveExternalBuffer(buffer)
-        await firstLease.cancel()
-
-        let secondLease = try await storage.nextFrame()
-        _ = try await secondLease.reserveExternalBuffer(buffer)
-        await secondLease.cancel()
-
-        await storage.closeForTesting()
-    }
-
-    @Test
-    func frameLeaseCannotReserveMultipleExternalBuffers() async throws {
-        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
-        let storage = externalBufferStorage(window: window)
-        let lease = try await storage.nextFrame()
-        let firstBuffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: lease,
-            descriptor: try testExternalDescriptor()
-        )
-        let secondBuffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: lease,
-            descriptor: try testExternalDescriptor()
-        )
-
-        _ = try await lease.reserveExternalBuffer(firstBuffer)
-        await #expect(throws: (any Error).self) {
-            _ = try await lease.reserveExternalBuffer(secondBuffer)
-        }
-        await lease.cancel()
-
-        await storage.closeForTesting()
-    }
-
-    @Test
-    func failedSoftwareSubmitReleasesExternalBufferReservation() async throws {
+    func renderLeaseCancelReleasesFrameAndBufferReservation() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
         let firstLease = try await storage.nextFrame()
@@ -1625,79 +1583,51 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             descriptor: try testExternalDescriptor()
         )
 
-        _ = try await firstLease.reserveExternalBuffer(buffer)
-        await #expect(
-            throws: WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
-        ) {
-            try await firstLease.submitSoftware { _ in
-                Issue.record("unexpected software draw")
-            }
-        }
-
-        let secondLease = try await storage.nextFrame()
-        _ = try await secondLease.reserveExternalBuffer(buffer)
-        await secondLease.cancel()
-
-        await storage.closeForTesting()
-    }
-
-    @Test
-    func staleRenderLeaseCancelDoesNotClearNewReservation() async throws {
-        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
-        let storage = externalBufferStorage(window: window)
-        let firstLease = try await storage.nextFrame()
-        let buffer = try await registerTestExternalBuffer(
-            storage: storage,
-            lease: firstLease,
-            descriptor: try testExternalDescriptor(
-                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
-                offset: 0,
-                fd: testOwnedFileDescriptor()
-            )
-        )
-
-        let firstRenderLease = try await firstLease.reserveExternalBuffer(buffer)
-        let firstReceipt = try await firstRenderLease.submit()
-        await window.emitImportedBufferRelease(at: 0)
-        #expect(await firstReceipt.waitForRelease() == .released)
+        let renderLease = try await firstLease.reserveExternalBuffer(buffer)
+        await renderLease.cancel()
 
         let secondLease = try await storage.nextFrame()
         let secondRenderLease = try await secondLease.reserveExternalBuffer(buffer)
-        await firstRenderLease.cancel()
-        _ = try await secondRenderLease.submit()
+        await secondRenderLease.cancel()
 
         await storage.closeForTesting()
     }
 
-    @Test
-    func cancelDuringExternalSubmitDoesNotClearSubmission() async throws {
-        let hook = ExternalBufferPresentationHook()
-        let window = try ExternalBufferFakeManagedWindow(
-            importBehavior: .succeed
-        ) {
-            await hook.run()
-        }
+    @Test(.timeLimit(.minutes(1)))
+    func abandoningRenderLeaseReleasesFrameAndBufferReservation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
-        let lease = try await storage.nextFrame()
+        let firstLease = try await storage.nextFrame()
         let buffer = try await registerTestExternalBuffer(
             storage: storage,
-            lease: lease,
-            descriptor: try testExternalDescriptor(
-                modifier: WaylandGraphicsDRMFormatModifier.linear.rawValue,
-                offset: 0,
-                fd: testOwnedFileDescriptor()
-            )
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
         )
 
-        let renderLease = try await lease.reserveExternalBuffer(buffer)
-        await hook.set { await renderLease.cancel() }
-        let receipt = try await renderLease.submit()
+        do {
+            let abandonedRenderLease = try await firstLease.reserveExternalBuffer(buffer)
+            _ = abandonedRenderLease.buffer
+            _ = abandonedRenderLease.contract
+        }
 
-        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
-        await window.emitImportedBufferRelease(at: 0)
-        #expect(await receipt.waitForRelease() == .released)
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(1))
+        while clock.now < deadline {
+            do {
+                let replacementLease = try await storage.nextFrame()
+                let replacementRenderLease = try await replacementLease.reserveExternalBuffer(
+                    buffer
+                )
+                await replacementRenderLease.cancel()
+                await storage.closeForTesting()
+                return
+            } catch WaylandGraphicsError.frameLeaseActive {
+                await Task.yield()
+            }
+        }
 
         await storage.closeForTesting()
+        Issue.record("abandoned render lease did not release its frame and buffer")
     }
 
     @Test
@@ -1725,7 +1655,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             _ = try await lease.reserveExternalBuffer(buffer)
             Issue.record("expected unregistered external buffer to be unavailable")
         } catch WaylandGraphicsError.externalBufferUnavailable {
-            await lease.cancel()
+            // Failed reservation consumed and released the frame permission.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -1775,6 +1705,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
         let firstLease = try await storage.nextFrame()
+        let firstGeneration = firstLease.contract.generation
         let buffer = try await registerTestExternalBuffer(
             storage: storage,
             lease: firstLease,
@@ -1789,14 +1720,14 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         await window.setGeometry(try testGraphicsSurfaceGeometry(width: 128, height: 96))
         let secondLease = try await storage.nextFrame()
 
-        #expect(secondLease.contract.generation != firstLease.contract.generation)
+        #expect(secondLease.contract.generation != firstGeneration)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
         do {
             _ = try await secondLease.reserveExternalBuffer(buffer)
             Issue.record("expected old-generation external buffer to be retired")
         } catch WaylandGraphicsError.externalBufferUnavailable {
-            await secondLease.cancel()
+            // Failed reservation consumed and released the frame permission.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -1887,7 +1818,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             _ = try await blockedLease.reserveExternalBuffer(buffer)
             Issue.record("release facts must not make a submitted buffer reusable")
         } catch WaylandGraphicsError.externalBufferUnavailable {
-            await blockedLease.cancel()
+            // Failed reservation consumed and released the frame permission.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -2165,6 +2096,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             )
         )
         let firstLease = try await storage.nextFrame()
+        let firstGeneration = firstLease.contract.generation
         let buffer = try await registerTestExternalBuffer(
             storage: storage,
             lease: firstLease,
@@ -2180,7 +2112,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         await window.setGeometry(try testGraphicsSurfaceGeometry(width: 128, height: 96))
         let secondLease = try await storage.nextFrame()
 
-        #expect(secondLease.contract.generation != firstLease.contract.generation)
+        #expect(secondLease.contract.generation != firstGeneration)
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
 
         await window.emitImportedBufferRelease(at: 0)
@@ -2205,25 +2137,16 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
         #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
 
-        await expectExternalBufferUnavailable {
-            _ = try await secondLease.reserveExternalBuffer(buffer)
-        }
-        await secondLease.cancel()
-
-        await storage.closeForTesting()
-    }
-
-    private func expectExternalBufferUnavailable(
-        _ operation: () async throws -> Void
-    ) async {
         do {
-            try await operation()
+            _ = try await secondLease.reserveExternalBuffer(buffer)
             Issue.record("expected external buffer to be unavailable")
         } catch WaylandGraphicsError.externalBufferUnavailable {
-            // Expected.
+            // Expected. The failed reservation released the frame permission.
         } catch {
             Issue.record("unexpected error: \(error)")
         }
+
+        await storage.closeForTesting()
     }
 
     private func externalReleaseMonitorCountReaches(
@@ -2654,7 +2577,7 @@ private func testGraphicsSurfaceGeometry(width: Int, height: Int) throws -> Surf
 
 private func registerAndSubmitTestExternalBuffer(
     storage: WaylandGraphicsWindowBackingStorage,
-    lease: WaylandGraphicsFrameLease,
+    lease: consuming WaylandGraphicsFrameLease,
     descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
     metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
     schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
@@ -2799,7 +2722,7 @@ private func explicitReleasePoint(
 
 private func registerTestExternalBuffer(
     storage: WaylandGraphicsWindowBackingStorage,
-    lease: WaylandGraphicsFrameLease,
+    lease: borrowing WaylandGraphicsFrameLease,
     descriptor: consuming WaylandGraphicsExternalBufferDescriptor
 ) async throws -> WaylandGraphicsExternalBuffer {
     let configurationID = try #require(

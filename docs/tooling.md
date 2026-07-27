@@ -42,7 +42,7 @@ tool-only targets.
 | Gate | Checks |
 | --- | --- |
 | `swift run wck ci cheap` | Format, lint, generated files, manifests, shims, dependency and import boundaries, identity declarations, and unsafe tokens. |
-| `swift run wck ci required` | Public API and documentation baselines, strict build, unit tests, integration packages, and the expected-failure graphics policy client. |
+| `swift run wck ci required` | Public API and documentation baselines, strict build, unit tests, integration packages, the expected-failure graphics policy client, and invalid graphics-lease clients for duplicate consumption and post-transfer reuse. |
 | `swift run wck ci check` | Cheap and required gates plus Markdown and DocC verification. |
 | `swift run wck ci release` | Check gate plus release builds, release tests, freshness checks, sanitizers where configured, and an available live or headless Wayland path. |
 
