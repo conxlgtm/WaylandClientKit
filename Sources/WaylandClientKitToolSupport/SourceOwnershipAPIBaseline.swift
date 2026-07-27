@@ -31,7 +31,11 @@ public struct SourceOwnershipAPIBaseline {
             var parsedSources: [ParsedOwnershipSource] = []
             for source in sources {
                 let sourceText = try fileSystem.readText(source)
-                guard sourceText.contains("Copyable") || sourceText.contains("borrowing") else {
+                guard
+                    sourceText.contains("Copyable")
+                        || sourceText.contains("borrowing")
+                        || sourceText.contains("consuming")
+                else {
                     continue
                 }
                 let result = try runner.run(
@@ -101,6 +105,8 @@ private struct SwiftParseDumpParser {
                 }
             } else if nodeKind == "borrowing_attr", let owner = stack.last {
                 declarations[owner].hasBorrowingAttribute = true
+            } else if nodeKind == "consuming_attr", let owner = stack.last {
+                declarations[owner].hasConsumingAttribute = true
             }
         }
         return declarations
@@ -175,30 +181,37 @@ private struct SourceOwnershipExtractor {
             for (index, declaration) in source.declarations.enumerated()
             where declaration.kind == "var_decl"
                 && isPublicMember(index, in: source.declarations)
-                && hasBorrowingGetter(index, in: source.declarations)
             {
                 guard
                     let containingType = containingTypeName(for: index, in: source.declarations),
                     noncopyableTypes.contains(containingType),
-                    let propertyName = declaration.name
+                    let propertyName = declaration.name,
+                    let getterOwnership = getterOwnership(index, in: source.declarations)
                 else { continue }
                 records.insert(
-                    "\(module).\(containingType).\(propertyName)\tborrowing get"
+                    "\(module).\(containingType).\(propertyName)\t\(getterOwnership) get"
                 )
             }
         }
         return records
     }
 
-    private func hasBorrowingGetter(
+    private func getterOwnership(
         _ property: Int,
         in declarations: [ParsedSwiftDeclaration]
-    ) -> Bool {
-        declarations.indices.contains { index in
-            declarations[index].parent == property
-                && declarations[index].kind == "accessor_decl"
-                && declarations[index].hasBorrowingAttribute
+    ) -> String? {
+        for index in declarations.indices
+        where declarations[index].parent == property
+            && declarations[index].kind == "accessor_decl"
+        {
+            if declarations[index].hasBorrowingAttribute {
+                return "borrowing"
+            }
+            if declarations[index].hasConsumingAttribute {
+                return "consuming"
+            }
         }
+        return nil
     }
 
     private func isExternallyPublic(
@@ -393,6 +406,7 @@ private struct ParsedSwiftDeclaration {
     let parent: Int?
     var hasPublicAccess = false
     var hasBorrowingAttribute = false
+    var hasConsumingAttribute = false
 
     var isNominalValueType: Bool {
         kind == "struct_decl" || kind == "enum_decl"
