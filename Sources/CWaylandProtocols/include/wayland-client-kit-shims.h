@@ -129,6 +129,7 @@ struct wl_buffer *swl_shm_pool_create_buffer(
 
 void swl_surface_attach(
     struct wl_surface *surface, struct wl_buffer *buffer, int32_t x, int32_t y);
+struct wl_callback *swl_surface_frame(struct wl_surface *surface);
 void swl_surface_commit(struct wl_surface *surface);
 void swl_surface_damage_buffer(
     struct wl_surface *surface, int32_t x, int32_t y,
@@ -837,6 +838,7 @@ enum swl_test_core_request_kind {
     SWL_TEST_CORE_SUBSURFACE_SET_SYNC = 18,
     SWL_TEST_CORE_SUBSURFACE_SET_DESYNC = 19,
     SWL_TEST_CORE_SUBSURFACE_DESTROY = 20,
+    SWL_TEST_CORE_SURFACE_FRAME = 21,
 };
 
 enum swl_test_metadata_request_kind {
@@ -946,6 +948,7 @@ struct swl_test_core_request_record {
     int32_t                         y;
     uint32_t                        latest_sequence;
     uint32_t                        attach_sequence;
+    uint32_t                        frame_sequence;
     uint32_t                        damage_sequence;
     uint32_t                        commit_sequence;
     uint32_t                        buffer_destroy_sequence;
@@ -1970,6 +1973,7 @@ struct swl_test_commit_timing_destroy_record
 swl_test_commit_timing_destroy_record(void);
 
 void swl_test_presentation_request_recording_begin(void);
+void swl_test_presentation_request_recording_begin_forwarding(void);
 void swl_test_presentation_request_recording_end(void);
 struct swl_test_presentation_request_record
 swl_test_presentation_request_record(void);

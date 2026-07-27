@@ -73,6 +73,13 @@ extension SurfaceRuntime {
         }
     }
 
+    func resolvedSubmitConstraints(
+        _ constraints: SurfaceSubmitConstraints
+    ) throws(SurfaceSubmitConstraintError) -> ResolvedSurfaceSubmitConstraints? {
+        guard let objects = surfaceObjects else { return nil }
+        return try objects.submitConstraintObjects.preflight(constraints)
+    }
+
     mutating func markSubmitConstraintsCommitted() {
         updateSurfaceObjects { objects in
             objects.submitConstraintObjects.markCommitted()

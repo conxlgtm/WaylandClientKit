@@ -20,6 +20,18 @@ enum WindowRedrawEffect: Equatable, Sendable {
     case publishRedrawRequested
 }
 
+struct WindowRedrawContentIdentity: Equatable, Sendable {
+    static let initial = Self(rawValue: 0)
+
+    let rawValue: UInt64
+
+    func incremented() -> Self {
+        let (nextValue, overflowed) = rawValue.addingReportingOverflow(1)
+        precondition(!overflowed, "Window redraw content identity exhausted")
+        return Self(rawValue: nextValue)
+    }
+}
+
 package enum RedrawBufferAvailability: Equatable, Sendable {
     case available
     case unavailable
@@ -72,6 +84,7 @@ struct WindowRedrawState: Equatable, Sendable {
     }
 
     private var contentGeneration: UInt64 = 0
+    private var contentIdentity = WindowRedrawContentIdentity.initial
     private var presentedGeneration: UInt64 = 0
     private var presentationStatus = PresentationStatus.current
     private var pacing = Pacing.frameReady(.none)
@@ -90,6 +103,17 @@ struct WindowRedrawState: Equatable, Sendable {
 
     var generationForCurrentDraw: UInt64 {
         contentGeneration
+    }
+
+    var identityForCurrentDraw: WindowRedrawContentIdentity {
+        contentIdentity
+    }
+
+    func matchesCurrentContent(
+        generation: UInt64,
+        identity: WindowRedrawContentIdentity
+    ) -> Bool {
+        generation == contentGeneration && identity == contentIdentity
     }
 
     mutating func reduce(
@@ -130,7 +154,9 @@ struct WindowRedrawState: Equatable, Sendable {
 
 extension WindowRedrawState {
     private mutating func invalidateContent() {
+        let nextIdentity = contentIdentity.incremented()
         contentGeneration &+= 1
+        contentIdentity = nextIdentity
         presentationStatus = .invalidated
     }
 
@@ -160,6 +186,19 @@ extension WindowRedrawState {
         }
 
         pacing = .frameReady(.none)
+        return publishIfNeeded(bufferAvailability: bufferAvailability)
+    }
+
+    mutating func supersedeSoftwarePresentation(
+        bufferAvailability: RedrawBufferAvailability
+    ) -> [WindowRedrawEffect] {
+        switch pacing {
+        case .frameReady(.outstanding), .waitingForBuffer:
+            pacing = .frameReady(.none)
+        case .frameReady(.none), .waitingForFrame:
+            break
+        }
+
         return publishIfNeeded(bufferAvailability: bufferAvailability)
     }
 

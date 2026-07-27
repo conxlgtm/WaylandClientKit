@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <wayland-client.h>
 
-struct wl_callback;
 struct wl_compositor;
 struct wl_data_device;
 struct wl_data_device_manager;
@@ -96,9 +95,6 @@ struct wl_touch *swl_seat_get_touch(
 
 void swl_seat_release(
     struct wl_seat *object);
-
-struct wl_callback *swl_surface_frame(
-    struct wl_surface *object);
 
 void swl_surface_set_buffer_scale(
     struct wl_surface *object,

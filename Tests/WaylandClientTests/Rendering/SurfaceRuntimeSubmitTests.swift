@@ -13,6 +13,20 @@
     @Suite(.serialized)
     struct SurfaceRuntimeSubmitTests {  // swiftlint:disable:this type_body_length
         @Test
+        func reservingPendingFrameCallbackFailsBeforeRequestCreation() throws {
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+            try runtime.requestFrameCallback(generation: 17)
+
+            #expect(throws: SurfaceTransactionError.frameCallbackAlreadyPending(generation: 17)) {
+                try SurfaceFrameCommitter.reserveFrameCallback(
+                    runtime: &runtime,
+                    generation: 18
+                )
+            }
+            #expect(runtime.transactionSnapshot.pendingFrameCallbackGeneration == 17)
+        }
+
+        @Test
         func submitCapabilitySnapshotPublishesSynchronizationAndPacingFacts() {
             var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
 
@@ -134,31 +148,31 @@
         }
 
         @Test
-        func externalBufferCommitSequenceRequestsPresentationFeedbackBeforeCommit()
+        func externalBufferCommitSequenceStagesSuccessBeforeProtocolRequests()
             throws
         {
             var events: [ExternalBufferPresentationEvent] = []
             let identity = SurfacePresentationIdentity(rawValue: 31)
             let expectedPlan = try testSurfaceCommitPlan()
 
-            let presentation = try WindowExternalBufferPresenter.performCommitSequence {
+            let presentation = WindowExternalBufferPresenter.performCommitSequence {
+                events.append(.stageSuccess)
+                return expectedPlan
+            } requestFrameCallback: {
                 events.append(.frameCallback)
             } requestPresentationFeedback: {
                 events.append(.presentationFeedback)
                 return identity
-            } commit: {
+            } commit: { stagedPlan in
                 events.append(.commit)
-                return expectedPlan
-            } cancelFrameCallback: {
-                events.append(.cancelFrameCallback)
-            } cancelPresentationFeedback: { cancelledIdentity in
-                events.append(.cancelPresentationFeedback(cancelledIdentity))
+                return stagedPlan
             }
 
             #expect(presentation.commitPlan == expectedPlan)
             #expect(presentation.presentationFeedbackIdentity == identity)
             #expect(
                 events == [
+                    .stageSuccess,
                     .frameCallback,
                     .presentationFeedback,
                     .commit,
@@ -167,36 +181,78 @@
         }
 
         @Test
-        func externalBufferFeedbackFailureDoesNotCommit() throws {
+        func externalBufferSuccessStagingFailureEmitsNoProtocolOperations() throws {
             var events: [ExternalBufferPresentationEvent] = []
+            let expectedPlan = try testSurfaceCommitPlan()
 
-            #expect(throws: InjectedExternalFeedbackFailure.self) {
+            #expect(throws: InjectedExternalStagingFailure.self) {
                 _ = try WindowExternalBufferPresenter.performCommitSequence {
+                    events.append(.stageSuccess)
+                    throw InjectedExternalStagingFailure()
+                } requestFrameCallback: {
                     events.append(.frameCallback)
                 } requestPresentationFeedback: {
                     events.append(.presentationFeedback)
-                    throw InjectedExternalFeedbackFailure()
-                } commit: {
+                    return SurfacePresentationIdentity(rawValue: 32)
+                } commit: { _ in
                     events.append(.commit)
-                    return try testSurfaceCommitPlan()
-                } cancelFrameCallback: {
-                    events.append(.cancelFrameCallback)
-                } cancelPresentationFeedback: { cancelledIdentity in
-                    events.append(.cancelPresentationFeedback(cancelledIdentity))
+                    return expectedPlan
                 }
             }
 
-            #expect(
-                events == [
-                    .frameCallback,
-                    .presentationFeedback,
-                    .cancelFrameCallback,
-                ]
-            )
+            #expect(events == [.stageSuccess])
         }
 
         @Test
-        func frameCommitterDoesNotRecordFrameWhenSubmitConstraintsFail() async throws {
+        func externalBufferSuccessStagingFailureRecordsNoRequests() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0x5651)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntimeWithoutPendingFrame()
+                var pendingFrameRegistration: FrameCallbackRegistration?
+                let request = WindowExternalBufferPresentationRequest(
+                    buffer: try testSurfaceBuffer(pointer: 0x5652),
+                    surface: surface,
+                    scaleInstallation: SurfaceScaleInstallation(),
+                    generation: 1,
+                    geometry: try testSurfaceGeometry(),
+                    submitConstraints: .default,
+                    metadata: .default,
+                    presentationFeedback: nil
+                ) {
+                    _ = ()
+                }
+
+                #expect(throws: InjectedExternalStagingFailure.self) {
+                    _ = try WindowExternalBufferPresenter.present(
+                        request,
+                        stageSuccess: { _ in
+                            throw InjectedExternalStagingFailure()
+                        },
+                        runtime: &runtime,
+                        pendingFrameRegistration: &pendingFrameRegistration
+                    )
+                }
+
+                #expect(runtime.transactionSnapshot.pendingFrameCallbackGeneration == nil)
+                #expect(runtime.transactionSnapshot.lastCommittedFrame == nil)
+                #expect(unsafe swl_test_core_request_record().call_count == 0)
+                let hasPendingFrameRegistration: Bool
+                switch consume pendingFrameRegistration {
+                case .none:
+                    hasPendingFrameRegistration = false
+                case .some:
+                    hasPendingFrameRegistration = true
+                }
+                #expect(!hasPendingFrameRegistration)
+            }
+        }
+
+        @Test
+        func frameCommitterRejectsUnavailableSubmitConstraintsDuringPreparation() async throws {
             try await CoreRequestRecordingGate.withExclusiveRecording {
                 swl_test_core_request_recording_begin()
                 defer { swl_test_core_request_recording_end() }
@@ -205,17 +261,12 @@
                 defer { surface.destroy() }
                 var runtime = try configuredRuntime()
                 runtime.setExplicitSynchronizationActive()
-                let preparedCommit = try preparedCommit(
-                    surface: surface,
-                    runtime: &runtime,
-                    constraints: explicitConstraints(timeline: 77, acquire: 2, release: 3),
-                    payload: .buffer(try testSurfaceBuffer(pointer: 0x5702))
-                )
-
                 #expect(throws: SurfaceSubmitConstraintError.explicitSyncUnavailable) {
-                    try SurfaceFrameCommitter.commit(
-                        preparedCommit,
-                        runtime: &runtime
+                    try preparedCommit(
+                        surface: surface,
+                        runtime: &runtime,
+                        constraints: explicitConstraints(timeline: 77, acquire: 2, release: 3),
+                        payload: .buffer(try testSurfaceBuffer(pointer: 0x5702))
                     )
                 }
                 #expect(runtime.transactionSnapshot.lastCommittedFrame == nil)
@@ -630,14 +681,13 @@
     }
 
     private enum ExternalBufferPresentationEvent: Equatable {
+        case stageSuccess
         case frameCallback
         case presentationFeedback
         case commit
-        case cancelFrameCallback
-        case cancelPresentationFeedback(SurfacePresentationIdentity)
     }
 
-    private struct InjectedExternalFeedbackFailure: Error {}
+    private struct InjectedExternalStagingFailure: Error {}
 
 // swiftlint:enable closure_body_length
 #endif

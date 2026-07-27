@@ -135,6 +135,20 @@ package struct SurfaceTransactionState: Equatable, Sendable {
         plan: SurfaceCommitPlan,
         payload: SurfaceCommittedPayload = .buffer
     ) throws {
+        recordValidatedCommittedFrame(
+            try committedFrameCandidate(
+                generation: generation,
+                plan: plan,
+                payload: payload
+            )
+        )
+    }
+
+    package func committedFrameCandidate(
+        generation: UInt64,
+        plan: SurfaceCommitPlan,
+        payload: SurfaceCommittedPayload = .buffer
+    ) throws -> SurfaceCommittedFrame {
         let acknowledgedConfigureSerial = try validateCommittedFrameCandidate(
             generation: generation
         )
@@ -147,20 +161,26 @@ package struct SurfaceTransactionState: Equatable, Sendable {
                 actual: generation
             )
         }
-        if let lastGeneration = lastCommittedFrame?.generation, generation <= lastGeneration {
-            throw SurfaceTransactionError.commitGenerationDidNotAdvance(
-                previous: lastGeneration,
-                actual: generation
-            )
-        }
 
-        lastCommittedFrame = SurfaceCommittedFrame(
+        return SurfaceCommittedFrame(
             generation: generation,
             configureSerial: acknowledgedConfigureSerial,
             plan: plan,
             payload: payload
         )
-        if payload == .buffer {
+    }
+
+    package mutating func recordValidatedCommittedFrame(
+        _ committedFrame: SurfaceCommittedFrame
+    ) {
+        precondition(acknowledgedConfigureSerial == committedFrame.configureSerial)
+        precondition(pendingFrameCallbackGeneration == committedFrame.generation)
+        precondition(
+            lastCommittedFrame.map { committedFrame.generation > $0.generation } ?? true
+        )
+
+        lastCommittedFrame = committedFrame
+        if committedFrame.payload == .buffer {
             hasCommittedBufferContent = true
         }
     }

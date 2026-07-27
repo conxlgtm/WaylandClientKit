@@ -257,6 +257,68 @@ struct WaylandPresentationAPISurfaceTests {
 
         _ = usePresentationFeedbackAPI
     }
+
+    @Test
+    func softwarePresentationOutcomesCompileForExternalClients() {
+        let outcomes: [SoftwarePresentationOutcome] = [
+            .presented,
+            .superseded,
+            .deferred,
+            .closed,
+        ]
+
+        #expect(Set(outcomes).count == 4)
+        _ = useAtomicSoftwarePresentationAPI
+    }
+
+    private func useAtomicSoftwarePresentationAPI(
+        _ window: Window
+    ) async throws -> [SoftwarePresentationOutcome] {
+        let simpleShow = try await window.show(requestPresentationFeedback: true) { _ in () }
+        let simpleRedraw = try await window.redraw(requestPresentationFeedback: true) { _ in () }
+        let simpleDamagedShow = try await window.show(
+            damage: nil,
+            requestPresentationFeedback: true,
+            timeoutMilliseconds: 1_000
+        ) { _ in () }
+        let simpleDamagedRedraw = try await window.redraw(
+            damage: nil,
+            requestPresentationFeedback: true
+        ) { _ in () }
+        let shown = try await window.show(
+            requestPresentationFeedback: true,
+            preparing: { reservation in reservation.id },
+            { _, _ in () }
+        )
+        let redrawn = try await window.redraw(
+            requestPresentationFeedback: true,
+            preparing: { reservation in reservation.id },
+            { _, _ in () }
+        )
+        let damagedShow = try await window.show(
+            damage: nil,
+            timeoutMilliseconds: 1_000,
+            requestPresentationFeedback: true,
+            preparing: { reservation in reservation.id },
+            { _, _ in () }
+        )
+        let damagedRedraw = try await window.redraw(
+            damage: nil,
+            requestPresentationFeedback: true,
+            preparing: { reservation in reservation.id },
+            { _, _ in () }
+        )
+        return [
+            simpleShow,
+            simpleRedraw,
+            simpleDamagedShow,
+            simpleDamagedRedraw,
+            shown,
+            redrawn,
+            damagedShow,
+            damagedRedraw,
+        ]
+    }
 }
 
 @Suite("WaylandDisplay data transfer public API surface")

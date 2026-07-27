@@ -48,6 +48,8 @@ targets.
 ### Rendering
 
 - ``SoftwareFrame``
+- ``SoftwareFrameReservation``
+- ``SoftwarePresentationOutcome``
 - ``SurfaceGeometry``
 - ``SurfaceScale``
 - ``OutputSnapshot``

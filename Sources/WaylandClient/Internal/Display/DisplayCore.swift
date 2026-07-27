@@ -124,9 +124,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func reserveSoftwareFrameForShow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32
-    ) throws -> SoftwareFrameReservation? {
+    ) throws -> WindowSoftwareFrameReservationOutcome {
         try withFatalFailureFinalization {
-            try requireOpenWindow(windowID).reserveShowSoftwareFrameOnOwnerThread(
+            guard !isClosed, let window = surfaces.window(windowID) else {
+                return .closed
+            }
+            return try window.reserveShowSoftwareFrameOnOwnerThread(
                 timeoutMilliseconds: timeoutMilliseconds
             )
         }
@@ -163,9 +166,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     func reserveSoftwareFrameForRedraw(
         _ windowID: WindowID
-    ) throws -> SoftwareFrameReservation? {
+    ) throws -> WindowSoftwareFrameReservationOutcome {
         try withFatalFailureFinalization {
-            try requireOpenWindow(windowID).reserveRedrawSoftwareFrameOnOwnerThread()
+            guard !isClosed, let window = surfaces.window(windowID) else {
+                return .closed
+            }
+            return try window.reserveRedrawSoftwareFrameOnOwnerThread()
         }
     }
 
@@ -178,24 +184,28 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
+    ) throws -> SoftwarePresentationOutcome {
         try withFatalFailureFinalization {
-            let window = try requireOpenWindow(windowID)
-            let presentationFeedback = try presentationFeedbackCommitRequest(
-                for: window,
-                windowID: windowID,
-                isRequested: requestPresentationFeedback
-            )
-            try window.submitReservedSoftwareFrameOnOwnerThread(
+            guard !isClosed, let window = surfaces.window(windowID) else {
+                return .closed
+            }
+            let outcome = try window.submitReservedSoftwareFrameOnOwnerThread(
                 reservation,
                 submitConstraints: submitConstraints,
                 metadata: metadata,
                 damage: damage,
-                presentationFeedback: presentationFeedback,
+                makePresentationFeedback: { [self] in
+                    try presentationFeedbackCommitRequest(
+                        for: window,
+                        windowID: windowID,
+                        isRequested: requestPresentationFeedback
+                    )
+                },
                 draw
             )
-            guard !isClosed, let activeSession else { return }
+            guard !isClosed, let activeSession else { return .closed }
             publishSessionEvents(activeSession)
+            return outcome
         }
     }
 
@@ -203,10 +213,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         _ windowID: WindowID,
         reservation: SoftwareFrameReservation
     ) throws {
-        try withFatalFailureFinalization {
-            try requireOpenWindow(windowID).cancelSoftwareFrameReservationOnOwnerThread(
-                reservation
-            )
+        withFatalFailureFinalization {
+            guard !isClosed, let window = surfaces.window(windowID) else { return }
+            window.cancelSoftwareFrameReservationOnOwnerThread(reservation)
         }
     }
 

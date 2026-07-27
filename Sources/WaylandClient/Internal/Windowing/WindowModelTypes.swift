@@ -17,6 +17,14 @@ package enum WindowEvent: Equatable, Sendable {
     )
     case presentationStarted(PresentationRequest)
     case presentationBlockedByBuffer
+    case softwarePresentationFailed(
+        generation: UInt64,
+        bufferAvailability: RedrawBufferAvailability
+    )
+    case softwarePresentationSuperseded(
+        generation: UInt64,
+        bufferAvailability: RedrawBufferAvailability
+    )
     case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
     case externalPresentationSucceeded(
         generation: UInt64,
@@ -45,6 +53,17 @@ package enum WindowEffect: Equatable, Sendable {
 package struct PresentationRequest: Equatable, Sendable {
     let generation: UInt64
     let configuration: ResolvedWindowConfiguration
+    let redrawIdentity: WindowRedrawContentIdentity
+
+    init(
+        generation: UInt64,
+        configuration: ResolvedWindowConfiguration,
+        redrawIdentity: WindowRedrawContentIdentity = .initial
+    ) {
+        self.generation = generation
+        self.configuration = configuration
+        self.redrawIdentity = redrawIdentity
+    }
 
     var summary: WindowPresentationRequestSummary {
         WindowPresentationRequestSummary(
@@ -75,10 +94,35 @@ package struct PreviewBufferPresentationResult: Equatable, Sendable {
             throw PreviewBufferPresentationResultError.invalidGeneration(commitGeneration)
         }
 
+        self.init(
+            validatedGeneration: commitGeneration,
+            commitPlan: surfaceCommitPlan,
+            capabilities: surfaceCapabilities,
+            presentationFeedbackIdentity: feedbackIdentity
+        )
+    }
+
+    private init(
+        validatedGeneration commitGeneration: UInt64,
+        commitPlan surfaceCommitPlan: SurfaceCommitPlan,
+        capabilities surfaceCapabilities: SurfaceCapabilitySnapshot,
+        presentationFeedbackIdentity feedbackIdentity: SurfacePresentationIdentity?
+    ) {
         generation = commitGeneration
         commitPlan = surfaceCommitPlan
         capabilities = surfaceCapabilities
         presentationFeedbackIdentity = feedbackIdentity
+    }
+
+    package func withPresentationFeedbackIdentity(
+        _ feedbackIdentity: SurfacePresentationIdentity?
+    ) -> Self {
+        Self(
+            validatedGeneration: generation,
+            commitPlan: commitPlan,
+            capabilities: capabilities,
+            presentationFeedbackIdentity: feedbackIdentity
+        )
     }
 }
 

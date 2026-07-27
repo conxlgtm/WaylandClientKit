@@ -101,6 +101,50 @@ struct PopupModelPresentationTests {
         #expect(model.presentation == .idle)
     }
 
+    @Test
+    func presentationSuccessStagesOnCopiedModel() throws {
+        let (model, request) = try activeModelWithStartedPresentation()
+
+        let stagedSuccess = try PopupPresentationSuccessStagingContext(
+            model: model,
+            parentWindowID: parentWindowID
+        ).stage(
+            generation: request.generation,
+            bufferAvailability: .available
+        )
+
+        #expect(model.presentation == .drawing(request: request))
+        #expect(stagedSuccess.model.presentation == .idle)
+        #expect(!stagedSuccess.publishesRedrawRequest)
+    }
+
+    @Test
+    func presentationSuccessStagingFailureLeavesSourceModelDrawing() throws {
+        let (model, request) = try activeModelWithStartedPresentation()
+
+        #expect(
+            throws: ClientError.window(
+                parentWindowID,
+                .invalidLifecycleTransition(
+                    .presentationGenerationMismatch(
+                        expected: request.generation,
+                        actual: request.generation + 1
+                    )
+                )
+            )
+        ) {
+            _ = try PopupPresentationSuccessStagingContext(
+                model: model,
+                parentWindowID: parentWindowID
+            ).stage(
+                generation: request.generation + 1,
+                bufferAvailability: .available
+            )
+        }
+
+        #expect(model.presentation == .drawing(request: request))
+    }
+
     private func popupModel() -> PopupModel {
         PopupModel(
             id: popupID,
@@ -122,6 +166,17 @@ struct PopupModelPresentationTests {
         var model = try waitingModel()
         _ = try model.reduce(.configureReceived(configure(serial: 1)))
         return model
+    }
+
+    private func activeModelWithStartedPresentation() throws -> (
+        model: PopupModel,
+        request: PopupPresentationRequest
+    ) {
+        var model = try activeModel()
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
+        let request = try #require(presentationRequest(from: effects))
+        _ = try model.reduce(.presentationStarted(request))
+        return (model, request)
     }
 
     private func configure(serial: UInt32) -> PopupConfigureSequence {

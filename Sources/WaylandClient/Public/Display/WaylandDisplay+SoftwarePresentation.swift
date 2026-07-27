@@ -39,8 +39,9 @@ extension WaylandDisplay {
     package func reserveSoftwareFrameForShow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32
-    ) throws -> SoftwareFrameReservation? {
-        try requireCore().reserveSoftwareFrameForShow(
+    ) throws -> WindowSoftwareFrameReservationOutcome {
+        guard let core = coreIfActive() else { return .closed }
+        return try core.reserveSoftwareFrameForShow(
             windowID,
             timeoutMilliseconds: timeoutMilliseconds
         )
@@ -80,8 +81,9 @@ extension WaylandDisplay {
 
     package func reserveSoftwareFrameForRedraw(
         _ windowID: WindowID
-    ) throws -> SoftwareFrameReservation? {
-        try requireCore().reserveSoftwareFrameForRedraw(windowID)
+    ) throws -> WindowSoftwareFrameReservationOutcome {
+        guard let core = coreIfActive() else { return .closed }
+        return try core.reserveSoftwareFrameForRedraw(windowID)
     }
 
     // swiftlint:disable:next function_parameter_count
@@ -93,8 +95,9 @@ extension WaylandDisplay {
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion? = nil,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try requireCore().submitReservedSoftwareFrame(
+    ) throws -> SoftwarePresentationOutcome {
+        guard let core = coreIfActive() else { return .closed }
+        return try core.submitReservedSoftwareFrame(
             windowID,
             reservation: reservation,
             submitConstraints: submitConstraints,
@@ -109,6 +112,7 @@ extension WaylandDisplay {
         _ windowID: WindowID,
         reservation: SoftwareFrameReservation
     ) throws {
-        try requireCore().cancelSoftwareFrameReservation(windowID, reservation: reservation)
+        guard let core = coreIfActive() else { return }
+        try core.cancelSoftwareFrameReservation(windowID, reservation: reservation)
     }
 }

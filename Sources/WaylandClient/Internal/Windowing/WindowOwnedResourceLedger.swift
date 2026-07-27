@@ -26,6 +26,14 @@ final class WindowOwnedResourceLedger<Identity: Hashable, Resource> {
         resources.removeValue(forKey: identity)
     }
 
+    func take(
+        _ identity: Identity,
+        matching predicate: (Resource) -> Bool
+    ) -> Resource? {
+        guard let resource = resources[identity], predicate(resource) else { return nil }
+        return resources.removeValue(forKey: identity)
+    }
+
     func retire(_ identity: Identity) {
         guard let resource = resources.removeValue(forKey: identity) else { return }
         retireResource(resource)
@@ -93,14 +101,14 @@ final class WindowSoftwareReservationCoordinator {
         _ = resources.insert(reservation, for: identity)
     }
 
-    func take(_ identity: SoftwareFrameReservationToken) -> PendingSoftwareFrameReservation? {
-        resources.take(identity)
+    func take(_ reservation: SoftwareFrameReservation) -> PendingSoftwareFrameReservation? {
+        resources.take(reservation.reservationID) { pendingReservation in
+            pendingReservation.reservedFrame.reservation == reservation
+        }
     }
 
-    func cancel(_ identity: SoftwareFrameReservationToken) -> Bool {
-        guard let reservation = resources.take(identity) else { return false }
-        reservation.reservedFrame.drawingBuffer.discard()
-        return true
+    func cancel(_ reservation: SoftwareFrameReservation) -> PendingSoftwareFrameReservation? {
+        take(reservation)
     }
 
     func close() {

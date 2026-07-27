@@ -77,8 +77,7 @@ package struct WindowModel: Equatable, Sendable {
             return try reduceInitialCommitSent()
         case .published:
             return try reducePublished()
-        case .configureReceived(let sequence):
-            return try reduceConfigureReceived(sequence)
+        case .configureReceived(let sequence): return try reduceConfigureReceived(sequence)
         case .contentInvalidated(let bufferAvailability):
             return reduceRedraw(.contentInvalidated, bufferAvailability: bufferAvailability)
         case .frameBecameReady(let bufferAvailability):
@@ -87,13 +86,15 @@ package struct WindowModel: Equatable, Sendable {
             return reduceRedraw(.bufferBecameAvailable, bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed(let bufferAvailability):
             return try reduceRedrawRequestConsumed(bufferAvailability: bufferAvailability)
-        case .graphicsPreviewPresentationCanceled(let bufferAvailability):
-            return reduceGraphicsPreviewPresentationCanceled(
-                bufferAvailability: bufferAvailability
-            )
+        case .graphicsPreviewPresentationCanceled(let availability):
+            return reduceGraphicsPreviewPresentationCanceled(bufferAvailability: availability)
         case .presentationStarted(let request):
             return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer: return try reducePresentationBlockedByBuffer()
+        case .softwarePresentationFailed(let generation, let availability):
+            return try reduceSoftwarePresentationFailed(generation, availability)
+        case .softwarePresentationSuperseded(let generation, let availability):
+            return try reduceSoftwarePresentationSuperseded(generation, availability)
         case .presentationSucceeded(let generation, let bufferAvailability):
             return try reducePresentationSucceeded(
                 generation: generation,
@@ -135,7 +136,7 @@ extension WindowModel {
         return state
     }
 
-    private mutating func transitionActiveWindowState(
+    mutating func transitionActiveWindowState(
         _ update: (inout ActiveWindowState) throws -> [WindowEffect]
     ) throws -> [WindowEffect] {
         var activeState = try requireActiveWindowState()
@@ -251,7 +252,8 @@ extension WindowModel {
             let generation = activeState.redraw.generationForCurrentDraw
             let request = PresentationRequest(
                 generation: generation,
-                configuration: activeState.configure
+                configuration: activeState.configure,
+                redrawIdentity: activeState.redraw.identityForCurrentDraw
             )
             activeState.presentation = .requested(request: request)
             return [.performSoftwarePresent(request)]
@@ -405,7 +407,7 @@ extension WindowModel {
         Self.mapRedrawEffects(effects, windowID: id)
     }
 
-    private static func mapRedrawEffects(
+    static func mapRedrawEffects(
         _ effects: [WindowRedrawEffect],
         in activeState: ActiveWindowState,
         windowID: WindowID
@@ -439,7 +441,7 @@ extension WindowModel {
         return generation
     }
 
-    private static func requireActivePresentation(
+    static func requireActivePresentation(
         generation actualGeneration: UInt64,
         in activeState: ActiveWindowState,
         windowID: WindowID

@@ -5,7 +5,7 @@ import WaylandRaw
 
 @Suite
 struct WindowModelPresentationTests {  // swiftlint:disable:this type_body_length
-    private let windowID = WindowID(rawValue: 42)
+    let windowID = WindowID(rawValue: 42)
 
     @Test
     func redrawRequestConsumedProducesPresentationEffect() throws {
@@ -14,7 +14,8 @@ struct WindowModelPresentationTests {  // swiftlint:disable:this type_body_lengt
         let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = PresentationRequest(
             generation: 1,
-            configuration: try #require(model.currentConfiguration)
+            configuration: try #require(model.currentConfiguration),
+            redrawIdentity: model.redraw.identityForCurrentDraw
         )
 
         #expect(effects == [.performSoftwarePresent(request)])
@@ -363,21 +364,21 @@ struct WindowModelPresentationTests {  // swiftlint:disable:this type_body_lengt
 }
 
 extension WindowModelPresentationTests {
-    private func configuredModelReadyForConfigure() throws -> WindowModel {
+    func configuredModelReadyForConfigure() throws -> WindowModel {
         var model = WindowModel(id: windowID, fallbackSize: .default)
         _ = try model.reduce(.roleObjectsCreated)
         _ = try model.reduce(.initialCommitSent)
         return model
     }
 
-    private func activePublishedModel() throws -> WindowModel {
+    func activePublishedModel() throws -> WindowModel {
         var model = try configuredModelReadyForConfigure()
         _ = try model.reduce(.published)
         _ = try model.reduce(.configureReceived(configure(width: 800, height: 600, serial: 1)))
         return model
     }
 
-    private func activeModelWithStartedPresentation() throws -> (
+    func activeModelWithStartedPresentation() throws -> (
         model: WindowModel,
         request: PresentationRequest
     ) {
@@ -388,7 +389,7 @@ extension WindowModelPresentationTests {
         return (model, request)
     }
 
-    private func presentationRequest(from effects: [WindowEffect]) throws -> PresentationRequest {
+    func presentationRequest(from effects: [WindowEffect]) throws -> PresentationRequest {
         guard case .performSoftwarePresent(let request) = try #require(effects.first) else {
             Issue.record("expected presentation effect")
             throw ClientError.window(
@@ -400,7 +401,7 @@ extension WindowModelPresentationTests {
         return request
     }
 
-    private func configure(
+    func configure(
         width: Int32,
         height: Int32,
         serial: UInt32 = 1

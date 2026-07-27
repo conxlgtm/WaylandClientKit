@@ -52,7 +52,6 @@
     "wl_surface": {
       "wrapperPrefix": "surface",
       "generatedRequests": [
-        "frame",
         "set_buffer_scale"
       ],
       "handwrittenByDefault": "test_recording"
