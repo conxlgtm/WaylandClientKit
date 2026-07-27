@@ -273,13 +273,9 @@ private func expectPresentationFeedback(
             try await window.requestRedraw()
         }
     )
-    let outcome = try await window.redraw(
-        requestPresentationFeedback: true,
-        preparing: { _ in () },
-        { _, frame in
-            fill(frame, color: 0x0044_2414)
-        }
-    )
+    let outcome = try await window.redraw(requestPresentationFeedback: true) { frame in
+        fill(frame, color: 0x0044_2414)
+    }
     #expect(outcome == .presented)
 
     let feedback: SurfacePresentationFeedback?

@@ -274,6 +274,17 @@ struct WaylandPresentationAPISurfaceTests {
     private func useAtomicSoftwarePresentationAPI(
         _ window: Window
     ) async throws -> [SoftwarePresentationOutcome] {
+        let simpleShow = try await window.show(requestPresentationFeedback: true) { _ in () }
+        let simpleRedraw = try await window.redraw(requestPresentationFeedback: true) { _ in () }
+        let simpleDamagedShow = try await window.show(
+            damage: nil,
+            requestPresentationFeedback: true,
+            timeoutMilliseconds: 1_000
+        ) { _ in () }
+        let simpleDamagedRedraw = try await window.redraw(
+            damage: nil,
+            requestPresentationFeedback: true
+        ) { _ in () }
         let shown = try await window.show(
             requestPresentationFeedback: true,
             preparing: { reservation in reservation.id },
@@ -297,7 +308,16 @@ struct WaylandPresentationAPISurfaceTests {
             preparing: { reservation in reservation.id },
             { _, _ in () }
         )
-        return [shown, redrawn, damagedShow, damagedRedraw]
+        return [
+            simpleShow,
+            simpleRedraw,
+            simpleDamagedShow,
+            simpleDamagedRedraw,
+            shown,
+            redrawn,
+            damagedShow,
+            damagedRedraw,
+        ]
     }
 }
 

@@ -22,6 +22,12 @@ WaylandClientKit revalidates the exact reservation, window, configure,
 authoritative geometry, redraw generation, and task cancellation before it
 borrows mutable bytes.
 
+When asynchronous preparation is unnecessary, use
+``Window/show(damage:requestPresentationFeedback:timeoutMilliseconds:_:)`` or
+``Window/redraw(damage:requestPresentationFeedback:_:)`` to request feedback
+atomically without a no-op preparation closure. These overloads return the same
+``SoftwarePresentationOutcome``.
+
 If the prepared generation is still current, WaylandClientKit draws, requests
 the frame callback and optional presentation feedback, commits the surface, and
 records the generation without another suspension point. If it is no longer

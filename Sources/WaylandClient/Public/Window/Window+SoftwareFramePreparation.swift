@@ -13,6 +13,38 @@ public enum SoftwarePresentationOutcome: Equatable, Sendable {
 
 extension Window {
     @discardableResult
+    public func show(
+        requestPresentationFeedback: Bool,
+        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws -> SoftwarePresentationOutcome {
+        try await show(
+            damage: nil,
+            requestPresentationFeedback: requestPresentationFeedback,
+            timeoutMilliseconds: timeoutMilliseconds,
+            draw
+        )
+    }
+
+    @discardableResult
+    public func show(
+        damage: SurfaceDamageRegion?,
+        requestPresentationFeedback: Bool,
+        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws -> SoftwarePresentationOutcome {
+        try await show(
+            damage: damage,
+            timeoutMilliseconds: timeoutMilliseconds,
+            requestPresentationFeedback: requestPresentationFeedback,
+            preparing: { _ in () },
+            { _, frame in
+                try draw(frame)
+            }
+        )
+    }
+
+    @discardableResult
     public func show<Prepared: Sendable>(
         timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
         requestPresentationFeedback: Bool = false,
@@ -71,6 +103,34 @@ extension Window {
             }
             throw submissionError
         }
+    }
+
+    @discardableResult
+    public func redraw(
+        requestPresentationFeedback: Bool,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws -> SoftwarePresentationOutcome {
+        try await redraw(
+            damage: nil,
+            requestPresentationFeedback: requestPresentationFeedback,
+            draw
+        )
+    }
+
+    @discardableResult
+    public func redraw(
+        damage: SurfaceDamageRegion?,
+        requestPresentationFeedback: Bool,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws -> SoftwarePresentationOutcome {
+        try await redraw(
+            damage: damage,
+            requestPresentationFeedback: requestPresentationFeedback,
+            preparing: { _ in () },
+            { _, frame in
+                try draw(frame)
+            }
+        )
     }
 
     @discardableResult
