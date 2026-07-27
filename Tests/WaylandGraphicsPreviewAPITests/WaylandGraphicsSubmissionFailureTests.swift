@@ -250,6 +250,39 @@ struct WaylandGraphicsSubmissionFailureTests {
         #expect(await window.damages() == [nil])
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func abandoningFrameLeaseAllowsNextFrame() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                reason: .forcedSoftware
+            )
+        )
+
+        do {
+            let abandonedLease = try await storage.nextFrame()
+            _ = abandonedLease.size
+            _ = abandonedLease.contract
+            _ = abandonedLease.runtimePath
+        }
+
+        for _ in 0..<100 {
+            do {
+                let replacementLease = try await storage.nextFrame()
+                await replacementLease.cancel()
+                await storage.closeForTesting()
+                return
+            } catch WaylandGraphicsError.frameLeaseActive {
+                await Task.yield()
+            }
+        }
+
+        await storage.closeForTesting()
+        Issue.record("abandoned frame lease did not release its backing")
+    }
+
     @Test
     func windowLifecycleAndWindowSubmissionFailuresAreDistinct() {
         let windowID = WindowID(rawValue: 45)

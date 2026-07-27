@@ -1590,6 +1590,62 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
     }
 
     @Test
+    func renderLeaseCancelReleasesFrameAndBufferReservation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
+        )
+
+        let renderLease = try await firstLease.reserveExternalBuffer(buffer)
+        await renderLease.cancel()
+
+        let secondLease = try await storage.nextFrame()
+        let secondRenderLease = try await secondLease.reserveExternalBuffer(buffer)
+        await secondRenderLease.cancel()
+
+        await storage.closeForTesting()
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func abandoningRenderLeaseReleasesFrameAndBufferReservation() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let firstLease = try await storage.nextFrame()
+        let buffer = try await registerTestExternalBuffer(
+            storage: storage,
+            lease: firstLease,
+            descriptor: try testExternalDescriptor()
+        )
+
+        do {
+            let abandonedRenderLease = try await firstLease.reserveExternalBuffer(buffer)
+            _ = abandonedRenderLease.buffer
+            _ = abandonedRenderLease.contract
+        }
+
+        for _ in 0..<100 {
+            do {
+                let replacementLease = try await storage.nextFrame()
+                let replacementRenderLease = try await replacementLease.reserveExternalBuffer(
+                    buffer
+                )
+                await replacementRenderLease.cancel()
+                await storage.closeForTesting()
+                return
+            } catch WaylandGraphicsError.frameLeaseActive {
+                await Task.yield()
+            }
+        }
+
+        await storage.closeForTesting()
+        Issue.record("abandoned render lease did not release its frame and buffer")
+    }
+
+    @Test
     func frameLeaseCannotReserveMultipleExternalBuffers() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
