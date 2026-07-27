@@ -1,7 +1,9 @@
 import WaylandGraphicsPreview
 
-func useRenderLeaseTwice(_ lease: WaylandGraphicsExternalBufferRenderLease) async {
-    let duplicate = lease
-    await lease.cancel()
+func useRenderLeaseTwice(
+    _ renderLease: consuming WaylandGraphicsExternalBufferRenderLease
+) async {
+    let duplicate = renderLease
+    await renderLease.cancel()
     await duplicate.cancel()
 }

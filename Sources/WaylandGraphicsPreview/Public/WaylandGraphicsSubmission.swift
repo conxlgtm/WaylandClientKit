@@ -1209,12 +1209,20 @@ public struct WaylandGraphicsExternalBufferSubmissionReceipt: Sendable {
     }
 }
 
-public struct WaylandGraphicsExternalBufferRenderLease: Sendable {
-    public let buffer: WaylandGraphicsExternalBuffer
-    public let contract: WaylandGraphicsFrameContract
-
+public struct WaylandGraphicsExternalBufferRenderLease: ~Copyable, Sendable {
+    private let reservedBuffer: WaylandGraphicsExternalBuffer
+    private let frameContract: WaylandGraphicsFrameContract
     private let frameLeaseID: WaylandGraphicsFrameLeaseID
     private let storage: WaylandGraphicsWindowBackingStorage
+    private let lifetime: WaylandGraphicsLeaseLifetime
+
+    public var buffer: WaylandGraphicsExternalBuffer {
+        borrowing get { reservedBuffer }
+    }
+
+    public var contract: WaylandGraphicsFrameContract {
+        borrowing get { frameContract }
+    }
 
     package init(
         buffer externalBuffer: WaylandGraphicsExternalBuffer,
@@ -1222,20 +1230,22 @@ public struct WaylandGraphicsExternalBufferRenderLease: Sendable {
         frameLeaseID leaseID: WaylandGraphicsFrameLeaseID,
         storage backingStorage: WaylandGraphicsWindowBackingStorage
     ) {
-        buffer = externalBuffer
-        contract = frameContract
+        reservedBuffer = externalBuffer
+        self.frameContract = frameContract
         frameLeaseID = leaseID
         storage = backingStorage
+        lifetime = WaylandGraphicsLeaseLifetime(
+            leaseID: leaseID,
+            storage: backingStorage
+        )
     }
 
     @discardableResult
-    public func submit(
+    public consuming func submit(
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
     ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
-        try await storage.submitRegisteredExternalBuffer(
-            leaseID: frameLeaseID,
-            buffer: buffer,
+        try await submitTerminally(
             acquireSynchronization: nil,
             metadata: frameMetadata,
             schedule: frameSchedule
@@ -1243,22 +1253,50 @@ public struct WaylandGraphicsExternalBufferRenderLease: Sendable {
     }
 
     @discardableResult
-    public func submit(
+    public consuming func submit(
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization,
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
     ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
-        try await storage.submitRegisteredExternalBuffer(
-            leaseID: frameLeaseID,
-            buffer: buffer,
+        try await submitTerminally(
             acquireSynchronization: acquireSynchronization,
             metadata: frameMetadata,
             schedule: frameSchedule
         )
     }
 
-    public func cancel() async {
-        await storage.cancelExternalBufferReservation(buffer, leaseID: frameLeaseID)
+    public consuming func cancel() async {
+        let leaseID = frameLeaseID
+        let storage = storage
+        lifetime.disarm()
+        await storage.cancel(leaseID: leaseID)
+    }
+
+    private consuming func submitTerminally(
+        acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
+        metadata: WaylandGraphicsFrameMetadata,
+        schedule: WaylandGraphicsFrameSchedule?
+    ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
+        let leaseID = frameLeaseID
+        let buffer = reservedBuffer
+        let storage = storage
+        lifetime.disarm()
+        do {
+            return try await storage.submitRegisteredExternalBuffer(
+                leaseID: leaseID,
+                buffer: buffer,
+                acquireSynchronization: acquireSynchronization,
+                metadata: metadata,
+                schedule: schedule
+            )
+        } catch {
+            await storage.cancel(leaseID: leaseID)
+            throw error
+        }
+    }
+
+    deinit {
+        lifetime.abandon()
     }
 }
 
@@ -1306,7 +1344,6 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
     case windowClosed
     case backingClosed
     case frameLeaseActive
-    case frameLeaseConsumed
     case unsupportedMetadata
     case invalidDamageRegion
     case unsupportedPacing
@@ -1319,6 +1356,50 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
         state: WaylandGraphicsExternalBufferLifecycle
     )
     case submissionFailed(WaylandGraphicsSubmissionFailure)
+}
+
+// SAFETY: The armed state is protected by `lock`. Abandonment claims the
+// cleanup exactly once before scheduling work on the backing actor.
+@safe
+final class WaylandGraphicsLeaseLifetime: @unchecked Sendable {
+    private let lock = NSLock()
+    private let leaseID: WaylandGraphicsFrameLeaseID
+    private let storage: WaylandGraphicsWindowBackingStorage
+    private var isArmed = true
+
+    init(
+        leaseID: WaylandGraphicsFrameLeaseID,
+        storage: WaylandGraphicsWindowBackingStorage
+    ) {
+        self.leaseID = leaseID
+        self.storage = storage
+    }
+
+    func disarm() {
+        lock.withLock {
+            isArmed = false
+        }
+    }
+
+    func abandon() {
+        let shouldCancel = lock.withLock {
+            guard isArmed else { return false }
+            isArmed = false
+            return true
+        }
+        guard shouldCancel else { return }
+
+        let leaseID = leaseID
+        let storage = storage
+        // swiftlint:disable:next no_unstructured_task
+        Task {
+            await storage.cancel(leaseID: leaseID)
+        }
+    }
+
+    deinit {
+        abandon()
+    }
 }
 
 public struct WaylandGraphicsWindowBacking: Sendable {
@@ -1402,13 +1483,25 @@ public struct WaylandGraphicsWindowBacking: Sendable {
 
 extension WaylandGraphicsWindowBacking: Identifiable {}
 
-public struct WaylandGraphicsFrameLease: Sendable {
-    public let size: PositivePixelSize
-    public let contract: WaylandGraphicsFrameContract
-    public let runtimePath: WaylandGraphicsRuntimePath
-
+public struct WaylandGraphicsFrameLease: ~Copyable, Sendable {
+    private let frameSize: PositivePixelSize
+    private let frameContract: WaylandGraphicsFrameContract
+    private let frameRuntimePath: WaylandGraphicsRuntimePath
     private let storage: WaylandGraphicsWindowBackingStorage
     private let id: WaylandGraphicsFrameLeaseID
+    private let lifetime: WaylandGraphicsLeaseLifetime
+
+    public var size: PositivePixelSize {
+        borrowing get { frameSize }
+    }
+
+    public var contract: WaylandGraphicsFrameContract {
+        borrowing get { frameContract }
+    }
+
+    public var runtimePath: WaylandGraphicsRuntimePath {
+        borrowing get { frameRuntimePath }
+    }
 
     init(
         id leaseID: WaylandGraphicsFrameLeaseID,
@@ -1418,95 +1511,160 @@ public struct WaylandGraphicsFrameLease: Sendable {
         storage backingStorage: WaylandGraphicsWindowBackingStorage
     ) {
         id = leaseID
-        size = frameSize
-        contract = frameContract
-        runtimePath = frameRuntimePath
+        self.frameSize = frameSize
+        self.frameContract = frameContract
+        self.frameRuntimePath = frameRuntimePath
         storage = backingStorage
+        lifetime = WaylandGraphicsLeaseLifetime(
+            leaseID: leaseID,
+            storage: backingStorage
+        )
     }
 
     @discardableResult
-    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws
+    public consuming func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws
         -> WaylandGraphicsFrameResult
     {
-        try await storage.submit(leaseID: id, frame: frame)
+        try await submitTerminally(
+            frame,
+            schedule: nil,
+            beforeSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook,
+            afterSubmissionEffect: noGraphicsPreviewSubmissionHook
+        )
     }
 
     @discardableResult
-    public func submit(
+    public consuming func submit(
         _ frame: WaylandGraphicsSubmittedFrame,
         schedule frameSchedule: WaylandGraphicsFrameSchedule
     ) async throws -> WaylandGraphicsFrameResult {
-        try await storage.submit(
-            leaseID: id,
-            frame: frame,
-            schedule: frameSchedule
+        try await submitTerminally(
+            frame,
+            schedule: frameSchedule,
+            beforeSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook,
+            afterSubmissionEffect: noGraphicsPreviewSubmissionHook
         )
     }
 
     @discardableResult
-    public func submitSoftware(
+    public consuming func submitSoftware(
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
-        try await storage.submitSoftware(
-            leaseID: id,
-            metadata: frameMetadata,
-            draw
-        )
+        let leaseID = id
+        let storage = storage
+        lifetime.disarm()
+        do {
+            return try await storage.submitSoftware(
+                leaseID: leaseID,
+                metadata: frameMetadata,
+                draw
+            )
+        } catch {
+            await storage.cancel(leaseID: leaseID)
+            throw error
+        }
     }
 
     @discardableResult
-    public func submitSoftware(
+    public consuming func submitSoftware(
         schedule frameSchedule: WaylandGraphicsFrameSchedule,
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
-        try await storage.submitSoftware(
-            leaseID: id,
-            metadata: frameMetadata,
-            schedule: frameSchedule,
-            draw
-        )
+        let leaseID = id
+        let storage = storage
+        lifetime.disarm()
+        do {
+            return try await storage.submitSoftware(
+                leaseID: leaseID,
+                metadata: frameMetadata,
+                schedule: frameSchedule,
+                draw
+            )
+        } catch {
+            await storage.cancel(leaseID: leaseID)
+            throw error
+        }
     }
 
     @discardableResult
-    package func submitForTestingBeforeSubmissionEffect(
+    package consuming func submitForTestingBeforeSubmissionEffect(
         _ frame: WaylandGraphicsSubmittedFrame,
         _ beforeSubmissionEffect: @Sendable @escaping () async throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
-        try await storage.submit(
-            leaseID: id,
-            frame: frame,
+        try await submitTerminally(
+            frame,
+            schedule: nil,
             beforeSubmissionEffect: beforeSubmissionEffect,
-            afterSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook
+            afterSubmissionEffect: noGraphicsPreviewSubmissionHook
         )
     }
 
     @discardableResult
-    package func submitForTesting(
+    package consuming func submitForTesting(
         _ frame: WaylandGraphicsSubmittedFrame,
         afterSubmissionEffect: @Sendable @escaping () async throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
-        try await storage.submit(
-            leaseID: id,
-            frame: frame,
+        try await submitTerminally(
+            frame,
+            schedule: nil,
             beforeSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook,
             afterSubmissionEffect: afterSubmissionEffect
         )
     }
 
-    public func cancel() async {
-        await storage.cancel(leaseID: id)
+    public consuming func cancel() async {
+        let leaseID = id
+        let storage = storage
+        lifetime.disarm()
+        await storage.cancel(leaseID: leaseID)
     }
 
-    public func reserveExternalBuffer(
+    public consuming func reserveExternalBuffer(
         _ buffer: WaylandGraphicsExternalBuffer
     ) async throws -> WaylandGraphicsExternalBufferRenderLease {
-        try await storage.reserveExternalBuffer(
-            buffer,
-            leaseID: id,
-            contract: contract
-        )
+        let leaseID = id
+        let contract = frameContract
+        let storage = storage
+        lifetime.disarm()
+        do {
+            return try await storage.reserveExternalBuffer(
+                buffer,
+                leaseID: leaseID,
+                contract: contract
+            )
+        } catch {
+            await storage.cancel(leaseID: leaseID)
+            throw error
+        }
+    }
+
+    private consuming func submitTerminally(
+        _ frame: WaylandGraphicsSubmittedFrame,
+        schedule: WaylandGraphicsFrameSchedule?,
+        beforeSubmissionEffect: @Sendable @escaping () async throws -> Void,
+        afterSubmissionEffect: @Sendable @escaping () async throws -> Void
+    ) async throws -> WaylandGraphicsFrameResult {
+        let leaseID = id
+        let storage = storage
+        lifetime.disarm()
+        do {
+            return try await storage.submit(
+                leaseID: leaseID,
+                frame: frame,
+                schedule: schedule,
+                beforeSubmissionEffect: beforeSubmissionEffect,
+                afterSubmissionEffect: afterSubmissionEffect
+            )
+        } catch {
+            await storage.cancel(leaseID: leaseID)
+            throw error
+        }
+    }
+
+    deinit {
+        lifetime.abandon()
     }
 }
 

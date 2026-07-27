@@ -190,6 +190,7 @@ struct WaylandGraphicsPreviewClientTests {
             let configuration = try #require(
                 lease.contract.externalBufferConfigurations.first
             )
+            _ = lease.runtimePath
             let plane = try WaylandGraphicsExternalBufferPlane(
                 fileDescriptor: try OwnedFileDescriptor(adopting: -1),
                 offset: 0,

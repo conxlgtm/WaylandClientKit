@@ -437,6 +437,7 @@ public struct SwiftCommandResolver {
             "IntegrationTests/GraphicsPreviewClient/Package.swift",
             "IntegrationTests/FrameworkHostClient/Package.swift",
             "IntegrationTests/TinyUIPrototype/Package.swift",
+            "IntegrationTests/InvalidGraphicsLeaseClient/Package.swift",
             "IntegrationTests/InvalidManagedIdentityClient/Package.swift",
             "IntegrationTests/InvalidApplicationIdentityClient/Package.swift",
         ]
@@ -449,6 +450,7 @@ public struct SwiftCommandResolver {
             "IntegrationTests/GraphicsPreviewClient/Tests",
             "IntegrationTests/FrameworkHostClient/Tests",
             "IntegrationTests/TinyUIPrototype/Tests",
+            "IntegrationTests/InvalidGraphicsLeaseClient/Sources",
             "IntegrationTests/InvalidManagedIdentityClient/Sources",
             "IntegrationTests/InvalidApplicationIdentityClient/Sources",
         ]

@@ -109,7 +109,10 @@ enum GraphicsPreviewExternalBufferSmoke {
             count: pool.buffers.count
         )
         var releaseCount = 0
-        for frameIndex in 0..<frameCount {
+        let firstRenderLease = try await lease.reserveExternalBuffer(pool.buffers[0])
+        receipts[0] = try await firstRenderLease.submit()
+
+        for frameIndex in 1..<frameCount {
             let bufferIndex = frameIndex % pool.buffers.count
             if let receipt = receipts[bufferIndex] {
                 let release = await releaseStatus(receipt)
@@ -119,10 +122,7 @@ enum GraphicsPreviewExternalBufferSmoke {
                 releaseCount += 1
             }
 
-            let frameLease =
-                frameIndex == 0
-                ? lease
-                : try await backing.nextFrame()
+            let frameLease = try await backing.nextFrame()
             guard frameLease.contract.generation == pool.generation else {
                 throw WaylandGraphicsError.staleFrameContract(
                     rendered: pool.generation,
@@ -146,7 +146,7 @@ enum GraphicsPreviewExternalBufferSmoke {
 
     private static func registerStressPool(
         backing: WaylandGraphicsWindowBacking,
-        lease: WaylandGraphicsFrameLease,
+        lease: borrowing WaylandGraphicsFrameLease,
         configuration: WaylandGraphicsExternalBufferConfiguration
     ) async throws -> StressPool {
         var renderers: [ExternalDmabufRenderer] = []
@@ -204,6 +204,7 @@ enum GraphicsPreviewExternalBufferSmoke {
         let configuration = try requireExternalConfiguration(
             firstLease.contract
         )
+        let synchronization = firstLease.contract.synchronization
         let renderer: ExternalDmabufRenderer
         do {
             renderer = try ExternalDmabufRenderer(
@@ -264,7 +265,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("release count: 2")
             log("same-registration submissions: 2")
             log("reuse count: 1")
-            log("sync mode: \(firstLease.contract.synchronization)")
+            log("sync mode: \(synchronization)")
             log("release mechanism: \(result.releaseMechanism)")
             log("release synchronization: \(releaseSynchronizationStatus(result))")
             log("target device: \(configuration.renderNode)")
@@ -338,7 +339,6 @@ enum GraphicsPreviewExternalBufferSmoke {
             log("release: not observed")
             log("fallback reason: none")
             log("failure: expected-negative-test(\(error))")
-            await lease.cancel()
         }
     }
 

@@ -1,7 +1,7 @@
 import WaylandGraphicsPreview
 
-func useFrameLeaseTwice(_ lease: WaylandGraphicsFrameLease) async {
-    let duplicate = lease
-    await lease.cancel()
+func useFrameLeaseTwice(_ frameLease: consuming WaylandGraphicsFrameLease) async {
+    let duplicate = frameLease
+    await frameLease.cancel()
     await duplicate.cancel()
 }
