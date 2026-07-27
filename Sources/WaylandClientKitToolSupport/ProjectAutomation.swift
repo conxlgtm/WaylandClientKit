@@ -934,7 +934,10 @@ public struct PublicAPIAuditor {
         )
         let ownershipReport = try SourceOwnershipAPIBaseline(
             fileSystem: context.fileSystem,
-            runner: context.runner
+            runner: context.runner,
+            swiftCompilerExecutable: context.swift.swiftCompilerExecutable(
+                environment: context.runner.environment
+            )
         ).render(
             moduleSources: Dictionary(
                 uniqueKeysWithValues: DocCVerifier.publicProducts.map { product in

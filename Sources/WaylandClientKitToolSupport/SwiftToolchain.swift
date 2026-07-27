@@ -37,6 +37,19 @@ public struct SwiftToolchain: Sendable {
         return "swift"
     }
 
+    public func swiftCompilerExecutable(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) throws -> String {
+        let selectedSwift = try swiftExecutable(environment: environment)
+        let resolvedSwift =
+            if selectedSwift.contains("/") {
+                URL(fileURLWithPath: selectedSwift)
+            } else {
+                try runner.executableURL(for: selectedSwift)
+            }
+        return resolvedSwift.deletingLastPathComponent().appendingPathComponent("swiftc").path
+    }
+
     @discardableResult
     public func runSwift(
         _ arguments: [String],

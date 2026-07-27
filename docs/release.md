@@ -8,7 +8,8 @@ Review [Compatibility Policy](compatibility-policy.md) for public API changes an
 
 ## Current Checkpoint Migration
 
-This checkpoint contains source-breaking `WaylandClient` changes:
+This checkpoint contains source-breaking `WaylandClient` and
+`WaylandGraphicsPreview` changes:
 
 - Replace `EventStreamConfiguration.displayEventCapacity` and
   `PositiveInt.defaultDisplayEventCapacity` with `eventCapacity` and
@@ -37,6 +38,12 @@ This checkpoint contains source-breaking `WaylandClient` changes:
   must adopt or discard the returned outcome. Matching overloads without a
   preparation closure expose the same atomic `requestPresentationFeedback`
   option and outcome. Prepared generations are revalidated before drawing.
+- `WaylandGraphicsFrameLease` and `WaylandGraphicsExternalBufferRenderLease` are
+  now move-only. Submission and cancellation consume the lease, and reserving an
+  external buffer consumes the frame lease and transfers sole authority to the
+  returned render lease. Snapshot metadata before a consuming call, acquire a
+  new frame after a throwing terminal operation, and remove handling for the
+  deleted `WaylandGraphicsError.frameLeaseConsumed` case.
 
 ## Required Gates
 

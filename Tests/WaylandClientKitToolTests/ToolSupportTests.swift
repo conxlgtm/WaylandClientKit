@@ -70,6 +70,17 @@ struct ToolSupportTests {
     }
 
     @Test
+    func swiftCompilerUsesSelectedToolchain() throws {
+        let selectedSwift = "/opt/swift-6.3/usr/bin/swift"
+
+        #expect(
+            try SwiftToolchain().swiftCompilerExecutable(
+                environment: ["SWIFT_BIN": selectedSwift]
+            ) == "/opt/swift-6.3/usr/bin/swiftc"
+        )
+    }
+
+    @Test
     func processRunnerRestoresCurrentDirectoryAfterWorkingDirectoryRun() throws {
         try withToolProcessFixtureLock {
             let root = try temporaryRepository()
