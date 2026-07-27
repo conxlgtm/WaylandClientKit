@@ -21,6 +21,13 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .executableTarget(
+            name: "FrameLeaseTransferClient",
+            dependencies: [
+                .product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")
+            ],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
             name: "RenderLeaseCopyClient",
             dependencies: [
                 .product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")

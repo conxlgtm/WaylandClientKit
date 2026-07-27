@@ -1610,7 +1610,9 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             _ = abandonedRenderLease.contract
         }
 
-        for _ in 0..<100 {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(1))
+        while clock.now < deadline {
             do {
                 let replacementLease = try await storage.nextFrame()
                 let replacementRenderLease = try await replacementLease.reserveExternalBuffer(

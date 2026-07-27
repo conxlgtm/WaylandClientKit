@@ -250,128 +250,6 @@ struct WaylandGraphicsSubmissionFailureTests {
         #expect(await window.damages() == [nil])
     }
 
-    @Test(.timeLimit(.minutes(1)))
-    func abandoningFrameLeaseAllowsNextFrame() async throws {
-        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
-        let storage = WaylandGraphicsWindowBackingStorage(
-            window: window,
-            runtimePath: .softwareFallback(
-                capabilities: softwareOnlySurfaceCapabilities(),
-                reason: .forcedSoftware
-            )
-        )
-
-        do {
-            let abandonedLease = try await storage.nextFrame()
-            _ = abandonedLease.size
-            _ = abandonedLease.contract
-            _ = abandonedLease.runtimePath
-        }
-
-        for _ in 0..<100 {
-            do {
-                let replacementLease = try await storage.nextFrame()
-                await replacementLease.cancel()
-                await storage.closeForTesting()
-                return
-            } catch WaylandGraphicsError.frameLeaseActive {
-                await Task.yield()
-            }
-        }
-
-        await storage.closeForTesting()
-        Issue.record("abandoned frame lease did not release its backing")
-    }
-
-    @Test(.timeLimit(.minutes(1)))
-    func backingCloseRacingWithSubmissionEndsClosed() async throws {
-        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
-        let storage = WaylandGraphicsWindowBackingStorage(
-            window: window,
-            runtimePath: .softwareFallback(
-                capabilities: softwareOnlySurfaceCapabilities(),
-                reason: .forcedSoftware
-            )
-        )
-        let lease = try await storage.nextFrame()
-
-        do {
-            _ = try await lease.submitForTesting(.clearColor(.black)) {
-                await storage.closeForTesting()
-            }
-            Issue.record("expected backing close to win submission completion")
-        } catch WaylandGraphicsError.backingClosed {
-            // Expected terminal state.
-        } catch {
-            Issue.record("unexpected error: \(error)")
-        }
-
-        do {
-            let unexpectedLease = try await storage.nextFrame()
-            await unexpectedLease.cancel()
-            Issue.record("closed backing unexpectedly issued another lease")
-        } catch WaylandGraphicsError.backingClosed {
-            // Expected terminal state.
-        } catch {
-            Issue.record("unexpected error: \(error)")
-        }
-    }
-
-    @Test(.timeLimit(.minutes(1)))
-    func backingCloseRacingWithCancellationEndsClosed() async throws {
-        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
-        let storage = WaylandGraphicsWindowBackingStorage(
-            window: window,
-            runtimePath: .softwareFallback(
-                capabilities: softwareOnlySurfaceCapabilities(),
-                reason: .forcedSoftware
-            )
-        )
-        let lease = try await storage.nextFrame()
-
-        async let closing: Void = storage.closeForTesting()
-        await lease.cancel()
-        await closing
-
-        do {
-            let unexpectedLease = try await storage.nextFrame()
-            await unexpectedLease.cancel()
-            Issue.record("closed backing unexpectedly issued another lease")
-        } catch WaylandGraphicsError.backingClosed {
-            // Expected terminal state.
-        } catch {
-            Issue.record("unexpected error: \(error)")
-        }
-    }
-
-    @Test(.timeLimit(.minutes(1)))
-    func backingCloseRacingWithAbandonmentEndsClosed() async throws {
-        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
-        let storage = WaylandGraphicsWindowBackingStorage(
-            window: window,
-            runtimePath: .softwareFallback(
-                capabilities: softwareOnlySurfaceCapabilities(),
-                reason: .forcedSoftware
-            )
-        )
-
-        do {
-            let abandonedLease = try await storage.nextFrame()
-            _ = abandonedLease.runtimePath
-        }
-        await storage.closeForTesting()
-
-        do {
-            let unexpectedLease = try await storage.nextFrame()
-            await unexpectedLease.cancel()
-            Issue.record("closed backing unexpectedly issued another lease")
-        } catch WaylandGraphicsError.backingClosed {
-            // Expected terminal state.
-        } catch {
-            Issue.record("unexpected error: \(error)")
-        }
-    }
-
     @Test
     func windowLifecycleAndWindowSubmissionFailuresAreDistinct() {
         let windowID = WindowID(rawValue: 45)
@@ -492,7 +370,7 @@ private struct InjectedUnexpectedSubmissionError: Error, CustomStringConvertible
     }
 }
 
-private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
+actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     nonisolated let id = WindowID(rawValue: 700)
 
     private let geometryValue: SurfaceGeometry

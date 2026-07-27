@@ -1361,7 +1361,7 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
 // SAFETY: The armed state is protected by `lock`. Abandonment claims the
 // cleanup exactly once before scheduling work on the backing actor.
 @safe
-final class WaylandGraphicsLeaseLifetime: @unchecked Sendable {
+private final class WaylandGraphicsLeaseLifetime: @unchecked Sendable {
     private let lock = NSLock()
     private let leaseID: WaylandGraphicsFrameLeaseID
     private let storage: WaylandGraphicsWindowBackingStorage

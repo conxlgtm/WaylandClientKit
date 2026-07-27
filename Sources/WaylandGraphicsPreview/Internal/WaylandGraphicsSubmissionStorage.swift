@@ -1835,13 +1835,6 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    package func cancelExternalBufferReservation(
-        _ buffer: WaylandGraphicsExternalBuffer,
-        leaseID: WaylandGraphicsFrameLeaseID
-    ) {
-        releaseExternalBufferReservation(bufferID: buffer.id, leaseID: leaseID)
-    }
-
     private func releaseExternalBufferReservation(
         bufferID: WaylandGraphicsExternalBufferID,
         leaseID: WaylandGraphicsFrameLeaseID

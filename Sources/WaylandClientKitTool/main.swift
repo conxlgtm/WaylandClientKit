@@ -1067,12 +1067,13 @@ private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) t
     }
 }
 
-private func verifyGraphicsLeaseCopyingIsRejected(context: ToolContext) throws {
+private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws {
     let packagePath = context.repository.url(
         "IntegrationTests/InvalidGraphicsLeaseClient"
     ).path
     let targets = [
         ("FrameLeaseCopyClient", "frameLease"),
+        ("FrameLeaseTransferClient", "frameLease"),
         ("RenderLeaseCopyClient", "renderLease"),
     ]
     let scratch = try context.fileSystem.createTemporaryDirectory(
@@ -1091,12 +1092,12 @@ private func verifyGraphicsLeaseCopyingIsRejected(context: ToolContext) throws {
             requireSuccess: false
         )
         guard result.exitCode != 0 else {
-            throw ToolError("graphics lease copy client unexpectedly compiled \(target)")
+            throw ToolError("invalid graphics lease client unexpectedly compiled \(target)")
         }
         let diagnostics = result.stdout + result.stderr
         guard diagnostics.contains("'\(variableName)' consumed more than once") else {
             throw ToolError(
-                "graphics lease copy client failed before move-only ownership was checked"
+                "invalid graphics lease client failed before move-only ownership was checked"
             )
         }
     }
@@ -1398,7 +1399,7 @@ private func runRequired(context: ToolContext) throws {
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
     try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
-    try verifyGraphicsLeaseCopyingIsRejected(context: context)
+    try verifyGraphicsLeaseOwnershipIsEnforced(context: context)
     try verifyManagedIdentityConstructionIsRejected(context: context)
     try verifyMissingApplicationIdentityIsRejected(context: context)
 }

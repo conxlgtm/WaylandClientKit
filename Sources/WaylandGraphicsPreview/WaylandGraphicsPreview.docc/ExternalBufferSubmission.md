@@ -31,6 +31,13 @@ expose raw protocol or renderer objects, pointers, or descriptor integers.
    ``WaylandGraphicsExternalBufferSubmissionReceipt/waitForRelease()``. Reuse it
    only after `.released`.
 
+Reservation consumes the move-only frame lease and transfers its sole authority
+into a move-only ``WaylandGraphicsExternalBufferRenderLease``. The original frame
+lease cannot be reused. Submit or cancel consumes the render lease; cancelling
+releases both the buffer reservation and the complete frame permission. Failed
+reservations, failed submissions, and abandoned leases release their authority
+inside WCK so later frames and buffer reservations are not stranded.
+
 Registration imports a descriptor once for reuse. It is scoped to the backing,
 window, frame generation, and selected configuration. If that scope changes
 during import, WCK removes the unpublished import and returns `backingClosed` or

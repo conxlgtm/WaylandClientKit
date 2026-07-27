@@ -1,14 +1,15 @@
 # Frame Leases
 
-``WaylandGraphicsFrameLease`` is the single-use permission to submit one frame
-through a ``WaylandGraphicsWindowBacking``.
+``WaylandGraphicsFrameLease`` is the move-only, single-use permission to submit
+one frame through a ``WaylandGraphicsWindowBacking``.
 
 ## Lifecycle
 
 Call ``WaylandGraphicsWindowBacking/nextFrame()`` to obtain a lease. Inspect
 ``WaylandGraphicsFrameLease/contract`` before rendering; it contains the current
 surface generation, authoritative geometry, buffer candidates, synchronization,
-and render-device identity.
+and render-device identity. Reading `size`, `contract`, or `runtimePath` borrows
+the lease without consuming it.
 
 Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)``,
 ``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``, or by reserving a
@@ -17,9 +18,17 @@ registered external buffer with
 returned render lease. Cancel the frame lease with
 ``WaylandGraphicsFrameLease/cancel()`` when no frame will be produced.
 
-A backing allows only one active lease. A submitted or cancelled lease cannot be
-submitted again. Closing the backing makes future lease operations fail with a
-typed error.
+Submitting, cancelling, or reserving an external buffer consumes the lease, so
+valid Swift source cannot copy the permission or use it twice. Reserving an
+external buffer transfers the only remaining frame authority into the returned
+move-only render lease. Submitting or cancelling that render lease consumes it;
+render-lease cancellation cancels the entire frame permission.
+
+A backing allows only one active lease. A consuming operation that throws
+terminally releases its authority inside WCK because the caller no longer owns a
+lease to cancel. Dropping an unfinished frame or render lease schedules the same
+cleanup so it cannot strand `nextFrame()` or a buffer slot. Closing the backing
+makes future lease operations fail with a typed error.
 
 ## Software, Clear, And External Frames
 
@@ -33,11 +42,12 @@ import, commit, release tracking, and reuse gating.
 
 Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
 describe optional metadata and logical damage. WaylandClientKit validates metadata
-and damage before consuming the lease for commit work.
+and damage before irreversible commit work. Validation failure still terminally
+releases the consumed frame authority.
 
-WaylandClientKit owns lease state, retry behavior after pre-commit failures,
-post-commit terminal state, and buffer reuse. Frameworks own frame scheduling
-and failure policy.
+WaylandClientKit owns lease state, new-frame retry behavior after pre-commit
+failures, post-commit terminal state, and buffer reuse. Frameworks own frame
+scheduling and failure policy.
 
 A contract generation changes with surface geometry. Work for stale geometry
 belongs to a new frame rather than the current lease.
