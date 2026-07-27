@@ -15,20 +15,29 @@
             var events: [CommitSequenceEvent] = []
             let identity = SurfacePresentationIdentity(rawValue: 7)
 
-            let returnedIdentity = WindowSoftwarePresentationCommitSequence.perform {
-                events.append(.markDrawingBufferBusy)
-            } requestFrameCallback: {
-                events.append(.frameCallback)
-            } requestPresentationFeedback: {
-                events.append(.presentationFeedback(operation))
-                return identity
-            } commit: {
-                events.append(.commit(operation))
-            }
+            let returnedIdentity = WindowSoftwarePresentationCommitSequence.perform(
+                stageSuccess: {
+                    events.append(.stageSuccess)
+                },
+                markDrawingBufferBusy: {
+                    events.append(.markDrawingBufferBusy)
+                },
+                requestFrameCallback: {
+                    events.append(.frameCallback)
+                },
+                requestPresentationFeedback: {
+                    events.append(.presentationFeedback(operation))
+                    return identity
+                },
+                commit: {
+                    events.append(.commit(operation))
+                }
+            )
 
             #expect(returnedIdentity == identity)
             #expect(
                 events == [
+                    .stageSuccess,
                     .markDrawingBufferBusy,
                     .frameCallback,
                     .presentationFeedback(operation),
@@ -36,10 +45,44 @@
                 ]
             )
         }
+
+        @Test
+        func successStagingFailureStopsBeforePointOfNoReturn() {
+            var events: [CommitSequenceEvent] = []
+
+            do {
+                _ = try WindowSoftwarePresentationCommitSequence.perform(
+                    stageSuccess: {
+                        events.append(.stageSuccess)
+                        throw InjectedSuccessStagingFailure()
+                    },
+                    markDrawingBufferBusy: {
+                        events.append(.markDrawingBufferBusy)
+                    },
+                    requestFrameCallback: {
+                        events.append(.frameCallback)
+                    },
+                    requestPresentationFeedback: {
+                        events.append(.presentationFeedback(.redraw))
+                        return nil
+                    },
+                    commit: {
+                        events.append(.commit(.redraw))
+                    }
+                )
+                Issue.record("expected success staging failure")
+            } catch is InjectedSuccessStagingFailure {
+                // The injected failure must remain observable before the point of no return.
+            } catch {
+                Issue.record("unexpected error: \(error)")
+            }
+
+            #expect(events == [.stageSuccess])
+        }
     }
 
     @Suite(.serialized)
-    struct WindowSoftwarePresenterTests {
+    struct WindowSoftwarePresenterTests {  // swiftlint:disable:this type_body_length
         private struct RoleToken {}
         private struct FrameIDCaptureComplete: Error {}
 
@@ -95,6 +138,52 @@
             try await withSoftwarePresentationRecording {
                 try exerciseSubmitConstraintFailureLeavesDrawingBufferReusable()
             }
+        }
+
+        @Test
+        func successStagingFailureLeavesDrawingBufferReusable() async throws {
+            try await withSoftwarePresentationRecording {
+                try exerciseSuccessStagingFailureLeavesDrawingBufferReusable()
+            }
+        }
+
+        private func exerciseSuccessStagingFailureLeavesDrawingBufferReusable() throws {
+            let surface = try testSurface(pointer: 0x6A41)
+            let sharedMemory = try testSharedMemory(pointer: 0x6A42)
+            let pool = try sharedMemory.createPool(width: 64, height: 48, bufferCount: 1)
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+            runtime.recordConfigureReceived(serial: 1)
+            try runtime.acknowledgeConfigure(serial: 1)
+            var pendingFrameRegistration: FrameCallbackRegistration?
+            let presenter = softwarePresenter(surface: surface, pool: pool)
+
+            do {
+                _ = try presenter.present(
+                    context: try softwarePresentationContext(),
+                    draw: { _ in () },
+                    stageSuccess: { currentBufferAvailability in
+                        #expect(currentBufferAvailability == .unavailable)
+                        throw InjectedSuccessStagingFailure()
+                    },
+                    runtime: &runtime,
+                    pendingFrameRegistration: &pendingFrameRegistration
+                )
+                Issue.record("expected success staging failure")
+            } catch is InjectedSuccessStagingFailure {
+                // Success bookkeeping remains fallible only before the point of no return.
+            } catch {
+                Issue.record("unexpected error: \(error)")
+            }
+
+            let hasPendingRegistration = hasPendingFrameRegistration(pendingFrameRegistration)
+            #expect(!hasPendingRegistration)
+            #expect(!pool.hasBusyBuffers)
+            #expect(pool.hasFreeBuffers)
+            #expect(unsafe swl_test_core_request_record().frame_sequence == 0)
+            #expect(unsafe swl_test_core_request_record().attach_sequence == 0)
+            #expect(unsafe swl_test_core_request_record().damage_sequence == 0)
+            #expect(unsafe swl_test_presentation_request_record().call_count == 0)
+            #expect(unsafe swl_test_core_request_record().commit_sequence == 0)
         }
 
         private func exerciseSubmitConstraintFailureLeavesDrawingBufferReusable() throws {
@@ -321,6 +410,7 @@
     }
 
     private enum CommitSequenceEvent: Equatable {
+        case stageSuccess
         case markDrawingBufferBusy
         case frameCallback
         case presentationFeedback(ManagedPresentationOperation)
@@ -328,4 +418,5 @@
     }
 
     private struct InjectedDrawFailure: Error {}
+    private struct InjectedSuccessStagingFailure: Error {}
 #endif

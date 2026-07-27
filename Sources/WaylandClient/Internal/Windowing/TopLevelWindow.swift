@@ -35,6 +35,56 @@ struct PendingSoftwareFrameReservation {
     let reservedFrame: WindowReservedSoftwareFrame
 }
 
+private struct StagedSoftwarePresentationSuccess {
+    let model: WindowModel
+    let publishesRedrawRequest: Bool
+}
+
+private struct SoftwarePresentationSuccessStagingContext {
+    let model: WindowModel
+    let windowID: WindowID
+    let hasPendingSurfaceConfigure: Bool
+
+    func stage(
+        generation: UInt64,
+        currentBufferAvailability: RedrawBufferAvailability
+    ) throws -> StagedSoftwarePresentationSuccess {
+        var stagedModel = model
+        let bufferAvailability = RedrawBufferAvailability.resolvingPendingConfigure(
+            hasPendingSurfaceConfigure,
+            currentBufferAvailability: currentBufferAvailability
+        )
+        let effects = try stagedModel.reduce(
+            .presentationSucceeded(
+                generation: generation,
+                bufferAvailability: bufferAvailability
+            )
+        )
+        var publishesRedrawRequest = false
+        for effect in effects {
+            guard case .publishRedrawRequested(let effectWindowID) = effect,
+                effectWindowID == windowID,
+                !publishesRedrawRequest
+            else {
+                throw ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(
+                        .invalidTransition(
+                            from: "software presentation success staging",
+                            event: "unexpected effect \(effect)"
+                        )
+                    )
+                )
+            }
+            publishesRedrawRequest = true
+        }
+        return StagedSoftwarePresentationSuccess(
+            model: stagedModel,
+            publishesRedrawRequest: publishesRedrawRequest
+        )
+    }
+}
+
 // swiftlint:disable:next type_body_length
 package final class TopLevelWindow {
     package static let defaultConfigureTimeoutMS: Int32 = 1_000
@@ -582,9 +632,12 @@ package final class TopLevelWindow {
             model.reduce(.presentationStarted(request))
         )
 
+        let successStagingContext = softwarePresentationSuccessStagingContext()
+        var stagedSuccess: StagedSoftwarePresentationSuccess?
+        let result: WindowSoftwarePresentationResult
         do {
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
-            let result = try softwarePresenter().present(
+            result = try softwarePresenter().present(
                 context: WindowSoftwarePresentationContext(
                     request: request,
                     geometry: geometry,
@@ -594,17 +647,37 @@ package final class TopLevelWindow {
                     presentationFeedback: presentationFeedback
                 ),
                 draw: draw,
+                stageSuccess: { currentBufferAvailability in
+                    stagedSuccess = try successStagingContext.stage(
+                        generation: request.generation,
+                        currentBufferAvailability: currentBufferAvailability
+                    )
+                },
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
             )
-            try interpretSoftwarePresentationFollowUp(result.followUp)
-            return result.outcome
         } catch let failure as WindowSoftwarePresentationFailure {
             failSoftwarePresentationIfStillActive(generation: request.generation)
             if case .userDraw = failure.presentationError {
                 throw WindowSoftwareDrawFailure(underlying: failure.underlying)
             }
             throw failure.underlying
+        } catch {
+            failPresentationIfStillActive(
+                generation: request.generation,
+                error: .surfaceCommit(String(describing: error))
+            )
+            throw error
+        }
+
+        if result.outcome == .presented {
+            installSoftwarePresentationSuccess(stagedSuccess)
+            return .presented
+        }
+
+        do {
+            try interpretSoftwarePresentationFollowUp(result.followUp)
+            return result.outcome
         } catch {
             failPresentationIfStillActive(
                 generation: request.generation,
@@ -655,19 +728,16 @@ package final class TopLevelWindow {
             return model.isClosed ? .closed : .superseded
         }
 
+        var stagedSuccess: StagedSoftwarePresentationSuccess?
+        let result: WindowSoftwarePresentationResult
         do {
-            _ = try consumeLatestConfigureIfAvailable()
-            let currentGeometry = try currentSurfaceGeometry()
-            guard !model.isClosed,
-                model.isCurrentSoftwarePresentation(pendingReservation.request),
-                currentGeometry == pendingReservation.geometry,
-                !Task.isCancelled
-            else {
+            guard try isCurrentSoftwarePresentation(pendingReservation) else {
                 return try supersedeSoftwarePresentation(pendingReservation)
             }
+            let successStagingContext = softwarePresentationSuccessStagingContext()
 
             let presentationFeedback = try makePresentationFeedback()
-            let result = try softwarePresenter().presentReserved(
+            result = try softwarePresenter().presentReserved(
                 pendingReservation.reservedFrame,
                 context: WindowSoftwarePresentationContext(
                     request: pendingReservation.request,
@@ -678,18 +748,15 @@ package final class TopLevelWindow {
                     presentationFeedback: presentationFeedback
                 ),
                 draw: draw,
+                stageSuccess: { currentBufferAvailability in
+                    stagedSuccess = try successStagingContext.stage(
+                        generation: pendingReservation.request.generation,
+                        currentBufferAvailability: currentBufferAvailability
+                    )
+                },
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
             )
-            try interpretSoftwarePresentationFollowUp(result.followUp)
-            switch result.outcome {
-            case .presented:
-                return .presented
-            case .skippedClosed:
-                return .closed
-            case .skippedPendingFrame, .waitingForBuffer:
-                return .deferred
-            }
         } catch let failure as WindowSoftwarePresentationFailure {
             pendingReservation.reservedFrame.drawingBuffer.discard()
             failSoftwarePresentationIfStillActive(
@@ -699,6 +766,60 @@ package final class TopLevelWindow {
                 throw WindowSoftwareDrawFailure(underlying: failure.underlying)
             }
             throw failure.underlying
+        } catch {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            failSoftwarePresentationIfStillActive(
+                generation: pendingReservation.request.generation
+            )
+            throw error
+        }
+
+        if result.outcome == .presented {
+            installSoftwarePresentationSuccess(stagedSuccess)
+            return .presented
+        }
+
+        return try interpretDeferredSoftwarePresentation(
+            result,
+            pendingReservation: pendingReservation
+        )
+    }
+
+    private func isCurrentSoftwarePresentation(
+        _ pendingReservation: PendingSoftwareFrameReservation
+    ) throws -> Bool {
+        _ = try consumeLatestConfigureIfAvailable()
+        let currentGeometry = try currentSurfaceGeometry()
+        return !model.isClosed
+            && model.isCurrentSoftwarePresentation(pendingReservation.request)
+            && currentGeometry == pendingReservation.geometry
+            && !Task.isCancelled
+    }
+
+    private func softwarePresentationSuccessStagingContext()
+        -> SoftwarePresentationSuccessStagingContext
+    {
+        SoftwarePresentationSuccessStagingContext(
+            model: model,
+            windowID: id,
+            hasPendingSurfaceConfigure: configureState.hasPendingSurfaceConfigure
+        )
+    }
+
+    private func interpretDeferredSoftwarePresentation(
+        _ result: WindowSoftwarePresentationResult,
+        pendingReservation: PendingSoftwareFrameReservation
+    ) throws -> SoftwarePresentationOutcome {
+        do {
+            try interpretSoftwarePresentationFollowUp(result.followUp)
+            switch result.outcome {
+            case .presented:
+                preconditionFailure("Presented software frames require staged success")
+            case .skippedClosed:
+                return .closed
+            case .skippedPendingFrame, .waitingForBuffer:
+                return .deferred
+            }
         } catch {
             pendingReservation.reservedFrame.drawingBuffer.discard()
             failSoftwarePresentationIfStillActive(
@@ -772,15 +893,20 @@ package final class TopLevelWindow {
             try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
         case .resetTransientState:
             try interpretWindowEffects(model.reduce(.transientStateReset))
-        case .succeeded(let generation):
-            try interpretWindowEffects(
-                model.reduce(
-                    .presentationSucceeded(
-                        generation: generation,
-                        bufferAvailability: try redrawBufferAvailability()
-                    )
-                )
-            )
+        case .succeeded:
+            preconditionFailure("Software presentation success must be installed from staging")
+        }
+    }
+
+    private func installSoftwarePresentationSuccess(
+        _ stagedSuccess: StagedSoftwarePresentationSuccess?
+    ) {
+        guard let stagedSuccess else {
+            preconditionFailure("Committed software presentation has no staged success")
+        }
+        model = stagedSuccess.model
+        if stagedSuccess.publishesRedrawRequest {
+            onRedrawRequested?()
         }
     }
 

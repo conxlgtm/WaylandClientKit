@@ -1,87 +1,9 @@
 import WaylandRaw
 
-struct WindowSoftwarePresentationResult {
-    let outcome: RedrawOutcome
-    let followUp: WindowSoftwarePresentationFollowUp?
-}
-
-struct WindowReservedSoftwareFrame {
-    let reservation: SoftwareFrameReservation
-    let drawingBuffer: RawBuffer.ReservedDrawingBuffer
-}
-
-struct WindowSoftwareFrameReservationResult {
-    let reservedFrame: WindowReservedSoftwareFrame?
-    let followUp: WindowSoftwarePresentationFollowUp?
-}
-
-package enum WindowSoftwareFrameReservationOutcome: Equatable, Sendable {
-    case reserved(SoftwareFrameReservation)
-    case deferred
-    case closed
-}
-
-enum WindowSoftwarePresentationFollowUp {
-    case fail(generation: UInt64, PresentationError)
-    case blockedByBuffer
-    case resetTransientState
-    case succeeded(generation: UInt64)
-}
-
-struct WindowSoftwarePresentationFailure: Error {
-    let presentationError: PresentationError
-    let underlying: any Error
-}
-
-package struct WindowSoftwareDrawFailure: Error {
-    package let underlying: any Error
-
-    package init(underlying drawError: any Error) {
-        underlying = drawError
-    }
-}
-
-package struct WindowPresentationFeedbackCommitRequest {
-    let request: () throws -> SurfacePresentationIdentity
-    let cancel: (SurfacePresentationIdentity) -> Void
-
-    package init(
-        request feedbackRequest: @escaping () throws -> SurfacePresentationIdentity,
-        cancel cancelFeedback: @escaping (SurfacePresentationIdentity) -> Void
-    ) {
-        request = feedbackRequest
-        cancel = cancelFeedback
-    }
-}
-
-package enum WindowSoftwarePresentationCommitSequence {
-    @discardableResult
-    package static func perform(
-        markDrawingBufferBusy: () -> Void,
-        requestFrameCallback: () -> Void,
-        requestPresentationFeedback: () -> SurfacePresentationIdentity?,
-        commit: () -> Void
-    ) -> SurfacePresentationIdentity? {
-        markDrawingBufferBusy()
-        requestFrameCallback()
-        let feedbackIdentity = requestPresentationFeedback()
-        commit()
-        return feedbackIdentity
-    }
-}
-
-struct WindowSoftwarePresentationContext {
-    let request: PresentationRequest
-    let geometry: SurfaceGeometry
-    let submitConstraints: SurfaceSubmitConstraints
-    let metadata: SurfaceCommitMetadata
-    let damage: SurfaceDamageRegion?
-    let presentationFeedback: WindowPresentationFeedbackCommitRequest?
-}
-
 private struct WindowSoftwareCommitContext {
     let preparedCommit: PreparedSurfaceFrameCommit
     let request: PresentationRequest
+    let bufferSize: TopLevelSize
     let presentationFeedback: WindowPresentationFeedbackCommitRequest?
 }
 
@@ -96,6 +18,7 @@ struct WindowSoftwarePresenter {
     func present<RoleResources>(
         context: WindowSoftwarePresentationContext,
         draw: (borrowing SoftwareFrame) throws -> Void,
+        stageSuccess: (RedrawBufferAvailability) throws -> Void = { _ in () },
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
     ) throws -> WindowSoftwarePresentationResult {
@@ -138,8 +61,10 @@ struct WindowSoftwarePresenter {
             context: WindowSoftwareCommitContext(
                 preparedCommit: preparedCommit,
                 request: context.request,
+                bufferSize: context.geometry.bufferSize.rawSize,
                 presentationFeedback: context.presentationFeedback
             ),
+            stageSuccess: stageSuccess,
             runtime: &runtime,
             pendingFrameRegistration: &pendingFrameRegistration,
             drawingBuffer: &drawingBuffer
@@ -202,6 +127,7 @@ struct WindowSoftwarePresenter {
         _ reservedFrame: WindowReservedSoftwareFrame,
         context: WindowSoftwarePresentationContext,
         draw: (borrowing SoftwareFrame) throws -> Void,
+        stageSuccess: (RedrawBufferAvailability) throws -> Void = { _ in () },
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
     ) throws -> WindowSoftwarePresentationResult {
@@ -236,8 +162,10 @@ struct WindowSoftwarePresenter {
             context: WindowSoftwareCommitContext(
                 preparedCommit: preparedCommit,
                 request: context.request,
+                bufferSize: context.geometry.bufferSize.rawSize,
                 presentationFeedback: context.presentationFeedback
             ),
+            stageSuccess: stageSuccess,
             runtime: &runtime,
             pendingFrameRegistration: &pendingFrameRegistration,
             drawingBuffer: reservedFrame.drawingBuffer
@@ -251,6 +179,7 @@ struct WindowSoftwarePresenter {
 
     private func performPreparedCommit<RoleResources>(
         context: WindowSoftwareCommitContext,
+        stageSuccess: (RedrawBufferAvailability) throws -> Void,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?,
         drawingBuffer: inout RawBuffer.DrawingBuffer
@@ -263,27 +192,39 @@ struct WindowSoftwarePresenter {
             throw error
         }
 
-        _ = WindowSoftwarePresentationCommitSequence.perform(
-            markDrawingBufferBusy: {
-                _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
-            },
-            requestFrameCallback: {
-                requestReservedFrameCallback(
-                    pendingFrameRegistration: &pendingFrameRegistration
-                )
-            },
-            requestPresentationFeedback: {
-                requestPresentationFeedbackAtPointOfNoReturn(
-                    context.presentationFeedback
-                )
-            },
-            commit: {
-                SurfaceFrameCommitter.commit(
-                    stagedCommit,
-                    runtime: &runtime,
-                )
-            }
+        let currentBufferAvailability = runtime.redrawBufferAvailability(
+            matching: context.bufferSize
         )
+        do {
+            _ = try WindowSoftwarePresentationCommitSequence.perform(
+                stageSuccess: {
+                    try stageSuccess(currentBufferAvailability)
+                },
+                markDrawingBufferBusy: {
+                    _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
+                },
+                requestFrameCallback: {
+                    requestReservedFrameCallback(
+                        pendingFrameRegistration: &pendingFrameRegistration
+                    )
+                },
+                requestPresentationFeedback: {
+                    requestPresentationFeedbackAtPointOfNoReturn(
+                        context.presentationFeedback
+                    )
+                },
+                commit: {
+                    SurfaceFrameCommitter.commit(
+                        stagedCommit,
+                        runtime: &runtime,
+                    )
+                }
+            )
+        } catch {
+            runtime.cancelFrameCallback()
+            drawingBuffer.discard()
+            throw error
+        }
     }
 
     private func drawFrame(
@@ -459,6 +400,7 @@ struct WindowSoftwarePresenter {
 
     private func performPreparedReservedCommit<RoleResources>(
         context: WindowSoftwareCommitContext,
+        stageSuccess: (RedrawBufferAvailability) throws -> Void,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?,
         drawingBuffer: RawBuffer.ReservedDrawingBuffer
@@ -471,26 +413,38 @@ struct WindowSoftwarePresenter {
             throw error
         }
 
-        _ = WindowSoftwarePresentationCommitSequence.perform(
-            markDrawingBufferBusy: {
-                _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
-            },
-            requestFrameCallback: {
-                requestReservedFrameCallback(
-                    pendingFrameRegistration: &pendingFrameRegistration
-                )
-            },
-            requestPresentationFeedback: {
-                requestPresentationFeedbackAtPointOfNoReturn(
-                    context.presentationFeedback
-                )
-            },
-            commit: {
-                SurfaceFrameCommitter.commit(
-                    stagedCommit,
-                    runtime: &runtime,
-                )
-            }
+        let currentBufferAvailability = runtime.redrawBufferAvailability(
+            matching: context.bufferSize
         )
+        do {
+            _ = try WindowSoftwarePresentationCommitSequence.perform(
+                stageSuccess: {
+                    try stageSuccess(currentBufferAvailability)
+                },
+                markDrawingBufferBusy: {
+                    _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
+                },
+                requestFrameCallback: {
+                    requestReservedFrameCallback(
+                        pendingFrameRegistration: &pendingFrameRegistration
+                    )
+                },
+                requestPresentationFeedback: {
+                    requestPresentationFeedbackAtPointOfNoReturn(
+                        context.presentationFeedback
+                    )
+                },
+                commit: {
+                    SurfaceFrameCommitter.commit(
+                        stagedCommit,
+                        runtime: &runtime,
+                    )
+                }
+            )
+        } catch {
+            runtime.cancelFrameCallback()
+            drawingBuffer.discard()
+            throw error
+        }
     }
 }
