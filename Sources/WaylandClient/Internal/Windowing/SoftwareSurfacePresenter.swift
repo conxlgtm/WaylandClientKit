@@ -5,6 +5,7 @@ private struct SoftwareSurfaceCommitContext {
     let generation: UInt64
     let bufferSize: TopLevelSize
     let presentationFeedback: SurfacePresentationFeedbackCommitRequest?
+    let commitFollowUp: () -> Void
 }
 
 // swiftlint:disable:next type_body_length
@@ -63,7 +64,8 @@ struct SoftwareSurfacePresenter {
                 preparedCommit: preparedCommit,
                 generation: context.generation,
                 bufferSize: context.geometry.bufferSize.rawSize,
-                presentationFeedback: context.presentationFeedback
+                presentationFeedback: context.presentationFeedback,
+                commitFollowUp: context.commitFollowUp
             ),
             stageSuccess: stageSuccess,
             runtime: &runtime,
@@ -165,7 +167,8 @@ struct SoftwareSurfacePresenter {
                 preparedCommit: preparedCommit,
                 generation: context.generation,
                 bufferSize: context.geometry.bufferSize.rawSize,
-                presentationFeedback: context.presentationFeedback
+                presentationFeedback: context.presentationFeedback,
+                commitFollowUp: context.commitFollowUp
             ),
             stageSuccess: stageSuccess,
             runtime: &runtime,
@@ -223,12 +226,13 @@ struct SoftwareSurfacePresenter {
                         context.presentationFeedback
                     )
                 },
-                commit: {
+                commitSurface: {
                     SurfaceFrameCommitter.commit(
                         stagedCommit,
                         runtime: &runtime,
                     )
-                }
+                },
+                commitFollowUp: context.commitFollowUp
             )
         } catch {
             runtime.cancelFrameCallback()
@@ -444,12 +448,13 @@ struct SoftwareSurfacePresenter {
                         context.presentationFeedback
                     )
                 },
-                commit: {
+                commitSurface: {
                     SurfaceFrameCommitter.commit(
                         stagedCommit,
                         runtime: &runtime,
                     )
-                }
+                },
+                commitFollowUp: context.commitFollowUp
             )
         } catch {
             runtime.cancelFrameCallback()

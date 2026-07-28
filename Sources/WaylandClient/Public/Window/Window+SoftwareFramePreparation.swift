@@ -71,12 +71,15 @@ extension Window {
             }
         } catch {
             let submissionError = error
+            let callerError =
+                (submissionError as? SoftwareSurfaceDrawFailure)?.underlying
+                ?? submissionError
             do {
                 try await display.cancelSoftwareFrameReservation(id, reservation: reservation)
             } catch {
-                throw submissionError
+                throw callerError
             }
-            throw submissionError
+            throw callerError
         }
     }
 
@@ -135,12 +138,15 @@ extension Window {
             }
         } catch {
             let submissionError = error
+            let callerError =
+                (submissionError as? SoftwareSurfaceDrawFailure)?.underlying
+                ?? submissionError
             do {
                 try await display.cancelSoftwareFrameReservation(id, reservation: reservation)
             } catch {
-                throw submissionError
+                throw callerError
             }
-            throw submissionError
+            throw callerError
         }
     }
 }

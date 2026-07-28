@@ -13,6 +13,10 @@ extension DisplayCore {
                 subsurface.closeOnOwnerThread()
                 throw ClientError.display(.closed)
             }
+            let managedIdentity = SubsurfaceIdentity(subsurface.id)
+            subsurface.onRedrawRequested = { [weak eventHub] in
+                eventHub?.publish(.redrawRequested(.subsurface(managedIdentity)))
+            }
             registerSubsurface(subsurface)
             try commitSubsurfaceParentStateIfNeeded(
                 SubsurfaceParentCommitPolicy.requirement(
@@ -20,40 +24,82 @@ extension DisplayCore {
                     subsurfaceID: subsurface.id,
                     event: .created
                 ))
+            try subsurface.requestRedrawOnOwnerThread()
             return subsurface.id
         }
     }
 
-    func showSubsurface(
-        _ subsurfaceID: SubsurfaceID,
-        damage: SurfaceDamageRegion?,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
+    func reserveSubsurfaceSoftwareFrameForShow(
+        id subsurfaceID: SubsurfaceID,
+        metadata: SurfaceFrameMetadata
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         try withFatalFailureFinalization {
-            let requirement = try requireOpenSubsurface(subsurfaceID).showOnOwnerThread(
-                damage: damage,
-                draw
-            )
-            try commitSubsurfaceParentStateIfNeeded(requirement)
-            guard !isClosed, let activeSession else { return }
-            publishSessionEvents(activeSession)
+            guard let subsurface = subsurfacesByID[subsurfaceID],
+                !subsurface.isClosedOnOwnerThread,
+                let parentWindow = surfaces.window(subsurface.parentWindowID),
+                !parentWindow.isClosedOnOwnerThread
+            else { return .closed }
+            return try subsurface.reserveSoftwareFrameForShowOnOwnerThread(metadata: metadata)
         }
     }
 
-    func redrawSubsurface(
-        _ subsurfaceID: SubsurfaceID,
-        damage: SurfaceDamageRegion?,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    func reserveSubsurfaceSoftwareFrameForRedraw(
+        id subsurfaceID: SubsurfaceID,
+        metadata: SurfaceFrameMetadata
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
+        try withFatalFailureFinalization {
+            guard let subsurface = subsurfacesByID[subsurfaceID],
+                !subsurface.isClosedOnOwnerThread,
+                let parentWindow = surfaces.window(subsurface.parentWindowID),
+                !parentWindow.isClosedOnOwnerThread
+            else { return .closed }
+            return try subsurface.reserveSoftwareFrameForRedrawOnOwnerThread(metadata: metadata)
+        }
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    func submitReservedSubsurfaceSoftwareFrame<Prepared: Sendable>(
+        id subsurfaceID: SubsurfaceID,
+        reservation: SoftwareFrameReservation,
+        metadata: SurfaceFrameMetadata,
+        requestPresentationFeedback: Bool,
+        prepared: sending Prepared,
+        _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void
+    ) throws -> SoftwarePresentationOutcome {
+        try withFatalFailureFinalization {
+            guard let subsurface = subsurfacesByID[subsurfaceID],
+                !subsurface.isClosedOnOwnerThread,
+                let parentWindow = surfaces.window(subsurface.parentWindowID),
+                !parentWindow.isClosedOnOwnerThread
+            else { return .closed }
+
+            return try subsurface.submitReservedSoftwareFrameOnOwnerThread(
+                reservation: reservation,
+                metadata: metadata,
+                makePresentationFeedback: {
+                    try self.presentationFeedbackCommitRequest(
+                        for: subsurface,
+                        subsurfaceID: subsurfaceID,
+                        isRequested: requestPresentationFeedback
+                    )
+                },
+                commitSynchronizedParent: {
+                    parentWindow.commitSubsurfaceParentStateOnOwnerThread()
+                },
+                { frame in
+                    try draw(prepared, frame)
+                }
+            )
+        }
+    }
+
+    func cancelReservedSubsurfaceSoftwareFrame(
+        id subsurfaceID: SubsurfaceID,
+        reservation: SoftwareFrameReservation
     ) throws {
         try withFatalFailureFinalization {
-            let requirement = try requireOpenSubsurface(subsurfaceID).redrawOnOwnerThread(
-                damage: damage,
-                draw
-            )
-            try commitSubsurfaceParentStateIfNeeded(requirement)
-            guard !isClosed else {
-                throw ClientError.display(.closed)
-            }
+            guard let subsurface = subsurfacesByID[subsurfaceID] else { return }
+            try subsurface.cancelReservedSoftwareFrameOnOwnerThread(reservation: reservation)
         }
     }
 
@@ -136,14 +182,17 @@ extension DisplayCore {
         }
     }
 
-    func closeSubsurface(_ subsurfaceID: SubsurfaceID) {
+    func closeSubsurface(
+        _ subsurfaceID: SubsurfaceID,
+        parentWindowClosed: Bool = false
+    ) {
         withFatalFailureFinalization {
             guard !hasPendingFatalFailure else { return }
             guard let subsurface = subsurfacesByID.removeValue(forKey: subsurfaceID)
             else {
                 return
             }
-            subsurface.closeOnOwnerThread()
+            subsurface.closeOnOwnerThread(parentWindowClosed: parentWindowClosed)
             closedSubsurfaceIDs.insert(subsurfaceID)
             let parentWindowID = subsurfaceParentWindowIDs.removeValue(forKey: subsurfaceID)
             if let parentWindowID {

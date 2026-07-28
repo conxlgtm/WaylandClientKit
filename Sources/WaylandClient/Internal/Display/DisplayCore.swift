@@ -320,7 +320,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
                 closeKeyboardShortcutsInhibitor(inhibitorID)
             }
             for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
-                closeSubsurface(subsurfaceID)
+                closeSubsurface(subsurfaceID, parentWindowClosed: true)
             }
             for popupID in popupIDsTopDown(parentedBy: windowID) {
                 closePopup(popupID)
@@ -488,7 +488,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             closeKeyboardShortcutsInhibitor(inhibitorID)
         }
         for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
-            closeSubsurface(subsurfaceID)
+            closeSubsurface(subsurfaceID, parentWindowClosed: true)
         }
         for popupID in popupIDsTopDown(parentedBy: windowID) {
             closePopup(popupID)

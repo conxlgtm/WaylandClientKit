@@ -64,25 +64,43 @@ extension DisplayCore {
 
         let session = try requireSession()
         let presentation = try session.presentationOnOwnerThread()
-        return SurfacePresentationFeedbackCommitRequest(
-            request: {
-                try popup.requestPresentationFeedbackOnOwnerThread(
-                    presentation: presentation,
-                    outputIDForPresentationSyncOutput: { output in
-                        try session.outputIDForPresentationSyncOutput(output)
-                    },
-                    onFeedback: { [weak self] feedback in
-                        self?.eventHub.publishPresentation(
-                            ManagedSurfacePresentationEvent(
-                                surface: .popup(PopupSurfaceIdentity(popupID)),
-                                feedback: feedback
-                            )
-                        )
-                    }
-                )
+        return try popup.presentationFeedbackCommitRequestOnOwnerThread(
+            presentation: presentation,
+            outputIDForPresentationSyncOutput: { output in
+                try session.outputIDForPresentationSyncOutput(output)
             },
-            cancel: { identity in
-                popup.cancelPresentationFeedbackOnOwnerThread(identity)
+            onFeedback: { [weak self] feedback in
+                self?.eventHub.publishPresentation(
+                    ManagedSurfacePresentationEvent(
+                        surface: .popup(PopupSurfaceIdentity(popupID)),
+                        feedback: feedback
+                    )
+                )
+            }
+        )
+    }
+
+    func presentationFeedbackCommitRequest(
+        for subsurface: SubsurfaceRoleSurface,
+        subsurfaceID: SubsurfaceID,
+        isRequested: Bool
+    ) throws -> SurfacePresentationFeedbackCommitRequest? {
+        guard isRequested else { return nil }
+
+        let session = try requireSession()
+        let presentation = try session.presentationOnOwnerThread()
+        return try subsurface.presentationFeedbackCommitRequestOnOwnerThread(
+            presentation: presentation,
+            outputIDForPresentationSyncOutput: { output in
+                try session.outputIDForPresentationSyncOutput(output)
+            },
+            onFeedback: { [weak self] feedback in
+                self?.eventHub.publishPresentation(
+                    ManagedSurfacePresentationEvent(
+                        surface: .subsurface(SubsurfaceIdentity(subsurfaceID)),
+                        feedback: feedback
+                    )
+                )
             }
         )
     }

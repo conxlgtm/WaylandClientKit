@@ -222,8 +222,8 @@
                     }
                 )
                 Issue.record("expected draw failure")
-            } catch let failure as SoftwareSurfaceDrawFailure {
-                #expect(failure.underlying is InjectedSoftwareDrawFailure)
+            } catch is InjectedSoftwareDrawFailure {
+                // The original draw error must remain observable.
             }
         }
     }

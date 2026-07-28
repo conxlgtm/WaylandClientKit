@@ -24,6 +24,32 @@ extension WaylandDisplayPublicIntegrationTests {
     }
 
     @Test
+    func closingPopupParentDuringPreparationReturnsClosedWithoutDrawing() async throws {
+        try await withPublicConnection { display in
+            let window = try await display.createTopLevelWindow(
+                configuration: testWindowConfiguration()
+            )
+            try await show(window, color: 0x0011_2233)
+            let popup = try await window.createPopup(configuration: testPopupConfiguration())
+            let gate = AsyncSoftwarePreparationGate()
+
+            async let outcome = popup.show(
+                timeoutMilliseconds: publicIntegrationTimeoutMilliseconds,
+                preparing: { reservation in
+                    await gate.suspendPreparation()
+                    return reservation.id
+                },
+                { _, _ in throw UnexpectedStaleSoftwareDraw() }
+            )
+            await gate.waitUntilSuspended()
+            await window.close()
+            await gate.resumePreparation()
+
+            #expect(try await outcome == .closed)
+        }
+    }
+
+    @Test
     func closingDisplayDuringAsyncSoftwarePreparationReturnsClosedWithoutDrawing() async throws {
         try await withPublicConnection { display in
             try await exerciseDisplayCloseDuringSoftwarePreparation(on: display)

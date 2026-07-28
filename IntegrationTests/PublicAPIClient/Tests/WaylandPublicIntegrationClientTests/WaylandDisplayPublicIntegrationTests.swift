@@ -151,7 +151,7 @@ func testWindowConfiguration() throws -> WindowConfiguration {
     )
 }
 
-private func testPopupConfiguration() throws -> PopupConfiguration {
+func testPopupConfiguration() throws -> PopupConfiguration {
     let anchorRect = try LogicalRect(x: 0, y: 0, width: 32, height: 32)
     let popupSize = try PositiveLogicalSize(width: 64, height: 48)
 

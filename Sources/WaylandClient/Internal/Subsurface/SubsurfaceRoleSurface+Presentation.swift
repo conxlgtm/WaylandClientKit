@@ -1,18 +1,22 @@
 import WaylandRaw
 
-struct StagedPopupPresentationSuccess {
-    let model: PopupModel
+struct PendingSubsurfaceSoftwareFrameReservation {
+    let request: SubsurfacePresentationRequest
+    let reservedFrame: ReservedSoftwareSurfaceFrame
+}
+
+struct StagedSubsurfacePresentationSuccess {
+    let model: SubsurfaceModel
     let publishesRedrawRequest: Bool
 }
 
-struct PopupPresentationSuccessStagingContext {
-    let model: PopupModel
-    let parentWindowID: WindowID
+struct SubsurfacePresentationSuccessStagingContext {
+    let model: SubsurfaceModel
 
     func stage(
         generation: UInt64,
         bufferAvailability: RedrawBufferAvailability
-    ) throws -> StagedPopupPresentationSuccess {
+    ) throws -> StagedSubsurfacePresentationSuccess {
         var stagedModel = model
         let effects = try stagedModel.reduce(
             .presentationSucceeded(
@@ -20,112 +24,80 @@ struct PopupPresentationSuccessStagingContext {
                 bufferAvailability: bufferAvailability
             )
         )
-        let expectedEvent = PopupLifecycleEvent(
-            popup: stagedModel.id,
-            parentWindowID: parentWindowID
-        )
         var publishesRedrawRequest = false
         for effect in effects {
-            guard case .publishRedrawRequested(let event) = effect,
-                event == expectedEvent,
-                !publishesRedrawRequest
-            else {
-                throw ClientError.window(
-                    parentWindowID,
-                    .invalidLifecycleTransition(
-                        .invalidTransition(
-                            from: "popup presentation success staging",
-                            event: "unexpected effect \(effect)"
-                        )
-                    )
-                )
+            switch effect {
+            case .publishRedrawRequested:
+                publishesRedrawRequest = true
+            case .performSoftwarePresent, .cancelFrameCallback, .retireSwapchain,
+                .destroyRoleObjects:
+                preconditionFailure("Subsurface success staged an irreversible effect")
             }
-            publishesRedrawRequest = true
         }
-        return StagedPopupPresentationSuccess(
+        return StagedSubsurfacePresentationSuccess(
             model: stagedModel,
             publishesRedrawRequest: publishesRedrawRequest
         )
     }
 }
 
-struct PendingPopupSoftwareFrameReservation {
-    let request: PopupPresentationRequest
-    let geometry: SurfaceGeometry
-    let reservedFrame: ReservedSoftwareSurfaceFrame
-}
-
-extension PopupRoleSurface {
+extension SubsurfaceRoleSurface {
     package func reserveSoftwareFrameForShowOnOwnerThread(
-        timeoutMilliseconds: Int32,
         metadata: SurfaceFrameMetadata
     ) throws -> SoftwareSurfaceFrameReservationOutcome {
         connection.preconditionIsOwnerThread()
-        guard !model.isClosed else { return .closed }
-        try validateSurfaceFrameMetadataSupport(metadata)
-        _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
-        return try reserveSoftwareFrameForCurrentRedraw(metadata: metadata)
+        return try reserveSoftwareFrame(metadata: metadata)
     }
 
     package func reserveSoftwareFrameForRedrawOnOwnerThread(
         metadata: SurfaceFrameMetadata
     ) throws -> SoftwareSurfaceFrameReservationOutcome {
         connection.preconditionIsOwnerThread()
-        guard !model.isClosed else { return .closed }
-        try validateSurfaceFrameMetadataSupport(metadata)
-        _ = try consumeLatestConfigureIfAvailable()
-        return try reserveSoftwareFrameForCurrentRedraw(metadata: metadata)
+        return try reserveSoftwareFrame(metadata: metadata)
     }
 
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     package func submitReservedSoftwareFrameOnOwnerThread(
-        _ reservation: SoftwareFrameReservation,
+        reservation: SoftwareFrameReservation,
         metadata: SurfaceFrameMetadata,
         makePresentationFeedback: () throws -> SurfacePresentationFeedbackCommitRequest?,
+        commitSynchronizedParent: @escaping () -> Void,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> SoftwarePresentationOutcome {
         connection.preconditionIsOwnerThread()
 
-        guard !model.isClosed else { return .closed }
+        guard model.lifecycle == .active else { return .closed }
         guard let pendingReservation = softwarePresentationCoordinator.take(reservation) else {
-            return model.isClosed ? .closed : .superseded
-        }
-
-        let request = pendingReservation.request
-        do {
-            _ = try consumeLatestConfigureIfAvailable()
-        } catch {
-            pendingReservation.reservedFrame.drawingBuffer.discard()
-            failSoftwarePresentationIfStillActive(generation: request.generation)
-            throw error
-        }
-
-        guard !model.isClosed else {
-            pendingReservation.reservedFrame.drawingBuffer.discard()
             return .closed
         }
 
-        let currentGeometry = try currentGeometry()
-        guard
-            !Task.isCancelled,
-            model.isCurrentSoftwarePresentation(request),
-            currentGeometry == pendingReservation.geometry
+        let request = pendingReservation.request
+        let geometry = try currentGeometry()
+        guard !Task.isCancelled,
+            model.isCurrentSoftwarePresentation(request, geometry: geometry)
         else {
             pendingReservation.reservedFrame.drawingBuffer.discard()
+            if model.lifecycle == .closed { return .closed }
             supersedeSoftwarePresentationIfStillActive(generation: request.generation)
             return .superseded
         }
 
-        let presentationFeedback: SurfacePresentationFeedbackCommitRequest?
         do {
             try validateSurfaceFrameMetadataSupport(metadata)
-            try metadata.damage?.validate(within: currentGeometry)
             try SurfaceMetadataSupport.ensureObjectsInstalled(
                 for: metadata.surfaceCommitMetadata,
                 connection: connection,
                 surface: surface,
                 runtime: &surfaceRuntime
             )
+        } catch {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            failSoftwarePresentationIfStillActive(generation: request.generation)
+            throw error
+        }
+
+        let presentationFeedback: SurfacePresentationFeedbackCommitRequest?
+        do {
             presentationFeedback = try makePresentationFeedback()
         } catch {
             pendingReservation.reservedFrame.drawingBuffer.discard()
@@ -133,28 +105,33 @@ extension PopupRoleSurface {
             throw error
         }
 
-        let successStagingContext = PopupPresentationSuccessStagingContext(
-            model: model,
-            parentWindowID: parentWindowID
-        )
-        var stagedSuccess: StagedPopupPresentationSuccess?
+        let successStagingContext = SubsurfacePresentationSuccessStagingContext(model: model)
+        var stagedSuccess: StagedSubsurfacePresentationSuccess?
+        let commitFollowUp: () -> Void =
+            request.synchronizationMode == .synchronized
+            ? commitSynchronizedParent
+            : {
+                // Desynchronized child has no parent commit.
+            }
+
         let result: SoftwareSurfacePresentationResult
         do {
             result = try softwarePresenter().presentReserved(
                 pendingReservation.reservedFrame,
                 context: SoftwareSurfacePresentationContext(
                     generation: request.generation,
-                    geometry: currentGeometry,
+                    geometry: request.geometry,
                     submitConstraints: .default,
                     metadata: metadata.surfaceCommitMetadata,
                     damage: metadata.damage,
-                    presentationFeedback: presentationFeedback
+                    presentationFeedback: presentationFeedback,
+                    commitFollowUp: commitFollowUp
                 ),
                 draw: draw,
-                stageSuccess: { currentBufferAvailability in
+                stageSuccess: { availability in
                     stagedSuccess = try successStagingContext.stage(
                         generation: request.generation,
-                        bufferAvailability: currentBufferAvailability
+                        bufferAvailability: availability
                     )
                 },
                 runtime: &surfaceRuntime,
@@ -164,14 +141,13 @@ extension PopupRoleSurface {
             failSoftwarePresentationIfStillActive(generation: request.generation)
             throw failure.underlying
         } catch {
-            pendingReservation.reservedFrame.drawingBuffer.discard()
             failSoftwarePresentationIfStillActive(generation: request.generation)
             throw error
         }
 
         if result.outcome == .presented {
             guard let stagedSuccess else {
-                preconditionFailure("Popup presentation committed without staged success")
+                preconditionFailure("Subsurface presentation committed without staged success")
             }
             model = stagedSuccess.model
             if stagedSuccess.publishesRedrawRequest {
@@ -181,17 +157,16 @@ extension PopupRoleSurface {
         }
 
         try interpretSoftwarePresentationFollowUp(result.followUp)
-        return softwarePresentationOutcome(for: result.outcome)
+        return mapPresentationOutcome(result.outcome)
     }
 
     package func cancelReservedSoftwareFrameOnOwnerThread(
-        _ reservation: SoftwareFrameReservation
-    ) {
+        reservation: SoftwareFrameReservation
+    ) throws {
         connection.preconditionIsOwnerThread()
         guard let pendingReservation = softwarePresentationCoordinator.cancel(reservation) else {
             return
         }
-        pendingReservation.reservedFrame.drawingBuffer.discard()
         supersedeSoftwarePresentationIfStillActive(
             generation: pendingReservation.request.generation
         )
@@ -203,12 +178,12 @@ extension PopupRoleSurface {
         onFeedback: @escaping (SurfacePresentationFeedback) -> Void
     ) throws -> SurfacePresentationFeedbackCommitRequest {
         connection.preconditionIsOwnerThread()
-        guard !model.isClosed else { throw ClientError.display(.unknownPopup) }
+        guard model.lifecycle == .active else { throw ClientError.display(.closedSubsurface) }
 
         let feedbackSurface = surface
         let coordinator = presentationFeedbackCoordinator
-        let onFailure: (any Error) -> Void = { [weak self] error in
-            self?.reportCallbackFailure(operation: .presentationFeedback, error: error)
+        let onFailure: (any Error) -> Void = { [weak self] _ in
+            self?.surfaceRuntime.resetTransientTransactionState()
         }
         return SurfacePresentationFeedbackCommitRequest(
             request: {
@@ -228,95 +203,89 @@ extension PopupRoleSurface {
 
     package func requestPresentationFeedbackOnOwnerThread(
         presentation: RawPresentation,
-        outputIDForPresentationSyncOutput:
-            @escaping (RawOutputPointerIdentity) throws -> OutputID?,
+        outputIDForPresentationSyncOutput: @escaping (RawOutputPointerIdentity) throws -> OutputID?,
         onFeedback: @escaping (SurfacePresentationFeedback) -> Void
     ) throws -> SurfacePresentationIdentity {
         connection.preconditionIsOwnerThread()
-        guard !model.isClosed else {
-            throw ClientError.display(.unknownPopup)
-        }
+        guard model.lifecycle == .active else { throw ClientError.display(.closedSubsurface) }
 
         return try presentationFeedbackCoordinator.request(
             presentation: presentation,
             surface: surface,
             outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
             onFeedback: onFeedback
-        ) { [weak self] error in
-            self?.reportCallbackFailure(operation: .presentationFeedback, error: error)
+        ) { [weak self] _ in
+            self?.surfaceRuntime.resetTransientTransactionState()
         }
     }
 
-    package func cancelPresentationFeedbackOnOwnerThread(
-        _ identity: SurfacePresentationIdentity
-    ) {
+    package func cancelPresentationFeedbackOnOwnerThread(_ identity: SurfacePresentationIdentity) {
         connection.preconditionIsOwnerThread()
         presentationFeedbackCoordinator.cancel(identity)
     }
+}
 
-    private func reserveSoftwareFrameForCurrentRedraw(
+extension SubsurfaceRoleSurface {
+    private func reserveSoftwareFrame(
         metadata: SurfaceFrameMetadata
     ) throws -> SoftwareSurfaceFrameReservationOutcome {
+        guard model.lifecycle == .active else { return .closed }
+        try validateSurfaceFrameMetadataSupport(metadata)
         try SurfaceMetadataSupport.ensureObjectsInstalled(
             for: metadata.surfaceCommitMetadata,
             connection: connection,
             surface: surface,
             runtime: &surfaceRuntime
         )
-        let currentBufferAvailability = try redrawBufferAvailability()
-        var presentationRequest: PopupPresentationRequest?
-        try interpretPopupEffects(
-            model.reduce(
-                .redrawRequestConsumed(bufferAvailability: currentBufferAvailability)
-            )
-        ) { request in
-            presentationRequest = request
-            return .presented
-        }
-
-        guard let request = presentationRequest else {
-            return model.isClosed ? .closed : .deferred
-        }
-
-        try interpretPopupEffects(model.reduce(.presentationStarted(request)))
         let geometry = try currentGeometry()
         try metadata.damage?.validate(within: geometry)
 
+        var presentationRequest: SubsurfacePresentationRequest?
+        try interpretSubsurfaceEffects(
+            model.reduce(
+                .redrawRequestConsumed(
+                    geometry: geometry,
+                    bufferAvailability: try redrawBufferAvailability()
+                )
+            )
+        ) { request in
+            presentationRequest = request
+        }
+
+        guard let request = presentationRequest else {
+            return model.lifecycle == .closed ? .closed : .deferred
+        }
+
         do {
-            let reservationID = softwarePresentationCoordinator.allocateIdentity()
+            _ = try model.reduce(.presentationStarted(request))
             let reservationResult = try softwarePresenter().reserve(
                 context: SoftwareSurfacePresentationContext(
                     generation: request.generation,
-                    geometry: geometry,
+                    geometry: request.geometry,
                     submitConstraints: .default,
                     metadata: metadata.surfaceCommitMetadata,
                     damage: metadata.damage,
                     presentationFeedback: nil
                 ),
-                reservationID: reservationID,
+                reservationID: softwarePresentationCoordinator.allocateIdentity(),
                 runtime: &surfaceRuntime,
                 hasPendingFrameRegistration: pendingFrameRegistration != nil
             )
+            try interpretSoftwarePresentationFollowUp(reservationResult.followUp)
 
-            if let followUp = reservationResult.followUp {
-                try interpretSoftwarePresentationFollowUp(followUp)
-            }
             guard let reservedFrame = reservationResult.reservedFrame else {
-                return model.isClosed ? .closed : .deferred
+                return model.lifecycle == .closed ? .closed : .deferred
             }
 
+            let pendingReservation = PendingSubsurfaceSoftwareFrameReservation(
+                request: request,
+                reservedFrame: reservedFrame
+            )
             softwarePresentationCoordinator.register(
-                PendingPopupSoftwareFrameReservation(
-                    request: request,
-                    geometry: geometry,
-                    reservedFrame: reservedFrame
-                ),
+                pendingReservation,
                 for: reservedFrame.reservation.reservationID
             )
             return .reserved(reservedFrame.reservation)
-        } catch let failure as SoftwareSurfacePresentationFailure {
-            failSoftwarePresentationIfStillActive(generation: request.generation)
-            throw failure.underlying
         } catch {
             failSoftwarePresentationIfStillActive(generation: request.generation)
             throw error
@@ -326,7 +295,7 @@ extension PopupRoleSurface {
     private func softwarePresenter() -> SoftwareSurfacePresenter {
         SoftwareSurfacePresenter(
             surface: surface,
-            scaleInstallation: scaleInstallation,
+            scaleInstallation: surfaceRuntime.scaleInstallation,
             createSharedMemoryPool: { [self] bufferSize in
                 guard let globals = connection.boundGlobals else {
                     throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
@@ -339,36 +308,34 @@ extension PopupRoleSurface {
                     self?.handleBufferReleased()
                 }
             },
-            isSurfaceClosed: { [weak self] in self?.model.isClosed ?? true },
-            onFrame: { [weak self] in self?.handleFrameDone() }
+            isSurfaceClosed: { [self] in model.lifecycle == .closed },
+            onFrame: { [weak self] in
+                self?.handleFrameDone()
+            }
         )
     }
 
-    private func currentGeometry() throws -> SurfaceGeometry {
-        try currentSurfaceGeometry()
+    func redrawBufferAvailability() throws -> RedrawBufferAvailability {
+        let geometry = try currentGeometry()
+        return surfaceRuntime.redrawBufferAvailability(matching: geometry.bufferSize.rawSize)
     }
 
     private func interpretSoftwarePresentationFollowUp(
         _ followUp: SoftwareSurfacePresentationFollowUp?
     ) throws {
         guard let followUp else { return }
-
         switch followUp {
         case .fail(let generation, _):
             failSoftwarePresentationIfStillActive(generation: generation)
         case .blockedByBuffer:
-            try interpretPopupEffects(model.reduce(.presentationBlockedByBuffer))
+            try interpretSubsurfaceEffects(model.reduce(.presentationBlockedByBuffer))
         case .resetTransientState:
-            guard case .drawing(let request) = model.presentation else { return }
-            supersedeSoftwarePresentationIfStillActive(generation: request.generation)
+            if case .drawing(let request) = model.presentation {
+                failSoftwarePresentationIfStillActive(generation: request.generation)
+            }
         case .succeeded:
-            preconditionFailure(
-                "Popup software-presentation success must be installed from staging")
+            preconditionFailure("Subsurface success must be installed from staged state")
         }
-    }
-
-    private func failSoftwarePresentationIfStillActive(generation: UInt64) {
-        supersedeSoftwarePresentationIfStillActive(generation: generation)
     }
 
     private func supersedeSoftwarePresentationIfStillActive(generation: UInt64) {
@@ -377,7 +344,7 @@ extension PopupRoleSurface {
         else { return }
 
         do {
-            try interpretPopupEffects(
+            try interpretSubsurfaceEffects(
                 model.reduce(
                     .softwarePresentationSuperseded(
                         generation: generation,
@@ -386,20 +353,24 @@ extension PopupRoleSurface {
                 )
             )
         } catch {
-            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+            surfaceRuntime.resetTransientTransactionState()
         }
     }
 
-    private func softwarePresentationOutcome(
-        for outcome: RedrawOutcome
+    private func failSoftwarePresentationIfStillActive(generation: UInt64) {
+        supersedeSoftwarePresentationIfStillActive(generation: generation)
+    }
+
+    private func mapPresentationOutcome(
+        _ outcome: RedrawOutcome
     ) -> SoftwarePresentationOutcome {
         switch outcome {
         case .presented:
-            return .presented
+            .presented
+        case .waitingForBuffer, .skippedPendingFrame:
+            .deferred
         case .skippedClosed:
-            return .closed
-        case .skippedPendingFrame, .waitingForBuffer:
-            return .deferred
+            .closed
         }
     }
 

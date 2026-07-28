@@ -29,8 +29,11 @@
                     events.append(.presentationFeedback(operation))
                     return identity
                 },
-                commit: {
-                    events.append(.commit(operation))
+                commitSurface: {
+                    events.append(.commitSurface(operation))
+                },
+                commitFollowUp: {
+                    events.append(.commitFollowUp(operation))
                 }
             )
 
@@ -41,7 +44,8 @@
                     .markDrawingBufferBusy,
                     .frameCallback,
                     .presentationFeedback(operation),
-                    .commit(operation),
+                    .commitSurface(operation),
+                    .commitFollowUp(operation),
                 ]
             )
         }
@@ -66,8 +70,11 @@
                         events.append(.presentationFeedback(.redraw))
                         return nil
                     },
-                    commit: {
-                        events.append(.commit(.redraw))
+                    commitSurface: {
+                        events.append(.commitSurface(.redraw))
+                    },
+                    commitFollowUp: {
+                        events.append(.commitFollowUp(.redraw))
                     }
                 )
                 Issue.record("expected success staging failure")
@@ -440,7 +447,8 @@
         case markDrawingBufferBusy
         case frameCallback
         case presentationFeedback(ManagedPresentationOperation)
-        case commit(ManagedPresentationOperation)
+        case commitSurface(ManagedPresentationOperation)
+        case commitFollowUp(ManagedPresentationOperation)
     }
 
     private struct InjectedDrawFailure: Error {}

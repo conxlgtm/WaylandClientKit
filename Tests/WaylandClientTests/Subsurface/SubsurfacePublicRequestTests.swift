@@ -38,8 +38,12 @@
                 let probe = try await installParentCommitProbe(in: display, for: window)
                 probe.reset()
 
-                try await subsurface.show(drawSolid)
+                let outcome = try await subsurface.show(
+                    requestPresentationFeedback: true,
+                    drawSolid
+                )
 
+                #expect(outcome == .presented)
                 #expect(probe.count == 1)
                 await subsurface.close()
             }
@@ -54,9 +58,39 @@
                 let probe = try await installParentCommitProbe(in: display, for: window)
                 probe.reset()
 
-                try await subsurface.show(drawSolid)
+                let outcome = try await subsurface.show(drawSolid)
 
+                #expect(outcome == .presented)
                 #expect(probe.isEmpty)
+                await subsurface.close()
+            }
+        }
+
+        @Test
+        func synchronizationModeChangeDuringPreparationSupersedesWithoutParentCommit() async throws
+        {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration(synchronizationMode: .synchronized)
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+                let gate = SubsurfacePreparationGate()
+
+                async let staleOutcome = subsurface.show(
+                    preparing: { reservation in
+                        await gate.suspendPreparation()
+                        return reservation.id
+                    },
+                    { _, _ in throw UnexpectedSubsurfaceDraw() }
+                )
+                await gate.waitUntilSuspended()
+                try await subsurface.setDesynchronized()
+                await gate.resumePreparation()
+
+                #expect(try await staleOutcome == .superseded)
+                #expect(probe.isEmpty)
+                #expect(try await subsurface.needsRedraw)
                 await subsurface.close()
             }
         }
@@ -380,6 +414,34 @@
             countStorage = 0
         }
     }
+
+    private actor SubsurfacePreparationGate {
+        private var isSuspended = false
+        private var suspensionWaiters: [CheckedContinuation<Void, Never>] = []
+        private var resumeContinuation: CheckedContinuation<Void, Never>?
+
+        func suspendPreparation() async {
+            isSuspended = true
+            let waiters = suspensionWaiters
+            suspensionWaiters.removeAll()
+            for waiter in waiters {
+                waiter.resume()
+            }
+            await withCheckedContinuation { resumeContinuation = $0 }
+        }
+
+        func waitUntilSuspended() async {
+            guard !isSuspended else { return }
+            await withCheckedContinuation { suspensionWaiters.append($0) }
+        }
+
+        func resumePreparation() {
+            resumeContinuation?.resume()
+            resumeContinuation = nil
+        }
+    }
+
+    private struct UnexpectedSubsurfaceDraw: Error {}
 
     private enum SubsurfaceRequestTestEnvironment {
         static var isEnabled: Bool {

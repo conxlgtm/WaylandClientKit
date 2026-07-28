@@ -1,8 +1,6 @@
-// swiftlint:disable file_length
-
 import WaylandRaw
 
-private struct SubsurfaceRoleResources {
+struct SubsurfaceRoleResources {
     let surface: RawSurface
     let subsurface: RawSubsurface
 
@@ -16,14 +14,19 @@ package final class SubsurfaceRoleSurface {
     package let id: SubsurfaceID
     package let parentWindowID: WindowID
 
-    private let connection: RawDisplayConnection
-    private let bufferCount: PositiveInt
-    private var size: PositiveLogicalSize
-    private var synchronizationMode: SubsurfaceSynchronizationMode
-    private var isClosed = false
-    private var needsRedrawStorage = true
-    private var surfaceRuntime: SurfaceRuntime<SubsurfaceRoleResources>
-    private var pendingFrameRegistration: FrameCallbackRegistration?
+    let connection: RawDisplayConnection
+    let bufferCount: PositiveInt
+    var size: PositiveLogicalSize
+    var model: SubsurfaceModel
+    let softwarePresentationCoordinator =
+        SoftwareSurfaceReservationCoordinator<PendingSubsurfaceSoftwareFrameReservation>(
+            reservation: { $0.reservedFrame.reservation },
+            retire: { $0.reservedFrame.drawingBuffer.discard() }
+        )
+    let presentationFeedbackCoordinator = SurfacePresentationFeedbackCoordinator()
+    var surfaceRuntime: SurfaceRuntime<SubsurfaceRoleResources>
+    var pendingFrameRegistration: FrameCallbackRegistration?
+    var onRedrawRequested: (() -> Void)?
     private var onOutputMembershipChanged: (([OutputID]) -> Void)?
 
     package init(
@@ -37,7 +40,9 @@ package final class SubsurfaceRoleSurface {
         connection = rawConnection
         bufferCount = subsurfaceConfiguration.bufferCount
         size = subsurfaceConfiguration.size
-        synchronizationMode = subsurfaceConfiguration.synchronizationMode
+        model = SubsurfaceModel(
+            synchronizationMode: subsurfaceConfiguration.synchronizationMode
+        )
 
         let globals = try rawConnection.bindRequiredGlobals()
         let rawObjects = try rawConnection.createManagedSubsurface(
@@ -72,17 +77,17 @@ package final class SubsurfaceRoleSurface {
     }
 
     deinit {
-        close()
+        closeOnOwnerThread()
     }
 
     package var isClosedOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
-        return isClosed
+        return model.lifecycle == .closed
     }
 
     package var needsRedrawOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
-        return needsRedrawStorage
+        return model.redraw.isDirty
     }
 
     package var geometryOnOwnerThread: SurfaceGeometry {
@@ -92,26 +97,14 @@ package final class SubsurfaceRoleSurface {
         }
     }
 
-    package func showOnOwnerThread(
-        damage: SurfaceDamageRegion?,
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws -> SubsurfaceParentCommitRequirement? {
+    package func requestRedrawOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
-        return try present(damage: damage, draw)
-    }
-
-    package func redrawOnOwnerThread(
-        damage: SurfaceDamageRegion?,
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws -> SubsurfaceParentCommitRequirement? {
-        connection.preconditionIsOwnerThread()
-        return try present(damage: damage, draw)
-    }
-
-    package func requestRedrawOnOwnerThread() {
-        connection.preconditionIsOwnerThread()
-        guard !isClosed else { return }
-        needsRedrawStorage = true
+        guard model.lifecycle == .active else { return }
+        try interpretSubsurfaceEffects(
+            model.reduce(
+                .contentInvalidated(bufferAvailability: try redrawBufferAvailability())
+            )
+        )
     }
 
     package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws
@@ -136,7 +129,7 @@ package final class SubsurfaceRoleSurface {
         -> SubsurfaceParentCommitRequirement?
     {
         connection.preconditionIsOwnerThread()
-        guard !isClosed else { return nil }
+        guard model.lifecycle == .active else { return nil }
         subsurface.setPosition(x: newPosition.x, y: newPosition.y)
         return parentCommitRequirement(reason: .positionChanged)
     }
@@ -146,8 +139,10 @@ package final class SubsurfaceRoleSurface {
     {
         connection.preconditionIsOwnerThread()
         try requireValidStackingSibling(sibling)
-        guard !isClosed else { throw ClientError.display(.closedSubsurface) }
-        guard !sibling.isClosed else { throw ClientError.display(.closedSubsurface) }
+        guard model.lifecycle == .active else { throw ClientError.display(.closedSubsurface) }
+        guard sibling.model.lifecycle == .active else {
+            throw ClientError.display(.closedSubsurface)
+        }
         subsurface.placeAbove(sibling.surface)
         return parentCommitRequirement(reason: .stackingChanged)
     }
@@ -157,31 +152,55 @@ package final class SubsurfaceRoleSurface {
     {
         connection.preconditionIsOwnerThread()
         try requireValidStackingSibling(sibling)
-        guard !isClosed else { throw ClientError.display(.closedSubsurface) }
-        guard !sibling.isClosed else { throw ClientError.display(.closedSubsurface) }
+        guard model.lifecycle == .active else { throw ClientError.display(.closedSubsurface) }
+        guard sibling.model.lifecycle == .active else {
+            throw ClientError.display(.closedSubsurface)
+        }
         subsurface.placeBelow(sibling.surface)
         return parentCommitRequirement(reason: .stackingChanged)
     }
 
-    package func setSynchronizedOnOwnerThread() -> SubsurfaceParentCommitRequirement? {
+    package func setSynchronizedOnOwnerThread() throws -> SubsurfaceParentCommitRequirement? {
         connection.preconditionIsOwnerThread()
-        guard !isClosed else { return nil }
-        synchronizationMode = .synchronized
+        guard model.lifecycle == .active else { return nil }
+        let bufferAvailability = try redrawBufferAvailability()
         subsurface.setSynchronized()
+        try interpretSubsurfaceEffects(
+            model.reduce(
+                .synchronizationModeChanged(
+                    .synchronized,
+                    bufferAvailability: bufferAvailability
+                )
+            )
+        )
         return nil
     }
 
-    package func setDesynchronizedOnOwnerThread() -> SubsurfaceParentCommitRequirement? {
+    package func setDesynchronizedOnOwnerThread() throws -> SubsurfaceParentCommitRequirement? {
         connection.preconditionIsOwnerThread()
-        guard !isClosed else { return nil }
-        synchronizationMode = .desynchronized
+        guard model.lifecycle == .active else { return nil }
+        let bufferAvailability = try redrawBufferAvailability()
         subsurface.setDesynchronized()
+        try interpretSubsurfaceEffects(
+            model.reduce(
+                .synchronizationModeChanged(
+                    .desynchronized,
+                    bufferAvailability: bufferAvailability
+                )
+            )
+        )
         return nil
     }
 
-    package func closeOnOwnerThread() {
+    package func closeOnOwnerThread(parentWindowClosed: Bool = false) {
         connection.preconditionIsOwnerThread()
-        close()
+        do {
+            try interpretSubsurfaceEffects(
+                model.reduce(parentWindowClosed ? .parentWindowClosed : .explicitClose)
+            )
+        } catch {
+            assertionFailure("subsurface close transition failed: \(error)")
+        }
     }
 }
 
@@ -196,7 +215,7 @@ extension SubsurfaceRoleSurface {
         set { surfaceRuntime.scaleInstallation = newValue }
     }
 
-    private var surface: RawSurface {
+    var surface: RawSurface {
         guard let surface = roleResources?.surface else {
             preconditionFailure("Subsurface surface used after destruction")
         }
@@ -257,7 +276,6 @@ extension SubsurfaceRoleSurface {
     }
 
     private func applySynchronizationMode(_ mode: SubsurfaceSynchronizationMode) {
-        synchronizationMode = mode
         switch mode {
         case .synchronized:
             subsurface.setSynchronized()
@@ -270,7 +288,7 @@ extension SubsurfaceRoleSurface {
         _ region: SurfaceRegion?,
         setRegion: (RawSurface, RawRegion?) -> Void
     ) throws -> SubsurfaceParentCommitRequirement? {
-        guard !isClosed else { return nil }
+        guard model.lifecycle == .active else { return nil }
         guard let globals = connection.boundGlobals else {
             throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
         }
@@ -285,105 +303,7 @@ extension SubsurfaceRoleSurface {
         return synchronizedStateCommitRequirement()
     }
 
-    private func present(
-        damage: SurfaceDamageRegion?,
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws -> SubsurfaceParentCommitRequirement? {
-        guard !isClosed else { return nil }
-
-        let generation = surfaceRuntime.nextCommitGeneration
-        let request = PresentationRequest(
-            generation: generation,
-            configuration: resolvedConfiguration()
-        )
-        let result: SoftwareSurfacePresentationResult
-        do {
-            result = try SoftwareSurfacePresenter(
-                surface: surface,
-                scaleInstallation: scaleInstallation,
-                createSharedMemoryPool: { [self] bufferSize in
-                    guard let globals = connection.boundGlobals else {
-                        throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
-                    }
-
-                    return try globals.sharedMemory.createPool(
-                        width: bufferSize.width.rawValue,
-                        height: bufferSize.height.rawValue,
-                        bufferCount: bufferCount.rawValue
-                    ) { [weak self] in
-                        self?.handleBufferReleased()
-                    }
-                },
-                isSurfaceClosed: { [self] in isClosed },
-                onFrame: { [weak self] in
-                    self?.handleFrameDone()
-                }
-            ).present(
-                context: SoftwareSurfacePresentationContext(
-                    generation: request.generation,
-                    geometry: try currentGeometry(),
-                    submitConstraints: .default,
-                    metadata: .default,
-                    damage: damage,
-                    presentationFeedback: nil
-                ),
-                draw: draw,
-                runtime: &surfaceRuntime,
-                pendingFrameRegistration: &pendingFrameRegistration
-            )
-        } catch {
-            throw mapPresentationFailure(error)
-        }
-        return try handlePresentationFollowUp(result.followUp)
-    }
-
-    private func handlePresentationFollowUp(
-        _ followUp: SoftwareSurfacePresentationFollowUp?
-    ) throws -> SubsurfaceParentCommitRequirement? {
-        guard let followUp else { return nil }
-
-        switch followUp {
-        case .succeeded:
-            needsRedrawStorage = false
-            return synchronizedStateCommitRequirement()
-        case .blockedByBuffer:
-            needsRedrawStorage = true
-            return nil
-        case .resetTransientState:
-            surfaceRuntime.resetTransientTransactionState()
-            needsRedrawStorage = true
-            return nil
-        case .fail(_, let error):
-            throw ClientError.display(
-                .subsurfacePresentationFailed(
-                    SubsurfacePresentationFailure(
-                        subsurfaceID: SubsurfaceIdentity(id),
-                        cause: .presentation(error)
-                    )
-                ))
-        }
-    }
-
-    private func mapPresentationFailure(_ error: any Error) -> ClientError {
-        let cause: SubsurfacePresentationFailureCause
-        if let failure = error as? SoftwareSurfacePresentationFailure {
-            cause = .presentation(failure.presentationError)
-        } else if let failure = error as? SoftwareSurfaceDrawFailure {
-            cause = .draw(String(describing: failure.underlying))
-        } else {
-            cause = .operation(String(describing: error))
-        }
-
-        return ClientError.display(
-            .subsurfacePresentationFailed(
-                SubsurfacePresentationFailure(
-                    subsurfaceID: SubsurfaceIdentity(id),
-                    cause: cause
-                )
-            ))
-    }
-
-    private func currentGeometry() throws -> SurfaceGeometry {
+    func currentGeometry() throws -> SurfaceGeometry {
         do {
             return try scaleInstallation.geometry(logicalSize: size)
         } catch let error as WindowError {
@@ -402,27 +322,39 @@ extension SubsurfaceRoleSurface {
         )
     }
 
-    private func handleFrameDone() {
+    func handleFrameDone() {
         do {
             _ = try surfaceRuntime.completeFrameCallback()
+            pendingFrameRegistration = nil
+            surfaceRuntime.dropReleasedRetiredBufferPools()
+            guard model.lifecycle == .active else { return }
+            try interpretSubsurfaceEffects(
+                model.reduce(
+                    .frameBecameReady(bufferAvailability: try redrawBufferAvailability())
+                )
+            )
         } catch {
             surfaceRuntime.resetTransientTransactionState()
         }
-        pendingFrameRegistration = nil
+    }
+
+    func handleBufferReleased() {
+        connection.preconditionIsOwnerThread()
         surfaceRuntime.dropReleasedRetiredBufferPools()
-        guard !isClosed else { return }
-        if needsRedrawStorage {
-            onOutputMembershipChanged?(currentOutputIDsOnOwnerThread())
+        guard model.lifecycle == .active else { return }
+        do {
+            try interpretSubsurfaceEffects(
+                model.reduce(
+                    .bufferBecameAvailable(bufferAvailability: try redrawBufferAvailability())
+                )
+            )
+        } catch {
+            surfaceRuntime.resetTransientTransactionState()
         }
     }
 
-    private func handleBufferReleased() {
-        connection.preconditionIsOwnerThread()
-        surfaceRuntime.dropReleasedRetiredBufferPools()
-    }
-
     private func handlePreferredBufferScale(_ factor: Int32) {
-        guard !isClosed else { return }
+        guard model.lifecycle == .active else { return }
         do {
             guard
                 try surfaceRuntime.updateScaleInstallation({ scaleInstallation in
@@ -432,14 +364,16 @@ extension SubsurfaceRoleSurface {
                     )
                 })
             else { return }
-            needsRedrawStorage = true
+            try interpretSubsurfaceEffects(
+                model.reduce(.scaleChanged(bufferAvailability: try redrawBufferAvailability()))
+            )
         } catch {
             surfaceRuntime.resetTransientTransactionState()
         }
     }
 
     private func handlePreferredFractionalScale(_ scale: UInt32) {
-        guard !isClosed else { return }
+        guard model.lifecycle == .active else { return }
         do {
             guard
                 try surfaceRuntime.updateScaleInstallation({ scaleInstallation in
@@ -449,14 +383,16 @@ extension SubsurfaceRoleSurface {
                     )
                 })
             else { return }
-            needsRedrawStorage = true
+            try interpretSubsurfaceEffects(
+                model.reduce(.scaleChanged(bufferAvailability: try redrawBufferAvailability()))
+            )
         } catch {
             surfaceRuntime.resetTransientTransactionState()
         }
     }
 
     private func handleSurfaceEnteredOutput(_ output: RawOutputPointerIdentity) {
-        guard !isClosed else { return }
+        guard model.lifecycle == .active else { return }
         guard
             let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
         else {
@@ -467,7 +403,7 @@ extension SubsurfaceRoleSurface {
     }
 
     private func handleSurfaceLeftOutput(_ output: RawOutputPointerIdentity) {
-        guard !isClosed else { return }
+        guard model.lifecycle == .active else { return }
         guard
             let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
         else {
@@ -507,7 +443,7 @@ extension SubsurfaceRoleSurface {
         SubsurfaceParentCommitPolicy.requirement(
             parentWindowID: parentWindowID,
             subsurfaceID: id,
-            event: .surfaceStateCommitted(synchronizationMode)
+            event: .surfaceStateCommitted(model.synchronizationMode)
         )
     }
 
@@ -519,22 +455,5 @@ extension SubsurfaceRoleSurface {
             subsurfaceID: id,
             reason: reason
         )
-    }
-
-    private func close() {
-        guard !isClosed else { return }
-        isClosed = true
-        needsRedrawStorage = false
-        pendingFrameRegistration = nil
-        surfaceRuntime.cancelFrameCallback()
-        surfaceRuntime.retireSharedMemoryPools(reason: .windowClosed)
-        surfaceRuntime.destroyScaleInstallation()
-        let removedRoleResources = surfaceRuntime.removeRoleResources()
-        removedRoleResources?.destroy()
-        do {
-            try surfaceRuntime.markSurfaceDestroyed()
-        } catch {
-            assertionFailure("subsurface surface runtime destroy failed: \(error)")
-        }
     }
 }

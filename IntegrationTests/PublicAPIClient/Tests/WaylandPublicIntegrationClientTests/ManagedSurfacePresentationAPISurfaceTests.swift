@@ -15,6 +15,7 @@ struct ManagedSurfacePresentationAPISurfaceTests {
         #expect(Set(outcomes).count == 4)
         _ = useAtomicWindowPresentationAPI
         _ = useAtomicPopupPresentationAPI
+        _ = useAtomicSubsurfacePresentationAPI
     }
 
     private func useAtomicWindowPresentationAPI(
@@ -76,6 +77,32 @@ struct ManagedSurfacePresentationAPISurfaceTests {
             { _, _ in () }
         )
         let preparedRedraw = try await popup.redraw(
+            metadata: .default,
+            requestPresentationFeedback: true,
+            preparing: { reservation in reservation.id },
+            { _, _ in () }
+        )
+        return [simpleShow, simpleRedraw, preparedShow, preparedRedraw]
+    }
+
+    private func useAtomicSubsurfacePresentationAPI(
+        _ subsurface: Subsurface
+    ) async throws -> [SoftwarePresentationOutcome] {
+        let simpleShow = try await subsurface.show(
+            metadata: .default,
+            requestPresentationFeedback: true
+        ) { _ in () }
+        let simpleRedraw = try await subsurface.redraw(
+            metadata: .default,
+            requestPresentationFeedback: true
+        ) { _ in () }
+        let preparedShow = try await subsurface.show(
+            metadata: .default,
+            requestPresentationFeedback: true,
+            preparing: { reservation in reservation.id },
+            { _, _ in () }
+        )
+        let preparedRedraw = try await subsurface.redraw(
             metadata: .default,
             requestPresentationFeedback: true,
             preparing: { reservation in reservation.id },

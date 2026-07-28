@@ -61,13 +61,17 @@ package enum SoftwareSurfacePresentationCommitSequence {
         markDrawingBufferBusy: () -> Void,
         requestFrameCallback: () -> Void,
         requestPresentationFeedback: () -> SurfacePresentationIdentity?,
-        commit: () -> Void
+        commitSurface: () -> Void,
+        commitFollowUp: () -> Void = {
+            // No role-level commit is required.
+        }
     ) rethrows -> SurfacePresentationIdentity? {
         try stageSuccess()
         markDrawingBufferBusy()
         requestFrameCallback()
         let feedbackIdentity = requestPresentationFeedback()
-        commit()
+        commitSurface()
+        commitFollowUp()
         return feedbackIdentity
     }
 }
@@ -79,4 +83,25 @@ struct SoftwareSurfacePresentationContext {
     let metadata: SurfaceCommitMetadata
     let damage: SurfaceDamageRegion?
     let presentationFeedback: SurfacePresentationFeedbackCommitRequest?
+    let commitFollowUp: () -> Void
+
+    init(
+        generation: UInt64,
+        geometry: SurfaceGeometry,
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata,
+        damage: SurfaceDamageRegion?,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest?,
+        commitFollowUp: @escaping () -> Void = {
+            // Windows and popups have no role-level follow-up commit.
+        }
+    ) {
+        self.generation = generation
+        self.geometry = geometry
+        self.submitConstraints = submitConstraints
+        self.metadata = metadata
+        self.damage = damage
+        self.presentationFeedback = presentationFeedback
+        self.commitFollowUp = commitFollowUp
+    }
 }

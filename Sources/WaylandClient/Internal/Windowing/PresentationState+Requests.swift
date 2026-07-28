@@ -4,6 +4,7 @@ protocol GeneratedPresentationRequest: Equatable, Sendable {
 
 extension PresentationRequest: GeneratedPresentationRequest {}
 extension PopupPresentationRequest: GeneratedPresentationRequest {}
+extension SubsurfacePresentationRequest: GeneratedPresentationRequest {}
 
 extension PresentationState where Request: GeneratedPresentationRequest {
     var isIdle: Bool {
