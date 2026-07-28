@@ -32,7 +32,7 @@ package struct TopLevelWindowRoleResources {
 struct PendingSoftwareFrameReservation {
     let request: PresentationRequest
     let geometry: SurfaceGeometry
-    let reservedFrame: WindowReservedSoftwareFrame
+    let reservedFrame: ReservedSoftwareSurfaceFrame
 }
 
 private struct StagedSoftwarePresentationSuccess {
@@ -497,7 +497,7 @@ package final class TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         guard !model.isClosed else { return .skippedClosed }
@@ -536,7 +536,7 @@ package final class TopLevelWindow {
     private func reserveSoftwareFrameForCurrentRedraw(
         metadata frameMetadata: SurfaceFrameMetadata = .default
     )
-        throws -> WindowSoftwareFrameReservationOutcome
+        throws -> SoftwareSurfaceFrameReservationOutcome
     {
         guard !model.isClosed else { return .closed }
         try validateSurfaceFrameMetadataSupport(frameMetadata)
@@ -550,8 +550,8 @@ package final class TopLevelWindow {
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
             try frameMetadata.damage?.validate(within: geometry)
             let result = try softwarePresenter().reserve(
-                context: WindowSoftwarePresentationContext(
-                    request: request,
+                context: SoftwareSurfacePresentationContext(
+                    generation: request.generation,
                     geometry: geometry,
                     submitConstraints: .default,
                     metadata: frameMetadata.surfaceCommitMetadata,
@@ -576,7 +576,7 @@ package final class TopLevelWindow {
                 for: reservedFrame.reservation.reservationID
             )
             return .reserved(reservedFrame.reservation)
-        } catch let failure as WindowSoftwarePresentationFailure {
+        } catch let failure as SoftwareSurfacePresentationFailure {
             failSoftwarePresentationIfStillActive(generation: request.generation)
             throw failure.underlying
         } catch {
@@ -682,7 +682,7 @@ package final class TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest?,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         try validateSurfaceCommitMetadataSupport(metadata)
@@ -692,12 +692,12 @@ package final class TopLevelWindow {
 
         let successStagingContext = softwarePresentationSuccessStagingContext()
         var stagedSuccess: StagedSoftwarePresentationSuccess?
-        let result: WindowSoftwarePresentationResult
+        let result: SoftwareSurfacePresentationResult
         do {
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
             result = try softwarePresenter().present(
-                context: WindowSoftwarePresentationContext(
-                    request: request,
+                context: SoftwareSurfacePresentationContext(
+                    generation: request.generation,
                     geometry: geometry,
                     submitConstraints: submitConstraints,
                     metadata: metadata,
@@ -714,10 +714,10 @@ package final class TopLevelWindow {
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
             )
-        } catch let failure as WindowSoftwarePresentationFailure {
+        } catch let failure as SoftwareSurfacePresentationFailure {
             failSoftwarePresentationIfStillActive(generation: request.generation)
             if case .userDraw = failure.presentationError {
-                throw WindowSoftwareDrawFailure(underlying: failure.underlying)
+                throw SoftwareSurfaceDrawFailure(underlying: failure.underlying)
             }
             throw failure.underlying
         } catch {
@@ -745,8 +745,8 @@ package final class TopLevelWindow {
         }
     }
 
-    private func softwarePresenter() -> WindowSoftwarePresenter {
-        WindowSoftwarePresenter(
+    private func softwarePresenter() -> SoftwareSurfacePresenter {
+        SoftwareSurfacePresenter(
             surface: surface,
             scaleInstallation: scaleInstallation,
             createSharedMemoryPool: { [self] bufferSize in
@@ -762,7 +762,7 @@ package final class TopLevelWindow {
                     self?.handleBufferReleased()
                 }
             },
-            isWindowClosed: { [self] in model.isClosed },
+            isSurfaceClosed: { [self] in model.isClosed },
             onFrame: { [weak self] in
                 self?.handleFrameDone()
             }
@@ -775,7 +775,7 @@ package final class TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints,
         metadata frameMetadata: SurfaceFrameMetadata,
         damage: SurfaceDamageRegion?,
-        makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest?,
+        makePresentationFeedback: () throws -> SurfacePresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> SoftwarePresentationOutcome {
         guard !model.isClosed else {
@@ -787,7 +787,7 @@ package final class TopLevelWindow {
         }
 
         var stagedSuccess: StagedSoftwarePresentationSuccess?
-        let result: WindowSoftwarePresentationResult
+        let result: SoftwareSurfacePresentationResult
         do {
             guard try isCurrentSoftwarePresentation(pendingReservation) else {
                 return try supersedeSoftwarePresentation(pendingReservation)
@@ -798,8 +798,8 @@ package final class TopLevelWindow {
             let presentationFeedback = try makePresentationFeedback()
             result = try softwarePresenter().presentReserved(
                 pendingReservation.reservedFrame,
-                context: WindowSoftwarePresentationContext(
-                    request: pendingReservation.request,
+                context: SoftwareSurfacePresentationContext(
+                    generation: pendingReservation.request.generation,
                     geometry: pendingReservation.geometry,
                     submitConstraints: submitConstraints,
                     metadata: frameMetadata.surfaceCommitMetadata,
@@ -816,13 +816,13 @@ package final class TopLevelWindow {
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
             )
-        } catch let failure as WindowSoftwarePresentationFailure {
+        } catch let failure as SoftwareSurfacePresentationFailure {
             pendingReservation.reservedFrame.drawingBuffer.discard()
             failSoftwarePresentationIfStillActive(
                 generation: pendingReservation.request.generation
             )
             if case .userDraw = failure.presentationError {
-                throw WindowSoftwareDrawFailure(underlying: failure.underlying)
+                throw SoftwareSurfaceDrawFailure(underlying: failure.underlying)
             }
             throw failure.underlying
         } catch {
@@ -866,7 +866,7 @@ package final class TopLevelWindow {
     }
 
     private func interpretDeferredSoftwarePresentation(
-        _ result: WindowSoftwarePresentationResult,
+        _ result: SoftwareSurfacePresentationResult,
         pendingReservation: PendingSoftwareFrameReservation
     ) throws -> SoftwarePresentationOutcome {
         do {
@@ -941,7 +941,7 @@ package final class TopLevelWindow {
     }
 
     private func interpretSoftwarePresentationFollowUp(
-        _ followUp: WindowSoftwarePresentationFollowUp?
+        _ followUp: SoftwareSurfacePresentationFollowUp?
     ) throws {
         guard let followUp else { return }
 
@@ -1465,7 +1465,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         var outcome = RedrawOutcome.skippedPendingFrame
@@ -1633,7 +1633,7 @@ extension TopLevelWindow {
         _ buffer: RawSurfaceBuffer,
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata = .default,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil
     ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
@@ -2171,7 +2171,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -2193,7 +2193,7 @@ extension TopLevelWindow {
     package func reserveShowSoftwareFrameOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata frameMetadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         connection.preconditionIsOwnerThread()
         try validateSurfaceFrameMetadataSupport(frameMetadata)
 
@@ -2231,7 +2231,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -2252,7 +2252,7 @@ extension TopLevelWindow {
     package func reserveRedrawSoftwareFrameOnOwnerThread(
         metadata frameMetadata: SurfaceFrameMetadata = .default
     )
-        throws -> WindowSoftwareFrameReservationOutcome
+        throws -> SoftwareSurfaceFrameReservationOutcome
     {
         connection.preconditionIsOwnerThread()
 
@@ -2268,7 +2268,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceFrameMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest? = { nil },
+        makePresentationFeedback: () throws -> SurfacePresentationFeedbackCommitRequest? = { nil },
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> SoftwarePresentationOutcome {
         connection.preconditionIsOwnerThread()
@@ -2321,7 +2321,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try showOnOwnerThread(

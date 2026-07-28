@@ -125,7 +125,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
         metadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         try withFatalFailureFinalization {
             guard !isClosed, let window = surfaces.window(windowID) else {
                 return .closed
@@ -169,7 +169,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func reserveSoftwareFrameForRedraw(
         _ windowID: WindowID,
         metadata frameMetadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         try withFatalFailureFinalization {
             guard !isClosed, let window = surfaces.window(windowID) else {
                 return .closed

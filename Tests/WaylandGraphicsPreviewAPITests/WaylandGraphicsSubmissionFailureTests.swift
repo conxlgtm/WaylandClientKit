@@ -145,7 +145,7 @@ struct WaylandGraphicsSubmissionFailureTests {
     @Test
     func submitSoftwarePreservesCallerDrawErrorCause() throws {
         let original = InjectedDrawFailure()
-        let wrapped = WindowSoftwareDrawFailure(underlying: original)
+        let wrapped = SoftwareSurfaceDrawFailure(underlying: original)
 
         let extracted = try #require(
             WaylandGraphicsErrorMapper.callerDrawError(from: wrapped)
@@ -447,7 +447,7 @@ actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
         recordedSubmitConstraints.append(submitConstraints)
         if remainingShowDrawFailures > 0 {
             remainingShowDrawFailures -= 1
-            throw WindowSoftwareDrawFailure(underlying: InjectedDrawFailure())
+            throw SoftwareSurfaceDrawFailure(underlying: InjectedDrawFailure())
         }
     }
 

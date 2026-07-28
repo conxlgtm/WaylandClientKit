@@ -8,7 +8,7 @@ struct WindowExternalBufferPresentationRequest {
     let geometry: SurfaceGeometry
     let submitConstraints: SurfaceSubmitConstraints
     let metadata: SurfaceCommitMetadata
-    let presentationFeedback: WindowPresentationFeedbackCommitRequest?
+    let presentationFeedback: SurfacePresentationFeedbackCommitRequest?
     let onFrameDone: () -> Void
 }
 
@@ -89,7 +89,7 @@ enum WindowExternalBufferPresenter {
     }
 
     private static func requestPresentationFeedbackAtPointOfNoReturn(
-        _ presentationFeedback: WindowPresentationFeedbackCommitRequest?
+        _ presentationFeedback: SurfacePresentationFeedbackCommitRequest?
     ) -> SurfacePresentationIdentity? {
         guard let presentationFeedback else { return nil }
 

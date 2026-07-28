@@ -1,39 +1,39 @@
 import WaylandRaw
 
-struct WindowSoftwarePresentationResult {
+struct SoftwareSurfacePresentationResult {
     let outcome: RedrawOutcome
-    let followUp: WindowSoftwarePresentationFollowUp?
+    let followUp: SoftwareSurfacePresentationFollowUp?
 }
 
-struct WindowReservedSoftwareFrame {
+struct ReservedSoftwareSurfaceFrame {
     let reservation: SoftwareFrameReservation
     let drawingBuffer: RawBuffer.ReservedDrawingBuffer
 }
 
-struct WindowSoftwareFrameReservationResult {
-    let reservedFrame: WindowReservedSoftwareFrame?
-    let followUp: WindowSoftwarePresentationFollowUp?
+struct SoftwareSurfaceFrameReservationResult {
+    let reservedFrame: ReservedSoftwareSurfaceFrame?
+    let followUp: SoftwareSurfacePresentationFollowUp?
 }
 
-package enum WindowSoftwareFrameReservationOutcome: Equatable, Sendable {
+package enum SoftwareSurfaceFrameReservationOutcome: Equatable, Sendable {
     case reserved(SoftwareFrameReservation)
     case deferred
     case closed
 }
 
-enum WindowSoftwarePresentationFollowUp {
+enum SoftwareSurfacePresentationFollowUp {
     case fail(generation: UInt64, PresentationError)
     case blockedByBuffer
     case resetTransientState
     case succeeded(generation: UInt64)
 }
 
-struct WindowSoftwarePresentationFailure: Error {
+struct SoftwareSurfacePresentationFailure: Error {
     let presentationError: PresentationError
     let underlying: any Error
 }
 
-package struct WindowSoftwareDrawFailure: Error {
+package struct SoftwareSurfaceDrawFailure: Error {
     package let underlying: any Error
 
     package init(underlying drawError: any Error) {
@@ -41,7 +41,7 @@ package struct WindowSoftwareDrawFailure: Error {
     }
 }
 
-package struct WindowPresentationFeedbackCommitRequest {
+package struct SurfacePresentationFeedbackCommitRequest {
     let request: () throws -> SurfacePresentationIdentity
     let cancel: (SurfacePresentationIdentity) -> Void
 
@@ -54,7 +54,7 @@ package struct WindowPresentationFeedbackCommitRequest {
     }
 }
 
-package enum WindowSoftwarePresentationCommitSequence {
+package enum SoftwareSurfacePresentationCommitSequence {
     @discardableResult
     package static func perform(
         stageSuccess: () throws -> Void,
@@ -72,11 +72,11 @@ package enum WindowSoftwarePresentationCommitSequence {
     }
 }
 
-struct WindowSoftwarePresentationContext {
-    let request: PresentationRequest
+struct SoftwareSurfacePresentationContext {
+    let generation: UInt64
     let geometry: SurfaceGeometry
     let submitConstraints: SurfaceSubmitConstraints
     let metadata: SurfaceCommitMetadata
     let damage: SurfaceDamageRegion?
-    let presentationFeedback: WindowPresentationFeedbackCommitRequest?
+    let presentationFeedback: SurfacePresentationFeedbackCommitRequest?
 }

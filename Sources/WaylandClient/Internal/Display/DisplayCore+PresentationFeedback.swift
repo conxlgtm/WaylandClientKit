@@ -26,12 +26,12 @@ extension DisplayCore {
         windowID: WindowID,
         isRequested: Bool,
         onFeedback: (@Sendable (SurfacePresentationFeedback) -> Void)? = nil
-    ) throws -> WindowPresentationFeedbackCommitRequest? {
+    ) throws -> SurfacePresentationFeedbackCommitRequest? {
         guard isRequested else { return nil }
 
         let session = try requireSession()
         let presentation = try session.presentationOnOwnerThread()
-        return WindowPresentationFeedbackCommitRequest(
+        return SurfacePresentationFeedbackCommitRequest(
             request: {
                 try window.requestPresentationFeedbackOnOwnerThread(
                     presentation: presentation,

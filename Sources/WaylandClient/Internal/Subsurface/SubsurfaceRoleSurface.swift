@@ -296,9 +296,9 @@ extension SubsurfaceRoleSurface {
             generation: generation,
             configuration: resolvedConfiguration()
         )
-        let result: WindowSoftwarePresentationResult
+        let result: SoftwareSurfacePresentationResult
         do {
-            result = try WindowSoftwarePresenter(
+            result = try SoftwareSurfacePresenter(
                 surface: surface,
                 scaleInstallation: scaleInstallation,
                 createSharedMemoryPool: { [self] bufferSize in
@@ -314,13 +314,13 @@ extension SubsurfaceRoleSurface {
                         self?.handleBufferReleased()
                     }
                 },
-                isWindowClosed: { [self] in isClosed },
+                isSurfaceClosed: { [self] in isClosed },
                 onFrame: { [weak self] in
                     self?.handleFrameDone()
                 }
             ).present(
-                context: WindowSoftwarePresentationContext(
-                    request: request,
+                context: SoftwareSurfacePresentationContext(
+                    generation: request.generation,
                     geometry: try currentGeometry(),
                     submitConstraints: .default,
                     metadata: .default,
@@ -338,7 +338,7 @@ extension SubsurfaceRoleSurface {
     }
 
     private func handlePresentationFollowUp(
-        _ followUp: WindowSoftwarePresentationFollowUp?
+        _ followUp: SoftwareSurfacePresentationFollowUp?
     ) throws -> SubsurfaceParentCommitRequirement? {
         guard let followUp else { return nil }
 
@@ -366,9 +366,9 @@ extension SubsurfaceRoleSurface {
 
     private func mapPresentationFailure(_ error: any Error) -> ClientError {
         let cause: SubsurfacePresentationFailureCause
-        if let failure = error as? WindowSoftwarePresentationFailure {
+        if let failure = error as? SoftwareSurfacePresentationFailure {
             cause = .presentation(failure.presentationError)
-        } else if let failure = error as? WindowSoftwareDrawFailure {
+        } else if let failure = error as? SoftwareSurfaceDrawFailure {
             cause = .draw(String(describing: failure.underlying))
         } else {
             cause = .operation(String(describing: error))

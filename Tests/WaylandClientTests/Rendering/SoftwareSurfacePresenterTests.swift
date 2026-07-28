@@ -7,7 +7,7 @@
     @testable import WaylandClient
 
     @Suite
-    struct WindowSoftwarePresentationCommitSequenceTests {
+    struct SoftwareSurfacePresentationCommitSequenceTests {
         @Test(arguments: ManagedPresentationOperation.allCases)
         func pointOfNoReturnMarksBufferBusyBeforeProtocolRequests(
             operation: ManagedPresentationOperation
@@ -15,7 +15,7 @@
             var events: [CommitSequenceEvent] = []
             let identity = SurfacePresentationIdentity(rawValue: 7)
 
-            let returnedIdentity = WindowSoftwarePresentationCommitSequence.perform(
+            let returnedIdentity = SoftwareSurfacePresentationCommitSequence.perform(
                 stageSuccess: {
                     events.append(.stageSuccess)
                 },
@@ -51,7 +51,7 @@
             var events: [CommitSequenceEvent] = []
 
             do {
-                _ = try WindowSoftwarePresentationCommitSequence.perform(
+                _ = try SoftwareSurfacePresentationCommitSequence.perform(
                     stageSuccess: {
                         events.append(.stageSuccess)
                         throw InjectedSuccessStagingFailure()
@@ -82,7 +82,7 @@
     }
 
     @Suite(.serialized)
-    struct WindowSoftwarePresenterTests {  // swiftlint:disable:this type_body_length
+    struct SoftwareSurfacePresenterTests {  // swiftlint:disable:this type_body_length
         private struct RoleToken {}
         private struct FrameIDCaptureComplete: Error {}
 
@@ -105,14 +105,14 @@
             var didDraw = false
             var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
             var pendingFrameRegistration: FrameCallbackRegistration?
-            let presenter = WindowSoftwarePresenter(
+            let presenter = SoftwareSurfacePresenter(
                 surface: try testSurface(pointer: 0x6A71),
                 scaleInstallation: SurfaceScaleInstallation(),
                 createSharedMemoryPool: { _ in
                     requestedPool = true
                     throw UnexpectedPoolRequest()
                 },
-                isWindowClosed: { false },
+                isSurfaceClosed: { false },
                 onFrame: { _ = () }
             )
 
@@ -258,7 +258,7 @@
                     pendingFrameRegistration: &pendingFrameRegistration
                 )
                 Issue.record("expected submit constraint failure")
-            } catch let failure as WindowSoftwarePresentationFailure {
+            } catch let failure as SoftwareSurfacePresentationFailure {
                 #expect(
                     failure.underlying as? SurfaceSubmitConstraintError
                         == .explicitSyncUnavailable
@@ -296,7 +296,7 @@
                     pendingFrameRegistration: &pendingFrameRegistration
                 )
                 Issue.record("expected draw failure")
-            } catch let failure as WindowSoftwarePresentationFailure {
+            } catch let failure as SoftwareSurfacePresentationFailure {
                 #expect(failure.underlying is InjectedDrawFailure)
                 guard case .userDraw = failure.presentationError else {
                     Issue.record("expected user draw presentation error")
@@ -330,7 +330,7 @@
                     pendingFrameRegistration: &pendingFrameRegistration
                 )
                 Issue.record("expected frame ID capture to stop drawing")
-            } catch let failure as WindowSoftwarePresentationFailure
+            } catch let failure as SoftwareSurfacePresentationFailure
                 where failure.underlying is FrameIDCaptureComplete
             {
                 // Capturing the ID during draw is enough for this identity regression.
@@ -371,27 +371,14 @@
             metadata: SurfaceCommitMetadata = .default,
             damage: SurfaceDamageRegion? = nil
         ) throws
-            -> WindowSoftwarePresentationContext
+            -> SoftwareSurfacePresentationContext
         {
             let geometry = try SurfaceGeometry(
                 logicalSize: PositiveLogicalSize(width: 64, height: 48),
                 scale: .one
             )
-            let configure = try WindowConfigureEvent(
-                sequence: XDGConfigureSequence(
-                    serial: 1,
-                    topLevel: XDGTopLevelConfigureSuggestion(
-                        size: TopLevelSize(width: 64, height: 48)
-                    )
-                ),
-                previousSize: nil,
-                fallbackSize: .default
-            )
-            return WindowSoftwarePresentationContext(
-                request: PresentationRequest(
-                    generation: 1,
-                    configuration: configure.configuration
-                ),
+            return SoftwareSurfacePresentationContext(
+                generation: 1,
                 geometry: geometry,
                 submitConstraints: submitConstraints,
                 metadata: metadata,
@@ -403,12 +390,12 @@
         private func softwarePresenter(
             surface: RawSurface,
             pool: RawSharedMemoryPool
-        ) -> WindowSoftwarePresenter {
-            WindowSoftwarePresenter(
+        ) -> SoftwareSurfacePresenter {
+            SoftwareSurfacePresenter(
                 surface: surface,
                 scaleInstallation: SurfaceScaleInstallation(),
                 createSharedMemoryPool: { _ in pool },
-                isWindowClosed: { false },
+                isSurfaceClosed: { false },
                 onFrame: {
                     _ = ()
                 }

@@ -222,7 +222,7 @@
                     }
                 )
                 Issue.record("expected draw failure")
-            } catch let failure as WindowSoftwareDrawFailure {
+            } catch let failure as SoftwareSurfaceDrawFailure {
                 #expect(failure.underlying is InjectedSoftwareDrawFailure)
             }
         }
