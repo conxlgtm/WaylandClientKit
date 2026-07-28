@@ -26,6 +26,7 @@ Intentionally public:
 - `WaylandDisplay`
 - `Window`
 - `PopupSurface`
+- `Subsurface`
 - `WindowConfiguration`
 - `WindowStateSnapshot`
 - `WindowRestorationSnapshot`
@@ -35,6 +36,8 @@ Intentionally public:
 - `PopupPositioner`
 - `PopupPlacement`
 - `PopupLifecycleEvent`
+- `SubsurfaceConfiguration`
+- `SubsurfaceIdentity`
 - `SurfaceScale`
 - `SurfaceGeometry`
 - `SoftwareFrameBufferID`
@@ -54,12 +57,13 @@ Intentionally public:
 - `SurfaceDamageRegion`
 - `SurfacePresentationIdentity`
 - `SurfacePresentationFeedback`
+- `ManagedSurfaceIdentity`
 - `PresentationFeedback`
 - `PresentationTimestamp`
 - `PresentationSequence`
 - `PresentationFeedbackFlags`
-- `WindowPresentationEvent`
-- `WindowPresentationEvents`
+- `ManagedSurfacePresentationEvent`
+- `ManagedSurfacePresentationEvents`
 - `DisplayEvent`
 - `EventStreamConfiguration`
 - `EventStreamIdentity`
@@ -180,7 +184,7 @@ Current user-facing contract:
 - Display connection, window creation and close, request-redraw, software
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
   payloads, server-side decoration negotiation, scale-aware window geometry,
-  popup surfaces, restoration snapshots, presentation feedback, regular
+  popup and subsurface roles, restoration snapshots, presentation feedback, regular
   clipboard selection, primary selection, receive-side and source-side
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
   pointer, pointer lock/confine, pointer warp, tablet input facts, cursor
@@ -219,21 +223,27 @@ Current user-facing contract:
   spans, stride, and geometry without exposing raw Wayland or SHM handles.
   `SoftwareFrameReservation` lets async preparation observe the selected
   software buffer identity and geometry before the final scoped draw borrow.
-  `Window.show` and `Window.redraw` each expose one simple and one prepared
-  method. All four accept `SurfaceFrameMetadata`, return a discardable
-  `SoftwarePresentationOutcome`, and provide the same atomic presentation-
-  feedback option. Explicitly requested unsupported surface metadata throws
+  `Window`, `PopupSurface`, and `Subsurface` each expose one simple and one
+  prepared `show`, plus one simple and one prepared `redraw`. All twelve methods
+  accept `SurfaceFrameMetadata`, return a discardable `SoftwarePresentationOutcome`,
+  and provide the same atomic presentation-feedback option. Explicitly requested
+  unsupported surface metadata throws
   `SurfaceFrameMetadataError` before drawing or issuing any Wayland request for
   that presentation attempt.
   Prepared calls are latest-wins transactions. After preparation resumes, the
-  library revalidates the exact reservation, window, configure, authoritative
-  geometry, redraw generation, and task cancellation. Supersession is resolved
+  library revalidates the exact reservation, role lifecycle, parent lifecycle,
+  configure or synchronization mode, authoritative geometry, redraw generation,
+  and task cancellation. Supersession is resolved
   before final metadata-support revalidation, so stale attempts still return
   `.superseded` if protocol capabilities change while preparation is suspended.
   A stale attempt is discarded without drawing, requesting a frame callback or
   presentation feedback, or committing the surface. Its replacement redraw is
   normal pacing. Presentation feedback requested by these APIs belongs to the
-  same eventual surface commit.
+  same eventual surface commit. A synchronized subsurface commits child then
+  parent inside one nonthrowing point of no return; rejected attempts commit neither.
+- Managed surface redraw events use `DisplayEvent.redrawRequested(ManagedSurfaceIdentity)`.
+  Presentation feedback uses `ManagedSurfacePresentationEvent` on the root stream,
+  while each handle exposes a filtered `ManagedSurfacePresentationEvents` sequence.
 - Window sizes are logical surface sizes. `SurfaceGeometry` records the
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.

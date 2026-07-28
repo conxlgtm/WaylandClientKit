@@ -18,6 +18,7 @@ public struct ExampleBuilder {
         "GraphicsPreviewManagedGPUClear",
         "IdleInhibitSmoke",
         "KeyboardShortcutsInhibitSmoke",
+        "ManagedSurfacePresentationSmoke",
         "ColorManagementSmoke",
         "OutputManagementSmoke",
         "OutputTopologySmoke",

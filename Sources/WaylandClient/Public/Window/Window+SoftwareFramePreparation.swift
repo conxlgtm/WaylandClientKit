@@ -1,13 +1,13 @@
-/// The terminal disposition of an asynchronously prepared software frame.
+/// The terminal disposition of a managed-surface software frame.
 public enum SoftwarePresentationOutcome: Equatable, Sendable {
-    /// The frame was committed to the window's Wayland surface.
+    /// The frame was committed through the managed surface's role boundary.
     case presented
     /// Preparation completed after the transaction became stale or was canceled
     /// during final validation.
     case superseded
     /// No presentation started because redraw pacing or buffers deferred it.
     case deferred
-    /// The window or its display closed before the frame could be committed.
+    /// The managed surface, its parent, or its display closed before commit.
     case closed
 }
 

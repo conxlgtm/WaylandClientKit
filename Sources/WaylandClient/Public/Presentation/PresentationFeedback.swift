@@ -68,10 +68,14 @@ public struct PresentationFeedback: Equatable, Sendable {
     }
 }
 
+/// Presentation feedback correlated to its managed surface.
 public struct ManagedSurfacePresentationEvent: Equatable, Sendable {
+    /// The window, popup, or subsurface that owned the committed feedback request.
     public let surface: ManagedSurfaceIdentity
+    /// The compositor's result for the committed request.
     public let feedback: SurfacePresentationFeedback
 
+    /// Creates a managed-surface presentation event.
     public init(
         surface eventSurface: ManagedSurfaceIdentity,
         feedback eventFeedback: SurfacePresentationFeedback
@@ -111,6 +115,7 @@ public struct ManagedSurfacePresentationEvents: AsyncSequence, Sendable {
     }
 }
 
+/// An iterator over presentation feedback for one managed surface.
 @safe
 public struct ManagedSurfacePresentationEventsIterator: AsyncIteratorProtocol {
     public typealias Element = SurfacePresentationFeedback
@@ -127,10 +132,12 @@ public struct ManagedSurfacePresentationEventsIterator: AsyncIteratorProtocol {
         base = iterator
     }
 
+    /// Returns the next feedback result for the selected surface.
     public mutating func next() async throws(WaylandDisplayError) -> SurfacePresentationFeedback? {
         try await next(isolation: nil)
     }
 
+    /// Returns the next result while preserving the caller's isolation context.
     public mutating func next(
         isolation actor: isolated (any Actor)?
     ) async throws(WaylandDisplayError) -> SurfacePresentationFeedback? {

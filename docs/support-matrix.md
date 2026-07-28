@@ -25,6 +25,7 @@ This matrix describes the current experimental baseline. Status labels:
 | --- | --- | --- |
 | `xdg_wm_base`, `xdg_surface`, `xdg_toplevel` | Public | Toplevel windows and configure lifecycle. |
 | `xdg_popup`, `xdg_positioner` | Public | Popup placement and dismissal. |
+| `wl_subcompositor`, `wl_subsurface` | Public | Managed synchronized and desynchronized child surfaces. |
 | `zxdg_decoration_manager_v1`, `zxdg_toplevel_decoration_v1` | Public | Server-side decoration negotiation. |
 | `xdg_wm_dialog_v1`, `xdg_dialog_v1` | Public | Dialog hints when advertised. |
 | `xdg_toplevel_drag_manager_v1`, `xdg_toplevel_drag_v1` | Public | Toplevel drag start. |
@@ -37,7 +38,7 @@ This matrix describes the current experimental baseline. Status labels:
 | --- | --- | --- |
 | `wp_viewporter`, `wp_viewport` | Public | Scale-aware SHM buffer presentation. |
 | `wp_fractional_scale_manager_v1`, `wp_fractional_scale_v1` | Public | Fractional scale facts. |
-| `wp_presentation`, `wp_presentation_feedback` | Public | Presentation feedback requests and events. |
+| `wp_presentation`, `wp_presentation_feedback` | Public | Window, popup, and subsurface feedback requests and events. |
 | `wp_content_type_manager_v1`, `wp_content_type_v1` | Internal preview | Surface commit metadata. |
 | `wp_alpha_modifier_v1`, `wp_alpha_modifier_surface_v1` | Internal preview | Surface commit metadata. |
 | `wp_tearing_control_manager_v1`, `wp_tearing_control_v1` | Internal preview | Surface commit metadata. |

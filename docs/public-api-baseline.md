@@ -333,9 +333,8 @@ s:13WaylandClient12DisplayEventO13outputChangedyAcA14OutputSnapshotVcACmF	swift.
 s:13WaylandClient12DisplayEventO13outputRemovedyAcA8OutputIDVcACmF	swift.enum.case	DisplayEvent.outputRemoved(_:)	case outputRemoved(OutputID)	-
 s:13WaylandClient12DisplayEventO11popupClosedyAcA014PopupLifecycleD0VcACmF	swift.enum.case	DisplayEvent.popupClosed(_:)	case popupClosed(PopupLifecycleEvent)	-
 s:13WaylandClient12DisplayEventO14popupDismissedyAcA014PopupLifecycleD0VcACmF	swift.enum.case	DisplayEvent.popupDismissed(_:)	case popupDismissed(PopupLifecycleEvent)	-
-s:13WaylandClient12DisplayEventO20popupRedrawRequestedyAcA014PopupLifecycleD0VcACmF	swift.enum.case	DisplayEvent.popupRedrawRequested(_:)	case popupRedrawRequested(PopupLifecycleEvent)	-
-s:13WaylandClient12DisplayEventO12presentationyAcA018WindowPresentationD0VcACmF	swift.enum.case	DisplayEvent.presentation(_:)	case presentation(WindowPresentationEvent)	-
-s:13WaylandClient12DisplayEventO15redrawRequestedyAcA8WindowIDVcACmF	swift.enum.case	DisplayEvent.redrawRequested(_:)	case redrawRequested(WindowID)	-
+s:13WaylandClient12DisplayEventO12presentationyAcA026ManagedSurfacePresentationD0VcACmF	swift.enum.case	DisplayEvent.presentation(_:)	case presentation(ManagedSurfacePresentationEvent)	-
+s:13WaylandClient12DisplayEventO15redrawRequestedyAcA22ManagedSurfaceIdentityOcACmF	swift.enum.case	DisplayEvent.redrawRequested(_:)	case redrawRequested(ManagedSurfaceIdentity)	-
 s:13WaylandClient12DisplayEventO9textInputyAcA04TextfD0OcACmF	swift.enum.case	DisplayEvent.textInput(_:)	case textInput(TextInputEvent)	-
 s:13WaylandClient12DisplayEventO20windowCloseRequestedyAcA8WindowIDVcACmF	swift.enum.case	DisplayEvent.windowCloseRequested(_:)	case windowCloseRequested(WindowID)	-
 s:13WaylandClient12DisplayEventO12windowClosedyAcA8WindowIDVcACmF	swift.enum.case	DisplayEvent.windowClosed(_:)	case windowClosed(WindowID)	-
@@ -929,6 +928,23 @@ s:13WaylandClient8MIMETypeV9plainTextACvpZ	swift.type.property	MIMEType.plainTex
 s:13WaylandClient8MIMETypeV13plainTextUTF8ACvpZ	swift.type.property	MIMEType.plainTextUTF8	static let plainTextUTF8: MIMEType	-
 s:13WaylandClient8MIMETypeV8rawValueSSvp	swift.property	MIMEType.rawValue	let rawValue: String	-
 s:13WaylandClient8MIMETypeV7uriListACvpZ	swift.type.property	MIMEType.uriList	static let uriList: MIMEType	-
+s:13WaylandClient22ManagedSurfaceIdentityO	swift.enum	ManagedSurfaceIdentity	enum ManagedSurfaceIdentity	-
+s:13WaylandClient22ManagedSurfaceIdentityO5popupyAcA05PopupdE0VcACmF	swift.enum.case	ManagedSurfaceIdentity.popup(_:)	case popup(PopupSurfaceIdentity)	-
+s:13WaylandClient22ManagedSurfaceIdentityO10subsurfaceyAcA010SubsurfaceE0VcACmF	swift.enum.case	ManagedSurfaceIdentity.subsurface(_:)	case subsurface(SubsurfaceIdentity)	-
+s:13WaylandClient22ManagedSurfaceIdentityO6windowyAcA8WindowIDVcACmF	swift.enum.case	ManagedSurfaceIdentity.window(_:)	case window(WindowID)	-
+s:13WaylandClient31ManagedSurfacePresentationEventV	swift.struct	ManagedSurfacePresentationEvent	struct ManagedSurfacePresentationEvent	-
+s:13WaylandClient31ManagedSurfacePresentationEventV8feedbackAA0dE8FeedbackOvp	swift.property	ManagedSurfacePresentationEvent.feedback	let feedback: SurfacePresentationFeedback	-
+s:13WaylandClient31ManagedSurfacePresentationEventV7surface8feedbackAcA0cD8IdentityO_AA0dE8FeedbackOtcfc	swift.init	ManagedSurfacePresentationEvent.init(surface:feedback:)	init(surface eventSurface: ManagedSurfaceIdentity, feedback eventFeedback: SurfacePresentationFeedback)	-
+s:13WaylandClient31ManagedSurfacePresentationEventV7surfaceAA0cD8IdentityOvp	swift.property	ManagedSurfacePresentationEvent.surface	let surface: ManagedSurfaceIdentity	-
+s:13WaylandClient32ManagedSurfacePresentationEventsV	swift.struct	ManagedSurfacePresentationEvents	struct ManagedSurfacePresentationEvents	-
+s:13WaylandClient32ManagedSurfacePresentationEventsV7Elementa	swift.typealias	ManagedSurfacePresentationEvents.Element	typealias Element = SurfacePresentationFeedback	-
+s:13WaylandClient32ManagedSurfacePresentationEventsV7Failurea	swift.typealias	ManagedSurfacePresentationEvents.Failure	typealias Failure = WaylandDisplayError	-
+s:13WaylandClient32ManagedSurfacePresentationEventsV17makeAsyncIteratorAA0cdefI0VyF	swift.method	ManagedSurfacePresentationEvents.makeAsyncIterator()	func makeAsyncIterator() -> ManagedSurfacePresentationEventsIterator	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV	swift.struct	ManagedSurfacePresentationEventsIterator	struct ManagedSurfacePresentationEventsIterator	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV7Elementa	swift.typealias	ManagedSurfacePresentationEventsIterator.Element	typealias Element = SurfacePresentationFeedback	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV7Failurea	swift.typealias	ManagedSurfacePresentationEventsIterator.Failure	typealias Failure = WaylandDisplayError	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV4nextAA0dE8FeedbackOSgyYaAA0A12DisplayErrorOYKF	swift.method	ManagedSurfacePresentationEventsIterator.next()	mutating func next() async throws(WaylandDisplayError) -> SurfacePresentationFeedback?	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV4next9isolationAA0dE8FeedbackOSgScA_pSgYi_tYaAA0A12DisplayErrorOYKF	swift.method	ManagedSurfacePresentationEventsIterator.next(isolation:)	mutating func next(isolation actor: isolated (any Actor)?) async throws(WaylandDisplayError) -> SurfacePresentationFeedback?	-
 s:13WaylandClient12MillisecondsV	swift.struct	Milliseconds	struct Milliseconds	-
 s:13WaylandClient12MillisecondsV1loiySbAC_ACtFZ	swift.func.op	Milliseconds.<(_:_:)	static func < (lhs: Milliseconds, rhs: Milliseconds) -> Bool	-
 s:13WaylandClient12MillisecondsV11descriptionSSvp	swift.property	Milliseconds.description	var description: String { get }	-
@@ -1303,11 +1319,14 @@ s:13WaylandClient12PopupSurfaceV8isClosedSbvp	swift.property	PopupSurface.isClos
 s:13WaylandClient12PopupSurfaceV11needsRedrawSbvp	swift.property	PopupSurface.needsRedraw	var needsRedraw: Bool { get async throws }	-
 s:13WaylandClient12PopupSurfaceV14parentWindowIDAA0fG0Vvp	swift.property	PopupSurface.parentWindowID	let parentWindowID: WindowID	-
 s:13WaylandClient12PopupSurfaceV9placementAA0C9PlacementVvp	swift.property	PopupSurface.placement	var placement: PopupPlacement { get async throws }	-
-s:13WaylandClient12PopupSurfaceV6redrawyyyAA13SoftwareFrameVYbKXEYaKF	swift.method	PopupSurface.redraw(_:)	func redraw(_ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
+s:13WaylandClient12PopupSurfaceV18presentationEventsAA07Managedd12PresentationF0Vvp	swift.property	PopupSurface.presentationEvents	var presentationEvents: ManagedSurfacePresentationEvents { get }	-
+s:13WaylandClient12PopupSurfaceV6redraw8metadata27requestPresentationFeedback_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_SbyAA0jL0VYbKXEtYaKF	swift.method	PopupSurface.redraw(metadata:requestPresentationFeedback:_:)	@discardableResult func redraw(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
+s:13WaylandClient12PopupSurfaceV6redraw8metadata27requestPresentationFeedback9preparing_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_SbxAA0kM11ReservationVYaYbKYCXEyx_AA0kM0VtYbKXEtYaKs8SendableRzlF	swift.method	PopupSurface.redraw(metadata:requestPresentationFeedback:preparing:_:)	@discardableResult func redraw<Prepared>(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
 s:13WaylandClient12PopupSurfaceV13requestRedrawyyYaKF	swift.method	PopupSurface.requestRedraw()	func requestRedraw() async throws	-
 s:13WaylandClient12PopupSurfaceV14setInputRegionyyAA0dG0VSgYaKF	swift.method	PopupSurface.setInputRegion(_:)	func setInputRegion(_ region: SurfaceRegion?) async throws	-
 s:13WaylandClient12PopupSurfaceV15setOpaqueRegionyyAA0dG0VSgYaKF	swift.method	PopupSurface.setOpaqueRegion(_:)	func setOpaqueRegion(_ region: SurfaceRegion?) async throws	-
-s:13WaylandClient12PopupSurfaceV4show19timeoutMilliseconds_ys5Int32V_yAA13SoftwareFrameVYbKXEtYaKF	swift.method	PopupSurface.show(timeoutMilliseconds:_:)	func show(timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
+s:13WaylandClient12PopupSurfaceV4show8metadata27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_Sbs5Int32VyAA0lN0VYbKXEtYaKF	swift.method	PopupSurface.show(metadata:requestPresentationFeedback:timeoutMilliseconds:_:)	@discardableResult func show(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
+s:13WaylandClient12PopupSurfaceV4show8metadata27requestPresentationFeedback19timeoutMilliseconds9preparing_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_Sbs5Int32VxAA0mO11ReservationVYaYbKYCXEyx_AA0mO0VtYbKXEtYaKs8SendableRzlF	swift.method	PopupSurface.show(metadata:requestPresentationFeedback:timeoutMilliseconds:preparing:_:)	@discardableResult func show<Prepared>(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
 s:13WaylandClient20PopupSurfaceIdentityV	swift.struct	PopupSurfaceIdentity	struct PopupSurfaceIdentity	-
 s:13WaylandClient20PopupSurfaceIdentityV11descriptionSSvp	swift.property	PopupSurfaceIdentity.description	var description: String { get }	-
 s:13WaylandClient11PositiveIntV	swift.struct	PositiveInt	struct PositiveInt	-
@@ -1513,16 +1532,17 @@ s:13WaylandClient10SubsurfaceV11needsRedrawSbvp	swift.property	Subsurface.needsR
 s:13WaylandClient10SubsurfaceV14parentWindowIDAA0eF0Vvp	swift.property	Subsurface.parentWindowID	let parentWindowID: WindowID	-
 s:13WaylandClient10SubsurfaceV10placeAboveyyACYaKF	swift.method	Subsurface.placeAbove(_:)	func placeAbove(_ sibling: Subsurface) async throws	-
 s:13WaylandClient10SubsurfaceV10placeBelowyyACYaKF	swift.method	Subsurface.placeBelow(_:)	func placeBelow(_ sibling: Subsurface) async throws	-
-s:13WaylandClient10SubsurfaceV6redrawyyyAA13SoftwareFrameVYbKXEYaKF	swift.method	Subsurface.redraw(_:)	func redraw(_ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
-s:13WaylandClient10SubsurfaceV6redraw6damage_yAA19SurfaceDamageRegionVSg_yAA13SoftwareFrameVYbKXEtYaKF	swift.method	Subsurface.redraw(damage:_:)	func redraw(damage: SurfaceDamageRegion?, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
+s:13WaylandClient10SubsurfaceV18presentationEventsAA026ManagedSurfacePresentationE0Vvp	swift.property	Subsurface.presentationEvents	var presentationEvents: ManagedSurfacePresentationEvents { get }	-
+s:13WaylandClient10SubsurfaceV6redraw8metadata27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbyAA0iL0VYbKXEtYaKF	swift.method	Subsurface.redraw(metadata:requestPresentationFeedback:_:)	@discardableResult func redraw(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
+s:13WaylandClient10SubsurfaceV6redraw8metadata27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbxAA0jM11ReservationVYaYbKYCXEyx_AA0jM0VtYbKXEtYaKs8SendableRzlF	swift.method	Subsurface.redraw(metadata:requestPresentationFeedback:preparing:_:)	@discardableResult func redraw<Prepared>(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, preparing: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
 s:13WaylandClient10SubsurfaceV13requestRedrawyyYaKF	swift.method	Subsurface.requestRedraw()	func requestRedraw() async throws	-
 s:13WaylandClient10SubsurfaceV17setDesynchronizedyyYaKF	swift.method	Subsurface.setDesynchronized()	func setDesynchronized() async throws	-
 s:13WaylandClient10SubsurfaceV14setInputRegionyyAA07SurfaceF0VSgYaKF	swift.method	Subsurface.setInputRegion(_:)	func setInputRegion(_ region: SurfaceRegion?) async throws	-
 s:13WaylandClient10SubsurfaceV15setOpaqueRegionyyAA07SurfaceF0VSgYaKF	swift.method	Subsurface.setOpaqueRegion(_:)	func setOpaqueRegion(_ region: SurfaceRegion?) async throws	-
 s:13WaylandClient10SubsurfaceV11setPositionyyAA13LogicalOffsetVYaKF	swift.method	Subsurface.setPosition(_:)	func setPosition(_ position: LogicalOffset) async throws	-
 s:13WaylandClient10SubsurfaceV15setSynchronizedyyYaKF	swift.method	Subsurface.setSynchronized()	func setSynchronized() async throws	-
-s:13WaylandClient10SubsurfaceV4showyyyAA13SoftwareFrameVYbKXEYaKF	swift.method	Subsurface.show(_:)	func show(_ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
-s:13WaylandClient10SubsurfaceV4show6damage_yAA19SurfaceDamageRegionVSg_yAA13SoftwareFrameVYbKXEtYaKF	swift.method	Subsurface.show(damage:_:)	func show(damage: SurfaceDamageRegion?, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
+s:13WaylandClient10SubsurfaceV4show8metadata27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbyAA0iL0VYbKXEtYaKF	swift.method	Subsurface.show(metadata:requestPresentationFeedback:_:)	@discardableResult func show(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
+s:13WaylandClient10SubsurfaceV4show8metadata27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbxAA0jM11ReservationVYaYbKYCXEyx_AA0jM0VtYbKXEtYaKs8SendableRzlF	swift.method	Subsurface.show(metadata:requestPresentationFeedback:preparing:_:)	@discardableResult func show<Prepared>(metadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, preparing: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
 s:13WaylandClient23SubsurfaceConfigurationV	swift.struct	SubsurfaceConfiguration	struct SubsurfaceConfiguration	-
 s:13WaylandClient23SubsurfaceConfigurationV11bufferCountAA11PositiveIntVvp	swift.property	SubsurfaceConfiguration.bufferCount	let bufferCount: PositiveInt	-
 s:13WaylandClient23SubsurfaceConfigurationV18defaultBufferCountAA11PositiveIntVvpZ	swift.type.property	SubsurfaceConfiguration.defaultBufferCount	static let defaultBufferCount: PositiveInt	-
@@ -2143,7 +2163,7 @@ s:13WaylandClient6WindowV24inhibitKeyboardShortcuts6seatIDAA0eF9InhibitorVAA04Se
 s:13WaylandClient6WindowV8isClosedSbvp	swift.property	Window.isClosed	var isClosed: Bool { get async throws }	-
 s:13WaylandClient6WindowV11lockPointer6seatID10cursorHint6region8lifetimeAA0E10ConstraintVAA04SeatG0V_AA0E8LocationVSgAA0eL6RegionVSgAA0eL8LifetimeOtYaKF	swift.method	Window.lockPointer(seatID:cursorHint:region:lifetime:)	func lockPointer(seatID: SeatID, cursorHint: PointerLocation? = nil, region: PointerConstraintRegion? = nil, lifetime: PointerConstraintLifetime = .oneShot) async throws -> PointerConstraint	-
 s:13WaylandClient6WindowV11needsRedrawSbvp	swift.property	Window.needsRedraw	var needsRedraw: Bool { get async throws }	-
-s:13WaylandClient6WindowV18presentationEventsAA0c12PresentationE0Vvp	swift.property	Window.presentationEvents	var presentationEvents: WindowPresentationEvents { get }	-
+s:13WaylandClient6WindowV18presentationEventsAA026ManagedSurfacePresentationE0Vvp	swift.property	Window.presentationEvents	var presentationEvents: ManagedSurfacePresentationEvents { get }	-
 s:13WaylandClient6WindowV6redraw8metadata27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbyAA0iL0VYbKXEtYaKF	swift.method	Window.redraw(metadata:requestPresentationFeedback:_:)	@discardableResult func redraw(metadata frameMetadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
 s:13WaylandClient6WindowV6redraw8metadata27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbxAA0jM11ReservationVYaYbKYCXEyx_AA0jM0VtYbKXEtYaKs8SendableRzlF	swift.method	Window.redraw(metadata:requestPresentationFeedback:preparing:_:)	@discardableResult func redraw<Prepared>(metadata frameMetadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
 s:13WaylandClient6WindowV15relativePointer6seatIDAA08RelativeE12SubscriptionVAA04SeatG0V_tYaKF	swift.method	Window.relativePointer(seatID:)	func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription	-
@@ -2338,19 +2358,6 @@ s:13WaylandClient28WindowPresentationDiagnosticV11descriptionSSvp	swift.property
 s:13WaylandClient28WindowPresentationDiagnosticV5errorAA0D5ErrorOvp	swift.property	WindowPresentationDiagnostic.error	let error: PresentationError	-
 s:13WaylandClient28WindowPresentationDiagnosticV9operation5errorAcA0cD9OperationO_AA0D5ErrorOtcfc	swift.init	WindowPresentationDiagnostic.init(operation:error:)	init(operation diagnosticOperation: WindowPresentationOperation, error presentationError: PresentationError)	-
 s:13WaylandClient28WindowPresentationDiagnosticV9operationAA0cD9OperationOvp	swift.property	WindowPresentationDiagnostic.operation	let operation: WindowPresentationOperation	-
-s:13WaylandClient23WindowPresentationEventV	swift.struct	WindowPresentationEvent	struct WindowPresentationEvent	-
-s:13WaylandClient23WindowPresentationEventV8feedbackAA07SurfaceD8FeedbackOvp	swift.property	WindowPresentationEvent.feedback	let feedback: SurfacePresentationFeedback	-
-s:13WaylandClient23WindowPresentationEventV8windowID8feedbackAcA0cG0V_AA07SurfaceD8FeedbackOtcfc	swift.init	WindowPresentationEvent.init(windowID:feedback:)	init(windowID eventWindowID: WindowID, feedback eventFeedback: SurfacePresentationFeedback)	-
-s:13WaylandClient23WindowPresentationEventV8windowIDAA0cG0Vvp	swift.property	WindowPresentationEvent.windowID	let windowID: WindowID	-
-s:13WaylandClient24WindowPresentationEventsV	swift.struct	WindowPresentationEvents	struct WindowPresentationEvents	-
-s:13WaylandClient24WindowPresentationEventsV7Elementa	swift.typealias	WindowPresentationEvents.Element	typealias Element = SurfacePresentationFeedback	-
-s:13WaylandClient24WindowPresentationEventsV7Failurea	swift.typealias	WindowPresentationEvents.Failure	typealias Failure = WaylandDisplayError	-
-s:13WaylandClient24WindowPresentationEventsV17makeAsyncIteratorAA0cdeH0VyF	swift.method	WindowPresentationEvents.makeAsyncIterator()	func makeAsyncIterator() -> WindowPresentationEventsIterator	-
-s:13WaylandClient32WindowPresentationEventsIteratorV	swift.struct	WindowPresentationEventsIterator	struct WindowPresentationEventsIterator	-
-s:13WaylandClient32WindowPresentationEventsIteratorV7Elementa	swift.typealias	WindowPresentationEventsIterator.Element	typealias Element = SurfacePresentationFeedback	-
-s:13WaylandClient32WindowPresentationEventsIteratorV7Failurea	swift.typealias	WindowPresentationEventsIterator.Failure	typealias Failure = WaylandDisplayError	-
-s:13WaylandClient32WindowPresentationEventsIteratorV4nextAA07SurfaceD8FeedbackOSgyYaAA0A12DisplayErrorOYKF	swift.method	WindowPresentationEventsIterator.next()	mutating func next() async throws(WaylandDisplayError) -> SurfacePresentationFeedback?	-
-s:13WaylandClient32WindowPresentationEventsIteratorV4next9isolationAA07SurfaceD8FeedbackOSgScA_pSgYi_tYaAA0A12DisplayErrorOYKF	swift.method	WindowPresentationEventsIterator.next(isolation:)	mutating func next(isolation actor: isolated (any Actor)?) async throws(WaylandDisplayError) -> SurfacePresentationFeedback?	-
 s:13WaylandClient27WindowPresentationOperationO	swift.enum	WindowPresentationOperation	enum WindowPresentationOperation	-
 s:13WaylandClient27WindowPresentationOperationO11descriptionSSvp	swift.property	WindowPresentationOperation.description	var description: String { get }	-
 s:13WaylandClient27WindowPresentationOperationO18presentationFailedyA2CmF	swift.enum.case	WindowPresentationOperation.presentationFailed	case presentationFailed	-
@@ -2725,14 +2732,15 @@ s:13WaylandClient10SubsurfaceV14setInputRegionyyAA07SurfaceF0VSgYaKF	memberOf	s:
 s:13WaylandClient10SubsurfaceV15setOpaqueRegionyyAA07SurfaceF0VSgYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV15setSynchronizedyyYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV17setDesynchronizedyyYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
+s:13WaylandClient10SubsurfaceV18presentationEventsAA026ManagedSurfacePresentationE0Vvp	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV2eeoiySbAC_ACtFZ	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV2idAA0C8IdentityVvp	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV4hash4intoys6HasherVz_tF	memberOf	s:13WaylandClient10SubsurfaceV	-
-s:13WaylandClient10SubsurfaceV4show6damage_yAA19SurfaceDamageRegionVSg_yAA13SoftwareFrameVYbKXEtYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
-s:13WaylandClient10SubsurfaceV4showyyyAA13SoftwareFrameVYbKXEYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
+s:13WaylandClient10SubsurfaceV4show8metadata27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbxAA0jM11ReservationVYaYbKYCXEyx_AA0jM0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient10SubsurfaceV	-
+s:13WaylandClient10SubsurfaceV4show8metadata27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbyAA0iL0VYbKXEtYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV5closeyyYaF	memberOf	s:13WaylandClient10SubsurfaceV	-
-s:13WaylandClient10SubsurfaceV6redraw6damage_yAA19SurfaceDamageRegionVSg_yAA13SoftwareFrameVYbKXEtYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
-s:13WaylandClient10SubsurfaceV6redrawyyyAA13SoftwareFrameVYbKXEYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
+s:13WaylandClient10SubsurfaceV6redraw8metadata27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbxAA0jM11ReservationVYaYbKYCXEyx_AA0jM0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient10SubsurfaceV	-
+s:13WaylandClient10SubsurfaceV6redraw8metadata27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbyAA0iL0VYbKXEtYaKF	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV8geometryAA15SurfaceGeometryVvp	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV8identityAA0C8IdentityVvp	memberOf	s:13WaylandClient10SubsurfaceV	-
 s:13WaylandClient10SubsurfaceV8isClosedSbvp	memberOf	s:13WaylandClient10SubsurfaceV	-
@@ -2879,13 +2887,12 @@ s:13WaylandClient12DisplayEventO	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient12DisplayEventO10diagnosticyAcA0C10DiagnosticVcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO11popupClosedyAcA014PopupLifecycleD0VcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO12dataTransferyAcA04DatafD0OcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
-s:13WaylandClient12DisplayEventO12presentationyAcA018WindowPresentationD0VcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
+s:13WaylandClient12DisplayEventO12presentationyAcA026ManagedSurfacePresentationD0VcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO12windowClosedyAcA8WindowIDVcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO13outputChangedyAcA14OutputSnapshotVcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO13outputRemovedyAcA8OutputIDVcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO14popupDismissedyAcA014PopupLifecycleD0VcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
-s:13WaylandClient12DisplayEventO15redrawRequestedyAcA8WindowIDVcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
-s:13WaylandClient12DisplayEventO20popupRedrawRequestedyAcA014PopupLifecycleD0VcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
+s:13WaylandClient12DisplayEventO15redrawRequestedyAcA22ManagedSurfaceIdentityOcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO20windowCloseRequestedyAcA8WindowIDVcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO20windowOutputsChangedyAcA022WindowOutputMembershipD0VcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
 s:13WaylandClient12DisplayEventO33keyboardShortcutsInhibitorChangedyAcA08KeyboardfgD0VcACmF	memberOf	s:13WaylandClient12DisplayEventO	-
@@ -2956,12 +2963,15 @@ s:13WaylandClient12PopupSurfaceV13requestRedrawyyYaKF	memberOf	s:13WaylandClient
 s:13WaylandClient12PopupSurfaceV14parentWindowIDAA0fG0Vvp	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV14setInputRegionyyAA0dG0VSgYaKF	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV15setOpaqueRegionyyAA0dG0VSgYaKF	memberOf	s:13WaylandClient12PopupSurfaceV	-
+s:13WaylandClient12PopupSurfaceV18presentationEventsAA07Managedd12PresentationF0Vvp	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV2eeoiySbAC_ACtFZ	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV2idAA0cD8IdentityVvp	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV4hash4intoys6HasherVz_tF	memberOf	s:13WaylandClient12PopupSurfaceV	-
-s:13WaylandClient12PopupSurfaceV4show19timeoutMilliseconds_ys5Int32V_yAA13SoftwareFrameVYbKXEtYaKF	memberOf	s:13WaylandClient12PopupSurfaceV	-
+s:13WaylandClient12PopupSurfaceV4show8metadata27requestPresentationFeedback19timeoutMilliseconds9preparing_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_Sbs5Int32VxAA0mO11ReservationVYaYbKYCXEyx_AA0mO0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient12PopupSurfaceV	-
+s:13WaylandClient12PopupSurfaceV4show8metadata27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_Sbs5Int32VyAA0lN0VYbKXEtYaKF	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV5closeyyYaF	memberOf	s:13WaylandClient12PopupSurfaceV	-
-s:13WaylandClient12PopupSurfaceV6redrawyyyAA13SoftwareFrameVYbKXEYaKF	memberOf	s:13WaylandClient12PopupSurfaceV	-
+s:13WaylandClient12PopupSurfaceV6redraw8metadata27requestPresentationFeedback9preparing_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_SbxAA0kM11ReservationVYaYbKYCXEyx_AA0kM0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient12PopupSurfaceV	-
+s:13WaylandClient12PopupSurfaceV6redraw8metadata27requestPresentationFeedback_AA08SoftwareH7OutcomeOAA0D13FrameMetadataV_SbyAA0jL0VYbKXEtYaKF	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV8geometryAA0D8GeometryVvp	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV8identityAA0cD8IdentityVvp	memberOf	s:13WaylandClient12PopupSurfaceV	-
 s:13WaylandClient12PopupSurfaceV8isClosedSbvp	memberOf	s:13WaylandClient12PopupSurfaceV	-
@@ -4655,6 +4665,13 @@ s:13WaylandClient22InputDiagnosticPayloadO6cursoryAcA06CursorD0OcACmF	memberOf	s
 s:13WaylandClient22InputDiagnosticPayloadO6keymapyAcA06KeymapD0OcACmF	memberOf	s:13WaylandClient22InputDiagnosticPayloadO	-
 s:13WaylandClient22InputDiagnosticPayloadO8listeneryAcA0c8ListenerD0VcACmF	memberOf	s:13WaylandClient22InputDiagnosticPayloadO	-
 s:13WaylandClient22InputDiagnosticPayloadO9operationAA0cD9OperationOvp	memberOf	s:13WaylandClient22InputDiagnosticPayloadO	-
+s:13WaylandClient22ManagedSurfaceIdentityO	conformsTo	s:SH	Swift.Hashable
+s:13WaylandClient22ManagedSurfaceIdentityO	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient22ManagedSurfaceIdentityO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient22ManagedSurfaceIdentityO	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient22ManagedSurfaceIdentityO10subsurfaceyAcA010SubsurfaceE0VcACmF	memberOf	s:13WaylandClient22ManagedSurfaceIdentityO	-
+s:13WaylandClient22ManagedSurfaceIdentityO5popupyAcA05PopupdE0VcACmF	memberOf	s:13WaylandClient22ManagedSurfaceIdentityO	-
+s:13WaylandClient22ManagedSurfaceIdentityO6windowyAcA8WindowIDVcACmF	memberOf	s:13WaylandClient22ManagedSurfaceIdentityO	-
 s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient22OutputManagementHeadIDV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -4866,12 +4883,6 @@ s:13WaylandClient23WindowManagerCapabilityO7unknownyACs6UInt32VcACmF	memberOf	s:
 s:13WaylandClient23WindowManagerCapabilityO8maximizeyA2CmF	memberOf	s:13WaylandClient23WindowManagerCapabilityO	-
 s:13WaylandClient23WindowManagerCapabilityO8minimizeyA2CmF	memberOf	s:13WaylandClient23WindowManagerCapabilityO	-
 s:13WaylandClient23WindowManagerCapabilityO8rawValues6UInt32Vvp	memberOf	s:13WaylandClient23WindowManagerCapabilityO	-
-s:13WaylandClient23WindowPresentationEventV	conformsTo	s:SQ	Swift.Equatable
-s:13WaylandClient23WindowPresentationEventV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:13WaylandClient23WindowPresentationEventV	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient23WindowPresentationEventV8feedbackAA07SurfaceD8FeedbackOvp	memberOf	s:13WaylandClient23WindowPresentationEventV	-
-s:13WaylandClient23WindowPresentationEventV8windowID8feedbackAcA0cG0V_AA07SurfaceD8FeedbackOtcfc	memberOf	s:13WaylandClient23WindowPresentationEventV	-
-s:13WaylandClient23WindowPresentationEventV8windowIDAA0cG0Vvp	memberOf	s:13WaylandClient23WindowPresentationEventV	-
 s:13WaylandClient24CursorConfigurationErrorO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient24CursorConfigurationErrorO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient24CursorConfigurationErrorO	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
@@ -5038,12 +5049,6 @@ s:13WaylandClient24WindowLifecycleOperationO	conformsTo	s:s23CustomStringConvert
 s:13WaylandClient24WindowLifecycleOperationO	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient24WindowLifecycleOperationO11descriptionSSvp	memberOf	s:13WaylandClient24WindowLifecycleOperationO	-
 s:13WaylandClient24WindowLifecycleOperationO5closeyA2CmF	memberOf	s:13WaylandClient24WindowLifecycleOperationO	-
-s:13WaylandClient24WindowPresentationEventsV	conformsTo	s:Sci	_Concurrency.AsyncSequence
-s:13WaylandClient24WindowPresentationEventsV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:13WaylandClient24WindowPresentationEventsV	conformsTo	s:s8SendableP	Swift.Sendable
-s:13WaylandClient24WindowPresentationEventsV17makeAsyncIteratorAA0cdeH0VyF	memberOf	s:13WaylandClient24WindowPresentationEventsV	-
-s:13WaylandClient24WindowPresentationEventsV7Elementa	memberOf	s:13WaylandClient24WindowPresentationEventsV	-
-s:13WaylandClient24WindowPresentationEventsV7Failurea	memberOf	s:13WaylandClient24WindowPresentationEventsV	-
 s:13WaylandClient25CursorDiagnosticOperationO	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient25CursorDiagnosticOperationO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient25CursorDiagnosticOperationO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -5604,6 +5609,12 @@ s:13WaylandClient31KeyboardShortcutsInhibitorEventV11inhibitorIDAA0cdeH0Vvp	memb
 s:13WaylandClient31KeyboardShortcutsInhibitorEventV6seatIDAA04SeatH0Vvp	memberOf	s:13WaylandClient31KeyboardShortcutsInhibitorEventV	-
 s:13WaylandClient31KeyboardShortcutsInhibitorEventV8activityAA0cdE8ActivityOvp	memberOf	s:13WaylandClient31KeyboardShortcutsInhibitorEventV	-
 s:13WaylandClient31KeyboardShortcutsInhibitorEventV8windowIDAA06WindowH0Vvp	memberOf	s:13WaylandClient31KeyboardShortcutsInhibitorEventV	-
+s:13WaylandClient31ManagedSurfacePresentationEventV	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient31ManagedSurfacePresentationEventV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient31ManagedSurfacePresentationEventV	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient31ManagedSurfacePresentationEventV7surface8feedbackAcA0cD8IdentityO_AA0dE8FeedbackOtcfc	memberOf	s:13WaylandClient31ManagedSurfacePresentationEventV	-
+s:13WaylandClient31ManagedSurfacePresentationEventV7surfaceAA0cD8IdentityOvp	memberOf	s:13WaylandClient31ManagedSurfacePresentationEventV	-
+s:13WaylandClient31ManagedSurfacePresentationEventV8feedbackAA0dE8FeedbackOvp	memberOf	s:13WaylandClient31ManagedSurfacePresentationEventV	-
 s:13WaylandClient31PointerConstraintLifecycleEventO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient31PointerConstraintLifecycleEventO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient31PointerConstraintLifecycleEventO	conformsTo	s:s8SendableP	Swift.Sendable
@@ -5632,11 +5643,12 @@ s:13WaylandClient32DataTransferCallbackFailureCauseO	conformsTo	s:s23CustomStrin
 s:13WaylandClient32DataTransferCallbackFailureCauseO	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient32DataTransferCallbackFailureCauseO11descriptionSSvp	memberOf	s:13WaylandClient32DataTransferCallbackFailureCauseO	-
 s:13WaylandClient32DataTransferCallbackFailureCauseO7backendyACSS_SStcACmF	memberOf	s:13WaylandClient32DataTransferCallbackFailureCauseO	-
-s:13WaylandClient32WindowPresentationEventsIteratorV	conformsTo	s:ScI	_Concurrency.AsyncIteratorProtocol
-s:13WaylandClient32WindowPresentationEventsIteratorV4next9isolationAA07SurfaceD8FeedbackOSgScA_pSgYi_tYaAA0A12DisplayErrorOYKF	memberOf	s:13WaylandClient32WindowPresentationEventsIteratorV	-
-s:13WaylandClient32WindowPresentationEventsIteratorV4nextAA07SurfaceD8FeedbackOSgyYaAA0A12DisplayErrorOYKF	memberOf	s:13WaylandClient32WindowPresentationEventsIteratorV	-
-s:13WaylandClient32WindowPresentationEventsIteratorV7Elementa	memberOf	s:13WaylandClient32WindowPresentationEventsIteratorV	-
-s:13WaylandClient32WindowPresentationEventsIteratorV7Failurea	memberOf	s:13WaylandClient32WindowPresentationEventsIteratorV	-
+s:13WaylandClient32ManagedSurfacePresentationEventsV	conformsTo	s:Sci	_Concurrency.AsyncSequence
+s:13WaylandClient32ManagedSurfacePresentationEventsV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient32ManagedSurfacePresentationEventsV	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient32ManagedSurfacePresentationEventsV17makeAsyncIteratorAA0cdefI0VyF	memberOf	s:13WaylandClient32ManagedSurfacePresentationEventsV	-
+s:13WaylandClient32ManagedSurfacePresentationEventsV7Elementa	memberOf	s:13WaylandClient32ManagedSurfacePresentationEventsV	-
+s:13WaylandClient32ManagedSurfacePresentationEventsV7Failurea	memberOf	s:13WaylandClient32ManagedSurfacePresentationEventsV	-
 s:13WaylandClient32WindowPresentationRequestSummaryV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient32WindowPresentationRequestSummaryV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient32WindowPresentationRequestSummaryV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
@@ -5742,6 +5754,11 @@ s:13WaylandClient39KeyboardInterpretationUnavailableReasonO23unsupportedKeymapFo
 s:13WaylandClient39KeyboardInterpretationUnavailableReasonO26composeStateCreationFailedyA2CmF	memberOf	s:13WaylandClient39KeyboardInterpretationUnavailableReasonO	-
 s:13WaylandClient39KeyboardInterpretationUnavailableReasonO27invalidComposeConfigurationyA2CmF	memberOf	s:13WaylandClient39KeyboardInterpretationUnavailableReasonO	-
 s:13WaylandClient39KeyboardInterpretationUnavailableReasonO8noKeymapyA2CmF	memberOf	s:13WaylandClient39KeyboardInterpretationUnavailableReasonO	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV	conformsTo	s:ScI	_Concurrency.AsyncIteratorProtocol
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV4next9isolationAA0dE8FeedbackOSgScA_pSgYi_tYaAA0A12DisplayErrorOYKF	memberOf	s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV4nextAA0dE8FeedbackOSgyYaAA0A12DisplayErrorOYKF	memberOf	s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV7Elementa	memberOf	s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV	-
+s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV7Failurea	memberOf	s:13WaylandClient40ManagedSurfacePresentationEventsIteratorV	-
 s:13WaylandClient6SeatIDV	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient6SeatIDV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient6SeatIDV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -5779,7 +5796,7 @@ s:13WaylandClient6WindowV16createSubsurface13configurationAA0E0VAA0E13Configurat
 s:13WaylandClient6WindowV17requestFullscreen6outputyAA8OutputIDVSg_tYaKF	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV17requestUnmaximizeyyYaKF	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV17startToplevelDrag6source6seatID6serial4icon6offsetAA07StartedeF0VAA0F19SourceConfigurationV_AA04SeatI0VAA11InputSerialVAA0F4IconOAA13LogicalOffsetVtYaKF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV18presentationEventsAA0c12PresentationE0Vvp	memberOf	s:13WaylandClient6WindowV	-
+s:13WaylandClient6WindowV18presentationEventsAA026ManagedSurfacePresentationE0Vvp	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV18requestPointerWarp6seatID8position6serialyAA04SeatH0V_AA13LogicalOffsetVAA11InputSerialVtYaKF	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV19restorationSnapshotAA0c11RestorationE0Vvp	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV21requestExitFullscreenyyYaKF	memberOf	s:13WaylandClient6WindowV	-

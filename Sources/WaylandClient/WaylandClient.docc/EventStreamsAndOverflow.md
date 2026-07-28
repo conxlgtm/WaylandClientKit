@@ -5,10 +5,15 @@ window lifecycle, input, text input, data transfer, presentation, and diagnostic
 events in owner-thread publication order.
 
 ``InputEvents``, ``TextInputEvents``, ``DataTransferEvents``,
-``WindowPresentationEvents``, and ``DisplayDiagnostics`` remain available as
+``ManagedSurfacePresentationEvents``, and ``DisplayDiagnostics`` remain available as
 specialized convenience streams. ``DisplayEvents`` is the only stream that
 preserves ordering across event families. A specialized stream preserves order
 only within its own family.
+
+Window, popup, and subsurface redraws all use
+``DisplayEvent/redrawRequested(_:)`` with a ``ManagedSurfaceIdentity``. Presentation
+feedback for all three roles uses ``DisplayEvent/presentation(_:)`` with a
+``ManagedSurfacePresentationEvent``.
 
 Each call to `makeAsyncIterator()` creates its own subscription and buffer.
 Buffering starts when the iterator is created, so events published before that
