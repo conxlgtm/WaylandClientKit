@@ -327,6 +327,29 @@ Tests:
 - `SurfaceRuntimeSubmitTests` covers commit ordering for explicit logical
   damage when buffer damage is unavailable.
 
+## Event Broker State Boundary
+
+Remaining unsafe constructs:
+
+- `EventBrokerLockedState` is a private `@unchecked Sendable` reference that
+  stores event-broker state behind `NSLock`.
+
+Audit invariant:
+
+- The mutable value is private, and every read or mutation occurs after the
+  sanitizer-visible lock acquisition and before its release.
+- Continuations are claimed while locked but resumed only after the broker lock
+  is released, so cancellation and publication cannot re-enter locked state.
+- This explicit boundary avoids the affected Swift toolchain's
+  `Synchronization.Mutex.withLock` inout instrumentation, which Thread
+  Sanitizer reports as overlapping access even though the mutex serializes the
+  closure bodies.
+
+Tests:
+
+- `EventBrokerCancellationTests` runs cancellation, publication, and finish
+  races; the focused suite is also executed with Thread Sanitizer enabled.
+
 ## Data Transfer File Descriptors
 
 Remaining unsafe constructs:

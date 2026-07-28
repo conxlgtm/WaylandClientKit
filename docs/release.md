@@ -31,13 +31,19 @@ This checkpoint contains source-breaking `WaylandClient` and
   `dataTransfer`, and `presentation` cases. `WaylandDisplay.events` is now the
   complete cross-family ordered feed; specialized streams remain
   family-ordered convenience views.
-- `Window.show(preparing:_:)` and `Window.redraw(preparing:_:)` now return
-  `SoftwarePresentationOutcome`, distinguishing presented, superseded, deferred,
-  and closed attempts. Calls that ignore the result remain valid because it is
-  discardable. Explicit `Void` bindings, typed function references, and wrappers
-  must adopt or discard the returned outcome. Matching overloads without a
-  preparation closure expose the same atomic `requestPresentationFeedback`
-  option and outcome. Prepared generations are revalidated before drawing.
+- Replace the former `Window.show` and `Window.redraw` overload families with
+  one simple and one prepared method each. All four return discardable
+  `SoftwarePresentationOutcome`, accept `SurfaceFrameMetadata`, and expose the
+  same atomic `requestPresentationFeedback` option. Move `damage:` arguments
+  into `SurfaceFrameMetadata.damage`; remove explicit no-op-preparation and
+  legacy `Void` wrappers. Prepared generations are revalidated before drawing.
+- Replace `WaylandGraphicsFrameMetadata`, `WaylandGraphicsDamageRegion`,
+  `WaylandGraphicsContentType`, `WaylandGraphicsPresentationHint`,
+  `WaylandGraphicsAlphaModifier`, `WaylandGraphicsColorAlphaMode`, and
+  `WaylandGraphicsColorRepresentation` with the corresponding shared
+  `WaylandClient` surface types. Pass `SurfaceFrameMetadata` to software and
+  external-buffer submissions and read it from frame results. Use `nil` damage
+  for a full-frame commit; empty damage regions are no longer a second sentinel.
 - `WaylandGraphicsFrameLease` and `WaylandGraphicsExternalBufferRenderLease` are
   now move-only. Submission and cancellation consume the lease, and reserving an
   external buffer consumes the frame lease and transfers sole authority to the

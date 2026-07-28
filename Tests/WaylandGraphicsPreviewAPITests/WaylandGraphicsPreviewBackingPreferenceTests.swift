@@ -64,7 +64,7 @@ struct WaylandGraphicsPresentationPolicyTests {
 
     @Test
     func frameResultReportsSubmissionFacts() throws {
-        let metadata = WaylandGraphicsFrameMetadata(
+        let metadata = SurfaceFrameMetadata(
             contentType: .game,
             presentationHint: .vsync
         )

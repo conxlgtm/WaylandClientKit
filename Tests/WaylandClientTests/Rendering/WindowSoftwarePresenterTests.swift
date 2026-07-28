@@ -94,6 +94,43 @@
         }
 
         @Test
+        func unsupportedMetadataIsRejectedBeforePoolAcquisitionOrDrawing() async throws {
+            try await withSoftwarePresentationRecording {
+                try exerciseUnsupportedMetadataPreflight()
+            }
+        }
+
+        private func exerciseUnsupportedMetadataPreflight() throws {
+            var requestedPool = false
+            var didDraw = false
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+            var pendingFrameRegistration: FrameCallbackRegistration?
+            let presenter = WindowSoftwarePresenter(
+                surface: try testSurface(pointer: 0x6A71),
+                scaleInstallation: SurfaceScaleInstallation(),
+                createSharedMemoryPool: { _ in
+                    requestedPool = true
+                    throw UnexpectedPoolRequest()
+                },
+                isWindowClosed: { false },
+                onFrame: { _ = () }
+            )
+
+            #expect(throws: SurfaceCommitMetadataError.contentTypeUnavailable) {
+                _ = try presenter.present(
+                    context: try softwarePresentationContext(
+                        metadata: SurfaceCommitMetadata(contentType: .photo)
+                    ),
+                    draw: { _ in didDraw = true },
+                    runtime: &runtime,
+                    pendingFrameRegistration: &pendingFrameRegistration
+                )
+            }
+            #expect(!requestedPool)
+            #expect(!didDraw)
+        }
+
+        @Test
         func bufferIDsAreUniqueAcrossPoolAllocations() async throws {
             try await withSoftwarePresentationRecording {
                 let surface = try testSurface(pointer: 0x6A11)
@@ -330,7 +367,9 @@
         }
 
         private func softwarePresentationContext(
-            submitConstraints: SurfaceSubmitConstraints = .default
+            submitConstraints: SurfaceSubmitConstraints = .default,
+            metadata: SurfaceCommitMetadata = .default,
+            damage: SurfaceDamageRegion? = nil
         ) throws
             -> WindowSoftwarePresentationContext
         {
@@ -355,8 +394,8 @@
                 ),
                 geometry: geometry,
                 submitConstraints: submitConstraints,
-                metadata: .default,
-                damage: nil,
+                metadata: metadata,
+                damage: damage,
                 presentationFeedback: nil
             )
         }
@@ -419,4 +458,5 @@
 
     private struct InjectedDrawFailure: Error {}
     private struct InjectedSuccessStagingFailure: Error {}
+    private struct UnexpectedPoolRequest: Error {}
 #endif

@@ -87,14 +87,13 @@ struct WaylandGraphicsPreviewClientTests {
             metadataPolicy: .preferAvailable,
             presentationFeedbackPolicy: .requestWhenAvailable
         )
-        let metadata = WaylandGraphicsFrameMetadata(
+        let metadata = SurfaceFrameMetadata(
             contentType: .video,
             presentationHint: .async,
             alpha: .opaque,
-            colorRepresentation: WaylandGraphicsColorRepresentation(
+            colorRepresentation: SurfaceColorRepresentation(
                 alphaMode: .premultipliedElectrical
-            ),
-            damage: .fullFrame
+            )
         )
         let schedule = WaylandGraphicsFrameSchedule(
             synchronization: .preferExplicit,
@@ -132,7 +131,7 @@ struct WaylandGraphicsPreviewClientTests {
         #expect(WaylandGraphicsReason.gbmAllocationFailed != .gbmUnavailable)
         #expect(metadata.contentType == .video)
         #expect(metadata.alpha == .opaque)
-        #expect(metadata.damage == .fullFrame)
+        #expect(metadata.damage == nil)
         #expect(frame == expectedFrame)
         #expect(result.operation == .show)
         #expect(result.backing == .fallback(.forcedSoftware))
@@ -154,7 +153,11 @@ struct WaylandGraphicsPreviewClientTests {
 
             let secondLease = try await backing.nextFrame()
             let result = try await secondLease.submitSoftware(
-                metadata: WaylandGraphicsFrameMetadata(damage: .fullFrame)
+                metadata: SurfaceFrameMetadata(
+                    damage: try SurfaceDamageRegion([
+                        LogicalRect(x: 0, y: 0, width: 1, height: 1)
+                    ])
+                )
             ) { frame in
                 frame.withXRGB8888Rows { _, pixels in
                     for index in 0..<pixels.count {

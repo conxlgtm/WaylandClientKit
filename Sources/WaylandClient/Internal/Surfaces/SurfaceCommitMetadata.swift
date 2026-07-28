@@ -1,43 +1,21 @@
 import WaylandRaw
 
-package struct SurfaceContentType: Equatable, Hashable, Sendable {
-    package let rawValue: UInt32
-
-    package static let none = Self(rawValue: 0)
-    package static let photo = Self(rawValue: 1)
-    package static let video = Self(rawValue: 2)
-    package static let game = Self(rawValue: 3)
-
-    package init(rawValue value: UInt32) {
-        rawValue = value
-    }
-
+extension SurfaceContentType {
     var rawContentType: RawContentType {
-        RawContentType(rawValue: rawValue)
+        switch self {
+        case .none:
+            RawContentType(rawValue: 0)
+        case .photo:
+            RawContentType(rawValue: 1)
+        case .video:
+            RawContentType(rawValue: 2)
+        case .game:
+            RawContentType(rawValue: 3)
+        }
     }
-
-    var isValidOutboundValue: Bool {
-        Self.validOutboundValues.contains(self)
-    }
-
-    private static let validOutboundValues: Set<Self> = [
-        .none,
-        .photo,
-        .video,
-        .game,
-    ]
 }
 
-package struct SurfaceAlphaMultiplier: Equatable, Sendable {
-    package let rawValue: UInt32
-
-    package static let opaque = Self(rawValue: UInt32.max)
-    package static let transparent = Self(rawValue: 0)
-
-    package init(rawValue value: UInt32) {
-        rawValue = value
-    }
-
+extension SurfaceAlphaMultiplier {
     var rawMultiplier: RawAlphaMultiplier {
         RawAlphaMultiplier(rawValue: rawValue)
     }
@@ -51,10 +29,7 @@ package struct SurfaceAlphaMetadata: Equatable, Sendable {
     }
 }
 
-package enum SurfacePresentationHint: Equatable, Sendable {
-    case vsync
-    case async
-
+extension SurfacePresentationHint {
     var rawPresentationHint: RawPresentationHint {
         switch self {
         case .vsync:
@@ -169,23 +144,6 @@ package struct SurfaceChromaLocation: Equatable, Hashable, Sendable {
     ]
 }
 
-package struct SurfaceColorRepresentation: Equatable, Sendable {
-    package var alphaMode: SurfaceAlphaMode?
-    package var coefficientsAndRange: SurfaceMatrixCoefficientsAndRange?
-    package var chromaLocation: SurfaceChromaLocation?
-
-    package init(
-        alphaMode surfaceAlphaMode: SurfaceAlphaMode? = nil,
-        coefficientsAndRange surfaceCoefficientsAndRange:
-            SurfaceMatrixCoefficientsAndRange? = nil,
-        chromaLocation surfaceChromaLocation: SurfaceChromaLocation? = nil
-    ) {
-        alphaMode = surfaceAlphaMode
-        coefficientsAndRange = surfaceCoefficientsAndRange
-        chromaLocation = surfaceChromaLocation
-    }
-}
-
 package struct SurfaceImageDescriptionIdentity: Equatable, Hashable, Sendable {
     package let rawValue: UInt64
 
@@ -241,9 +199,6 @@ package struct SurfaceCommitMetadata: Equatable, Sendable {
         if contentType != nil, capabilities.contentType == .unavailable {
             throw .contentTypeUnavailable
         }
-        if let contentType, !contentType.isValidOutboundValue {
-            throw .unsupportedContentType(contentType)
-        }
         if alpha != nil, capabilities.alphaModifier == .unavailable {
             throw .alphaModifierUnavailable
         }
@@ -277,7 +232,7 @@ extension SurfaceColorRepresentation {
             throw .colorRepresentationUnavailable
         }
 
-        if let alphaMode, !support.alphaModes.contains(alphaMode) {
+        if let alphaMode = storedAlphaMode, !support.alphaModes.contains(alphaMode) {
             throw .unsupportedAlphaMode(alphaMode)
         }
         if let coefficientsAndRange,
@@ -313,7 +268,6 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
         message: String
     )
     case invalidColorDescriptionIdentity(UInt64)
-    case unsupportedContentType(SurfaceContentType)
     case unsupportedAlphaMode(SurfaceAlphaMode)
     case unsupportedCoefficientsAndRange(SurfaceMatrixCoefficientsAndRange)
     case unsupportedChromaLocation(SurfaceChromaLocation)
@@ -351,8 +305,6 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
                 + "\(cause.rawValue): \(message)"
         case .invalidColorDescriptionIdentity(let identity):
             "color description identity \(identity) is invalid"
-        case .unsupportedContentType(let contentType):
-            "content type \(contentType.rawValue) is not supported for outbound commits"
         case .unsupportedAlphaMode(let alphaMode):
             "alpha mode \(alphaMode.rawValue) is not supported by the compositor"
         case .unsupportedCoefficientsAndRange(let coefficientsAndRange):

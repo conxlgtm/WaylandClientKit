@@ -1622,6 +1622,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         let geometry: SurfaceGeometry
         try leaseState.requireNotClosed()
         do {
+            try frame.validateManagedPreviewMetadataPolicy(
+                configuration: effectiveConfiguration
+            )
             try await ensureWindowOpen()
             try await prepareInitialConfigure(
                 leaseID: leaseID,
@@ -1675,7 +1678,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
     func submitSoftware(
         leaseID: WaylandGraphicsFrameLeaseID,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        metadata frameMetadata: SurfaceFrameMetadata,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
         try await submitSoftware(
@@ -1688,7 +1691,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
     func submitSoftware(
         leaseID: WaylandGraphicsFrameLeaseID,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        metadata frameMetadata: SurfaceFrameMetadata,
         schedule frameSchedule: WaylandGraphicsFrameSchedule?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
@@ -1696,6 +1699,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         let geometry: SurfaceGeometry
         try leaseState.requireNotClosed()
         do {
+            try frameMetadata.validateManagedPreviewMetadataPolicy(
+                configuration: effectiveConfiguration
+            )
             try await ensureWindowOpen()
             try rejectSoftwareSubmissionWhenUnavailable(configuration: effectiveConfiguration)
 
@@ -1747,7 +1753,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         leaseID: WaylandGraphicsFrameLeaseID,
         buffer externalBuffer: WaylandGraphicsExternalBuffer,
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        metadata frameMetadata: SurfaceFrameMetadata,
         schedule frameSchedule: WaylandGraphicsFrameSchedule?
     ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
         let effectiveConfiguration = configuration.applying(schedule: frameSchedule)
@@ -1755,6 +1761,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         let operation: WaylandGraphicsFrameSubmissionOperation
         do {
             try leaseState.requireNotClosed()
+            try frameMetadata.validateManagedPreviewMetadataPolicy(
+                configuration: effectiveConfiguration
+            )
             try await ensureWindowOpen()
             try requireLocalRegisteredExternalBuffer(externalBuffer)
             guard externalBufferRegistry.reservation(for: externalBuffer.id) == leaseID else {
@@ -1882,7 +1891,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         _ externalBuffer: WaylandGraphicsExternalBuffer,
         submissionID: WaylandGraphicsExternalSubmissionID,
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        metadata frameMetadata: SurfaceFrameMetadata,
         geometry: SurfaceGeometry,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) async throws -> SubmittedExternalBufferFrame {
@@ -2166,7 +2175,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             geometry: geometry
         )
         let metadata = resolvedMetadata.commitMetadata
-        let damage = try frame.metadata.surfaceDamageRegion()
+        let damage = frame.metadata.damage
         if shouldAttemptManagedGPU {
             do {
                 _ = try await managedGPUBacking?.submitClearFrame(
@@ -2249,7 +2258,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     private func submitSoftwareFrame(
-        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        metadata frameMetadata: SurfaceFrameMetadata,
         operation: WaylandGraphicsFrameSubmissionOperation,
         geometry: SurfaceGeometry,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration,
@@ -2261,7 +2270,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             geometry: geometry
         )
         let metadata = resolvedMetadata.commitMetadata
-        let damage = try frameMetadata.surfaceDamageRegion()
+        let damage = frameMetadata.damage
         let pacingSelection = try Self.softwarePacingSelection(
             policy: effectiveConfiguration.gpuPacingPolicy,
             capabilities: backingRuntimePath.capabilities,
@@ -2374,7 +2383,7 @@ extension WaylandGraphicsWindowBackingStorage {
     private func prepareRegisteredExternalBufferSubmission(
         _ externalBuffer: WaylandGraphicsExternalBuffer,
         leaseID: WaylandGraphicsFrameLeaseID,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        metadata frameMetadata: SurfaceFrameMetadata,
         geometry: SurfaceGeometry,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) throws -> WaylandGraphicsFrameSubmissionOperation {
@@ -2960,7 +2969,7 @@ extension WaylandGraphicsWindowBackingStorage {
     private func frameResult(
         operation: WaylandGraphicsFrameSubmissionOperation,
         size: PositivePixelSize,
-        metadata: WaylandGraphicsFrameMetadata,
+        metadata: SurfaceFrameMetadata,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) -> WaylandGraphicsFrameResult {
         WaylandGraphicsFrameResult(

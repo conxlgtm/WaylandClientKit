@@ -295,8 +295,7 @@ extension GPURuntimePathReason {
 
     package init(_ metadataError: SurfaceCommitMetadataError) {
         switch metadataError {
-        case .contentTypeUnavailable, .contentTypeObjectUnavailable,
-            .unsupportedContentType:
+        case .contentTypeUnavailable, .contentTypeObjectUnavailable:
             self = .contentTypeUnavailable
         case .alphaModifierUnavailable, .alphaModifierObjectUnavailable:
             self = .alphaModifierUnavailable
@@ -369,8 +368,7 @@ private func metadataRuntimePathComponent(
     for error: SurfaceCommitMetadataError
 ) -> MetadataRuntimePathComponent {
     switch error {
-    case .contentTypeUnavailable, .contentTypeObjectUnavailable,
-        .unsupportedContentType:
+    case .contentTypeUnavailable, .contentTypeObjectUnavailable:
         .contentType
     case .alphaModifierUnavailable, .alphaModifierObjectUnavailable:
         .alpha

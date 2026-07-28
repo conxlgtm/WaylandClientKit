@@ -123,14 +123,16 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     func reserveSoftwareFrameForShow(
         _ windowID: WindowID,
-        timeoutMilliseconds: Int32
+        timeoutMilliseconds: Int32,
+        metadata: SurfaceFrameMetadata = .default
     ) throws -> WindowSoftwareFrameReservationOutcome {
         try withFatalFailureFinalization {
             guard !isClosed, let window = surfaces.window(windowID) else {
                 return .closed
             }
             return try window.reserveShowSoftwareFrameOnOwnerThread(
-                timeoutMilliseconds: timeoutMilliseconds
+                timeoutMilliseconds: timeoutMilliseconds,
+                metadata: metadata
             )
         }
     }
@@ -165,13 +167,16 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     }
 
     func reserveSoftwareFrameForRedraw(
-        _ windowID: WindowID
+        _ windowID: WindowID,
+        metadata frameMetadata: SurfaceFrameMetadata = .default
     ) throws -> WindowSoftwareFrameReservationOutcome {
         try withFatalFailureFinalization {
             guard !isClosed, let window = surfaces.window(windowID) else {
                 return .closed
             }
-            return try window.reserveRedrawSoftwareFrameOnOwnerThread()
+            return try window.reserveRedrawSoftwareFrameOnOwnerThread(
+                metadata: frameMetadata
+            )
         }
     }
 
@@ -180,7 +185,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         _ windowID: WindowID,
         reservation: SoftwareFrameReservation,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata: SurfaceCommitMetadata,
+        metadata: SurfaceFrameMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void

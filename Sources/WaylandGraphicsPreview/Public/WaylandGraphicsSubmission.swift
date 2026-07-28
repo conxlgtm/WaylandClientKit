@@ -389,117 +389,6 @@ public struct WaylandGraphicsFrameContract: Equatable, Sendable {
     }
 }
 
-public struct WaylandGraphicsDamageRegion: Equatable, Sendable {
-    public let rects: [LogicalRect]
-
-    public static let fullFrame = WaylandGraphicsDamageRegion(rects: [])
-
-    public init(rects damageRects: [LogicalRect]) {
-        rects = damageRects
-    }
-}
-
-public struct WaylandGraphicsFrameMetadata: Equatable, Sendable {
-    public var contentType: WaylandGraphicsContentType?
-    public var presentationHint: WaylandGraphicsPresentationHint?
-    public var alpha: WaylandGraphicsAlphaModifier?
-    public var colorRepresentation: WaylandGraphicsColorRepresentation?
-    package var colorDescription: WaylandGraphicsColorDescription?
-    public var damage: WaylandGraphicsDamageRegion?
-
-    public static let `default` = WaylandGraphicsFrameMetadata()
-
-    public init(
-        contentType frameContentType: WaylandGraphicsContentType? = nil,
-        presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil,
-        alpha frameAlpha: WaylandGraphicsAlphaModifier? = nil,
-        colorRepresentation frameColorRepresentation:
-            WaylandGraphicsColorRepresentation? = nil,
-        damage frameDamage: WaylandGraphicsDamageRegion? = nil
-    ) {
-        contentType = frameContentType
-        presentationHint = framePresentationHint
-        alpha = frameAlpha
-        colorRepresentation = frameColorRepresentation
-        colorDescription = nil
-        damage = frameDamage
-    }
-
-    package init(
-        contentType frameContentType: WaylandGraphicsContentType? = nil,
-        presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil,
-        alpha frameAlpha: WaylandGraphicsAlphaModifier? = nil,
-        colorRepresentation frameColorRepresentation:
-            WaylandGraphicsColorRepresentation? = nil,
-        colorDescription frameColorDescription: WaylandGraphicsColorDescription? = nil,
-        damage frameDamage: WaylandGraphicsDamageRegion? = nil
-    ) {
-        contentType = frameContentType
-        presentationHint = framePresentationHint
-        alpha = frameAlpha
-        colorRepresentation = frameColorRepresentation
-        colorDescription = frameColorDescription
-        damage = frameDamage
-    }
-}
-
-public enum WaylandGraphicsContentType: Equatable, Sendable {
-    case none
-    case photo
-    case video
-    case game
-}
-
-public enum WaylandGraphicsPresentationHint: Equatable, Sendable {
-    case vsync
-    case async
-}
-
-public struct WaylandGraphicsAlphaModifier: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public static let opaque = Self(rawValue: UInt32.max)
-    public static let transparent = Self(rawValue: 0)
-
-    public init(rawValue alphaMultiplierRawValue: UInt32) {
-        rawValue = alphaMultiplierRawValue
-    }
-}
-
-public enum WaylandGraphicsColorAlphaMode: Equatable, Sendable {
-    case premultipliedElectrical
-    case premultipliedOptical
-    case straight
-}
-
-public struct WaylandGraphicsColorRepresentation: Equatable, Sendable {
-    public var alphaMode: WaylandGraphicsColorAlphaMode?
-
-    public init(alphaMode colorAlphaMode: WaylandGraphicsColorAlphaMode? = nil) {
-        alphaMode = colorAlphaMode
-    }
-}
-
-package struct WaylandGraphicsColorDescriptionID: Equatable, Hashable, Sendable {
-    package let rawValue: UInt64
-
-    package init(rawValue colorDescriptionRawValue: UInt64) throws {
-        guard colorDescriptionRawValue != 0 else {
-            throw WaylandGraphicsError.unavailable(.invalidColorDescription)
-        }
-
-        rawValue = colorDescriptionRawValue
-    }
-}
-
-package struct WaylandGraphicsColorDescription: Equatable, Hashable, Sendable {
-    package let id: WaylandGraphicsColorDescriptionID
-
-    package init(id colorDescriptionID: WaylandGraphicsColorDescriptionID) {
-        id = colorDescriptionID
-    }
-}
-
 public struct WaylandGraphicsXRGBColor: Equatable, Sendable {
     public let red: UInt8
     public let green: UInt8
@@ -981,11 +870,11 @@ extension WaylandGraphicsExternalBufferDescriptor {
 
 public struct WaylandGraphicsClearFrame: Equatable, Sendable {
     public let color: WaylandGraphicsXRGBColor
-    public let metadata: WaylandGraphicsFrameMetadata
+    public let metadata: SurfaceFrameMetadata
 
     public init(
         color clearColor: WaylandGraphicsXRGBColor,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default
+        metadata frameMetadata: SurfaceFrameMetadata = .default
     ) {
         color = clearColor
         metadata = frameMetadata
@@ -999,7 +888,7 @@ public enum WaylandGraphicsSubmittedFrame: Equatable, Sendable {
         .clearColor(WaylandGraphicsClearFrame(color: color))
     }
 
-    package var metadata: WaylandGraphicsFrameMetadata {
+    package var metadata: SurfaceFrameMetadata {
         switch self {
         case .clearColor(let clearFrame):
             clearFrame.metadata
@@ -1016,7 +905,7 @@ public struct WaylandGraphicsFrameResult: Equatable, Sendable {
     public let runtimePath: WaylandGraphicsRuntimePath
     public let operation: WaylandGraphicsSubmissionOperation
     public let size: PositivePixelSize
-    public let metadata: WaylandGraphicsFrameMetadata
+    public let metadata: SurfaceFrameMetadata
     public let schedule: WaylandGraphicsFrameSchedule
     public let presentationFeedbackRequested: Bool
     public let synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
@@ -1029,7 +918,7 @@ public struct WaylandGraphicsFrameResult: Equatable, Sendable {
         runtimePath frameRuntimePath: WaylandGraphicsRuntimePath,
         operation frameOperation: WaylandGraphicsSubmissionOperation,
         size frameSize: PositivePixelSize,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil,
         presentationFeedbackRequested framePresentationFeedbackRequested: Bool = false,
         synchronizationPolicy frameSynchronizationPolicy:
@@ -1242,7 +1131,7 @@ public struct WaylandGraphicsExternalBufferRenderLease: ~Copyable, Sendable {
 
     @discardableResult
     public consuming func submit(
-        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
     ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
         try await submitTerminally(
@@ -1255,7 +1144,7 @@ public struct WaylandGraphicsExternalBufferRenderLease: ~Copyable, Sendable {
     @discardableResult
     public consuming func submit(
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
     ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
         try await submitTerminally(
@@ -1274,7 +1163,7 @@ public struct WaylandGraphicsExternalBufferRenderLease: ~Copyable, Sendable {
 
     private consuming func submitTerminally(
         acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization?,
-        metadata: WaylandGraphicsFrameMetadata,
+        metadata: SurfaceFrameMetadata,
         schedule: WaylandGraphicsFrameSchedule?
     ) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt {
         let leaseID = frameLeaseID
@@ -1548,7 +1437,7 @@ public struct WaylandGraphicsFrameLease: ~Copyable, Sendable {
 
     @discardableResult
     public consuming func submitSoftware(
-        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
         let leaseID = id
@@ -1569,7 +1458,7 @@ public struct WaylandGraphicsFrameLease: ~Copyable, Sendable {
     @discardableResult
     public consuming func submitSoftware(
         schedule frameSchedule: WaylandGraphicsFrameSchedule,
-        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
         let leaseID = id
@@ -1669,6 +1558,17 @@ public struct WaylandGraphicsFrameLease: ~Copyable, Sendable {
 }
 
 extension WaylandGraphicsSubmittedFrame {
+    package func validateManagedPreviewMetadataPolicy(
+        configuration: WaylandGraphicsConfiguration
+    ) throws {
+        switch self {
+        case .clearColor(let clearFrame):
+            try clearFrame.metadata.validateManagedPreviewMetadataPolicy(
+                configuration: configuration
+            )
+        }
+    }
+
     package func validateManagedPreviewSupport(
         configuration: WaylandGraphicsConfiguration,
         capabilities: WaylandGraphicsSurfaceCapabilities,
@@ -1685,16 +1585,26 @@ extension WaylandGraphicsSubmittedFrame {
     }
 }
 
-extension WaylandGraphicsFrameMetadata {
+extension SurfaceFrameMetadata {
+    package func validateManagedPreviewMetadataPolicy(
+        configuration: WaylandGraphicsConfiguration
+    ) throws {
+        if hasCommitMetadata, configuration.metadataPolicy == .none {
+            throw WaylandGraphicsError.unsupportedMetadata
+        }
+    }
+
     package func validateManagedPreviewSupport(
         configuration: WaylandGraphicsConfiguration,
         capabilities: WaylandGraphicsSurfaceCapabilities,
         geometry: SurfaceGeometry
     ) throws {
         _ = capabilities
-        try damage?.validateManagedPreviewSupport(geometry: geometry)
-        if hasCommitMetadata, configuration.metadataPolicy == .none {
-            throw WaylandGraphicsError.unsupportedMetadata
+        try validateManagedPreviewMetadataPolicy(configuration: configuration)
+        do {
+            try damage?.validate(within: geometry)
+        } catch {
+            throw WaylandGraphicsError.invalidDamageRegion
         }
     }
 
@@ -1714,21 +1624,21 @@ extension WaylandGraphicsFrameMetadata {
         var fallbacks = WaylandGraphicsMetadataFallbacks.none
         if let contentType {
             if capabilities.colorMetadata.contentType.isAvailable {
-                commitMetadata.contentType = contentType.surfaceContentType
+                commitMetadata.contentType = contentType
             } else {
                 fallbacks.contentType = true
             }
         }
         if let presentationHint {
             if capabilities.colorMetadata.tearingControl.isAvailable {
-                commitMetadata.presentationHint = presentationHint.surfacePresentationHint
+                commitMetadata.presentationHint = presentationHint
             } else {
                 fallbacks.presentationHint = true
             }
         }
         if let alpha {
             if capabilities.colorMetadata.alphaModifier.isAvailable {
-                commitMetadata.alpha = alpha.surfaceAlphaMetadata
+                commitMetadata.alpha = SurfaceAlphaMetadata(multiplier: alpha)
             } else {
                 fallbacks.alpha = true
             }
@@ -1736,8 +1646,7 @@ extension WaylandGraphicsFrameMetadata {
         if let colorRepresentation {
             switch capabilities.colorMetadata.colorRepresentation {
             case .available:
-                commitMetadata.colorRepresentation =
-                    colorRepresentation.surfaceColorRepresentation
+                commitMetadata.colorRepresentation = colorRepresentation
             case .pending:
                 fallbacks.colorRepresentationPending = true
             case .unavailable:
@@ -1746,8 +1655,7 @@ extension WaylandGraphicsFrameMetadata {
         }
         if let colorDescription {
             if capabilities.colorMetadata.colorManagement.isAvailable {
-                commitMetadata.colorDescription =
-                    try colorDescription.surfaceColorDescriptionReference
+                commitMetadata.colorDescription = colorDescription
             } else {
                 fallbacks.colorDescription = true
             }
@@ -1757,110 +1665,6 @@ extension WaylandGraphicsFrameMetadata {
             commitMetadata: commitMetadata,
             fallbacks: fallbacks
         )
-    }
-
-    package func surfaceCommitMetadata() throws -> SurfaceCommitMetadata {
-        SurfaceCommitMetadata(
-            contentType: contentType?.surfaceContentType,
-            alpha: alpha?.surfaceAlphaMetadata,
-            colorRepresentation: colorRepresentation?.surfaceColorRepresentation,
-            colorDescription: try colorDescription?.surfaceColorDescriptionReference,
-            presentationHint: presentationHint?.surfacePresentationHint
-        )
-    }
-
-    package func surfaceDamageRegion() throws -> SurfaceDamageRegion? {
-        try damage?.surfaceDamageRegion()
-    }
-
-    private var hasCommitMetadata: Bool {
-        contentType != nil
-            || presentationHint != nil
-            || alpha != nil
-            || colorRepresentation != nil
-            || colorDescription != nil
-    }
-}
-
-extension WaylandGraphicsDamageRegion {
-    package func validateManagedPreviewSupport(geometry: SurfaceGeometry) throws {
-        let region = try surfaceDamageRegion()
-        do {
-            try region?.validate(within: geometry)
-        } catch {
-            throw WaylandGraphicsError.invalidDamageRegion
-        }
-    }
-
-    package func surfaceDamageRegion() throws -> SurfaceDamageRegion? {
-        guard !rects.isEmpty else { return nil }
-
-        do {
-            return try SurfaceDamageRegion(rects)
-        } catch {
-            throw WaylandGraphicsError.invalidDamageRegion
-        }
-    }
-}
-
-extension WaylandGraphicsContentType {
-    package var surfaceContentType: SurfaceContentType {
-        switch self {
-        case .none:
-            .none
-        case .photo:
-            .photo
-        case .video:
-            .video
-        case .game:
-            .game
-        }
-    }
-}
-
-extension WaylandGraphicsPresentationHint {
-    package var surfacePresentationHint: SurfacePresentationHint {
-        switch self {
-        case .vsync:
-            .vsync
-        case .async:
-            .async
-        }
-    }
-}
-
-extension WaylandGraphicsAlphaModifier {
-    package var surfaceAlphaMetadata: SurfaceAlphaMetadata {
-        SurfaceAlphaMetadata(
-            multiplier: SurfaceAlphaMultiplier(rawValue: rawValue)
-        )
-    }
-}
-
-extension WaylandGraphicsColorAlphaMode {
-    package var surfaceAlphaMode: SurfaceAlphaMode {
-        switch self {
-        case .premultipliedElectrical:
-            .premultipliedElectrical
-        case .premultipliedOptical:
-            .premultipliedOptical
-        case .straight:
-            .straight
-        }
-    }
-}
-
-extension WaylandGraphicsColorRepresentation {
-    package var surfaceColorRepresentation: SurfaceColorRepresentation {
-        SurfaceColorRepresentation(alphaMode: alphaMode?.surfaceAlphaMode)
-    }
-}
-
-extension WaylandGraphicsColorDescription {
-    package var surfaceColorDescriptionReference: SurfaceColorDescriptionReference {
-        get throws {
-            try SurfaceColorDescriptionReference(identity: id.rawValue)
-        }
     }
 }
 

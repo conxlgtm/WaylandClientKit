@@ -86,7 +86,9 @@ enum DamageRegionSmoke {
 
             let geometry = try await window.geometry
             let frame = try await animation.nextFrame(logicalSize: geometry.logicalSize)
-            try await window.redraw(damage: frame.damage) { softwareFrame in
+            try await window.redraw(
+                metadata: SurfaceFrameMetadata(damage: frame.damage)
+            ) { softwareFrame in
                 draw(softwareFrame, phase: frame.phase)
             }
             log("operation: submit-partial-damage pass")

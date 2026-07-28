@@ -146,7 +146,7 @@ struct SurfaceMetadataObjects {
 
         return ResolvedSurfaceColorRepresentation(
             object: object,
-            alphaMode: representation.alphaMode?.rawAlphaMode,
+            alphaMode: representation.storedAlphaMode?.rawAlphaMode,
             coefficientsAndRange:
                 representation.coefficientsAndRange?.rawCoefficientsAndRange,
             chromaLocation: representation.chromaLocation?.rawChromaLocation

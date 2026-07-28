@@ -10,8 +10,8 @@ Each software frame reports an opaque ``SoftwareFrameBufferID`` for the borrowed
 SHM buffer. ``SoftwareFrame/withBuffer(_:)`` provides scoped access to XRGB8888
 bytes, stride, and geometry. The byte span is valid only inside the closure.
 Use
-``Window/show(damage:timeoutMilliseconds:requestPresentationFeedback:preparing:_:)``
-and ``Window/redraw(damage:requestPresentationFeedback:preparing:_:)`` when
+``Window/show(metadata:requestPresentationFeedback:timeoutMilliseconds:preparing:_:)``
+and ``Window/redraw(metadata:requestPresentationFeedback:preparing:_:)`` when
 expensive scene preparation should
 begin after WaylandClientKit has selected the authoritative software frame
 geometry and reusable buffer identity. The preparation closure receives a
@@ -23,10 +23,10 @@ authoritative geometry, redraw generation, and task cancellation before it
 borrows mutable bytes.
 
 When asynchronous preparation is unnecessary, use
-``Window/show(damage:requestPresentationFeedback:timeoutMilliseconds:_:)`` or
-``Window/redraw(damage:requestPresentationFeedback:_:)`` to request feedback
-atomically without a no-op preparation closure. These overloads return the same
-``SoftwarePresentationOutcome``.
+``Window/show(metadata:requestPresentationFeedback:timeoutMilliseconds:_:)`` or
+``Window/redraw(metadata:requestPresentationFeedback:_:)``. Both simple and
+prepared methods return ``SoftwarePresentationOutcome``; the result is
+discardable when callers do not need the terminal disposition.
 
 If the prepared generation is still current, WaylandClientKit draws, requests
 the frame callback and optional presentation feedback, commits the surface, and
@@ -57,12 +57,14 @@ error is re-thrown.
 ``PopupSurface`` follows the same ownership rule as windows: it is a managed
 surface, but popup placement and dismissal are governed by xdg-shell.
 
-Use ``Window/show(damage:timeoutMilliseconds:_:)`` for the first frame and
-``Window/redraw(damage:_:)`` for later partial redraws. Damage is expressed as
-logical ``SurfaceDamageRegion`` rectangles. WaylandClientKit validates any damage
-passed to `show`; the first buffer commit uses full-frame damage. Later commits
-map logical damage to scaled buffer coordinates and clip it to the surface.
-Passing no damage uses the full frame.
+Use ``Window/show(metadata:requestPresentationFeedback:timeoutMilliseconds:_:)``
+for the first frame and
+``Window/redraw(metadata:requestPresentationFeedback:_:)`` for later partial
+redraws. ``SurfaceFrameMetadata`` carries renderer-neutral surface metadata,
+including logical ``SurfaceDamageRegion`` rectangles. WaylandClientKit validates
+damage before drawing. `metadata.damage == nil` is the only full-frame
+representation; later partial commits map logical damage to scaled buffer
+coordinates and clip it to the surface.
 
 Use ``Window/setInputRegion(_:)`` and ``Window/setOpaqueRegion(_:)`` to publish
 surface regions to the compositor. Input regions affect compositor targeting.

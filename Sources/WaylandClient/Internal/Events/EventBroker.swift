@@ -1,4 +1,3 @@
-import Synchronization
 import WaylandRuntime
 
 @safe
@@ -356,7 +355,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
     private let stream: EventStreamIdentity
     private let capacity: Int
     private let overflowStrategy: OverflowStrategy<Element>
-    private let state = Mutex(BrokerState())
+    private let state = EventBrokerLockedState(BrokerState())
 
     init(
         stream eventStream: EventStreamIdentity,

@@ -159,7 +159,7 @@ enum GraphicsPreviewManagedGPUClear {
         _ events: DisplayEvents,
         backing: WaylandGraphicsWindowBacking,
         state: ManagedGPUClearRunState,
-        metadata: WaylandGraphicsFrameMetadata
+        metadata: SurfaceFrameMetadata
     ) async throws {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
@@ -186,7 +186,7 @@ enum GraphicsPreviewManagedGPUClear {
     nonisolated private static func submitClearFrame(
         backing: WaylandGraphicsWindowBacking,
         state: ManagedGPUClearRunState,
-        metadata: WaylandGraphicsFrameMetadata
+        metadata: SurfaceFrameMetadata
     ) async throws -> WaylandGraphicsFrameResult {
         let lease = try await backing.nextFrame()
         let result = try await lease.submit(
@@ -398,8 +398,8 @@ enum GraphicsPreviewManagedGPUClear {
 
     nonisolated private static func requestedFrameMetadata(
         _ options: ExampleRunOptions
-    ) throws -> WaylandGraphicsFrameMetadata {
-        try WaylandGraphicsFrameMetadata(
+    ) throws -> SurfaceFrameMetadata {
+        try SurfaceFrameMetadata(
             contentType: requestedContentType(options.contentType),
             presentationHint: requestedPresentationHint(options.presentationHint)
         )
@@ -407,12 +407,12 @@ enum GraphicsPreviewManagedGPUClear {
 
     nonisolated private static func requestedContentType(
         _ rawValue: String?
-    ) throws -> WaylandGraphicsContentType? {
+    ) throws -> SurfaceContentType? {
         switch normalized(rawValue) {
         case nil:
             nil
         case "none":
-            WaylandGraphicsContentType.none
+            SurfaceContentType.none
         case "photo":
             .photo
         case "video":
@@ -426,7 +426,7 @@ enum GraphicsPreviewManagedGPUClear {
 
     nonisolated private static func requestedPresentationHint(
         _ rawValue: String?
-    ) throws -> WaylandGraphicsPresentationHint? {
+    ) throws -> SurfacePresentationHint? {
         switch normalized(rawValue) {
         case nil:
             nil
@@ -498,7 +498,7 @@ enum GraphicsPreviewManagedGPUClear {
     }
 
     nonisolated fileprivate static func contentTypeDescription(
-        _ contentType: WaylandGraphicsContentType?
+        _ contentType: SurfaceContentType?
     ) -> String {
         guard let contentType else { return "not requested" }
         switch contentType {
@@ -514,7 +514,7 @@ enum GraphicsPreviewManagedGPUClear {
     }
 
     nonisolated fileprivate static func presentationHintDescription(
-        _ hint: WaylandGraphicsPresentationHint?
+        _ hint: SurfacePresentationHint?
     ) -> String {
         guard let hint else { return "not requested" }
         switch hint {
@@ -740,7 +740,7 @@ private struct ManagedGPUClearReport: Sendable {
     var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
     var pacingPolicy: WaylandGraphicsPacingPolicy
     var metadataPolicy: WaylandGraphicsMetadataPolicy
-    var metadata: WaylandGraphicsFrameMetadata
+    var metadata: SurfaceFrameMetadata
     var resizeRequestCount: Int
     var failure: String?
 
@@ -754,7 +754,7 @@ private struct ManagedGPUClearReport: Sendable {
             WaylandGraphicsSynchronizationPolicy = .implicitOnly,
         pacingPolicy reportedPacingPolicy: WaylandGraphicsPacingPolicy = .none,
         metadataPolicy reportedMetadataPolicy: WaylandGraphicsMetadataPolicy = .none,
-        metadata reportedMetadata: WaylandGraphicsFrameMetadata = .default,
+        metadata reportedMetadata: SurfaceFrameMetadata = .default,
         resizeRequestCount reportedResizeRequestCount: Int = 0,
         failure reportedFailure: String? = nil
     ) {
@@ -800,7 +800,7 @@ private actor ManagedGPUClearRunState {
         synchronizationPolicy: WaylandGraphicsSynchronizationPolicy,
         pacingPolicy: WaylandGraphicsPacingPolicy,
         metadataPolicy: WaylandGraphicsMetadataPolicy,
-        metadata: WaylandGraphicsFrameMetadata,
+        metadata: SurfaceFrameMetadata,
         resizeRequestCount: Int
     ) -> ManagedGPUClearReport {
         ManagedGPUClearReport(

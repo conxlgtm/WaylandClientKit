@@ -533,10 +533,13 @@ package final class TopLevelWindow {
         return presentationRequest
     }
 
-    private func reserveSoftwareFrameForCurrentRedraw()
+    private func reserveSoftwareFrameForCurrentRedraw(
+        metadata frameMetadata: SurfaceFrameMetadata = .default
+    )
         throws -> WindowSoftwareFrameReservationOutcome
     {
         guard !model.isClosed else { return .closed }
+        try validateSurfaceFrameMetadataSupport(frameMetadata)
         guard let request = try consumeSoftwarePresentationRequest() else { return .deferred }
 
         try interpretWindowEffects(
@@ -545,13 +548,14 @@ package final class TopLevelWindow {
 
         do {
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
+            try frameMetadata.damage?.validate(within: geometry)
             let result = try softwarePresenter().reserve(
                 context: WindowSoftwarePresentationContext(
                     request: request,
                     geometry: geometry,
                     submitConstraints: .default,
-                    metadata: .default,
-                    damage: nil,
+                    metadata: frameMetadata.surfaceCommitMetadata,
+                    damage: frameMetadata.damage,
                     presentationFeedback: nil
                 ),
                 reservationID: softwarePresentationCoordinator.allocateIdentity(),
@@ -681,6 +685,7 @@ package final class TopLevelWindow {
         presentationFeedback: WindowPresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
+        try validateSurfaceCommitMetadataSupport(metadata)
         try interpretWindowEffects(
             model.reduce(.presentationStarted(request))
         )
@@ -768,7 +773,7 @@ package final class TopLevelWindow {
     private func submitReservedSoftwareFrame(
         _ reservation: SoftwareFrameReservation,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata: SurfaceCommitMetadata,
+        metadata frameMetadata: SurfaceFrameMetadata,
         damage: SurfaceDamageRegion?,
         makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
@@ -787,6 +792,7 @@ package final class TopLevelWindow {
             guard try isCurrentSoftwarePresentation(pendingReservation) else {
                 return try supersedeSoftwarePresentation(pendingReservation)
             }
+            try validateSurfaceFrameMetadataSupport(frameMetadata)
             let successStagingContext = softwarePresentationSuccessStagingContext()
 
             let presentationFeedback = try makePresentationFeedback()
@@ -796,7 +802,7 @@ package final class TopLevelWindow {
                     request: pendingReservation.request,
                     geometry: pendingReservation.geometry,
                     submitConstraints: submitConstraints,
-                    metadata: metadata,
+                    metadata: frameMetadata.surfaceCommitMetadata,
                     damage: damage,
                     presentationFeedback: presentationFeedback
                 ),
@@ -1810,6 +1816,20 @@ extension TopLevelWindow {
         }
     }
 
+    private func validateSurfaceFrameMetadataSupport(
+        _ metadata: SurfaceFrameMetadata
+    ) throws {
+        refreshMetadataCapabilitiesFromBoundGlobals()
+        try metadata.validate(capabilities: surfaceRuntime.capabilitySnapshot())
+    }
+
+    private func validateSurfaceCommitMetadataSupport(
+        _ metadata: SurfaceCommitMetadata
+    ) throws {
+        refreshMetadataCapabilitiesFromBoundGlobals()
+        try metadata.validate(capabilities: surfaceRuntime.capabilitySnapshot())
+    }
+
     private func refreshMetadataCapabilitiesFromBoundGlobals() {
         guard let extensions = connection.boundGlobals?.extensions else {
             surfaceRuntime.setContentTypeCapability(.unavailable)
@@ -2155,6 +2175,7 @@ extension TopLevelWindow {
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
+        try validateSurfaceCommitMetadataSupport(metadata)
 
         if model.currentConfiguration == nil {
             _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
@@ -2170,15 +2191,17 @@ extension TopLevelWindow {
     }
 
     package func reserveShowSoftwareFrameOnOwnerThread(
-        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS
+        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        metadata frameMetadata: SurfaceFrameMetadata = .default
     ) throws -> WindowSoftwareFrameReservationOutcome {
         connection.preconditionIsOwnerThread()
+        try validateSurfaceFrameMetadataSupport(frameMetadata)
 
         if model.currentConfiguration == nil {
             _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
         }
 
-        return try reserveSoftwareFrameForCurrentRedraw()
+        return try reserveSoftwareFrameForCurrentRedraw(metadata: frameMetadata)
     }
 
     package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
@@ -2214,6 +2237,7 @@ extension TopLevelWindow {
         connection.preconditionIsOwnerThread()
 
         guard !model.isClosed else { return }
+        try validateSurfaceCommitMetadataSupport(metadata)
 
         _ = try consumeLatestConfigureIfAvailable()
         _ = try drawAndPresent(
@@ -2225,21 +2249,24 @@ extension TopLevelWindow {
         )
     }
 
-    package func reserveRedrawSoftwareFrameOnOwnerThread()
+    package func reserveRedrawSoftwareFrameOnOwnerThread(
+        metadata frameMetadata: SurfaceFrameMetadata = .default
+    )
         throws -> WindowSoftwareFrameReservationOutcome
     {
         connection.preconditionIsOwnerThread()
 
         guard !model.isClosed else { return .closed }
+        try validateSurfaceFrameMetadataSupport(frameMetadata)
 
         _ = try consumeLatestConfigureIfAvailable()
-        return try reserveSoftwareFrameForCurrentRedraw()
+        return try reserveSoftwareFrameForCurrentRedraw(metadata: frameMetadata)
     }
 
     package func submitReservedSoftwareFrameOnOwnerThread(
         _ reservation: SoftwareFrameReservation,
         submitConstraints: SurfaceSubmitConstraints = .default,
-        metadata: SurfaceCommitMetadata = .default,
+        metadata: SurfaceFrameMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
         makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest? = { nil },
         _ draw: (borrowing SoftwareFrame) throws -> Void

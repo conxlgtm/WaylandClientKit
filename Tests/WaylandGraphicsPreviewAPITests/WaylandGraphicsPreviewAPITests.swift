@@ -211,10 +211,10 @@ struct WaylandGraphicsPreviewAPITests {
     @Test
     func clearFrameCarriesColorAndOptionalMetadata() {
         let color = WaylandGraphicsXRGBColor(red: 0x10, green: 0x20, blue: 0x30)
-        let metadata = WaylandGraphicsFrameMetadata(
+        let metadata = SurfaceFrameMetadata(
             contentType: .game,
             presentationHint: .vsync,
-            damage: .fullFrame
+            damage: nil
         )
         let clearFrame = WaylandGraphicsClearFrame(color: color, metadata: metadata)
         let expectedSubmittedFrame = WaylandGraphicsSubmittedFrame.clearColor(
@@ -226,7 +226,7 @@ struct WaylandGraphicsPreviewAPITests {
         #expect(color.blue == 0x30)
         #expect(clearFrame.metadata.contentType == .game)
         #expect(clearFrame.metadata.presentationHint == .vsync)
-        #expect(clearFrame.metadata.damage == .fullFrame)
+        #expect(clearFrame.metadata.damage == nil)
         #expect(WaylandGraphicsSubmittedFrame.clearColor(color) == expectedSubmittedFrame)
     }
 }

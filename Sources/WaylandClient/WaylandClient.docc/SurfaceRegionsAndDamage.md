@@ -6,9 +6,10 @@ publishes logical rectangles that changed between frames.
 
 Use ``Window/setInputRegion(_:)`` when only part of a window should receive
 pointer targeting from the compositor. Use ``Window/setOpaqueRegion(_:)`` when
-rectangles are fully opaque and the compositor can optimize composition. Use
-``Window/redraw(damage:_:)`` when an already-shown window only changed part of
-its surface.
+rectangles are fully opaque and the compositor can optimize composition. Pass a
+``SurfaceFrameMetadata`` value with non-`nil` damage to
+``Window/redraw(metadata:requestPresentationFeedback:_:)`` when an already-shown
+window only changed part of its surface.
 
 ## Capability Gate
 
@@ -18,8 +19,8 @@ the current ``SurfaceGeometry`` and maps logical rectangles to buffer
 coordinates for the active scale.
 
 Invalid rectangles and out-of-bounds damage are reported as typed client errors.
-WaylandClientKit owns coordinate conversion, clipping, and the first-frame full
-damage rule.
+WaylandClientKit owns coordinate conversion and clipping. A `nil` metadata
+damage value is the only full-frame representation.
 
 ## Example
 

@@ -1549,10 +1549,43 @@ s:13WaylandClient23SubsurfaceStackingErrorO13selfReferenceyAcA0C8IdentityVcACmF	
 s:13WaylandClient29SubsurfaceSynchronizationModeO	swift.enum	SubsurfaceSynchronizationMode	enum SubsurfaceSynchronizationMode	-
 s:13WaylandClient29SubsurfaceSynchronizationModeO14desynchronizedyA2CmF	swift.enum.case	SubsurfaceSynchronizationMode.desynchronized	case desynchronized	-
 s:13WaylandClient29SubsurfaceSynchronizationModeO12synchronizedyA2CmF	swift.enum.case	SubsurfaceSynchronizationMode.synchronized	case synchronized	-
+s:13WaylandClient22SurfaceAlphaMultiplierV	swift.struct	SurfaceAlphaMultiplier	struct SurfaceAlphaMultiplier	-
+s:13WaylandClient22SurfaceAlphaMultiplierV8rawValueACs6UInt32V_tcfc	swift.init	SurfaceAlphaMultiplier.init(rawValue:)	init(rawValue alphaMultiplierRawValue: UInt32)	-
+s:13WaylandClient22SurfaceAlphaMultiplierV6opaqueACvpZ	swift.type.property	SurfaceAlphaMultiplier.opaque	static let opaque: SurfaceAlphaMultiplier	-
+s:13WaylandClient22SurfaceAlphaMultiplierV8rawValues6UInt32Vvp	swift.property	SurfaceAlphaMultiplier.rawValue	let rawValue: UInt32	-
+s:13WaylandClient22SurfaceAlphaMultiplierV11transparentACvpZ	swift.type.property	SurfaceAlphaMultiplier.transparent	static let transparent: SurfaceAlphaMultiplier	-
+s:13WaylandClient21SurfaceColorAlphaModeO	swift.enum	SurfaceColorAlphaMode	enum SurfaceColorAlphaMode	-
+s:13WaylandClient21SurfaceColorAlphaModeO23premultipliedElectricalyA2CmF	swift.enum.case	SurfaceColorAlphaMode.premultipliedElectrical	case premultipliedElectrical	-
+s:13WaylandClient21SurfaceColorAlphaModeO20premultipliedOpticalyA2CmF	swift.enum.case	SurfaceColorAlphaMode.premultipliedOptical	case premultipliedOptical	-
+s:13WaylandClient21SurfaceColorAlphaModeO8straightyA2CmF	swift.enum.case	SurfaceColorAlphaMode.straight	case straight	-
+s:13WaylandClient26SurfaceColorRepresentationV	swift.struct	SurfaceColorRepresentation	struct SurfaceColorRepresentation	-
+s:13WaylandClient26SurfaceColorRepresentationV9alphaModeAA0cd5AlphaG0OSgvp	swift.property	SurfaceColorRepresentation.alphaMode	var alphaMode: SurfaceColorAlphaMode? { get set }	-
+s:13WaylandClient26SurfaceColorRepresentationV9alphaModeAcA0cd5AlphaG0OSg_tcfc	swift.init	SurfaceColorRepresentation.init(alphaMode:)	init(alphaMode colorAlphaMode: SurfaceColorAlphaMode? = nil)	-
+s:13WaylandClient18SurfaceContentTypeO	swift.enum	SurfaceContentType	enum SurfaceContentType	-
+s:13WaylandClient18SurfaceContentTypeO4gameyA2CmF	swift.enum.case	SurfaceContentType.game	case game	-
+s:13WaylandClient18SurfaceContentTypeO4noneyA2CmF	swift.enum.case	SurfaceContentType.none	case none	-
+s:13WaylandClient18SurfaceContentTypeO5photoyA2CmF	swift.enum.case	SurfaceContentType.photo	case photo	-
+s:13WaylandClient18SurfaceContentTypeO5videoyA2CmF	swift.enum.case	SurfaceContentType.video	case video	-
 s:13WaylandClient19SurfaceDamageRegionV	swift.struct	SurfaceDamageRegion	struct SurfaceDamageRegion	-
 s:13WaylandClient19SurfaceDamageRegionVyACSayAA11LogicalRectVGKcfc	swift.init	SurfaceDamageRegion.init(_:)	init(_ damageRectangles: [LogicalRect]) throws	-
 s:13WaylandClient19SurfaceDamageRegionV10rectanglesACSayAA11LogicalRectVG_tKcfc	swift.init	SurfaceDamageRegion.init(rectangles:)	init(rectangles damageRectangles: [LogicalRect]) throws	-
 s:13WaylandClient19SurfaceDamageRegionV10rectanglesSayAA11LogicalRectVGvp	swift.property	SurfaceDamageRegion.rectangles	let rectangles: [LogicalRect]	-
+s:13WaylandClient20SurfaceFrameMetadataV	swift.struct	SurfaceFrameMetadata	struct SurfaceFrameMetadata	-
+s:13WaylandClient20SurfaceFrameMetadataV5alphaAA0C15AlphaMultiplierVSgvp	swift.property	SurfaceFrameMetadata.alpha	var alpha: SurfaceAlphaMultiplier?	-
+s:13WaylandClient20SurfaceFrameMetadataV19colorRepresentationAA0c5ColorG0VSgvp	swift.property	SurfaceFrameMetadata.colorRepresentation	var colorRepresentation: SurfaceColorRepresentation?	-
+s:13WaylandClient20SurfaceFrameMetadataV11contentTypeAA0c7ContentG0OSgvp	swift.property	SurfaceFrameMetadata.contentType	var contentType: SurfaceContentType?	-
+s:13WaylandClient20SurfaceFrameMetadataV6damageAA0C12DamageRegionVSgvp	swift.property	SurfaceFrameMetadata.damage	var damage: SurfaceDamageRegion?	-
+s:13WaylandClient20SurfaceFrameMetadataV7defaultACvpZ	swift.type.property	SurfaceFrameMetadata.default	static let `default`: SurfaceFrameMetadata	-
+s:13WaylandClient20SurfaceFrameMetadataV11contentType16presentationHint5alpha19colorRepresentation6damageAcA0c7ContentG0OSg_AA0c12PresentationI0OSgAA0C15AlphaMultiplierVSgAA0c5ColorL0VSgAA0C12DamageRegionVSgtcfc	swift.init	SurfaceFrameMetadata.init(contentType:presentationHint:alpha:colorRepresentation:damage:)	init(contentType surfaceContentType: SurfaceContentType? = nil, presentationHint surfacePresentationHint: SurfacePresentationHint? = nil, alpha surfaceAlpha: SurfaceAlphaMultiplier? = nil, colorRepresentation surfaceColorRepresentation: SurfaceColorRepresentation? = nil, damage surfaceDamage: SurfaceDamageRegion? = nil)	-
+s:13WaylandClient20SurfaceFrameMetadataV16presentationHintAA0c12PresentationG0OSgvp	swift.property	SurfaceFrameMetadata.presentationHint	var presentationHint: SurfacePresentationHint?	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO	swift.enum	SurfaceFrameMetadataError	enum SurfaceFrameMetadataError	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO26alphaMultiplierUnavailableyA2CmF	swift.enum.case	SurfaceFrameMetadataError.alphaMultiplierUnavailable	case alphaMultiplierUnavailable	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO33colorRepresentationSupportPendingyA2CmF	swift.enum.case	SurfaceFrameMetadataError.colorRepresentationSupportPending	case colorRepresentationSupportPending	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO30colorRepresentationUnavailableyA2CmF	swift.enum.case	SurfaceFrameMetadataError.colorRepresentationUnavailable	case colorRepresentationUnavailable	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO22contentTypeUnavailableyA2CmF	swift.enum.case	SurfaceFrameMetadataError.contentTypeUnavailable	case contentTypeUnavailable	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO11descriptionSSvp	swift.property	SurfaceFrameMetadataError.description	var description: String { get }	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO27presentationHintUnavailableyA2CmF	swift.enum.case	SurfaceFrameMetadataError.presentationHintUnavailable	case presentationHintUnavailable	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO25unsupportedColorAlphaModeyAcA0chiJ0OcACmF	swift.enum.case	SurfaceFrameMetadataError.unsupportedColorAlphaMode(_:)	case unsupportedColorAlphaMode(SurfaceColorAlphaMode)	-
 s:13WaylandClient15SurfaceGeometryV	swift.struct	SurfaceGeometry	struct SurfaceGeometry	-
 s:13WaylandClient15SurfaceGeometryV10bufferSizeAA013PositivePixelF0Vvp	swift.property	SurfaceGeometry.bufferSize	let bufferSize: PositivePixelSize	-
 s:13WaylandClient15SurfaceGeometryV11descriptionSSvp	swift.property	SurfaceGeometry.description	var description: String { get }	-
@@ -1563,6 +1596,9 @@ s:13WaylandClient27SurfacePresentationFeedbackO	swift.enum	SurfacePresentationFe
 s:13WaylandClient27SurfacePresentationFeedbackO9discardedyAcA0cD8IdentityVcACmF	swift.enum.case	SurfacePresentationFeedback.discarded(_:)	case discarded(SurfacePresentationIdentity)	-
 s:13WaylandClient27SurfacePresentationFeedbackO9presentedyAcA0dE0VcACmF	swift.enum.case	SurfacePresentationFeedback.presented(_:)	case presented(PresentationFeedback)	-
 s:13WaylandClient27SurfacePresentationFeedbackO7surfaceAA0cD8IdentityVvp	swift.property	SurfacePresentationFeedback.surface	var surface: SurfacePresentationIdentity { get }	-
+s:13WaylandClient23SurfacePresentationHintO	swift.enum	SurfacePresentationHint	enum SurfacePresentationHint	-
+s:13WaylandClient23SurfacePresentationHintO5asyncyA2CmF	swift.enum.case	SurfacePresentationHint.async	case async	-
+s:13WaylandClient23SurfacePresentationHintO5vsyncyA2CmF	swift.enum.case	SurfacePresentationHint.vsync	case vsync	-
 s:13WaylandClient27SurfacePresentationIdentityV	swift.struct	SurfacePresentationIdentity	struct SurfacePresentationIdentity	-
 s:13WaylandClient27SurfacePresentationIdentityV11descriptionSSvp	swift.property	SurfacePresentationIdentity.description	var description: String { get }	-
 s:13WaylandClient13SurfaceRegionV	swift.struct	SurfaceRegion	struct SurfaceRegion	-
@@ -2108,12 +2144,8 @@ s:13WaylandClient6WindowV8isClosedSbvp	swift.property	Window.isClosed	var isClos
 s:13WaylandClient6WindowV11lockPointer6seatID10cursorHint6region8lifetimeAA0E10ConstraintVAA04SeatG0V_AA0E8LocationVSgAA0eL6RegionVSgAA0eL8LifetimeOtYaKF	swift.method	Window.lockPointer(seatID:cursorHint:region:lifetime:)	func lockPointer(seatID: SeatID, cursorHint: PointerLocation? = nil, region: PointerConstraintRegion? = nil, lifetime: PointerConstraintLifetime = .oneShot) async throws -> PointerConstraint	-
 s:13WaylandClient6WindowV11needsRedrawSbvp	swift.property	Window.needsRedraw	var needsRedraw: Bool { get async throws }	-
 s:13WaylandClient6WindowV18presentationEventsAA0c12PresentationE0Vvp	swift.property	Window.presentationEvents	var presentationEvents: WindowPresentationEvents { get }	-
-s:13WaylandClient6WindowV6redrawyyyAA13SoftwareFrameVYbKXEYaKF	swift.method	Window.redraw(_:)	func redraw(_ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
-s:13WaylandClient6WindowV6redraw6damage_yAA19SurfaceDamageRegionVSg_yAA13SoftwareFrameVYbKXEtYaKF	swift.method	Window.redraw(damage:_:)	func redraw(damage: SurfaceDamageRegion?, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
-s:13WaylandClient6WindowV6redraw6damage27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA19SurfaceDamageRegionVSg_SbyAA0I5FrameVYbKXEtYaKF	swift.method	Window.redraw(damage:requestPresentationFeedback:_:)	@discardableResult func redraw(damage: SurfaceDamageRegion?, requestPresentationFeedback: Bool, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
-s:13WaylandClient6WindowV6redraw6damage27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA19SurfaceDamageRegionVSg_SbxAA0J16FrameReservationVYaYbKYCXEyx_AA0jO0VtYbKXEtYaKs8SendableRzlF	swift.method	Window.redraw(damage:requestPresentationFeedback:preparing:_:)	@discardableResult func redraw<Prepared>(damage: SurfaceDamageRegion?, requestPresentationFeedback: Bool = false, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
-s:13WaylandClient6WindowV6redraw27requestPresentationFeedback_AA08SoftwareF7OutcomeOSb_yAA0H5FrameVYbKXEtYaKF	swift.method	Window.redraw(requestPresentationFeedback:_:)	@discardableResult func redraw(requestPresentationFeedback: Bool, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
-s:13WaylandClient6WindowV6redraw27requestPresentationFeedback9preparing_AA08SoftwareF7OutcomeOSb_xAA0I16FrameReservationVYaYbKYCXEyx_AA0iK0VtYbKXEtYaKs8SendableRzlF	swift.method	Window.redraw(requestPresentationFeedback:preparing:_:)	@discardableResult func redraw<Prepared>(requestPresentationFeedback: Bool = false, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
+s:13WaylandClient6WindowV6redraw8metadata27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbyAA0iL0VYbKXEtYaKF	swift.method	Window.redraw(metadata:requestPresentationFeedback:_:)	@discardableResult func redraw(metadata frameMetadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
+s:13WaylandClient6WindowV6redraw8metadata27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbxAA0jM11ReservationVYaYbKYCXEyx_AA0jM0VtYbKXEtYaKs8SendableRzlF	swift.method	Window.redraw(metadata:requestPresentationFeedback:preparing:_:)	@discardableResult func redraw<Prepared>(metadata frameMetadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
 s:13WaylandClient6WindowV15relativePointer6seatIDAA08RelativeE12SubscriptionVAA04SeatG0V_tYaKF	swift.method	Window.relativePointer(seatID:)	func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription	-
 s:13WaylandClient6WindowV22requestActivationToken5appID13serialContext19timeoutMillisecondsAA0eF0VSSSg_AA0e6SerialJ0VSgs5Int32VtYaKF	swift.method	Window.requestActivationToken(appID:serialContext:timeoutMilliseconds:)	func requestActivationToken(appID: String? = nil, serialContext: ActivationSerialContext? = nil, timeoutMilliseconds: Int32 = WaylandDisplay.defaultActivationTokenTimeoutMilliseconds) async throws -> ActivationToken	-
 s:13WaylandClient6WindowV21requestExitFullscreenyyYaKF	swift.method	Window.requestExitFullscreen()	func requestExitFullscreen() async throws	-
@@ -2138,12 +2170,8 @@ s:13WaylandClient6WindowV14setMinimumSizeyyAA015PositiveLogicalF0VSgYaKF	swift.m
 s:13WaylandClient6WindowV15setOpaqueRegionyyAA07SurfaceF0VSgYaKF	swift.method	Window.setOpaqueRegion(_:)	func setOpaqueRegion(_ region: SurfaceRegion?) async throws	-
 s:13WaylandClient6WindowV8setTitleyyAA0A6StringVYaKF	swift.method	Window.setTitle(_:)	func setTitle(_ title: WaylandString) async throws	-
 s:13WaylandClient6WindowV8setTitleyySSYaKF	swift.method	Window.setTitle(_:)	func setTitle(_ title: String) async throws	-
-s:13WaylandClient6WindowV4show6damage27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareG7OutcomeOAA19SurfaceDamageRegionVSg_Sbs5Int32VyAA0K5FrameVYbKXEtYaKF	swift.method	Window.show(damage:requestPresentationFeedback:timeoutMilliseconds:_:)	@discardableResult func show(damage: SurfaceDamageRegion?, requestPresentationFeedback: Bool, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
-s:13WaylandClient6WindowV4show6damage19timeoutMilliseconds_yAA19SurfaceDamageRegionVSg_s5Int32VyAA13SoftwareFrameVYbKXEtYaKF	swift.method	Window.show(damage:timeoutMilliseconds:_:)	func show(damage: SurfaceDamageRegion?, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
-s:13WaylandClient6WindowV4show6damage19timeoutMilliseconds27requestPresentationFeedback9preparing_AA08SoftwareI7OutcomeOAA19SurfaceDamageRegionVSg_s5Int32VSbxAA0L16FrameReservationVYaYbKYCXEyx_AA0lR0VtYbKXEtYaKs8SendableRzlF	swift.method	Window.show(damage:timeoutMilliseconds:requestPresentationFeedback:preparing:_:)	@discardableResult func show<Prepared>(damage: SurfaceDamageRegion?, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, requestPresentationFeedback: Bool = false, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
-s:13WaylandClient6WindowV4show27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareF7OutcomeOSb_s5Int32VyAA0J5FrameVYbKXEtYaKF	swift.method	Window.show(requestPresentationFeedback:timeoutMilliseconds:_:)	@discardableResult func show(requestPresentationFeedback: Bool, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
-s:13WaylandClient6WindowV4show19timeoutMilliseconds_ys5Int32V_yAA13SoftwareFrameVYbKXEtYaKF	swift.method	Window.show(timeoutMilliseconds:_:)	func show(timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws	-
-s:13WaylandClient6WindowV4show19timeoutMilliseconds27requestPresentationFeedback9preparing_AA08SoftwareH7OutcomeOs5Int32V_SbxAA0K16FrameReservationVYaYbKYCXEyx_AA0kN0VtYbKXEtYaKs8SendableRzlF	swift.method	Window.show(timeoutMilliseconds:requestPresentationFeedback:preparing:_:)	@discardableResult func show<Prepared>(timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, requestPresentationFeedback: Bool = false, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
+s:13WaylandClient6WindowV4show8metadata27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_Sbs5Int32VyAA0kN0VYbKXEtYaKF	swift.method	Window.show(metadata:requestPresentationFeedback:timeoutMilliseconds:_:)	@discardableResult func show(metadata frameMetadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"}}
+s:13WaylandClient6WindowV4show8metadata27requestPresentationFeedback19timeoutMilliseconds9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_Sbs5Int32VxAA0lO11ReservationVYaYbKYCXEyx_AA0lO0VtYbKXEtYaKs8SendableRzlF	swift.method	Window.show(metadata:requestPresentationFeedback:timeoutMilliseconds:preparing:_:)	@discardableResult func show<Prepared>(metadata frameMetadata: SurfaceFrameMetadata = .default, requestPresentationFeedback: Bool = false, timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds, preparing prepare: nonisolated(nonsending) sending @Sendable (SoftwareFrameReservation) async throws -> Prepared, _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void) async throws -> SoftwarePresentationOutcome where Prepared : Sendable	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.struct"},"swiftGenerics":{"constraints":[{"kind":"conformance","lhs":"Prepared","rhs":"Sendable","rhsPrecise":"s:s8SendableP"}],"parameters":[{"depth":0,"index":0,"name":"Prepared"}]}}
 s:13WaylandClient6WindowV9startDrag6source6seatID6serial4iconAA0E6SourceVAA0eK13ConfigurationV_AA04SeatH0VAA11InputSerialVAA0E4IconOtYaKF	swift.method	Window.startDrag(source:seatID:serial:icon:)	func startDrag(source configuration: DragSourceConfiguration, seatID: SeatID, serial: InputSerial, icon: DragIcon = .none) async throws -> DragSource	-
 s:13WaylandClient6WindowV17startToplevelDrag6source6seatID6serial4icon6offsetAA07StartedeF0VAA0F19SourceConfigurationV_AA04SeatI0VAA11InputSerialVAA0F4IconOAA13LogicalOffsetVtYaKF	swift.method	Window.startToplevelDrag(source:seatID:serial:icon:offset:)	func startToplevelDrag(source configuration: DragSourceConfiguration, seatID: SeatID, serial: InputSerial, icon: DragIcon = .none, offset: LogicalOffset = .zero) async throws -> StartedToplevelDrag	-
 s:13WaylandClient6WindowV13stateSnapshotAA0c5StateE0Vvp	swift.property	Window.stateSnapshot	var stateSnapshot: WindowStateSnapshot { get async throws }	-
@@ -3951,6 +3979,14 @@ s:13WaylandClient18SubsurfaceIdentityV	conformsTo	s:s16SendableMetatypeP	Swift.S
 s:13WaylandClient18SubsurfaceIdentityV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:13WaylandClient18SubsurfaceIdentityV	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient18SubsurfaceIdentityV11descriptionSSvp	memberOf	s:13WaylandClient18SubsurfaceIdentityV	-
+s:13WaylandClient18SurfaceContentTypeO	conformsTo	s:SH	Swift.Hashable
+s:13WaylandClient18SurfaceContentTypeO	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient18SurfaceContentTypeO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient18SurfaceContentTypeO	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient18SurfaceContentTypeO4gameyA2CmF	memberOf	s:13WaylandClient18SurfaceContentTypeO	-
+s:13WaylandClient18SurfaceContentTypeO4noneyA2CmF	memberOf	s:13WaylandClient18SurfaceContentTypeO	-
+s:13WaylandClient18SurfaceContentTypeO5photoyA2CmF	memberOf	s:13WaylandClient18SurfaceContentTypeO	-
+s:13WaylandClient18SurfaceContentTypeO5videoyA2CmF	memberOf	s:13WaylandClient18SurfaceContentTypeO	-
 s:13WaylandClient18SurfaceRegionErrorO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient18SurfaceRegionErrorO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient18SurfaceRegionErrorO	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
@@ -4251,6 +4287,16 @@ s:13WaylandClient20ProtocolAvailabilityO11isAvailableSbvp	memberOf	s:13WaylandCl
 s:13WaylandClient20ProtocolAvailabilityO11unavailableyA2CmF	memberOf	s:13WaylandClient20ProtocolAvailabilityO	-
 s:13WaylandClient20ProtocolAvailabilityO7versions6UInt32VSgvp	memberOf	s:13WaylandClient20ProtocolAvailabilityO	-
 s:13WaylandClient20ProtocolAvailabilityO9availableyACs6UInt32V_tcACmF	memberOf	s:13WaylandClient20ProtocolAvailabilityO	-
+s:13WaylandClient20SurfaceFrameMetadataV	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient20SurfaceFrameMetadataV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient20SurfaceFrameMetadataV	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient20SurfaceFrameMetadataV11contentType16presentationHint5alpha19colorRepresentation6damageAcA0c7ContentG0OSg_AA0c12PresentationI0OSgAA0C15AlphaMultiplierVSgAA0c5ColorL0VSgAA0C12DamageRegionVSgtcfc	memberOf	s:13WaylandClient20SurfaceFrameMetadataV	-
+s:13WaylandClient20SurfaceFrameMetadataV11contentTypeAA0c7ContentG0OSgvp	memberOf	s:13WaylandClient20SurfaceFrameMetadataV	-
+s:13WaylandClient20SurfaceFrameMetadataV16presentationHintAA0c12PresentationG0OSgvp	memberOf	s:13WaylandClient20SurfaceFrameMetadataV	-
+s:13WaylandClient20SurfaceFrameMetadataV19colorRepresentationAA0c5ColorG0VSgvp	memberOf	s:13WaylandClient20SurfaceFrameMetadataV	-
+s:13WaylandClient20SurfaceFrameMetadataV5alphaAA0C15AlphaMultiplierVSgvp	memberOf	s:13WaylandClient20SurfaceFrameMetadataV	-
+s:13WaylandClient20SurfaceFrameMetadataV6damageAA0C12DamageRegionVSgvp	memberOf	s:13WaylandClient20SurfaceFrameMetadataV	-
+s:13WaylandClient20SurfaceFrameMetadataV7defaultACvpZ	memberOf	s:13WaylandClient20SurfaceFrameMetadataV	-
 s:13WaylandClient20TabletToolCapabilityO	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient20TabletToolCapabilityO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient20TabletToolCapabilityO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -4495,6 +4541,13 @@ s:13WaylandClient21SoftwareFrameGeometryV16bufferPixelPoint8logicalX0I1YAA06Buff
 s:13WaylandClient21SoftwareFrameGeometryV5scaleAA12SurfaceScaleVvp	memberOf	s:13WaylandClient21SoftwareFrameGeometryV	-
 s:13WaylandClient21SoftwareFrameGeometryV7surfaceAA07SurfaceE0Vvp	memberOf	s:13WaylandClient21SoftwareFrameGeometryV	-
 s:13WaylandClient21SoftwareFrameGeometryV7surfaceAcA07SurfaceE0V_tcfc	memberOf	s:13WaylandClient21SoftwareFrameGeometryV	-
+s:13WaylandClient21SurfaceColorAlphaModeO	conformsTo	s:SH	Swift.Hashable
+s:13WaylandClient21SurfaceColorAlphaModeO	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient21SurfaceColorAlphaModeO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient21SurfaceColorAlphaModeO	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient21SurfaceColorAlphaModeO20premultipliedOpticalyA2CmF	memberOf	s:13WaylandClient21SurfaceColorAlphaModeO	-
+s:13WaylandClient21SurfaceColorAlphaModeO23premultipliedElectricalyA2CmF	memberOf	s:13WaylandClient21SurfaceColorAlphaModeO	-
+s:13WaylandClient21SurfaceColorAlphaModeO8straightyA2CmF	memberOf	s:13WaylandClient21SurfaceColorAlphaModeO	-
 s:13WaylandClient21TabletToolProximityInV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient21TabletToolProximityInV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient21TabletToolProximityInV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4631,6 +4684,13 @@ s:13WaylandClient22SeatStateSnapshotErrorO	conformsTo	s:s16SendableMetatypeP	Swi
 s:13WaylandClient22SeatStateSnapshotErrorO	conformsTo	s:s5ErrorP	Swift.Error
 s:13WaylandClient22SeatStateSnapshotErrorO	conformsTo	s:s8SendableP	Swift.Sendable
 s:13WaylandClient22SeatStateSnapshotErrorO29activeCapabilityNotAdvertisedyAcA0C12CapabilitiesV_AFtcACmF	memberOf	s:13WaylandClient22SeatStateSnapshotErrorO	-
+s:13WaylandClient22SurfaceAlphaMultiplierV	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient22SurfaceAlphaMultiplierV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient22SurfaceAlphaMultiplierV	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient22SurfaceAlphaMultiplierV11transparentACvpZ	memberOf	s:13WaylandClient22SurfaceAlphaMultiplierV	-
+s:13WaylandClient22SurfaceAlphaMultiplierV6opaqueACvpZ	memberOf	s:13WaylandClient22SurfaceAlphaMultiplierV	-
+s:13WaylandClient22SurfaceAlphaMultiplierV8rawValueACs6UInt32V_tcfc	memberOf	s:13WaylandClient22SurfaceAlphaMultiplierV	-
+s:13WaylandClient22SurfaceAlphaMultiplierV8rawValues6UInt32Vvp	memberOf	s:13WaylandClient22SurfaceAlphaMultiplierV	-
 s:13WaylandClient22TextInputLanguageEventV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient22TextInputLanguageEventV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient22TextInputLanguageEventV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -4741,6 +4801,12 @@ s:13WaylandClient23SubsurfaceStackingErrorO	conformsTo	s:s8SendableP	Swift.Senda
 s:13WaylandClient23SubsurfaceStackingErrorO11descriptionSSvp	memberOf	s:13WaylandClient23SubsurfaceStackingErrorO	-
 s:13WaylandClient23SubsurfaceStackingErrorO13selfReferenceyAcA0C8IdentityVcACmF	memberOf	s:13WaylandClient23SubsurfaceStackingErrorO	-
 s:13WaylandClient23SubsurfaceStackingErrorO15differentParentyAcA0C8IdentityV_AFtcACmF	memberOf	s:13WaylandClient23SubsurfaceStackingErrorO	-
+s:13WaylandClient23SurfacePresentationHintO	conformsTo	s:SH	Swift.Hashable
+s:13WaylandClient23SurfacePresentationHintO	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient23SurfacePresentationHintO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient23SurfacePresentationHintO	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient23SurfacePresentationHintO5asyncyA2CmF	memberOf	s:13WaylandClient23SurfacePresentationHintO	-
+s:13WaylandClient23SurfacePresentationHintO5vsyncyA2CmF	memberOf	s:13WaylandClient23SurfacePresentationHintO	-
 s:13WaylandClient23TextInputContentPurposeV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient23TextInputContentPurposeV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient23TextInputContentPurposeV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -5042,6 +5108,18 @@ s:13WaylandClient25PresentationFeedbackFlagsV5vsyncACvpZ	memberOf	s:13WaylandCli
 s:13WaylandClient25PresentationFeedbackFlagsV8rawValueACs6UInt32V_tcfc	memberOf	s:13WaylandClient25PresentationFeedbackFlagsV	-
 s:13WaylandClient25PresentationFeedbackFlagsV8rawValues6UInt32Vvp	memberOf	s:13WaylandClient25PresentationFeedbackFlagsV	-
 s:13WaylandClient25PresentationFeedbackFlagsV8zeroCopyACvpZ	memberOf	s:13WaylandClient25PresentationFeedbackFlagsV	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient25SurfaceFrameMetadataErrorO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient25SurfaceFrameMetadataErrorO	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
+s:13WaylandClient25SurfaceFrameMetadataErrorO	conformsTo	s:s5ErrorP	Swift.Error
+s:13WaylandClient25SurfaceFrameMetadataErrorO	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient25SurfaceFrameMetadataErrorO11descriptionSSvp	memberOf	s:13WaylandClient25SurfaceFrameMetadataErrorO	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO22contentTypeUnavailableyA2CmF	memberOf	s:13WaylandClient25SurfaceFrameMetadataErrorO	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO25unsupportedColorAlphaModeyAcA0chiJ0OcACmF	memberOf	s:13WaylandClient25SurfaceFrameMetadataErrorO	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO26alphaMultiplierUnavailableyA2CmF	memberOf	s:13WaylandClient25SurfaceFrameMetadataErrorO	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO27presentationHintUnavailableyA2CmF	memberOf	s:13WaylandClient25SurfaceFrameMetadataErrorO	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO30colorRepresentationUnavailableyA2CmF	memberOf	s:13WaylandClient25SurfaceFrameMetadataErrorO	-
+s:13WaylandClient25SurfaceFrameMetadataErrorO33colorRepresentationSupportPendingyA2CmF	memberOf	s:13WaylandClient25SurfaceFrameMetadataErrorO	-
 s:13WaylandClient25TextInputRequestOperationO	conformsTo	s:SH	Swift.Hashable
 s:13WaylandClient25TextInputRequestOperationO	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient25TextInputRequestOperationO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -5181,6 +5259,11 @@ s:13WaylandClient26RelativePointerMotionEventV18unacceleratedDeltaAA0dH0Vvp	memb
 s:13WaylandClient26RelativePointerMotionEventV4time5delta18unacceleratedDeltaAcA0A21TimestampMicrosecondsV_AA0dJ0VAJtcfc	memberOf	s:13WaylandClient26RelativePointerMotionEventV	-
 s:13WaylandClient26RelativePointerMotionEventV4timeAA0A21TimestampMicrosecondsVvp	memberOf	s:13WaylandClient26RelativePointerMotionEventV	-
 s:13WaylandClient26RelativePointerMotionEventV5deltaAA0D5DeltaVvp	memberOf	s:13WaylandClient26RelativePointerMotionEventV	-
+s:13WaylandClient26SurfaceColorRepresentationV	conformsTo	s:SQ	Swift.Equatable
+s:13WaylandClient26SurfaceColorRepresentationV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
+s:13WaylandClient26SurfaceColorRepresentationV	conformsTo	s:s8SendableP	Swift.Sendable
+s:13WaylandClient26SurfaceColorRepresentationV9alphaModeAA0cd5AlphaG0OSgvp	memberOf	s:13WaylandClient26SurfaceColorRepresentationV	-
+s:13WaylandClient26SurfaceColorRepresentationV9alphaModeAcA0cd5AlphaG0OSg_tcfc	memberOf	s:13WaylandClient26SurfaceColorRepresentationV	-
 s:13WaylandClient26WindowDecorationDiagnosticV	conformsTo	s:SQ	Swift.Equatable
 s:13WaylandClient26WindowDecorationDiagnosticV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:13WaylandClient26WindowDecorationDiagnosticV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
@@ -5708,19 +5791,11 @@ s:13WaylandClient6WindowV27requestPresentationFeedbackyyYaKF	memberOf	s:13Waylan
 s:13WaylandClient6WindowV2eeoiySbAC_ACtFZ	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV2idAA0C2IDVvp	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV4hash4intoys6HasherVz_tF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV4show19timeoutMilliseconds27requestPresentationFeedback9preparing_AA08SoftwareH7OutcomeOs5Int32V_SbxAA0K16FrameReservationVYaYbKYCXEyx_AA0kN0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV4show19timeoutMilliseconds_ys5Int32V_yAA13SoftwareFrameVYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV4show27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareF7OutcomeOSb_s5Int32VyAA0J5FrameVYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV4show6damage19timeoutMilliseconds27requestPresentationFeedback9preparing_AA08SoftwareI7OutcomeOAA19SurfaceDamageRegionVSg_s5Int32VSbxAA0L16FrameReservationVYaYbKYCXEyx_AA0lR0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV4show6damage19timeoutMilliseconds_yAA19SurfaceDamageRegionVSg_s5Int32VyAA13SoftwareFrameVYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV4show6damage27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareG7OutcomeOAA19SurfaceDamageRegionVSg_Sbs5Int32VyAA0K5FrameVYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
+s:13WaylandClient6WindowV4show8metadata27requestPresentationFeedback19timeoutMilliseconds9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_Sbs5Int32VxAA0lO11ReservationVYaYbKYCXEyx_AA0lO0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient6WindowV	-
+s:13WaylandClient6WindowV4show8metadata27requestPresentationFeedback19timeoutMilliseconds_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_Sbs5Int32VyAA0kN0VYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV5closeyyYaF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV6redraw27requestPresentationFeedback9preparing_AA08SoftwareF7OutcomeOSb_xAA0I16FrameReservationVYaYbKYCXEyx_AA0iK0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV6redraw27requestPresentationFeedback_AA08SoftwareF7OutcomeOSb_yAA0H5FrameVYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV6redraw6damage27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA19SurfaceDamageRegionVSg_SbxAA0J16FrameReservationVYaYbKYCXEyx_AA0jO0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV6redraw6damage27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA19SurfaceDamageRegionVSg_SbyAA0I5FrameVYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV6redraw6damage_yAA19SurfaceDamageRegionVSg_yAA13SoftwareFrameVYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
-s:13WaylandClient6WindowV6redrawyyyAA13SoftwareFrameVYbKXEYaKF	memberOf	s:13WaylandClient6WindowV	-
+s:13WaylandClient6WindowV6redraw8metadata27requestPresentationFeedback9preparing_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbxAA0jM11ReservationVYaYbKYCXEyx_AA0jM0VtYbKXEtYaKs8SendableRzlF	memberOf	s:13WaylandClient6WindowV	-
+s:13WaylandClient6WindowV6redraw8metadata27requestPresentationFeedback_AA08SoftwareG7OutcomeOAA20SurfaceFrameMetadataV_SbyAA0iL0VYbKXEtYaKF	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV7setIconyyAA0cE0OYaKF	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV8activate5usingyAA15ActivationTokenV_tYaKF	memberOf	s:13WaylandClient6WindowV	-
 s:13WaylandClient6WindowV8geometryAA15SurfaceGeometryVvp	memberOf	s:13WaylandClient6WindowV	-
@@ -5848,23 +5923,14 @@ s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE06createD13WindowBacking19window
 s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE23graphicsBackingDecision6policyAD0adgH0OAD0aD18PresentationPolicyO_tKF	swift.method	WaylandDisplay.graphicsBackingDecision(policy:)	func graphicsBackingDecision(policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)) throws -> WaylandGraphicsBackingDecision	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE19graphicsRuntimePath6policyAD0adgH0VAD0aD18PresentationPolicyO_tKF	swift.method	WaylandDisplay.graphicsRuntimePath(policy:)	func graphicsRuntimePath(policy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software)) throws -> WaylandGraphicsRuntimePath	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
 s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE27graphicsSurfaceCapabilitiesAD0adgH0VyKF	swift.method	WaylandDisplay.graphicsSurfaceCapabilities()	func graphicsSurfaceCapabilities() throws -> WaylandGraphicsSurfaceCapabilities	{"swiftExtension":{"extendedModule":"WaylandClient","typeKind":"swift.class"}}
-s:22WaylandGraphicsPreview0aB13AlphaModifierV	swift.struct	WaylandGraphicsAlphaModifier	struct WaylandGraphicsAlphaModifier	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV8rawValueACs6UInt32V_tcfc	swift.init	WaylandGraphicsAlphaModifier.init(rawValue:)	init(rawValue alphaMultiplierRawValue: UInt32)	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV6opaqueACvpZ	swift.type.property	WaylandGraphicsAlphaModifier.opaque	static let opaque: WaylandGraphicsAlphaModifier	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV8rawValues6UInt32Vvp	swift.property	WaylandGraphicsAlphaModifier.rawValue	let rawValue: UInt32	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV11transparentACvpZ	swift.type.property	WaylandGraphicsAlphaModifier.transparent	static let transparent: WaylandGraphicsAlphaModifier	-
 s:22WaylandGraphicsPreview0aB15BackingDecisionO	swift.enum	WaylandGraphicsBackingDecision	enum WaylandGraphicsBackingDecision	-
 s:22WaylandGraphicsPreview0aB15BackingDecisionO3gpuyAcA0aB11RuntimePathVcACmF	swift.enum.case	WaylandGraphicsBackingDecision.gpu(_:)	case gpu(WaylandGraphicsRuntimePath)	-
 s:22WaylandGraphicsPreview0aB15BackingDecisionO8softwareyAcA0aB6ReasonOcACmF	swift.enum.case	WaylandGraphicsBackingDecision.software(_:)	case software(WaylandGraphicsReason)	-
 s:22WaylandGraphicsPreview0aB15BackingDecisionO11unavailableyAcA0aB6ReasonOcACmF	swift.enum.case	WaylandGraphicsBackingDecision.unavailable(_:)	case unavailable(WaylandGraphicsReason)	-
 s:22WaylandGraphicsPreview0aB10ClearFrameV	swift.struct	WaylandGraphicsClearFrame	struct WaylandGraphicsClearFrame	-
 s:22WaylandGraphicsPreview0aB10ClearFrameV5colorAA0aB9XRGBColorVvp	swift.property	WaylandGraphicsClearFrame.color	let color: WaylandGraphicsXRGBColor	-
-s:22WaylandGraphicsPreview0aB10ClearFrameV5color8metadataAcA0aB9XRGBColorV_AA0abE8MetadataVtcfc	swift.init	WaylandGraphicsClearFrame.init(color:metadata:)	init(color clearColor: WaylandGraphicsXRGBColor, metadata frameMetadata: WaylandGraphicsFrameMetadata = .default)	-
-s:22WaylandGraphicsPreview0aB10ClearFrameV8metadataAA0abE8MetadataVvp	swift.property	WaylandGraphicsClearFrame.metadata	let metadata: WaylandGraphicsFrameMetadata	-
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	swift.enum	WaylandGraphicsColorAlphaMode	enum WaylandGraphicsColorAlphaMode	-
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO23premultipliedElectricalyA2CmF	swift.enum.case	WaylandGraphicsColorAlphaMode.premultipliedElectrical	case premultipliedElectrical	-
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO20premultipliedOpticalyA2CmF	swift.enum.case	WaylandGraphicsColorAlphaMode.premultipliedOptical	case premultipliedOptical	-
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO8straightyA2CmF	swift.enum.case	WaylandGraphicsColorAlphaMode.straight	case straight	-
+s:22WaylandGraphicsPreview0aB10ClearFrameV5color8metadataAcA0aB9XRGBColorV_0A6Client07SurfaceE8MetadataVtcfc	swift.init	WaylandGraphicsClearFrame.init(color:metadata:)	init(color clearColor: WaylandGraphicsXRGBColor, metadata frameMetadata: SurfaceFrameMetadata = .default)	-
+s:22WaylandGraphicsPreview0aB10ClearFrameV8metadata0A6Client07SurfaceE8MetadataVvp	swift.property	WaylandGraphicsClearFrame.metadata	let metadata: SurfaceFrameMetadata	-
 s:22WaylandGraphicsPreview0aB25ColorMetadataAvailabilityV	swift.struct	WaylandGraphicsColorMetadataAvailability	struct WaylandGraphicsColorMetadataAvailability	-
 s:22WaylandGraphicsPreview0aB25ColorMetadataAvailabilityV13alphaModifierAA0ab8ProtocolF0Ovp	swift.property	WaylandGraphicsColorMetadataAvailability.alphaModifier	let alphaModifier: WaylandGraphicsProtocolAvailability	-
 s:22WaylandGraphicsPreview0aB25ColorMetadataAvailabilityV15colorManagementAA0ab8ProtocolF0Ovp	swift.property	WaylandGraphicsColorMetadataAvailability.colorManagement	let colorManagement: WaylandGraphicsProtocolAvailability	-
@@ -5873,9 +5939,6 @@ s:22WaylandGraphicsPreview0aB25ColorMetadataAvailabilityV11contentTypeAA0ab8Prot
 s:22WaylandGraphicsPreview0aB25ColorMetadataAvailabilityV11contentType13alphaModifier14tearingControl19colorRepresentation0M10ManagementAcA0ab8ProtocolF0O_A4Jtcfc	swift.init	WaylandGraphicsColorMetadataAvailability.init(contentType:alphaModifier:tearingControl:colorRepresentation:colorManagement:)	init(contentType: WaylandGraphicsProtocolAvailability, alphaModifier: WaylandGraphicsProtocolAvailability, tearingControl: WaylandGraphicsProtocolAvailability, colorRepresentation: WaylandGraphicsProtocolAvailability, colorManagement: WaylandGraphicsProtocolAvailability)	-
 s:22WaylandGraphicsPreview0aB25ColorMetadataAvailabilityV14tearingControlAA0ab8ProtocolF0Ovp	swift.property	WaylandGraphicsColorMetadataAvailability.tearingControl	let tearingControl: WaylandGraphicsProtocolAvailability	-
 s:22WaylandGraphicsPreview0aB25ColorMetadataAvailabilityV11unavailableACvpZ	swift.type.property	WaylandGraphicsColorMetadataAvailability.unavailable	static let unavailable: WaylandGraphicsColorMetadataAvailability	-
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV	swift.struct	WaylandGraphicsColorRepresentation	struct WaylandGraphicsColorRepresentation	-
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV9alphaModeAA0abd5AlphaG0OSgvp	swift.property	WaylandGraphicsColorRepresentation.alphaMode	var alphaMode: WaylandGraphicsColorAlphaMode?	-
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV9alphaModeAcA0abd5AlphaG0OSg_tcfc	swift.init	WaylandGraphicsColorRepresentation.init(alphaMode:)	init(alphaMode colorAlphaMode: WaylandGraphicsColorAlphaMode? = nil)	-
 s:22WaylandGraphicsPreview0aB13ConfigurationV	swift.struct	WaylandGraphicsConfiguration	struct WaylandGraphicsConfiguration	-
 s:22WaylandGraphicsPreview0aB13ConfigurationV7defaultACvpZ	swift.type.property	WaylandGraphicsConfiguration.default	static let `default`: WaylandGraphicsConfiguration	-
 s:22WaylandGraphicsPreview0aB13ConfigurationV18presentationPolicy015synchronizationF006pacingF008metadataF00e8FeedbackF0AcA0ab12PresentationF0O_AA0ab15SynchronizationF0OAA0ab6PacingF0OAA0ab8MetadataF0OAA0abkjF0Otcfc	swift.init	WaylandGraphicsConfiguration.init(presentationPolicy:synchronizationPolicy:pacingPolicy:metadataPolicy:presentationFeedbackPolicy:)	init(presentationPolicy requestedPresentationPolicy: WaylandGraphicsPresentationPolicy = .managedGPU(fallback: .software), synchronizationPolicy frameSynchronizationPolicy: WaylandGraphicsSynchronizationPolicy = .implicitOnly, pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none, metadataPolicy frameMetadataPolicy: WaylandGraphicsMetadataPolicy = .none, presentationFeedbackPolicy framePresentationFeedbackPolicy: WaylandGraphicsPresentationFeedbackPolicy = .none)	-
@@ -5884,11 +5947,6 @@ s:22WaylandGraphicsPreview0aB13ConfigurationV12pacingPolicyAA0ab6PacingF0Ovp	swi
 s:22WaylandGraphicsPreview0aB13ConfigurationV26presentationFeedbackPolicyAA0ab12PresentationfG0Ovp	swift.property	WaylandGraphicsConfiguration.presentationFeedbackPolicy	var presentationFeedbackPolicy: WaylandGraphicsPresentationFeedbackPolicy	-
 s:22WaylandGraphicsPreview0aB13ConfigurationV18presentationPolicyAA0ab12PresentationF0Ovp	swift.property	WaylandGraphicsConfiguration.presentationPolicy	var presentationPolicy: WaylandGraphicsPresentationPolicy	-
 s:22WaylandGraphicsPreview0aB13ConfigurationV21synchronizationPolicyAA0ab15SynchronizationF0Ovp	swift.property	WaylandGraphicsConfiguration.synchronizationPolicy	var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO	swift.enum	WaylandGraphicsContentType	enum WaylandGraphicsContentType	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO4gameyA2CmF	swift.enum.case	WaylandGraphicsContentType.game	case game	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO4noneyA2CmF	swift.enum.case	WaylandGraphicsContentType.none	case none	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO5photoyA2CmF	swift.enum.case	WaylandGraphicsContentType.photo	case photo	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO5videoyA2CmF	swift.enum.case	WaylandGraphicsContentType.video	case video	-
 s:22WaylandGraphicsPreview0aB9DRMFormatV	swift.struct	WaylandGraphicsDRMFormat	struct WaylandGraphicsDRMFormat	-
 s:22WaylandGraphicsPreview0aB9DRMFormatV8argb8888ACvpZ	swift.type.property	WaylandGraphicsDRMFormat.argb8888	static let argb8888: WaylandGraphicsDRMFormat	-
 s:22WaylandGraphicsPreview0aB9DRMFormatV8rawValueACs6UInt32V_tKcfc	swift.init	WaylandGraphicsDRMFormat.init(rawValue:)	init(rawValue formatRawValue: UInt32) throws	-
@@ -5899,10 +5957,6 @@ s:22WaylandGraphicsPreview0aB17DRMFormatModifierV8rawValueACs6UInt64V_tcfc	swift
 s:22WaylandGraphicsPreview0aB17DRMFormatModifierV7invalidACvpZ	swift.type.property	WaylandGraphicsDRMFormatModifier.invalid	static let invalid: WaylandGraphicsDRMFormatModifier	-
 s:22WaylandGraphicsPreview0aB17DRMFormatModifierV6linearACvpZ	swift.type.property	WaylandGraphicsDRMFormatModifier.linear	static let linear: WaylandGraphicsDRMFormatModifier	-
 s:22WaylandGraphicsPreview0aB17DRMFormatModifierV8rawValues6UInt64Vvp	swift.property	WaylandGraphicsDRMFormatModifier.rawValue	let rawValue: UInt64	-
-s:22WaylandGraphicsPreview0aB12DamageRegionV	swift.struct	WaylandGraphicsDamageRegion	struct WaylandGraphicsDamageRegion	-
-s:22WaylandGraphicsPreview0aB12DamageRegionV9fullFrameACvpZ	swift.type.property	WaylandGraphicsDamageRegion.fullFrame	static let fullFrame: WaylandGraphicsDamageRegion	-
-s:22WaylandGraphicsPreview0aB12DamageRegionV5rectsACSay0A6Client11LogicalRectVG_tcfc	swift.init	WaylandGraphicsDamageRegion.init(rects:)	init(rects damageRects: [LogicalRect])	-
-s:22WaylandGraphicsPreview0aB12DamageRegionV5rectsSay0A6Client11LogicalRectVGvp	swift.property	WaylandGraphicsDamageRegion.rects	let rects: [LogicalRect]	-
 s:22WaylandGraphicsPreview0aB5ErrorO	swift.enum	WaylandGraphicsError	enum WaylandGraphicsError	-
 s:22WaylandGraphicsPreview0aB5ErrorO13backingClosedyA2CmF	swift.enum.case	WaylandGraphicsError.backingClosed	case backingClosed	-
 s:22WaylandGraphicsPreview0aB5ErrorO25externalBufferUnavailableyAcA0ab8ExternalF2IDV_AA0abhF9LifecycleOtcACmF	swift.enum.case	WaylandGraphicsError.externalBufferUnavailable(id:state:)	case externalBufferUnavailable(id: WaylandGraphicsExternalBufferID, state: WaylandGraphicsExternalBufferLifecycle)	-
@@ -5965,8 +6019,8 @@ s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	swift.struct	WaylandGr
 s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6bufferAA0abdE0Vvp	swift.property	WaylandGraphicsExternalBufferRenderLease.buffer	var buffer: WaylandGraphicsExternalBuffer { get }	-
 s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6cancelyyYaF	swift.method	WaylandGraphicsExternalBufferRenderLease.cancel()	consuming func cancel() async	-
 s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV8contractAA0aB13FrameContractVvp	swift.property	WaylandGraphicsExternalBufferRenderLease.contract	var contract: WaylandGraphicsFrameContract { get }	-
-s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit22acquireSynchronization8metadata8scheduleAA0abdE17SubmissionReceiptVAA0abd7AcquireJ0O_AA0aB13FrameMetadataVAA0abP8ScheduleVSgtYaKF	swift.method	WaylandGraphicsExternalBufferRenderLease.submit(acquireSynchronization:metadata:schedule:)	@discardableResult consuming func submit(acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization, metadata frameMetadata: WaylandGraphicsFrameMetadata = .default, schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt	-
-s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit8metadata8scheduleAA0abdE17SubmissionReceiptVAA0aB13FrameMetadataV_AA0abM8ScheduleVSgtYaKF	swift.method	WaylandGraphicsExternalBufferRenderLease.submit(metadata:schedule:)	@discardableResult consuming func submit(metadata frameMetadata: WaylandGraphicsFrameMetadata = .default, schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt	-
+s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit22acquireSynchronization8metadata8scheduleAA0abdE17SubmissionReceiptVAA0abd7AcquireJ0O_0A6Client20SurfaceFrameMetadataVAA0abR8ScheduleVSgtYaKF	swift.method	WaylandGraphicsExternalBufferRenderLease.submit(acquireSynchronization:metadata:schedule:)	@discardableResult consuming func submit(acquireSynchronization: WaylandGraphicsExternalAcquireSynchronization, metadata frameMetadata: SurfaceFrameMetadata = .default, schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt	-
+s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit8metadata8scheduleAA0abdE17SubmissionReceiptV0A6Client20SurfaceFrameMetadataV_AA0abO8ScheduleVSgtYaKF	swift.method	WaylandGraphicsExternalBufferRenderLease.submit(metadata:schedule:)	@discardableResult consuming func submit(metadata frameMetadata: SurfaceFrameMetadata = .default, schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil) async throws -> WaylandGraphicsExternalBufferSubmissionReceipt	-
 s:22WaylandGraphicsPreview0aB31ExternalBufferSubmissionReceiptV	swift.struct	WaylandGraphicsExternalBufferSubmissionReceipt	struct WaylandGraphicsExternalBufferSubmissionReceipt	-
 s:22WaylandGraphicsPreview0aB31ExternalBufferSubmissionReceiptV8bufferIDAA0abdeI0Vvp	swift.property	WaylandGraphicsExternalBufferSubmissionReceipt.bufferID	let bufferID: WaylandGraphicsExternalBufferID	-
 s:22WaylandGraphicsPreview0aB31ExternalBufferSubmissionReceiptV18contractGenerationAA0ab7SurfaceI0Vvp	swift.property	WaylandGraphicsExternalBufferSubmissionReceipt.contractGeneration	let contractGeneration: WaylandGraphicsSurfaceGeneration	-
@@ -6038,16 +6092,8 @@ s:22WaylandGraphicsPreview0aB10FrameLeaseV11runtimePathAA0ab7RuntimeG0Vvp	swift.
 s:22WaylandGraphicsPreview0aB10FrameLeaseV4size0A6Client17PositivePixelSizeVvp	swift.property	WaylandGraphicsFrameLease.size	var size: PositivePixelSize { get }	-
 s:22WaylandGraphicsPreview0aB10FrameLeaseV6submityAA0abD6ResultVAA0ab9SubmittedD0OYaKF	swift.method	WaylandGraphicsFrameLease.submit(_:)	@discardableResult consuming func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws -> WaylandGraphicsFrameResult	-
 s:22WaylandGraphicsPreview0aB10FrameLeaseV6submit_8scheduleAA0abD6ResultVAA0ab9SubmittedD0O_AA0abD8ScheduleVtYaKF	swift.method	WaylandGraphicsFrameLease.submit(_:schedule:)	@discardableResult consuming func submit(_ frame: WaylandGraphicsSubmittedFrame, schedule frameSchedule: WaylandGraphicsFrameSchedule) async throws -> WaylandGraphicsFrameResult	-
-s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8metadata_AA0abD6ResultVAA0abD8MetadataV_y0A6Client0gD0VYbKXEtYaKF	swift.method	WaylandGraphicsFrameLease.submitSoftware(metadata:_:)	@discardableResult consuming func submitSoftware(metadata frameMetadata: WaylandGraphicsFrameMetadata = .default, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> WaylandGraphicsFrameResult	-
-s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8schedule8metadata_AA0abD6ResultVAA0abD8ScheduleV_AA0abD8MetadataVy0A6Client0gD0VYbKXEtYaKF	swift.method	WaylandGraphicsFrameLease.submitSoftware(schedule:metadata:_:)	@discardableResult consuming func submitSoftware(schedule frameSchedule: WaylandGraphicsFrameSchedule, metadata frameMetadata: WaylandGraphicsFrameMetadata = .default, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> WaylandGraphicsFrameResult	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV	swift.struct	WaylandGraphicsFrameMetadata	struct WaylandGraphicsFrameMetadata	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV5alphaAA0aB13AlphaModifierVSgvp	swift.property	WaylandGraphicsFrameMetadata.alpha	var alpha: WaylandGraphicsAlphaModifier?	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV19colorRepresentationAA0ab5ColorG0VSgvp	swift.property	WaylandGraphicsFrameMetadata.colorRepresentation	var colorRepresentation: WaylandGraphicsColorRepresentation?	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV11contentTypeAA0ab7ContentG0OSgvp	swift.property	WaylandGraphicsFrameMetadata.contentType	var contentType: WaylandGraphicsContentType?	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV6damageAA0aB12DamageRegionVSgvp	swift.property	WaylandGraphicsFrameMetadata.damage	var damage: WaylandGraphicsDamageRegion?	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV7defaultACvpZ	swift.type.property	WaylandGraphicsFrameMetadata.default	static let `default`: WaylandGraphicsFrameMetadata	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV11contentType16presentationHint5alpha19colorRepresentation6damageAcA0ab7ContentG0OSg_AA0ab12PresentationI0OSgAA0aB13AlphaModifierVSgAA0ab5ColorL0VSgAA0aB12DamageRegionVSgtcfc	swift.init	WaylandGraphicsFrameMetadata.init(contentType:presentationHint:alpha:colorRepresentation:damage:)	init(contentType frameContentType: WaylandGraphicsContentType? = nil, presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil, alpha frameAlpha: WaylandGraphicsAlphaModifier? = nil, colorRepresentation frameColorRepresentation: WaylandGraphicsColorRepresentation? = nil, damage frameDamage: WaylandGraphicsDamageRegion? = nil)	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV16presentationHintAA0ab12PresentationG0OSgvp	swift.property	WaylandGraphicsFrameMetadata.presentationHint	var presentationHint: WaylandGraphicsPresentationHint?	-
+s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8metadata_AA0abD6ResultV0A6Client07SurfaceD8MetadataV_yAH0gD0VYbKXEtYaKF	swift.method	WaylandGraphicsFrameLease.submitSoftware(metadata:_:)	@discardableResult consuming func submitSoftware(metadata frameMetadata: SurfaceFrameMetadata = .default, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> WaylandGraphicsFrameResult	-
+s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8schedule8metadata_AA0abD6ResultVAA0abD8ScheduleV_0A6Client07SurfaceD8MetadataVyAK0gD0VYbKXEtYaKF	swift.method	WaylandGraphicsFrameLease.submitSoftware(schedule:metadata:_:)	@discardableResult consuming func submitSoftware(schedule frameSchedule: WaylandGraphicsFrameSchedule, metadata frameMetadata: SurfaceFrameMetadata = .default, _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void) async throws -> WaylandGraphicsFrameResult	-
 s:22WaylandGraphicsPreview0aB23FramePacingAvailabilityV	swift.struct	WaylandGraphicsFramePacingAvailability	struct WaylandGraphicsFramePacingAvailability	-
 s:22WaylandGraphicsPreview0aB23FramePacingAvailabilityV12commitTimingAA0ab8ProtocolF0Ovp	swift.property	WaylandGraphicsFramePacingAvailability.commitTiming	let commitTiming: WaylandGraphicsProtocolAvailability	-
 s:22WaylandGraphicsPreview0aB23FramePacingAvailabilityV4fifoAA0ab8ProtocolF0Ovp	swift.property	WaylandGraphicsFramePacingAvailability.fifo	let fifo: WaylandGraphicsProtocolAvailability	-
@@ -6059,8 +6105,8 @@ s:22WaylandGraphicsPreview0aB18FramePacingRequestO4fifoyA2CmF	swift.enum.case	Wa
 s:22WaylandGraphicsPreview0aB18FramePacingRequestO4noneyA2CmF	swift.enum.case	WaylandGraphicsFramePacingRequest.none	case none	-
 s:22WaylandGraphicsPreview0aB11FrameResultV	swift.struct	WaylandGraphicsFrameResult	struct WaylandGraphicsFrameResult	-
 s:22WaylandGraphicsPreview0aB11FrameResultV7backingAA0aB13RuntimeStatusOvp	swift.property	WaylandGraphicsFrameResult.backing	var backing: WaylandGraphicsRuntimeStatus { get }	-
-s:22WaylandGraphicsPreview0aB11FrameResultV11runtimePath9operation4size8metadata8schedule29presentationFeedbackRequested21synchronizationPolicy06pacingP0AcA0ab7RuntimeG0V_AA0aB19SubmissionOperationO0A6Client17PositivePixelSizeVAA0abD8MetadataVAA0abD8ScheduleVSgSbAA0ab15SynchronizationP0OAA0ab6PacingP0Otcfc	swift.init	WaylandGraphicsFrameResult.init(runtimePath:operation:size:metadata:schedule:presentationFeedbackRequested:synchronizationPolicy:pacingPolicy:)	init(runtimePath frameRuntimePath: WaylandGraphicsRuntimePath, operation frameOperation: WaylandGraphicsSubmissionOperation, size frameSize: PositivePixelSize, metadata frameMetadata: WaylandGraphicsFrameMetadata = .default, schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil, presentationFeedbackRequested framePresentationFeedbackRequested: Bool = false, synchronizationPolicy frameSynchronizationPolicy: WaylandGraphicsSynchronizationPolicy = .implicitOnly, pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none)	-
-s:22WaylandGraphicsPreview0aB11FrameResultV8metadataAA0abD8MetadataVvp	swift.property	WaylandGraphicsFrameResult.metadata	let metadata: WaylandGraphicsFrameMetadata	-
+s:22WaylandGraphicsPreview0aB11FrameResultV11runtimePath9operation4size8metadata8schedule29presentationFeedbackRequested21synchronizationPolicy06pacingP0AcA0ab7RuntimeG0V_AA0aB19SubmissionOperationO0A6Client17PositivePixelSizeVAP07SurfaceD8MetadataVAA0abD8ScheduleVSgSbAA0ab15SynchronizationP0OAA0ab6PacingP0Otcfc	swift.init	WaylandGraphicsFrameResult.init(runtimePath:operation:size:metadata:schedule:presentationFeedbackRequested:synchronizationPolicy:pacingPolicy:)	init(runtimePath frameRuntimePath: WaylandGraphicsRuntimePath, operation frameOperation: WaylandGraphicsSubmissionOperation, size frameSize: PositivePixelSize, metadata frameMetadata: SurfaceFrameMetadata = .default, schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil, presentationFeedbackRequested framePresentationFeedbackRequested: Bool = false, synchronizationPolicy frameSynchronizationPolicy: WaylandGraphicsSynchronizationPolicy = .implicitOnly, pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none)	-
+s:22WaylandGraphicsPreview0aB11FrameResultV8metadata0A6Client07SurfaceD8MetadataVvp	swift.property	WaylandGraphicsFrameResult.metadata	let metadata: SurfaceFrameMetadata	-
 s:22WaylandGraphicsPreview0aB11FrameResultV9operationAA0aB19SubmissionOperationOvp	swift.property	WaylandGraphicsFrameResult.operation	let operation: WaylandGraphicsSubmissionOperation	-
 s:22WaylandGraphicsPreview0aB11FrameResultV12pacingPolicyAA0ab6PacingG0Ovp	swift.property	WaylandGraphicsFrameResult.pacingPolicy	let pacingPolicy: WaylandGraphicsPacingPolicy	-
 s:22WaylandGraphicsPreview0aB11FrameResultV29presentationFeedbackRequestedSbvp	swift.property	WaylandGraphicsFrameResult.presentationFeedbackRequested	let presentationFeedbackRequested: Bool	-
@@ -6096,9 +6142,6 @@ s:22WaylandGraphicsPreview0aB26PresentationFeedbackPolicyO	swift.enum	WaylandGra
 s:22WaylandGraphicsPreview0aB26PresentationFeedbackPolicyO4noneyA2CmF	swift.enum.case	WaylandGraphicsPresentationFeedbackPolicy.none	case none	-
 s:22WaylandGraphicsPreview0aB26PresentationFeedbackPolicyO20requestWhenAvailableyA2CmF	swift.enum.case	WaylandGraphicsPresentationFeedbackPolicy.requestWhenAvailable	case requestWhenAvailable	-
 s:22WaylandGraphicsPreview0aB26PresentationFeedbackPolicyO7requireyA2CmF	swift.enum.case	WaylandGraphicsPresentationFeedbackPolicy.require	case require	-
-s:22WaylandGraphicsPreview0aB16PresentationHintO	swift.enum	WaylandGraphicsPresentationHint	enum WaylandGraphicsPresentationHint	-
-s:22WaylandGraphicsPreview0aB16PresentationHintO5asyncyA2CmF	swift.enum.case	WaylandGraphicsPresentationHint.async	case async	-
-s:22WaylandGraphicsPreview0aB16PresentationHintO5vsyncyA2CmF	swift.enum.case	WaylandGraphicsPresentationHint.vsync	case vsync	-
 s:22WaylandGraphicsPreview0aB18PresentationPolicyO	swift.enum	WaylandGraphicsPresentationPolicy	enum WaylandGraphicsPresentationPolicy	-
 s:22WaylandGraphicsPreview0aB18PresentationPolicyO6decide12capabilitiesAA0aB15BackingDecisionO0A6Client0A12CapabilitiesV_tF	swift.method	WaylandGraphicsPresentationPolicy.decide(capabilities:)	func decide(capabilities: WaylandCapabilities) -> WaylandGraphicsBackingDecision	{"swiftExtension":{"extendedModule":"WaylandGraphicsPreview","typeKind":"swift.enum"}}
 s:22WaylandGraphicsPreview0aB18PresentationPolicyO6decide12capabilitiesAA0aB15BackingDecisionOAA0aB19SurfaceCapabilitiesV_tF	swift.method	WaylandGraphicsPresentationPolicy.decide(capabilities:)	func decide(capabilities: WaylandGraphicsSurfaceCapabilities) -> WaylandGraphicsBackingDecision	{"swiftExtension":{"extendedModule":"WaylandGraphicsPreview","typeKind":"swift.enum"}}
@@ -6234,14 +6277,14 @@ s:13WaylandClient0A7DisplayC0A15GraphicsPreviewE27graphicsSurfaceCapabilitiesAD0
 s:22WaylandGraphicsPreview0aB10ClearFrameV	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB10ClearFrameV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB10ClearFrameV	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB10ClearFrameV5color8metadataAcA0aB9XRGBColorV_AA0abE8MetadataVtcfc	memberOf	s:22WaylandGraphicsPreview0aB10ClearFrameV	-
+s:22WaylandGraphicsPreview0aB10ClearFrameV5color8metadataAcA0aB9XRGBColorV_0A6Client07SurfaceE8MetadataVtcfc	memberOf	s:22WaylandGraphicsPreview0aB10ClearFrameV	-
 s:22WaylandGraphicsPreview0aB10ClearFrameV5colorAA0aB9XRGBColorVvp	memberOf	s:22WaylandGraphicsPreview0aB10ClearFrameV	-
-s:22WaylandGraphicsPreview0aB10ClearFrameV8metadataAA0abE8MetadataVvp	memberOf	s:22WaylandGraphicsPreview0aB10ClearFrameV	-
+s:22WaylandGraphicsPreview0aB10ClearFrameV8metadata0A6Client07SurfaceE8MetadataVvp	memberOf	s:22WaylandGraphicsPreview0aB10ClearFrameV	-
 s:22WaylandGraphicsPreview0aB10FrameLeaseV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB10FrameLeaseV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB10FrameLeaseV11runtimePathAA0ab7RuntimeG0Vvp	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
-s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8metadata_AA0abD6ResultVAA0abD8MetadataV_y0A6Client0gD0VYbKXEtYaKF	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
-s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8schedule8metadata_AA0abD6ResultVAA0abD8ScheduleV_AA0abD8MetadataVy0A6Client0gD0VYbKXEtYaKF	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
+s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8metadata_AA0abD6ResultV0A6Client07SurfaceD8MetadataV_yAH0gD0VYbKXEtYaKF	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
+s:22WaylandGraphicsPreview0aB10FrameLeaseV14submitSoftware8schedule8metadata_AA0abD6ResultVAA0abD8ScheduleV_0A6Client07SurfaceD8MetadataVyAK0gD0VYbKXEtYaKF	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
 s:22WaylandGraphicsPreview0aB10FrameLeaseV21reserveExternalBufferyAA0abgh6RenderE0VAA0abgH0VYaKF	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
 s:22WaylandGraphicsPreview0aB10FrameLeaseV4size0A6Client17PositivePixelSizeVvp	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
 s:22WaylandGraphicsPreview0aB10FrameLeaseV6cancelyyYaF	memberOf	s:22WaylandGraphicsPreview0aB10FrameLeaseV	-
@@ -6255,25 +6298,17 @@ s:22WaylandGraphicsPreview0aB10RenderNodeV	conformsTo	s:s23CustomStringConvertib
 s:22WaylandGraphicsPreview0aB10RenderNodeV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB10RenderNodeV11descriptionSSvp	memberOf	s:22WaylandGraphicsPreview0aB10RenderNodeV	-
 s:22WaylandGraphicsPreview0aB10RenderNodeV13deviceIDBytesSays5UInt8VGvp	memberOf	s:22WaylandGraphicsPreview0aB10RenderNodeV	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO	conformsTo	s:SH	Swift.Hashable
-s:22WaylandGraphicsPreview0aB11ContentTypeO	conformsTo	s:SQ	Swift.Equatable
-s:22WaylandGraphicsPreview0aB11ContentTypeO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:22WaylandGraphicsPreview0aB11ContentTypeO	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB11ContentTypeO4gameyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB11ContentTypeO	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO4noneyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB11ContentTypeO	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO5photoyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB11ContentTypeO	-
-s:22WaylandGraphicsPreview0aB11ContentTypeO5videoyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB11ContentTypeO	-
 s:22WaylandGraphicsPreview0aB11FrameResultV	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB11FrameResultV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB11FrameResultV	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB11FrameResultV11runtimePath9operation4size8metadata8schedule29presentationFeedbackRequested21synchronizationPolicy06pacingP0AcA0ab7RuntimeG0V_AA0aB19SubmissionOperationO0A6Client17PositivePixelSizeVAA0abD8MetadataVAA0abD8ScheduleVSgSbAA0ab15SynchronizationP0OAA0ab6PacingP0Otcfc	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
+s:22WaylandGraphicsPreview0aB11FrameResultV11runtimePath9operation4size8metadata8schedule29presentationFeedbackRequested21synchronizationPolicy06pacingP0AcA0ab7RuntimeG0V_AA0aB19SubmissionOperationO0A6Client17PositivePixelSizeVAP07SurfaceD8MetadataVAA0abD8ScheduleVSgSbAA0ab15SynchronizationP0OAA0ab6PacingP0Otcfc	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV11runtimePathAA0ab7RuntimeG0Vvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV12pacingPolicyAA0ab6PacingG0Ovp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV21synchronizationPolicyAA0ab15SynchronizationG0Ovp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV29presentationFeedbackRequestedSbvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV4size0A6Client17PositivePixelSizeVvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV7backingAA0aB13RuntimeStatusOvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
-s:22WaylandGraphicsPreview0aB11FrameResultV8metadataAA0abD8MetadataVvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
+s:22WaylandGraphicsPreview0aB11FrameResultV8metadata0A6Client07SurfaceD8MetadataVvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV8scheduleAA0abD8ScheduleVvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11FrameResultV9operationAA0aB19SubmissionOperationOvp	memberOf	s:22WaylandGraphicsPreview0aB11FrameResultV	-
 s:22WaylandGraphicsPreview0aB11RuntimePathV	conformsTo	s:SQ	Swift.Equatable
@@ -6297,12 +6332,6 @@ s:22WaylandGraphicsPreview0aB11RuntimePathV8fallbackAA0aB6ReasonOSgvp	memberOf	s
 s:22WaylandGraphicsPreview0aB11RuntimePathV8metadataAA0aB14MetadataStatusVvp	memberOf	s:22WaylandGraphicsPreview0aB11RuntimePathV	-
 s:22WaylandGraphicsPreview0aB11RuntimePathV9projected12capabilities6policyAC0A6Client0A12CapabilitiesV_AA0aB18PresentationPolicyOtFZ	memberOf	s:22WaylandGraphicsPreview0aB11RuntimePathV	-
 s:22WaylandGraphicsPreview0aB11RuntimePathV9projected12capabilities6policyAcA0aB19SurfaceCapabilitiesV_AA0aB18PresentationPolicyOtFZ	memberOf	s:22WaylandGraphicsPreview0aB11RuntimePathV	-
-s:22WaylandGraphicsPreview0aB12DamageRegionV	conformsTo	s:SQ	Swift.Equatable
-s:22WaylandGraphicsPreview0aB12DamageRegionV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:22WaylandGraphicsPreview0aB12DamageRegionV	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB12DamageRegionV5rectsACSay0A6Client11LogicalRectVG_tcfc	memberOf	s:22WaylandGraphicsPreview0aB12DamageRegionV	-
-s:22WaylandGraphicsPreview0aB12DamageRegionV5rectsSay0A6Client11LogicalRectVGvp	memberOf	s:22WaylandGraphicsPreview0aB12DamageRegionV	-
-s:22WaylandGraphicsPreview0aB12DamageRegionV9fullFrameACvpZ	memberOf	s:22WaylandGraphicsPreview0aB12DamageRegionV	-
 s:22WaylandGraphicsPreview0aB12PacingPolicyO	conformsTo	s:SH	Swift.Hashable
 s:22WaylandGraphicsPreview0aB12PacingPolicyO	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB12PacingPolicyO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -6316,13 +6345,6 @@ s:22WaylandGraphicsPreview0aB12PacingStatusV	conformsTo	s:s8SendableP	Swift.Send
 s:22WaylandGraphicsPreview0aB12PacingStatusV12commitTimingAA0ab7RuntimeE0Ovp	memberOf	s:22WaylandGraphicsPreview0aB12PacingStatusV	-
 s:22WaylandGraphicsPreview0aB12PacingStatusV4fifo12commitTimingAcA0ab7RuntimeE0O_AGtcfc	memberOf	s:22WaylandGraphicsPreview0aB12PacingStatusV	-
 s:22WaylandGraphicsPreview0aB12PacingStatusV4fifoAA0ab7RuntimeE0Ovp	memberOf	s:22WaylandGraphicsPreview0aB12PacingStatusV	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV	conformsTo	s:SQ	Swift.Equatable
-s:22WaylandGraphicsPreview0aB13AlphaModifierV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:22WaylandGraphicsPreview0aB13AlphaModifierV	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB13AlphaModifierV11transparentACvpZ	memberOf	s:22WaylandGraphicsPreview0aB13AlphaModifierV	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV6opaqueACvpZ	memberOf	s:22WaylandGraphicsPreview0aB13AlphaModifierV	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV8rawValueACs6UInt32V_tcfc	memberOf	s:22WaylandGraphicsPreview0aB13AlphaModifierV	-
-s:22WaylandGraphicsPreview0aB13AlphaModifierV8rawValues6UInt32Vvp	memberOf	s:22WaylandGraphicsPreview0aB13AlphaModifierV	-
 s:22WaylandGraphicsPreview0aB13ConfigurationV	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB13ConfigurationV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB13ConfigurationV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -6342,16 +6364,6 @@ s:22WaylandGraphicsPreview0aB13FrameContractV15synchronizationAA0aB35ExternalSyn
 s:22WaylandGraphicsPreview0aB13FrameContractV28externalBufferConfigurationsSayAA0ab8ExternalG13ConfigurationVGvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameContractV	-
 s:22WaylandGraphicsPreview0aB13FrameContractV34recommendedExternalConfigurationIDAA0abghI0VSgvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameContractV	-
 s:22WaylandGraphicsPreview0aB13FrameContractV8geometry0A6Client15SurfaceGeometryVvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameContractV	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV	conformsTo	s:SQ	Swift.Equatable
-s:22WaylandGraphicsPreview0aB13FrameMetadataV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:22WaylandGraphicsPreview0aB13FrameMetadataV	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB13FrameMetadataV11contentType16presentationHint5alpha19colorRepresentation6damageAcA0ab7ContentG0OSg_AA0ab12PresentationI0OSgAA0aB13AlphaModifierVSgAA0ab5ColorL0VSgAA0aB12DamageRegionVSgtcfc	memberOf	s:22WaylandGraphicsPreview0aB13FrameMetadataV	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV11contentTypeAA0ab7ContentG0OSgvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameMetadataV	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV16presentationHintAA0ab12PresentationG0OSgvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameMetadataV	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV19colorRepresentationAA0ab5ColorG0VSgvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameMetadataV	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV5alphaAA0aB13AlphaModifierVSgvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameMetadataV	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV6damageAA0aB12DamageRegionVSgvp	memberOf	s:22WaylandGraphicsPreview0aB13FrameMetadataV	-
-s:22WaylandGraphicsPreview0aB13FrameMetadataV7defaultACvpZ	memberOf	s:22WaylandGraphicsPreview0aB13FrameMetadataV	-
 s:22WaylandGraphicsPreview0aB13FrameScheduleV	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB13FrameScheduleV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB13FrameScheduleV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -6383,13 +6395,6 @@ s:22WaylandGraphicsPreview0aB13WindowBackingV2id0A6Client0D2IDVvp	memberOf	s:22W
 s:22WaylandGraphicsPreview0aB13WindowBackingV5closeyyYaF	memberOf	s:22WaylandGraphicsPreview0aB13WindowBackingV	-
 s:22WaylandGraphicsPreview0aB13WindowBackingV6window0A6Client0D0Vvp	memberOf	s:22WaylandGraphicsPreview0aB13WindowBackingV	-
 s:22WaylandGraphicsPreview0aB13WindowBackingV9nextFrameAA0abG5LeaseVyYaKF	memberOf	s:22WaylandGraphicsPreview0aB13WindowBackingV	-
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	conformsTo	s:SH	Swift.Hashable
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	conformsTo	s:SQ	Swift.Equatable
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO20premultipliedOpticalyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	-
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO23premultipliedElectricalyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	-
-s:22WaylandGraphicsPreview0aB14ColorAlphaModeO8straightyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB14ColorAlphaModeO	-
 s:22WaylandGraphicsPreview0aB14ExternalBufferV	conformsTo	s:s12IdentifiableP	Swift.Identifiable
 s:22WaylandGraphicsPreview0aB14ExternalBufferV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB14ExternalBufferV	conformsTo	s:s8SendableP	Swift.Sendable
@@ -6441,12 +6446,6 @@ s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	conformsTo	s:s16SendableMetatyp
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	conformsTo	s:s23CustomStringConvertibleP	Swift.CustomStringConvertible
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB16ExternalBufferIDV11descriptionSSvp	memberOf	s:22WaylandGraphicsPreview0aB16ExternalBufferIDV	-
-s:22WaylandGraphicsPreview0aB16PresentationHintO	conformsTo	s:SH	Swift.Hashable
-s:22WaylandGraphicsPreview0aB16PresentationHintO	conformsTo	s:SQ	Swift.Equatable
-s:22WaylandGraphicsPreview0aB16PresentationHintO	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:22WaylandGraphicsPreview0aB16PresentationHintO	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB16PresentationHintO5asyncyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB16PresentationHintO	-
-s:22WaylandGraphicsPreview0aB16PresentationHintO5vsyncyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB16PresentationHintO	-
 s:22WaylandGraphicsPreview0aB17DRMFormatModifierV	conformsTo	s:SH	Swift.Hashable
 s:22WaylandGraphicsPreview0aB17DRMFormatModifierV	conformsTo	s:SQ	Swift.Equatable
 s:22WaylandGraphicsPreview0aB17DRMFormatModifierV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
@@ -6496,11 +6495,6 @@ s:22WaylandGraphicsPreview0aB18PresentationPolicyO11externalGPUyAcA0aB19Fallback
 s:22WaylandGraphicsPreview0aB18PresentationPolicyO6decide12capabilitiesAA0aB15BackingDecisionO0A6Client0A12CapabilitiesV_tF	memberOf	s:22WaylandGraphicsPreview0aB18PresentationPolicyO	-
 s:22WaylandGraphicsPreview0aB18PresentationPolicyO6decide12capabilitiesAA0aB15BackingDecisionOAA0aB19SurfaceCapabilitiesV_tF	memberOf	s:22WaylandGraphicsPreview0aB18PresentationPolicyO	-
 s:22WaylandGraphicsPreview0aB18PresentationPolicyO8softwareyA2CmF	memberOf	s:22WaylandGraphicsPreview0aB18PresentationPolicyO	-
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV	conformsTo	s:SQ	Swift.Equatable
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV	conformsTo	s:s8SendableP	Swift.Sendable
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV9alphaModeAA0abd5AlphaG0OSgvp	memberOf	s:22WaylandGraphicsPreview0aB19ColorRepresentationV	-
-s:22WaylandGraphicsPreview0aB19ColorRepresentationV9alphaModeAcA0abd5AlphaG0OSg_tcfc	memberOf	s:22WaylandGraphicsPreview0aB19ColorRepresentationV	-
 s:22WaylandGraphicsPreview0aB19ExternalBufferPlaneV	conformsTo	s:s16SendableMetatypeP	Swift.SendableMetatype
 s:22WaylandGraphicsPreview0aB19ExternalBufferPlaneV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB19ExternalBufferPlaneV14fileDescriptor6offset6stride10planeIndexAC0A6Client09OwnedFileH0V_s6UInt32VA2LtKcfc	memberOf	s:22WaylandGraphicsPreview0aB19ExternalBufferPlaneV	-
@@ -6635,8 +6629,8 @@ s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	conformsTo	s:s16Sendab
 s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	conformsTo	s:s8SendableP	Swift.Sendable
 s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6bufferAA0abdE0Vvp	memberOf	s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	-
 s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6cancelyyYaF	memberOf	s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	-
-s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit22acquireSynchronization8metadata8scheduleAA0abdE17SubmissionReceiptVAA0abd7AcquireJ0O_AA0aB13FrameMetadataVAA0abP8ScheduleVSgtYaKF	memberOf	s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	-
-s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit8metadata8scheduleAA0abdE17SubmissionReceiptVAA0aB13FrameMetadataV_AA0abM8ScheduleVSgtYaKF	memberOf	s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	-
+s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit22acquireSynchronization8metadata8scheduleAA0abdE17SubmissionReceiptVAA0abd7AcquireJ0O_0A6Client20SurfaceFrameMetadataVAA0abR8ScheduleVSgtYaKF	memberOf	s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	-
+s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV6submit8metadata8scheduleAA0abdE17SubmissionReceiptV0A6Client20SurfaceFrameMetadataV_AA0abO8ScheduleVSgtYaKF	memberOf	s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	-
 s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV8contractAA0aB13FrameContractVvp	memberOf	s:22WaylandGraphicsPreview0aB25ExternalBufferRenderLeaseV	-
 s:22WaylandGraphicsPreview0aB26PresentationFeedbackPolicyO	conformsTo	s:SH	Swift.Hashable
 s:22WaylandGraphicsPreview0aB26PresentationFeedbackPolicyO	conformsTo	s:SQ	Swift.Equatable

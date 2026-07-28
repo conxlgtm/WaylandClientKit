@@ -34,10 +34,15 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsClearFrame(
                 color: .black,
-                metadata: WaylandGraphicsFrameMetadata(contentType: .game)
+                metadata: SurfaceFrameMetadata(contentType: .game)
             )
         )
 
+        #expect(
+            throws: WaylandGraphicsError.unsupportedMetadata
+        ) {
+            try frame.validateManagedPreviewMetadataPolicy(configuration: .default)
+        }
         #expect(
             throws: WaylandGraphicsError.unsupportedMetadata
         ) {
@@ -55,7 +60,7 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsClearFrame(
                 color: .black,
-                metadata: WaylandGraphicsFrameMetadata(
+                metadata: SurfaceFrameMetadata(
                     contentType: .game,
                     presentationHint: .vsync
                 )
@@ -73,7 +78,7 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
 
     @Test
     func metadataPolicyPreferAvailableOmitsUnavailableMetadata() throws {
-        let metadata = WaylandGraphicsFrameMetadata(
+        let metadata = SurfaceFrameMetadata(
             contentType: .game,
             presentationHint: .async
         )
@@ -106,7 +111,7 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsClearFrame(
                 color: .black,
-                metadata: WaylandGraphicsFrameMetadata(
+                metadata: SurfaceFrameMetadata(
                     contentType: .game,
                     presentationHint: .vsync
                 )
@@ -119,16 +124,37 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
             geometry: testGraphicsSurfaceGeometry()
         )
     }
+
+    @Test
+    func managedPreviewResolvesTheSharedMetadataWithoutChangingSurfaceValues() throws {
+        let metadata = SurfaceFrameMetadata(
+            contentType: .video,
+            presentationHint: .vsync,
+            alpha: .transparent,
+            colorRepresentation: SurfaceColorRepresentation(
+                alphaMode: .premultipliedOptical
+            )
+        )
+
+        let resolved = try metadata.resolveManagedPreviewMetadata(
+            configuration: WaylandGraphicsConfiguration(metadataPolicy: .preferAvailable),
+            capabilities: gpuCapableSurfaceCapabilities(),
+            geometry: testGraphicsSurfaceGeometry()
+        )
+
+        #expect(resolved.commitMetadata == metadata.surfaceCommitMetadata)
+        #expect(resolved.fallbacks.isEmpty)
+    }
 }
 
 @Suite
 struct WaylandGraphicsPreviewRuntimeTests {
     @Test
     func partialDamageIsAcceptedWhenWithinSurfaceBounds() throws {
-        let damage = WaylandGraphicsDamageRegion(
-            rects: [try LogicalRect(x: 0, y: 0, width: 10, height: 10)]
+        let damage = try SurfaceDamageRegion(
+            [try LogicalRect(x: 0, y: 0, width: 10, height: 10)]
         )
-        let metadata = WaylandGraphicsFrameMetadata(damage: damage)
+        let metadata = SurfaceFrameMetadata(damage: damage)
 
         try metadata.validateManagedPreviewSupport(
             configuration: .default,
@@ -139,10 +165,10 @@ struct WaylandGraphicsPreviewRuntimeTests {
 
     @Test
     func noIntersectionGraphicsDamageIsInvalidDamageRegion() throws {
-        let damage = WaylandGraphicsDamageRegion(
-            rects: [try LogicalRect(x: 101, y: 0, width: 20, height: 10)]
+        let damage = try SurfaceDamageRegion(
+            [try LogicalRect(x: 101, y: 0, width: 20, height: 10)]
         )
-        let metadata = WaylandGraphicsFrameMetadata(damage: damage)
+        let metadata = SurfaceFrameMetadata(damage: damage)
 
         #expect(throws: WaylandGraphicsError.invalidDamageRegion) {
             try metadata.validateManagedPreviewSupport(

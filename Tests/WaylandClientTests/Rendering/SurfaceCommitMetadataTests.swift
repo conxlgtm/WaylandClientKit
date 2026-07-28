@@ -48,7 +48,7 @@
                 contentType: .game,
                 alpha: SurfaceAlphaMetadata(multiplier: .opaque),
                 colorRepresentation: SurfaceColorRepresentation(
-                    alphaMode: .premultipliedElectrical,
+                    rawAlphaMode: .premultipliedElectrical,
                     coefficientsAndRange: SurfaceMatrixCoefficientsAndRange(
                         coefficients: .bt709,
                         range: .limited
@@ -98,7 +98,7 @@
             ) {
                 try SurfaceCommitMetadata(
                     colorRepresentation: SurfaceColorRepresentation(
-                        alphaMode: SurfaceAlphaMode(rawValue: 88)
+                        rawAlphaMode: SurfaceAlphaMode(rawValue: 88)
                     )
                 ).validate(
                     capabilities: metadataCapabilities(
@@ -139,7 +139,7 @@
             )
             let metadata = SurfaceCommitMetadata(
                 colorRepresentation: SurfaceColorRepresentation(
-                    alphaMode: advertisedAlphaMode,
+                    rawAlphaMode: advertisedAlphaMode,
                     coefficientsAndRange: advertisedCoefficientsAndRange
                 )
             )
@@ -154,17 +154,6 @@
                         )
                     )
                 ))
-        }
-
-        @Test
-        func invalidContentTypeRawValueCannotBeCommitted() {
-            let unsupported = SurfaceContentType(rawValue: 99)
-
-            #expect(throws: SurfaceCommitMetadataError.unsupportedContentType(unsupported)) {
-                try SurfaceCommitMetadata(contentType: unsupported).validate(
-                    capabilities: metadataCapabilities(contentType: .available)
-                )
-            }
         }
 
         @Test
