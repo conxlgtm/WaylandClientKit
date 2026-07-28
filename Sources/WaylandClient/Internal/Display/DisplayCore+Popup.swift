@@ -77,28 +77,73 @@ extension DisplayCore {
         }
     }
 
-    func showPopup(
-        _ popupID: PopupID,
+    func reservePopupSoftwareFrameForShow(
+        id popupID: PopupID,
         timeoutMilliseconds: Int32,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
+        metadata: SurfaceFrameMetadata
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         try withFatalFailureFinalization {
-            let popup = try requireOpenPopup(popupID)
-            try popup.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
-            guard !isClosed, let activeSession else { return }
-            publishSessionEvents(activeSession)
+            guard !isClosed, let popup = surfaces.popup(popupID), !popup.isClosedOnOwnerThread
+            else {
+                return .closed
+            }
+            return try popup.reserveSoftwareFrameForShowOnOwnerThread(
+                timeoutMilliseconds: timeoutMilliseconds,
+                metadata: metadata
+            )
         }
     }
 
-    func redrawPopup(
-        _ popupID: PopupID,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
+    func reservePopupSoftwareFrameForRedraw(
+        id popupID: PopupID,
+        metadata: SurfaceFrameMetadata
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         try withFatalFailureFinalization {
-            try requireOpenPopup(popupID).redrawOnOwnerThread(draw)
-            guard !isClosed else {
-                throw ClientError.display(.closed)
+            guard !isClosed, let popup = surfaces.popup(popupID), !popup.isClosedOnOwnerThread
+            else {
+                return .closed
             }
+            return try popup.reserveSoftwareFrameForRedrawOnOwnerThread(metadata: metadata)
+        }
+    }
+
+    func submitReservedPopupSoftwareFrame(
+        id popupID: PopupID,
+        reservation: SoftwareFrameReservation,
+        metadata: SurfaceFrameMetadata,
+        requestPresentationFeedback: Bool,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) throws -> SoftwarePresentationOutcome {
+        try withFatalFailureFinalization {
+            guard !isClosed, let popup = surfaces.popup(popupID), !popup.isClosedOnOwnerThread
+            else {
+                return .closed
+            }
+            let outcome = try popup.submitReservedSoftwareFrameOnOwnerThread(
+                reservation,
+                metadata: metadata,
+                makePresentationFeedback: { [self] in
+                    try presentationFeedbackCommitRequest(
+                        for: popup,
+                        popupID: popupID,
+                        isRequested: requestPresentationFeedback
+                    )
+                },
+                draw
+            )
+            guard !isClosed, let activeSession else { return .closed }
+            publishSessionEvents(activeSession)
+            return outcome
+        }
+    }
+
+    func cancelReservedPopupSoftwareFrame(
+        id popupID: PopupID,
+        reservation: SoftwareFrameReservation
+    ) {
+        withFatalFailureFinalization {
+            guard !isClosed, let popup = surfaces.popup(popupID) else { return }
+            popup.cancelReservedSoftwareFrameOnOwnerThread(reservation)
         }
     }
 

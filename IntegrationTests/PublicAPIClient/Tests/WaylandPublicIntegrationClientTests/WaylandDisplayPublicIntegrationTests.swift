@@ -175,7 +175,13 @@ func show(_ window: Window, color: UInt32) async throws {
 
 private func show(_ popup: PopupSurface, color: UInt32) async throws {
     let timeout = publicIntegrationTimeoutMilliseconds
-    try await popup.show(timeoutMilliseconds: timeout, drawColor(color))
+    let outcome = try await popup.show(
+        requestPresentationFeedback: true,
+        timeoutMilliseconds: timeout,
+        preparing: { reservation in reservation.id },
+        { _, frame in fill(frame, color: color) }
+    )
+    #expect(outcome == .presented)
 }
 
 private struct PublicStreamSources: Sendable {
@@ -264,7 +270,7 @@ private func expectShownPopup(_ popup: PopupSurface) async throws {
 
 private func redraw(
     _ popup: PopupSurface,
-    parent window: Window,
+    parent _: Window,
     events displayEvents: DisplayEvents
 ) async throws {
     let redrawEvent = try await displayEvent(
@@ -284,9 +290,12 @@ private func redraw(
     #expect(identity == popup.identity)
     #expect(try await popup.needsRedraw)
 
-    try await popup.redraw { frame in
-        fill(frame, color: 0x0050_5050)
-    }
+    let outcome = try await popup.redraw(
+        requestPresentationFeedback: true,
+        preparing: { reservation in reservation.id },
+        { _, frame in fill(frame, color: 0x0050_5050) }
+    )
+    #expect(outcome == .presented)
 }
 
 private func close(

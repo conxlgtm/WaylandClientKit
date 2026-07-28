@@ -3,7 +3,7 @@ public struct PopupSurface: Sendable, Hashable, Identifiable {
     public let id: PopupSurfaceIdentity
     public let parentWindowID: WindowID
 
-    private let display: WaylandDisplay
+    package let display: WaylandDisplay
     private let ownership: DisplayOwnedIdentity<PopupID>
 
     package init(
@@ -20,19 +20,6 @@ public struct PopupSurface: Sendable, Hashable, Identifiable {
 
     public var identity: PopupSurfaceIdentity {
         id
-    }
-
-    public func show(
-        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.showPopup(popupID, timeoutMilliseconds: timeoutMilliseconds, draw)
-    }
-
-    public func redraw(
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.redrawPopup(popupID, draw)
     }
 
     public func requestRedraw() async throws {

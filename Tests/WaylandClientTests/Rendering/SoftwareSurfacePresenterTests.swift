@@ -7,7 +7,7 @@
     @testable import WaylandClient
 
     @Suite
-    struct SoftwareSurfacePresentationCommitSequenceTests {
+    struct SoftwareSurfaceCommitSequenceTests {
         @Test(arguments: ManagedPresentationOperation.allCases)
         func pointOfNoReturnMarksBufferBusyBeforeProtocolRequests(
             operation: ManagedPresentationOperation

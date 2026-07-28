@@ -23,13 +23,19 @@ struct PopupRoleResources {
 package final class PopupRoleSurface {
     package let id: PopupID
     package let parentWindowID: WindowID
-
     package let connection: RawDisplayConnection
     package let configuration: PopupConfiguration
     package let bufferCount: PositiveInt
     package let initialConfigurePump: (Int32) throws -> Void
     package let failureSink: any WindowFailureSink
     package let configureState = PopupConfigureState()
+
+    let softwarePresentationCoordinator =
+        SoftwareSurfaceReservationCoordinator<PendingPopupSoftwareFrameReservation>(
+            reservation: { $0.reservedFrame.reservation },
+            retire: { $0.reservedFrame.drawingBuffer.discard() }
+        )
+    let presentationFeedbackCoordinator = SurfacePresentationFeedbackCoordinator()
 
     var surfaceRuntime: SurfaceRuntime<PopupRoleResources>
     package var pendingFrameRegistration: FrameCallbackRegistration?
@@ -210,30 +216,6 @@ package final class PopupRoleSurface {
 
             return currentPlacement
         }
-    }
-
-    package func showOnOwnerThread(
-        timeoutMilliseconds: Int32,
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        connection.preconditionIsOwnerThread()
-
-        if model.currentPlacement == nil {
-            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
-        }
-
-        try requestRedrawOnOwnerThread()
-        _ = try drawAndPresent(draw)
-    }
-
-    package func redrawOnOwnerThread(
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        connection.preconditionIsOwnerThread()
-        guard !model.isClosed else { return }
-
-        _ = try consumeLatestConfigureIfAvailable()
-        _ = try drawAndPresent(draw)
     }
 
     package func requestRedrawOnOwnerThread() throws {

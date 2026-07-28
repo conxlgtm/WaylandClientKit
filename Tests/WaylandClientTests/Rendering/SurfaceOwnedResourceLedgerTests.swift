@@ -3,7 +3,7 @@ import Testing
 @testable import WaylandClient
 
 @Suite
-struct WindowOwnedResourceLedgerTests {
+struct SurfaceOwnedResourceLedgerTests {
     @Test
     func closeBeforeStartRetiresLateResourceImmediately() {
         let log = RetirementLog()
@@ -18,7 +18,7 @@ struct WindowOwnedResourceLedgerTests {
     func closeDuringRetirementIsSafe() {
         let log = RetirementLog()
         let holder = LedgerHolder()
-        let ledger = WindowOwnedResourceLedger<Int, Resource> { resource in
+        let ledger = SurfaceOwnedResourceLedger<Int, Resource> { resource in
             log.append(resource.id)
             holder.ledger?.close()
         }
@@ -84,8 +84,8 @@ struct WindowOwnedResourceLedgerTests {
 
     private func makeLedger(
         _ log: RetirementLog
-    ) -> WindowOwnedResourceLedger<Int, Resource> {
-        WindowOwnedResourceLedger { log.append($0.id) }
+    ) -> SurfaceOwnedResourceLedger<Int, Resource> {
+        SurfaceOwnedResourceLedger { log.append($0.id) }
     }
 }
 
@@ -102,5 +102,5 @@ private final class RetirementLog {
 }
 
 private final class LedgerHolder {
-    var ledger: WindowOwnedResourceLedger<Int, Resource>?
+    var ledger: SurfaceOwnedResourceLedger<Int, Resource>?
 }

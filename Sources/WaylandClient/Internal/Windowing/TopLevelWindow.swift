@@ -149,8 +149,12 @@ package final class TopLevelWindow {
     private let initialConfigurePump: (Int32) throws -> Void
     private let surface: RawSurface
     private let configureState = XDGConfigureState()
-    private let softwarePresentationCoordinator = WindowSoftwareReservationCoordinator()
-    private let presentationFeedbackCoordinator = WindowPresentationFeedbackCoordinator()
+    private let softwarePresentationCoordinator =
+        SoftwareSurfaceReservationCoordinator<PendingSoftwareFrameReservation>(
+            reservation: { $0.reservedFrame.reservation },
+            retire: { $0.reservedFrame.drawingBuffer.discard() }
+        )
+    private let presentationFeedbackCoordinator = SurfacePresentationFeedbackCoordinator()
     private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
 
     private let failureSink: any WindowFailureSink
@@ -1960,17 +1964,14 @@ extension TopLevelWindow {
             )
         }
 
-        let identity = presentationFeedbackCoordinator.allocateIdentity()
-        let feedback = try presentation.requestFeedback(for: surface) { [weak self] rawEvent in
-            self?.handlePresentationFeedback(
-                identity,
-                event: rawEvent,
-                outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
-                onFeedback: onFeedback
-            )
+        return try presentationFeedbackCoordinator.request(
+            presentation: presentation,
+            surface: surface,
+            outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
+            onFeedback: onFeedback
+        ) { [weak self] error in
+            self?.reportCallbackFailure(operation: .presentationFeedback, error: error)
         }
-        presentationFeedbackCoordinator.register(feedback, for: identity)
-        return identity
     }
 
     package func cancelPresentationFeedbackOnOwnerThread(
@@ -2345,47 +2346,6 @@ extension TopLevelWindow {
 }
 
 extension TopLevelWindow {
-    private func handlePresentationFeedback(
-        _ identity: SurfacePresentationIdentity,
-        event rawEvent: RawPresentationFeedbackEvent,
-        outputIDForPresentationSyncOutput: (RawOutputPointerIdentity) throws -> OutputID?,
-        onFeedback: (SurfacePresentationFeedback) -> Void
-    ) {
-        presentationFeedbackCoordinator.complete(identity)
-
-        do {
-            switch rawEvent {
-            case .presented(let rawPresented):
-                let synchronizedOutput = try rawPresented.synchronizedOutput.flatMap { output in
-                    try outputIDForPresentationSyncOutput(output)
-                }
-                onFeedback(
-                    .presented(
-                        PresentationFeedback(
-                            surface: identity,
-                            timestamp: PresentationTimestamp(
-                                seconds: rawPresented.timestamp.seconds,
-                                nanoseconds: rawPresented.timestamp.nanoseconds
-                            ),
-                            refreshNanoseconds: rawPresented.refreshNanoseconds == 0
-                                ? nil
-                                : rawPresented.refreshNanoseconds,
-                            sequence: PresentationSequence(
-                                value: rawPresented.sequence.value
-                            ),
-                            flags: PresentationFeedbackFlags(rawValue: rawPresented.flags),
-                            synchronizedOutput: synchronizedOutput
-                        )
-                    )
-                )
-            case .discarded:
-                onFeedback(.discarded(identity))
-            }
-        } catch {
-            reportCallbackFailure(operation: .presentationFeedback, error: error)
-        }
-    }
-
     private func cancelPresentationFeedbacks() {
         presentationFeedbackCoordinator.close()
     }
