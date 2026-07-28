@@ -11,7 +11,10 @@ extension DisplayCore {
                 },
                 onFeedback: { [weak self] feedback in
                     self?.eventHub.publishPresentation(
-                        WindowPresentationEvent(windowID: windowID, feedback: feedback)
+                        ManagedSurfacePresentationEvent(
+                            surface: .window(windowID),
+                            feedback: feedback
+                        )
                     )
                 }
             )
@@ -37,8 +40,8 @@ extension DisplayCore {
                     },
                     onFeedback: { [weak self] feedback in
                         self?.eventHub.publishPresentation(
-                            WindowPresentationEvent(
-                                windowID: windowID,
+                            ManagedSurfacePresentationEvent(
+                                surface: .window(windowID),
                                 feedback: feedback
                             )
                         )

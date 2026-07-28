@@ -56,6 +56,10 @@ public struct Subsurface: Sendable, Hashable, Identifiable {
         try await display.requestSubsurfaceRedraw(subsurfaceID)
     }
 
+    public var presentationEvents: ManagedSurfacePresentationEvents {
+        display.managedSurfacePresentationEvents(for: .subsurface(id))
+    }
+
     public func setInputRegion(_ region: SurfaceRegion?) async throws {
         try await display.setSubsurfaceInputRegion(subsurfaceID, region)
     }

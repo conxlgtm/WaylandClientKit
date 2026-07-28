@@ -101,7 +101,7 @@ enum PresentationFeedbackAnimation {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
-            case .redrawRequested(let windowID) where windowID == window.id:
+            case .redrawRequested(.window(let windowID)) where windowID == window.id:
                 let phase = await animation.nextPhase()
                 if usePresentationFeedback {
                     do {
@@ -133,7 +133,7 @@ enum PresentationFeedbackAnimation {
     }
 
     nonisolated private static func consumePresentationEvents(
-        _ events: WindowPresentationEvents,
+        _ events: ManagedSurfacePresentationEvents,
         animation: AnimationState
     ) async throws {
         var iterator = events.makeAsyncIterator()

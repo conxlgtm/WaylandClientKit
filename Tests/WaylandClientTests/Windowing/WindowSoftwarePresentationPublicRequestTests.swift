@@ -305,7 +305,7 @@
                 var iterator = displayEvents.makeAsyncIterator()
                 try await trigger()
                 while let event = try await iterator.next() {
-                    if event == .redrawRequested(window.id) {
+                    if event == .redrawRequested(.window(window.id)) {
                         return event
                     }
                 }

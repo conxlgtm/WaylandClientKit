@@ -5,7 +5,7 @@ import Testing
 @Suite
 struct DisplayEventHubPresentationTests {
     @Test
-    func presentationEventsAreScopedToWindow() async {
+    func presentationEventsAreScopedToManagedSurface() async {
         let hub = DisplayEventHub()
         let expected = SurfacePresentationFeedback.presented(
             PresentationFeedback(
@@ -17,29 +17,32 @@ struct DisplayEventHubPresentationTests {
                 synchronizedOutput: OutputID(rawValue: 3)
             )
         )
-        var iterator = hub.windowPresentationEvents(
-            windowID: WindowID(rawValue: 2)
+        let popup: ManagedSurfaceIdentity = .popup(
+            PopupSurfaceIdentity(PopupID(rawValue: 2))
+        )
+        var iterator = hub.managedSurfacePresentationEvents(
+            surface: popup
         ).makeAsyncIterator()
         var displayIterator = hub.displayEvents().makeAsyncIterator()
 
-        let otherWindowEvent = WindowPresentationEvent(
-            windowID: WindowID(rawValue: 1),
+        let otherSurfaceEvent = ManagedSurfacePresentationEvent(
+            surface: .window(WindowID(rawValue: 1)),
             feedback: .discarded(SurfacePresentationIdentity(rawValue: 99))
         )
-        let expectedWindowEvent = WindowPresentationEvent(
-            windowID: WindowID(rawValue: 2),
+        let expectedPopupEvent = ManagedSurfacePresentationEvent(
+            surface: popup,
             feedback: expected
         )
-        hub.publishPresentation(otherWindowEvent)
-        hub.publishPresentation(expectedWindowEvent)
+        hub.publishPresentation(otherSurfaceEvent)
+        hub.publishPresentation(expectedPopupEvent)
 
         do {
             let event = try await iterator.next()
             #expect(event == expected)
             let firstDisplayEvent = try await displayIterator.next()
             let secondDisplayEvent = try await displayIterator.next()
-            #expect(firstDisplayEvent == .presentation(otherWindowEvent))
-            #expect(secondDisplayEvent == .presentation(expectedWindowEvent))
+            #expect(firstDisplayEvent == .presentation(otherSurfaceEvent))
+            #expect(secondDisplayEvent == .presentation(expectedPopupEvent))
         } catch {
             Issue.record("Expected presentation event, got \(error)")
         }
@@ -51,18 +54,22 @@ struct DisplayEventHubPresentationTests {
             configuration: EventStreamConfiguration(
                 presentationEventCapacity: try PositiveInt(1))
         )
-        let windowID = WindowID(rawValue: 4)
-        var iterator = hub.windowPresentationEvents(windowID: windowID).makeAsyncIterator()
+        let surface: ManagedSurfaceIdentity = .subsurface(
+            SubsurfaceIdentity(SubsurfaceID(rawValue: 4))
+        )
+        var iterator = hub.managedSurfacePresentationEvents(
+            surface: surface
+        ).makeAsyncIterator()
 
         hub.publishPresentation(
-            WindowPresentationEvent(
-                windowID: windowID,
+            ManagedSurfacePresentationEvent(
+                surface: surface,
                 feedback: .discarded(SurfacePresentationIdentity(rawValue: 1))
             )
         )
         hub.publishPresentation(
-            WindowPresentationEvent(
-                windowID: windowID,
+            ManagedSurfacePresentationEvent(
+                surface: surface,
                 feedback: .discarded(SurfacePresentationIdentity(rawValue: 2))
             )
         )

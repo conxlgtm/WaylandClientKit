@@ -69,7 +69,7 @@ enum FrameworkHostSmoke {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
-            case .redrawRequested(let windowID) where windowID == window.id:
+            case .redrawRequested(.window(let windowID)) where windowID == window.id:
                 try await loop.redrawIfNeeded()
             case .windowCloseRequested(let windowID) where windowID == window.id:
                 await window.close()
@@ -84,7 +84,7 @@ enum FrameworkHostSmoke {
                 break
             case .diagnostic(let diagnostic):
                 log("display diagnostic \(diagnostic)")
-            case .popupDismissed, .popupClosed, .popupRedrawRequested, .outputChanged,
+            case .popupDismissed, .popupClosed, .outputChanged,
                 .outputRemoved, .windowCloseRequested, .windowClosed, .redrawRequested,
                 .windowOutputsChanged, .keyboardShortcutsInhibitorChanged:
                 break

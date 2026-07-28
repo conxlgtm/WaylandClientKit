@@ -39,6 +39,10 @@ public struct PopupSurface: Sendable, Hashable, Identifiable {
         try await display.requestPopupRedraw(popupID)
     }
 
+    public var presentationEvents: ManagedSurfacePresentationEvents {
+        display.managedSurfacePresentationEvents(for: .popup(id))
+    }
+
     public func setInputRegion(_ region: SurfaceRegion?) async throws {
         try await display.setPopupInputRegion(popupID, region)
     }

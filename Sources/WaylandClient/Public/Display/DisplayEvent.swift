@@ -3,8 +3,7 @@ public enum DisplayEvent: Equatable, Sendable {
     case windowClosed(WindowID)
     case popupDismissed(PopupLifecycleEvent)
     case popupClosed(PopupLifecycleEvent)
-    case redrawRequested(WindowID)
-    case popupRedrawRequested(PopupLifecycleEvent)
+    case redrawRequested(ManagedSurfaceIdentity)
     case outputChanged(OutputSnapshot)
     case outputRemoved(OutputID)
     case windowOutputsChanged(WindowOutputMembershipEvent)
@@ -13,7 +12,7 @@ public enum DisplayEvent: Equatable, Sendable {
     case input(InputEvent)
     case textInput(TextInputEvent)
     case dataTransfer(DataTransferEvent)
-    case presentation(WindowPresentationEvent)
+    case presentation(ManagedSurfacePresentationEvent)
     case diagnostic(DisplayDiagnostic)
 }
 

@@ -27,15 +27,12 @@ struct DisplayEventHubPopupTests {
     @Test
     func popupRedrawRequestsPublishPopupTargetsOnDisplayStream() async {
         let hub = DisplayEventHub()
-        let popup = PopupLifecycleEvent(
-            popup: PopupID(rawValue: 7),
-            parentWindowID: WindowID(rawValue: 3)
-        )
+        let popup = PopupSurfaceIdentity(PopupID(rawValue: 7))
         var iterator = hub.displayEvents().makeAsyncIterator()
 
-        hub.publish(.popupRedrawRequested(popup))
+        hub.publish(.redrawRequested(.popup(popup)))
 
-        await expectPopupEvent(.popupRedrawRequested(popup), from: &iterator)
+        await expectPopupEvent(.redrawRequested(.popup(popup)), from: &iterator)
     }
 
     @Test
@@ -44,10 +41,7 @@ struct DisplayEventHubPopupTests {
         let core = DisplayCore(eventHub: hub)
         let popupID = PopupID(rawValue: 7)
         let parentWindowID = WindowID(rawValue: 3)
-        let expected = PopupLifecycleEvent(
-            popup: popupID,
-            parentWindowID: parentWindowID
-        )
+        let expected = PopupSurfaceIdentity(popupID)
         var iterator = hub.displayEvents().makeAsyncIterator()
 
         let callbacks = core.popupEventCallbacks(
@@ -56,7 +50,7 @@ struct DisplayEventHubPopupTests {
         )
         callbacks.onRedrawRequested()
 
-        await expectPopupEvent(.popupRedrawRequested(expected), from: &iterator)
+        await expectPopupEvent(.redrawRequested(.popup(expected)), from: &iterator)
     }
 
     @Test

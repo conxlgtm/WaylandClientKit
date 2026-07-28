@@ -103,7 +103,7 @@ enum TwoWindowFrameworkHost {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
-            case .redrawRequested(let windowID):
+            case .redrawRequested(.window(let windowID)):
                 if let controller = await registry.controller(for: windowID) {
                     log("redraw requested window=\(windowID)")
                     try await controller.redrawIfNeeded()

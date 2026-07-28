@@ -105,7 +105,6 @@ private func isOutputChange(_ event: DisplayEvent) -> Bool {
         .popupDismissed,
         .popupClosed,
         .redrawRequested,
-        .popupRedrawRequested,
         .windowOutputsChanged,
         .keyboardShortcutsInhibitorChanged:
         false

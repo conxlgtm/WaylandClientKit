@@ -66,7 +66,7 @@ extension WaylandDisplayPublicIntegrationTests {
 
         async let replacementEvent = displayEvent(
             in: displayEvents,
-            matching: { $0 == .redrawRequested(window.id) },
+            matching: { $0 == .redrawRequested(.window(window.id)) },
             after: {
                 try await window.requestRedraw()
                 await gate.resumePreparation()
@@ -74,7 +74,7 @@ extension WaylandDisplayPublicIntegrationTests {
         )
 
         #expect(try await staleOutcome == .superseded)
-        #expect(try await replacementEvent == .redrawRequested(window.id))
+        #expect(try await replacementEvent == .redrawRequested(.window(window.id)))
         #expect(try await window.needsRedraw)
         let replacementOutcome = try await window.redraw(
             preparing: { $0.id },
@@ -113,11 +113,11 @@ extension WaylandDisplayPublicIntegrationTests {
 
             async let replacementEvent = displayEvent(
                 in: displayEvents,
-                matching: { $0 == .redrawRequested(window.id) },
+                matching: { $0 == .redrawRequested(.window(window.id)) },
                 after: { await gate.resumePreparation() }
             )
             let nextOutcome = try await group.next()
-            #expect(try await replacementEvent == .redrawRequested(window.id))
+            #expect(try await replacementEvent == .redrawRequested(.window(window.id)))
             return try #require(nextOutcome)
         }
         #expect(outcome == .superseded)
@@ -198,7 +198,7 @@ extension WaylandDisplayPublicIntegrationTests {
 
             let replacementEvent = try await displayEvent(
                 in: displayEvents,
-                matching: { $0 == .redrawRequested(window.id) },
+                matching: { $0 == .redrawRequested(.window(window.id)) },
                 after: {
                     do {
                         _ = try await window.redraw(
@@ -211,7 +211,7 @@ extension WaylandDisplayPublicIntegrationTests {
                     }
                 }
             )
-            #expect(replacementEvent == .redrawRequested(window.id))
+            #expect(replacementEvent == .redrawRequested(.window(window.id)))
             #expect(
                 try await window.redraw(
                     preparing: { $0.id },
@@ -267,7 +267,7 @@ private func expectPresentationFeedback(
     _ = try await displayEvent(
         in: displayEvents,
         matching: { event in
-            event == .redrawRequested(window.id)
+            event == .redrawRequested(.window(window.id))
         },
         after: {
             try await window.requestRedraw()
@@ -307,7 +307,7 @@ private func expectPresentationFeedback(
 }
 
 private func nextPresentationFeedback(
-    in events: WindowPresentationEvents
+    in events: ManagedSurfacePresentationEvents
 ) async throws -> SurfacePresentationFeedback? {
     var iterator = events.makeAsyncIterator()
     return try await iterator.next()
@@ -325,7 +325,7 @@ private func waitForRedrawRequest(
 ) async throws {
     _ = try await displayEvent(
         in: displayEvents,
-        matching: { $0 == .redrawRequested(window.id) },
+        matching: { $0 == .redrawRequested(.window(window.id)) },
         after: { try await window.requestRedraw() }
     )
 }

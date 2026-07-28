@@ -61,13 +61,13 @@ struct WaylandDisplayPublicIntegrationTests {
             let redrawEvent = try await displayEvent(
                 in: displayEvents,
                 matching: { event in
-                    event == .redrawRequested(window.id)
+                    event == .redrawRequested(.window(window.id))
                 },
                 after: {
                     try await window.requestRedraw()
                 }
             )
-            #expect(redrawEvent == .redrawRequested(window.id))
+            #expect(redrawEvent == .redrawRequested(.window(window.id)))
             #expect(try await window.needsRedraw)
 
             try await window.redraw { frame in
@@ -270,24 +270,18 @@ private func redraw(
     let redrawEvent = try await displayEvent(
         in: displayEvents,
         matching: { event in
-            isPopupLifecycleEvent(
-                event,
-                eventCase: .redrawRequested,
-                popup: popup.identity,
-                parentWindowID: window.id
-            )
+            event == .redrawRequested(.popup(popup.identity))
         },
         after: {
             try await popup.requestRedraw()
         }
     )
 
-    guard case .popupRedrawRequested(let lifecycleEvent) = redrawEvent else {
+    guard case .redrawRequested(.popup(let identity)) = redrawEvent else {
         Issue.record("Expected popup redraw event, got \(redrawEvent)")
         return
     }
-    #expect(lifecycleEvent.popup == popup.identity)
-    #expect(lifecycleEvent.parentWindowID == window.id)
+    #expect(identity == popup.identity)
     #expect(try await popup.needsRedraw)
 
     try await popup.redraw { frame in
@@ -321,9 +315,8 @@ private func close(
     let closeEvent = try await displayEvent(
         in: displayEvents,
         matching: { event in
-            isPopupLifecycleEvent(
+            isPopupClosedEvent(
                 event,
-                eventCase: .closed,
                 popup: popup.identity,
                 parentWindowID: window.id
             )
@@ -343,26 +336,12 @@ private func close(
     #expect(try await popup.isClosed)
 }
 
-private enum PopupEventCase {
-    case redrawRequested
-    case closed
-}
-
-private func isPopupLifecycleEvent(
+private func isPopupClosedEvent(
     _ event: DisplayEvent,
-    eventCase expectedCase: PopupEventCase,
     popup expectedPopup: PopupSurfaceIdentity,
     parentWindowID expectedParentWindowID: WindowID
 ) -> Bool {
-    let lifecycleEvent: PopupLifecycleEvent
-    switch (expectedCase, event) {
-    case (.redrawRequested, .popupRedrawRequested(let event)):
-        lifecycleEvent = event
-    case (.closed, .popupClosed(let event)):
-        lifecycleEvent = event
-    case (.redrawRequested, _), (.closed, _):
-        return false
-    }
+    guard case .popupClosed(let lifecycleEvent) = event else { return false }
 
     return lifecycleEvent.popup == expectedPopup
         && lifecycleEvent.parentWindowID == expectedParentWindowID

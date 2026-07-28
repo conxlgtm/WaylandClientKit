@@ -414,7 +414,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func publishWindowRedrawRequested(_ windowID: WindowID) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
-        eventHub.publish(.redrawRequested(windowID))
+        eventHub.publish(.redrawRequested(.window(windowID)))
     }
 
     private func handleWindowOutputsChanged(

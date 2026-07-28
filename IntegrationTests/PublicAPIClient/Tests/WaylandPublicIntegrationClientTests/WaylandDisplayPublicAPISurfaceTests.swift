@@ -237,16 +237,18 @@ struct WaylandPresentationAPISurfaceTests {
         func inspectEvent(_ event: SurfacePresentationFeedback) -> SurfacePresentationIdentity {
             event.surface
         }
-        func inspectWindowEvent(_ event: WindowPresentationEvent) -> WindowID {
-            event.windowID
+        func inspectManagedEvent(
+            _ event: ManagedSurfacePresentationEvent
+        ) -> ManagedSurfaceIdentity {
+            event.surface
         }
-        func inspectDisplayEvent(_ event: DisplayEvent) -> WindowPresentationEvent? {
+        func inspectDisplayEvent(_ event: DisplayEvent) -> ManagedSurfacePresentationEvent? {
             guard case .presentation(let presentation) = event else { return nil }
             return presentation
         }
         _ = inspectFeedback
         _ = inspectEvent
-        _ = inspectWindowEvent
+        _ = inspectManagedEvent
         _ = inspectDisplayEvent
 
         func usePresentationFeedbackAPI(window: Window) async throws {
@@ -255,7 +257,16 @@ struct WaylandPresentationAPISurfaceTests {
             try await window.requestPresentationFeedback()
         }
 
+        func useManagedSurfacePresentationStreams(
+            popup: PopupSurface,
+            subsurface: Subsurface
+        ) {
+            _ = popup.presentationEvents.makeAsyncIterator()
+            _ = subsurface.presentationEvents.makeAsyncIterator()
+        }
+
         _ = usePresentationFeedbackAPI
+        _ = useManagedSurfacePresentationStreams
     }
 
     @Test

@@ -164,7 +164,7 @@ enum GraphicsPreviewManagedGPUClear {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
-            case .redrawRequested(let windowID) where windowID == backing.id:
+            case .redrawRequested(.window(let windowID)) where windowID == backing.id:
                 _ = try await submitClearFrame(
                     backing: backing,
                     state: state,

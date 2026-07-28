@@ -132,8 +132,8 @@ public struct Window: Sendable, Hashable {
         try await display.requestRedraw(id)
     }
 
-    public var presentationEvents: WindowPresentationEvents {
-        display.windowPresentationEvents(for: id)
+    public var presentationEvents: ManagedSurfacePresentationEvents {
+        display.managedSurfacePresentationEvents(for: .window(id))
     }
 
     public func requestPresentationFeedback() async throws {

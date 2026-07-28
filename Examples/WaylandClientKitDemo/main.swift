@@ -48,13 +48,13 @@ enum WaylandClientKitDemo {
             }
         case .diagnostic(let diagnostic):
             DemoLog.write("display diagnostic \(diagnostic)")
-        case .redrawRequested(let windowID):
+        case .redrawRequested(.window(let windowID)):
             guard windowID == window.id else { return false }
             let redrawState = demoState
             try await window.redraw { frame in
                 drawDemoFrame(frame, state: redrawState)
             }
-        case .popupRedrawRequested:
+        case .redrawRequested:
             break
         case .windowCloseRequested(let windowID):
             guard windowID == window.id else { return false }

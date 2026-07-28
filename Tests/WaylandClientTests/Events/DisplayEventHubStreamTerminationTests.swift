@@ -11,7 +11,9 @@ struct DisplayEventHubStreamTerminationTests {
         var inputIterator = hub.inputEvents().makeAsyncIterator()
         var dataTransferIterator = hub.dataTransferEvents().makeAsyncIterator()
         var textInputIterator = hub.textInputEvents().makeAsyncIterator()
-        let presentationEvents = hub.windowPresentationEvents(windowID: WindowID(rawValue: 7))
+        let presentationEvents = hub.managedSurfacePresentationEvents(
+            surface: .window(WindowID(rawValue: 7))
+        )
         var presentationIterator = presentationEvents.makeAsyncIterator()
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
         let error = WaylandDisplayError.internalInvariantViolation(
@@ -37,8 +39,8 @@ struct DisplayEventHubStreamTerminationTests {
         var inputIterator = hub.inputEvents().makeAsyncIterator()
         var textInputIterator = hub.textInputEvents().makeAsyncIterator()
         var dataTransferIterator = hub.dataTransferEvents().makeAsyncIterator()
-        var presentationIterator = hub.windowPresentationEvents(
-            windowID: events.presentation.windowID
+        var presentationIterator = hub.managedSurfacePresentationEvents(
+            surface: events.presentation.surface
         ).makeAsyncIterator()
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
 
@@ -101,8 +103,8 @@ private struct StreamTerminationEvents {
             offerID: DataOfferID(rawValue: 5)
         )
     )
-    let presentation = WindowPresentationEvent(
-        windowID: WindowID(rawValue: 7),
+    let presentation = ManagedSurfacePresentationEvent(
+        surface: .window(WindowID(rawValue: 7)),
         feedback: .discarded(SurfacePresentationIdentity(rawValue: 6))
     )
     let diagnostic = DisplayDiagnostic(
@@ -154,7 +156,7 @@ private func expectFailure(
 
 private func expectFailure(
     _ expectedError: WaylandDisplayError,
-    from iterator: inout WindowPresentationEventsIterator
+    from iterator: inout ManagedSurfacePresentationEventsIterator
 ) async {
     do {
         _ = try await iterator.next()
