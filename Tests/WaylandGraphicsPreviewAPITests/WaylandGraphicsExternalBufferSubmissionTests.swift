@@ -1105,13 +1105,13 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         let firstLease = try await storage.nextFrame()
         _ = try await firstLease.submit(.clearColor(.black))
         let failedLease = try await storage.nextFrame()
-        let invalidDamage = WaylandGraphicsDamageRegion(
-            rects: [try LogicalRect(x: 101, y: 0, width: 20, height: 10)]
+        let invalidDamage = try SurfaceDamageRegion(
+            [try LogicalRect(x: 101, y: 0, width: 20, height: 10)]
         )
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsClearFrame(
                 color: .black,
-                metadata: WaylandGraphicsFrameMetadata(damage: invalidDamage)
+                metadata: SurfaceFrameMetadata(damage: invalidDamage)
             )
         )
 
@@ -1460,11 +1460,11 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
             )
         )
         let lease = try await storage.nextFrame()
-        let metadata = WaylandGraphicsFrameMetadata(
+        let metadata = SurfaceFrameMetadata(
             contentType: .game,
             presentationHint: .async,
             alpha: .opaque,
-            colorRepresentation: WaylandGraphicsColorRepresentation(alphaMode: .straight)
+            colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight)
         )
         let schedule = WaylandGraphicsFrameSchedule(
             pacing: .fifo,
@@ -1483,6 +1483,7 @@ struct WaylandGraphicsExternalBufferLifecycleTests {
         #expect(result.frameResult.metadata == metadata)
         #expect(result.frameResult.schedule == schedule)
         #expect(result.frameResult.presentationFeedbackRequested)
+        #expect(await window.metadataSnapshot() == [metadata.surfaceCommitMetadata])
         #expect(await window.submitConstraintsSnapshot().map(\.pacing) == [.fifo(.setBarrier)])
         #expect(await window.presentationFeedbackRequestSnapshot() == [true])
         #expect(await window.metadataSnapshot().compactMap(\.contentType) == [.game])
@@ -2579,7 +2580,7 @@ private func registerAndSubmitTestExternalBuffer(
     storage: WaylandGraphicsWindowBackingStorage,
     lease: consuming WaylandGraphicsFrameLease,
     descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
-    metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+    metadata frameMetadata: SurfaceFrameMetadata = .default,
     schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
 ) async throws -> (
     buffer: WaylandGraphicsExternalBuffer,

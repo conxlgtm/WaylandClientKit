@@ -274,50 +274,40 @@ struct WaylandPresentationAPISurfaceTests {
     private func useAtomicSoftwarePresentationAPI(
         _ window: Window
     ) async throws -> [SoftwarePresentationOutcome] {
-        let simpleShow = try await window.show(requestPresentationFeedback: true) { _ in () }
-        let simpleRedraw = try await window.redraw(requestPresentationFeedback: true) { _ in () }
-        let simpleDamagedShow = try await window.show(
-            damage: nil,
+        let dirtyRectangle = try LogicalRect(x: 0, y: 0, width: 1, height: 1)
+        let metadata = SurfaceFrameMetadata(
+            contentType: .photo,
+            presentationHint: .vsync,
+            alpha: .opaque,
+            colorRepresentation: SurfaceColorRepresentation(
+                alphaMode: .premultipliedElectrical
+            ),
+            damage: try SurfaceDamageRegion([dirtyRectangle])
+        )
+
+        let simpleShow = try await window.show(
+            metadata: metadata,
             requestPresentationFeedback: true,
             timeoutMilliseconds: 1_000
         ) { _ in () }
-        let simpleDamagedRedraw = try await window.redraw(
-            damage: nil,
+        let simpleRedraw = try await window.redraw(
+            metadata: metadata,
             requestPresentationFeedback: true
         ) { _ in () }
-        let shown = try await window.show(
+        let preparedShow = try await window.show(
+            metadata: metadata,
             requestPresentationFeedback: true,
-            preparing: { reservation in reservation.id },
-            { _, _ in () }
-        )
-        let redrawn = try await window.redraw(
-            requestPresentationFeedback: true,
-            preparing: { reservation in reservation.id },
-            { _, _ in () }
-        )
-        let damagedShow = try await window.show(
-            damage: nil,
             timeoutMilliseconds: 1_000,
+            preparing: { reservation in reservation.id },
+            { _, _ in () }
+        )
+        let preparedRedraw = try await window.redraw(
+            metadata: metadata,
             requestPresentationFeedback: true,
             preparing: { reservation in reservation.id },
             { _, _ in () }
         )
-        let damagedRedraw = try await window.redraw(
-            damage: nil,
-            requestPresentationFeedback: true,
-            preparing: { reservation in reservation.id },
-            { _, _ in () }
-        )
-        return [
-            simpleShow,
-            simpleRedraw,
-            simpleDamagedShow,
-            simpleDamagedRedraw,
-            shown,
-            redrawn,
-            damagedShow,
-            damagedRedraw,
-        ]
+        return [simpleShow, simpleRedraw, preparedShow, preparedRedraw]
     }
 }
 

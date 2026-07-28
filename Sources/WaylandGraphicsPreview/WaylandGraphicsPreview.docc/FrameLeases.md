@@ -40,10 +40,11 @@ preview code. On software backing or fallback, WaylandClientKit fills a
 For external buffers, the renderer owns allocation and rendering; WCK owns
 import, commit, release tracking, and reuse gating.
 
-Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
-describe optional metadata and logical damage. WaylandClientKit validates metadata
-and damage before irreversible commit work. Validation failure still terminally
-releases the consumed frame authority.
+Use `SurfaceFrameMetadata` and `SurfaceDamageRegion` to describe optional
+surface metadata and logical damage. `nil` damage is the only full-frame
+representation; a non-`nil` region contains at least one validated rectangle.
+WaylandClientKit validates metadata and damage before irreversible commit work.
+Validation failure still terminally releases the consumed frame authority.
 
 WaylandClientKit owns lease state, new-frame retry behavior after pre-commit
 failures, post-commit terminal state, and buffer reuse. Frameworks own frame

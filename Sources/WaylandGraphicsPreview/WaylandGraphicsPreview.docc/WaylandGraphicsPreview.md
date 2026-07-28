@@ -75,11 +75,13 @@ value types.
 - ``WaylandGraphicsExternalSynchronizationAvailability``
 - ``WaylandGraphicsExternalAlphaMode``
 - ``WaylandGraphicsXRGBColor``
-- ``WaylandGraphicsFrameMetadata``
-- ``WaylandGraphicsDamageRegion``
-- ``WaylandGraphicsAlphaModifier``
-- ``WaylandGraphicsColorRepresentation``
-- ``WaylandGraphicsColorAlphaMode``
+- `SurfaceFrameMetadata`
+- `SurfaceDamageRegion`
+- `SurfaceContentType`
+- `SurfacePresentationHint`
+- `SurfaceAlphaMultiplier`
+- `SurfaceColorRepresentation`
+- `SurfaceColorAlphaMode`
 
 ### Runtime Path Values
 

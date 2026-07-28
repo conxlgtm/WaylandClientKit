@@ -73,12 +73,12 @@ enum GraphicsPreviewColorMetadataSmoke {
 
     private static func requestedMetadata(
         _ options: ExampleRunOptions
-    ) throws -> WaylandGraphicsFrameMetadata {
-        WaylandGraphicsFrameMetadata(
+    ) throws -> SurfaceFrameMetadata {
+        SurfaceFrameMetadata(
             contentType: try requestedContentType(options.contentType),
             presentationHint: try requestedPresentationHint(options.presentationHint),
             alpha: .opaque,
-            colorRepresentation: WaylandGraphicsColorRepresentation(
+            colorRepresentation: SurfaceColorRepresentation(
                 alphaMode: .premultipliedElectrical
             )
         )
@@ -116,7 +116,7 @@ enum GraphicsPreviewColorMetadataSmoke {
 
     private static func requestedContentType(
         _ rawValue: String?
-    ) throws -> WaylandGraphicsContentType? {
+    ) throws -> SurfaceContentType? {
         switch normalized(rawValue) {
         case nil, "none":
             nil
@@ -133,7 +133,7 @@ enum GraphicsPreviewColorMetadataSmoke {
 
     private static func requestedPresentationHint(
         _ rawValue: String?
-    ) throws -> WaylandGraphicsPresentationHint? {
+    ) throws -> SurfacePresentationHint? {
         switch normalized(rawValue) {
         case nil, "none":
             nil
@@ -196,7 +196,7 @@ enum GraphicsPreviewColorMetadataSmoke {
     }
 
     nonisolated private static func contentTypeDescription(
-        _ contentType: WaylandGraphicsContentType?
+        _ contentType: SurfaceContentType?
     ) -> String {
         switch contentType {
         case nil:
@@ -213,7 +213,7 @@ enum GraphicsPreviewColorMetadataSmoke {
     }
 
     nonisolated private static func presentationHintDescription(
-        _ presentationHint: WaylandGraphicsPresentationHint?
+        _ presentationHint: SurfacePresentationHint?
     ) -> String {
         switch presentationHint {
         case nil:

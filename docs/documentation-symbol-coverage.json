@@ -1,12 +1,12 @@
 {
   "products" : {
     "WaylandClient" : {
-      "documented" : 151,
-      "eligible" : 1530
+      "documented" : 176,
+      "eligible" : 1547
     },
     "WaylandGraphicsPreview" : {
       "documented" : 32,
-      "eligible" : 243
+      "eligible" : 223
     }
   }
 }

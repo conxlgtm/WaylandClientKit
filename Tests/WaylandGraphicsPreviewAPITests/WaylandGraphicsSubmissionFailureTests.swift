@@ -2,6 +2,7 @@ import Testing
 import WaylandClient
 import WaylandGraphicsPreview
 
+// swiftlint:disable type_body_length
 @Suite
 struct WaylandGraphicsSubmissionFailureTests {
     @Test
@@ -218,8 +219,8 @@ struct WaylandGraphicsSubmissionFailureTests {
             )
         )
         let rect = try LogicalRect(x: 0, y: 0, width: 10, height: 10)
-        let metadata = WaylandGraphicsFrameMetadata(
-            damage: WaylandGraphicsDamageRegion(rects: [rect])
+        let metadata = SurfaceFrameMetadata(
+            damage: try SurfaceDamageRegion([rect])
         )
         let lease = try await storage.nextFrame()
 
@@ -228,6 +229,38 @@ struct WaylandGraphicsSubmissionFailureTests {
         }
 
         #expect(await window.damages() == [try SurfaceDamageRegion([rect])])
+    }
+
+    @Test
+    func submitSoftwarePassesTheSharedMetadataToTheSurfaceCommit() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                reason: .forcedSoftware
+            ),
+            configuration: WaylandGraphicsConfiguration(
+                presentationPolicy: .software,
+                metadataPolicy: .preferAvailable
+            )
+        )
+        let damage = try SurfaceDamageRegion(
+            [try LogicalRect(x: 1, y: 2, width: 10, height: 11)]
+        )
+        let metadata = SurfaceFrameMetadata(
+            contentType: .game,
+            presentationHint: .async,
+            alpha: .opaque,
+            colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight),
+            damage: damage
+        )
+        let lease = try await storage.nextFrame()
+
+        _ = try await lease.submitSoftware(metadata: metadata) { _ in () }
+
+        #expect(await window.metadatas() == [metadata.surfaceCommitMetadata])
+        #expect(await window.damages() == [damage])
     }
 
     @Test
@@ -240,7 +273,7 @@ struct WaylandGraphicsSubmissionFailureTests {
                 reason: .forcedSoftware
             )
         )
-        let metadata = WaylandGraphicsFrameMetadata(damage: .fullFrame)
+        let metadata = SurfaceFrameMetadata(damage: nil)
         let lease = try await storage.nextFrame()
 
         _ = try await lease.submitSoftware(metadata: metadata) { _ in
@@ -287,6 +320,7 @@ struct WaylandGraphicsSubmissionFailureTests {
         )
     }
 }
+// swiftlint:enable type_body_length
 
 @Suite
 struct WaylandGraphicsSoftwarePacingSubmissionTests {
@@ -377,6 +411,7 @@ actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     private var remainingShowDrawFailures: Int
     private var recordedOperations: [WaylandGraphicsSubmissionOperation] = []
     private var recordedDamages: [SurfaceDamageRegion?] = []
+    private var recordedMetadata: [SurfaceCommitMetadata] = []
     private var recordedSubmitConstraints: [SurfaceSubmitConstraints] = []
 
     init(showDrawFailures: Int) throws {
@@ -400,7 +435,7 @@ actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     func show(
         timeoutMilliseconds _: Int32,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata _: SurfaceCommitMetadata,
+        metadata: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
@@ -408,6 +443,7 @@ actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
         _ = draw
         recordedOperations.append(.show)
         recordedDamages.append(damage)
+        recordedMetadata.append(metadata)
         recordedSubmitConstraints.append(submitConstraints)
         if remainingShowDrawFailures > 0 {
             remainingShowDrawFailures -= 1
@@ -417,7 +453,7 @@ actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
 
     func redraw(
         submitConstraints: SurfaceSubmitConstraints,
-        metadata _: SurfaceCommitMetadata,
+        metadata: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
@@ -425,6 +461,7 @@ actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
         _ = draw
         recordedOperations.append(.redraw)
         recordedDamages.append(damage)
+        recordedMetadata.append(metadata)
         recordedSubmitConstraints.append(submitConstraints)
     }
 
@@ -438,6 +475,10 @@ actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
 
     func damages() -> [SurfaceDamageRegion?] {
         recordedDamages
+    }
+
+    func metadatas() -> [SurfaceCommitMetadata] {
+        recordedMetadata
     }
 
     func submitConstraints() -> [SurfaceSubmitConstraints] {

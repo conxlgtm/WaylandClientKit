@@ -50,6 +50,13 @@ targets.
 - ``SoftwareFrame``
 - ``SoftwareFrameReservation``
 - ``SoftwarePresentationOutcome``
+- ``SurfaceFrameMetadata``
+- ``SurfaceContentType``
+- ``SurfacePresentationHint``
+- ``SurfaceAlphaMultiplier``
+- ``SurfaceColorRepresentation``
+- ``SurfaceColorAlphaMode``
+- ``SurfaceFrameMetadataError``
 - ``SurfaceGeometry``
 - ``SurfaceScale``
 - ``OutputSnapshot``

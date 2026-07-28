@@ -43,14 +43,13 @@ struct WaylandFrameworkHostClientTests {
             metadataPolicy: .preferAvailable,
             presentationFeedbackPolicy: .requestWhenAvailable
         )
-        let damage = WaylandGraphicsDamageRegion(rects: [])
-        let metadata = WaylandGraphicsFrameMetadata(damage: damage)
+        let metadata = SurfaceFrameMetadata()
 
         #expect(displayConfiguration.eventStreams == streams)
         #expect(windowConfiguration.initialSize.width.rawValue == 128)
         #expect(popupConfiguration.positioner.size.width.rawValue == 64)
         #expect(graphicsConfiguration.presentationPolicy == .software)
-        #expect(metadata.damage == .fullFrame)
+        #expect(metadata.damage == nil)
     }
 
     @Test

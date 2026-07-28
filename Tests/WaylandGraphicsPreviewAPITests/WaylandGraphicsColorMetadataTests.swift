@@ -6,12 +6,10 @@ import WaylandGraphicsPreview
 struct WaylandGraphicsColorMetadataTests {
     @Test
     func colorMetadataFallsBackWhenProtocolsAreUnavailable() throws {
-        let metadata = WaylandGraphicsFrameMetadata(
+        let metadata = SurfaceFrameMetadata(
+            colorDescription: try SurfaceColorDescriptionReference(identity: 42),
             alpha: .transparent,
-            colorRepresentation: WaylandGraphicsColorRepresentation(alphaMode: .straight),
-            colorDescription: WaylandGraphicsColorDescription(
-                id: try WaylandGraphicsColorDescriptionID(rawValue: 42)
-            )
+            colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight)
         )
 
         let resolved = try metadata.resolveManagedPreviewMetadata(
@@ -34,9 +32,9 @@ struct WaylandGraphicsColorMetadataTests {
 
     @Test
     func colorMetadataMapsWhenProtocolsAreAvailable() throws {
-        let metadata = WaylandGraphicsFrameMetadata(
+        let metadata = SurfaceFrameMetadata(
             alpha: .opaque,
-            colorRepresentation: WaylandGraphicsColorRepresentation(
+            colorRepresentation: SurfaceColorRepresentation(
                 alphaMode: .premultipliedElectrical
             )
         )
@@ -53,9 +51,9 @@ struct WaylandGraphicsColorMetadataTests {
     }
 
     @Test
-    func zeroColorDescriptionIDIsRejected() {
-        #expect(throws: WaylandGraphicsError.unavailable(.invalidColorDescription)) {
-            _ = try WaylandGraphicsColorDescriptionID(rawValue: 0)
+    func zeroSurfaceColorDescriptionIDIsRejected() {
+        #expect(throws: SurfaceCommitMetadataError.invalidColorDescriptionIdentity(0)) {
+            _ = try SurfaceColorDescriptionReference(identity: 0)
         }
     }
 }

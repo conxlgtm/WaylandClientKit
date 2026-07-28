@@ -16,29 +16,6 @@ public struct Window: Sendable, Hashable {
         ownership.isOwned(by: owningDisplay)
     }
 
-    public func show(
-        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.showWindow(id, timeoutMilliseconds: timeoutMilliseconds, draw)
-    }
-
-    public func show(
-        damage: SurfaceDamageRegion?,
-        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.showWindow(
-            id,
-            timeoutMilliseconds: timeoutMilliseconds,
-            submitConstraints: .default,
-            metadata: .default,
-            requestPresentationFeedback: false,
-            damage: damage,
-            draw
-        )
-    }
-
     package func show(
         timeoutMilliseconds: Int32,
         submitConstraints: SurfaceSubmitConstraints,
@@ -53,26 +30,6 @@ public struct Window: Sendable, Hashable {
             submitConstraints: submitConstraints,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
-            damage: damage,
-            draw
-        )
-    }
-
-    public func redraw(
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.redraw(id, draw)
-    }
-
-    public func redraw(
-        damage: SurfaceDamageRegion?,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.redraw(
-            id,
-            submitConstraints: .default,
-            metadata: .default,
-            requestPresentationFeedback: false,
             damage: damage,
             draw
         )

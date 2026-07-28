@@ -14,29 +14,15 @@ public enum SoftwarePresentationOutcome: Equatable, Sendable {
 extension Window {
     @discardableResult
     public func show(
-        requestPresentationFeedback: Bool,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
+        requestPresentationFeedback: Bool = false,
         timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> SoftwarePresentationOutcome {
         try await show(
-            damage: nil,
+            metadata: frameMetadata,
             requestPresentationFeedback: requestPresentationFeedback,
             timeoutMilliseconds: timeoutMilliseconds,
-            draw
-        )
-    }
-
-    @discardableResult
-    public func show(
-        damage: SurfaceDamageRegion?,
-        requestPresentationFeedback: Bool,
-        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws -> SoftwarePresentationOutcome {
-        try await show(
-            damage: damage,
-            timeoutMilliseconds: timeoutMilliseconds,
-            requestPresentationFeedback: requestPresentationFeedback,
             preparing: { _ in () },
             { _, frame in
                 try draw(frame)
@@ -46,31 +32,20 @@ extension Window {
 
     @discardableResult
     public func show<Prepared: Sendable>(
-        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
         requestPresentationFeedback: Bool = false,
-        preparing prepare: sending @Sendable (SoftwareFrameReservation) async throws -> Prepared,
-        _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void
-    ) async throws -> SoftwarePresentationOutcome {
-        try await show(
-            damage: nil,
-            timeoutMilliseconds: timeoutMilliseconds,
-            requestPresentationFeedback: requestPresentationFeedback,
-            preparing: prepare,
-            draw
-        )
-    }
-
-    @discardableResult
-    public func show<Prepared: Sendable>(
-        damage: SurfaceDamageRegion?,
         timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
-        requestPresentationFeedback: Bool = false,
         preparing prepare: sending @Sendable (SoftwareFrameReservation) async throws -> Prepared,
-        _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void
+        _ draw:
+            sending @Sendable (
+                Prepared,
+                borrowing SoftwareFrame
+            ) throws -> Void
     ) async throws -> SoftwarePresentationOutcome {
         let reservationOutcome = try await display.reserveSoftwareFrameForShow(
             id,
-            timeoutMilliseconds: timeoutMilliseconds
+            timeoutMilliseconds: timeoutMilliseconds,
+            metadata: frameMetadata
         )
         let reservation: SoftwareFrameReservation
         switch reservationOutcome {
@@ -88,9 +63,9 @@ extension Window {
                 id,
                 reservation: reservation,
                 submitConstraints: .default,
-                metadata: .default,
+                metadata: frameMetadata,
                 requestPresentationFeedback: requestPresentationFeedback,
-                damage: damage
+                damage: frameMetadata.damage
             ) { frame in
                 try draw(prepared, frame)
             }
@@ -107,24 +82,12 @@ extension Window {
 
     @discardableResult
     public func redraw(
-        requestPresentationFeedback: Bool,
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
+        requestPresentationFeedback: Bool = false,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> SoftwarePresentationOutcome {
         try await redraw(
-            damage: nil,
-            requestPresentationFeedback: requestPresentationFeedback,
-            draw
-        )
-    }
-
-    @discardableResult
-    public func redraw(
-        damage: SurfaceDamageRegion?,
-        requestPresentationFeedback: Bool,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws -> SoftwarePresentationOutcome {
-        try await redraw(
-            damage: damage,
+            metadata: frameMetadata,
             requestPresentationFeedback: requestPresentationFeedback,
             preparing: { _ in () },
             { _, frame in
@@ -135,26 +98,19 @@ extension Window {
 
     @discardableResult
     public func redraw<Prepared: Sendable>(
+        metadata frameMetadata: SurfaceFrameMetadata = .default,
         requestPresentationFeedback: Bool = false,
         preparing prepare: sending @Sendable (SoftwareFrameReservation) async throws -> Prepared,
-        _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void
+        _ draw:
+            sending @Sendable (
+                Prepared,
+                borrowing SoftwareFrame
+            ) throws -> Void
     ) async throws -> SoftwarePresentationOutcome {
-        try await redraw(
-            damage: nil,
-            requestPresentationFeedback: requestPresentationFeedback,
-            preparing: prepare,
-            draw
+        let reservationOutcome = try await display.reserveSoftwareFrameForRedraw(
+            id,
+            metadata: frameMetadata
         )
-    }
-
-    @discardableResult
-    public func redraw<Prepared: Sendable>(
-        damage: SurfaceDamageRegion?,
-        requestPresentationFeedback: Bool = false,
-        preparing prepare: sending @Sendable (SoftwareFrameReservation) async throws -> Prepared,
-        _ draw: sending @Sendable (Prepared, borrowing SoftwareFrame) throws -> Void
-    ) async throws -> SoftwarePresentationOutcome {
-        let reservationOutcome = try await display.reserveSoftwareFrameForRedraw(id)
         let reservation: SoftwareFrameReservation
         switch reservationOutcome {
         case .reserved(let reservedFrame):
@@ -171,9 +127,9 @@ extension Window {
                 id,
                 reservation: reservation,
                 submitConstraints: .default,
-                metadata: .default,
+                metadata: frameMetadata,
                 requestPresentationFeedback: requestPresentationFeedback,
-                damage: damage
+                damage: frameMetadata.damage
             ) { frame in
                 try draw(prepared, frame)
             }

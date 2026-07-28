@@ -31,6 +31,7 @@ struct WindowSoftwarePresenter {
                 )
             )
         }
+        try validatePresentation(context, runtime: runtime)
 
         let pool = try runtime.sharedMemoryPool(for: context.geometry.bufferSize) {
             try createSharedMemoryPool(context.geometry.bufferSize)
@@ -141,6 +142,7 @@ struct WindowSoftwarePresenter {
                 )
             )
         }
+        try validatePresentation(context, runtime: runtime)
 
         try drawReservedFrame(reservedFrame, geometry: context.geometry, draw: draw)
 
@@ -175,6 +177,14 @@ struct WindowSoftwarePresenter {
             outcome: .presented,
             followUp: .succeeded(generation: context.request.generation)
         )
+    }
+
+    private func validatePresentation<RoleResources>(
+        _ context: WindowSoftwarePresentationContext,
+        runtime: borrowing SurfaceRuntime<RoleResources>
+    ) throws {
+        try context.metadata.validate(capabilities: runtime.capabilitySnapshot())
+        try context.damage?.validate(within: context.geometry)
     }
 
     private func performPreparedCommit<RoleResources>(

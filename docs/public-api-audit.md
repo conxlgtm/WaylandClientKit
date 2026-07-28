@@ -44,6 +44,14 @@ Intentionally public:
 - `SoftwareFrameGeometry`
 - `PositivePixelSize`
 - `SoftwareFrame`
+- `SurfaceFrameMetadata`
+- `SurfaceContentType`
+- `SurfacePresentationHint`
+- `SurfaceAlphaMultiplier`
+- `SurfaceColorAlphaMode`
+- `SurfaceColorRepresentation`
+- `SurfaceFrameMetadataError`
+- `SurfaceDamageRegion`
 - `SurfacePresentationIdentity`
 - `SurfacePresentationFeedback`
 - `PresentationFeedback`
@@ -211,14 +219,19 @@ Current user-facing contract:
   spans, stride, and geometry without exposing raw Wayland or SHM handles.
   `SoftwareFrameReservation` lets async preparation observe the selected
   software buffer identity and geometry before the final scoped draw borrow.
-  Async `Window.show(preparing:_:)` and `Window.redraw(preparing:_:)` calls are
-  latest-wins transactions and return `SoftwarePresentationOutcome`. Matching
-  overloads without a preparation closure provide the same outcome and atomic
-  presentation-feedback option. After preparation resumes, the library
-  revalidates the exact reservation, window, configure, authoritative geometry,
-  redraw generation, and task cancellation. A stale attempt is discarded
-  without drawing, requesting a frame callback or presentation feedback, or
-  committing the surface. Its replacement redraw is published once through
+  `Window.show` and `Window.redraw` each expose one simple and one prepared
+  method. All four accept `SurfaceFrameMetadata`, return a discardable
+  `SoftwarePresentationOutcome`, and provide the same atomic presentation-
+  feedback option. Explicitly requested unsupported surface metadata throws
+  `SurfaceFrameMetadataError` before drawing or issuing any Wayland request for
+  that presentation attempt.
+  Prepared calls are latest-wins transactions. After preparation resumes, the
+  library revalidates the exact reservation, window, configure, authoritative
+  geometry, redraw generation, and task cancellation. Supersession is resolved
+  before final metadata-support revalidation, so stale attempts still return
+  `.superseded` if protocol capabilities change while preparation is suspended.
+  A stale attempt is discarded without drawing, requesting a frame callback or
+  presentation feedback, or committing the surface. Its replacement redraw is
   normal pacing. Presentation feedback requested by these APIs belongs to the
   same eventual surface commit.
 - Window sizes are logical surface sizes. `SurfaceGeometry` records the
@@ -324,13 +337,6 @@ Intentionally public:
 - `WaylandGraphicsFramePacingRequest`
 - `WaylandGraphicsMetadataPolicy`
 - `WaylandGraphicsPresentationFeedbackPolicy`
-- `WaylandGraphicsDamageRegion`
-- `WaylandGraphicsFrameMetadata`
-- `WaylandGraphicsContentType`
-- `WaylandGraphicsPresentationHint`
-- `WaylandGraphicsAlphaModifier`
-- `WaylandGraphicsColorAlphaMode`
-- `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsXRGBColor`
 - `WaylandGraphicsSurfaceGeneration`
 - `WaylandGraphicsExternalConfigurationID`
@@ -382,6 +388,11 @@ Current preview contract:
   Contradictory mode/fallback combinations and the former lossy mutable backing
   projection are not public. This is an intentional source break in the preview
   product.
+- Frame submissions and results use `WaylandClient.SurfaceFrameMetadata` rather
+  than graphics-prefixed duplicates. `nil` damage is the only full-frame
+  representation; non-`nil` `SurfaceDamageRegion` values contain one or more
+  validated logical rectangles. `WaylandGraphicsMetadataPolicy` remains preview
+  policy and records omitted optional metadata as runtime fallback facts.
 - `WaylandGraphicsReason` is shared by fallback and failed runtime statuses;
   their status case records the disposition without a duplicate reason enum or
   duplicate mapping switch.
