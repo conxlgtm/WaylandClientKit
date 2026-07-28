@@ -497,7 +497,7 @@ Current preview contract:
   surface intersection.
 - Presentation feedback policy can request feedback when available or require
   it before creating a managed backing. Feedback observations still arrive on
-  `WindowPresentationEvents`, frame submission results only report whether
+  `ManagedSurfacePresentationEvents`, frame submission results only report whether
   feedback was requested for that submit, not whether it was later observed.
 - Downstream code that wants this boundary imports `WaylandGraphicsPreview`
   explicitly, importing `WaylandClient` alone does not opt into renderer-facing
@@ -532,9 +532,9 @@ Notes:
   terminate with a closed-backing result.
 - `PopupSurface` is the public popup handle. Popup lifecycle display events carry
   the popup identity and parent window identity.
-- `WindowPresentationEvents` is a public async sequence for presentation
-  feedback requested through a managed window. A discarded result is distinct
-  from a presented result with timestamps and feedback flags.
+- `ManagedSurfacePresentationEvents` is the public filtered async sequence for
+  feedback requested through a managed window, popup, or subsurface. A discarded
+  result is distinct from a presented result with timestamps and feedback flags.
 - Every public event sequence creates an independent broker subscription in
   `makeAsyncIterator()`. Buffering begins at iterator creation; copied sequences
   do not split one queue, and cancellation or overflow remains local to one

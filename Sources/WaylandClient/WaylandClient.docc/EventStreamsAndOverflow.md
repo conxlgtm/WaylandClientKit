@@ -11,9 +11,8 @@ preserves ordering across event families. A specialized stream preserves order
 only within its own family.
 
 Window, popup, and subsurface redraws all use
-``DisplayEvent/redrawRequested(_:)`` with a ``ManagedSurfaceIdentity``. Presentation
-feedback for all three roles uses ``DisplayEvent/presentation(_:)`` with a
-``ManagedSurfacePresentationEvent``.
+`DisplayEvent.redrawRequested(ManagedSurfaceIdentity)`. Presentation feedback
+for all three roles uses `DisplayEvent.presentation(ManagedSurfacePresentationEvent)`.
 
 Each call to `makeAsyncIterator()` creates its own subscription and buffer.
 Buffering starts when the iterator is created, so events published before that

@@ -6,6 +6,9 @@
 
     @testable import WaylandClient
 
+    // Request-path helpers remain colocated so every raw recorder uses the same
+    // serialized lifecycle and teardown boundary.
+    // swiftlint:disable type_body_length
     @Suite(
         .enabled(
             if: SubsurfaceRequestTestEnvironment.isEnabled,
@@ -92,6 +95,31 @@
                 #expect(probe.isEmpty)
                 #expect(try await subsurface.needsRedraw)
                 await subsurface.close()
+            }
+        }
+
+        @Test
+        func preparationFailureReleasesSingleBufferReservation() async throws {
+            try await withSubsurfaceConnection { _, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: try subsurfaceConfiguration(
+                        bufferCount: PositiveInt(unchecked: 1)
+                    )
+                )
+
+                do {
+                    _ = try await subsurface.show(
+                        preparing: { _ -> Int in throw InjectedPreparationFailure() },
+                        { _, frame in drawSolid(frame) }
+                    )
+                    Issue.record("expected preparation failure")
+                } catch is InjectedPreparationFailure {
+                    // The original error remains observable after cancellation cleanup.
+                }
+
+                #expect(try await subsurface.show(drawSolid) == .presented)
+                await subsurface.close()
+                await window.close()
             }
         }
 
@@ -321,11 +349,13 @@
     }
 
     private func subsurfaceConfiguration(
+        bufferCount: PositiveInt = SubsurfaceConfiguration.defaultBufferCount,
         synchronizationMode: SubsurfaceSynchronizationMode = .synchronized
     ) throws -> SubsurfaceConfiguration {
         SubsurfaceConfiguration(
             position: LogicalOffset(x: 8, y: 8),
             size: try PositiveLogicalSize(width: 48, height: 48),
+            bufferCount: bufferCount,
             synchronizationMode: synchronizationMode
         )
     }
@@ -442,6 +472,7 @@
     }
 
     private struct UnexpectedSubsurfaceDraw: Error {}
+    private struct InjectedPreparationFailure: Error {}
 
     private enum SubsurfaceRequestTestEnvironment {
         static var isEnabled: Bool {
@@ -451,5 +482,7 @@
                 && environment["WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS"] == "1"
         }
     }
+
+// swiftlint:enable type_body_length
 
 #endif

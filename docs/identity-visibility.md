@@ -1,6 +1,8 @@
 # Public identity visibility
 
 This file is generated from `docs/identity-categories.json` and public Swift declarations. It records which identities callers may construct and which stored values are public.
+Composite and public-value enums use public cases instead of raw-value storage;
+their constructor and storage columns are shown as `—`.
 
 Run `swift run wck identity verify --update` after reviewing an intentional identity contract change.
 
@@ -10,13 +12,16 @@ Run `swift run wck identity verify --update` after reviewing an intentional iden
 | `ActivationToken` | opaque protocol token | `public` | `value` | `public` | `Sources/WaylandClient/Public/Activation/ActivationDomainTypes.swift` |
 | `ClipboardOfferIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `ClipboardSourceIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
+| `DataTransferOfferIdentity` | composite identity | — | — | — | `Sources/WaylandClient/Public/DataTransfer/DataTransferDomainTypes.swift` |
 | `DiagnosticID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `DragOfferIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `DragSourceIdentity` | public projection | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
+| `EventStreamIdentity` | public value identity | — | — | — | `Sources/WaylandClient/Public/Display/DisplayEvent.swift` |
 | `ForeignToplevelID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `IdleInhibitorID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `InputSerial` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `KeyboardShortcutsInhibitorID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
+| `ManagedSurfaceIdentity` | composite identity | — | — | — | `Sources/WaylandClient/Public/Rendering/ManagedSurfaceIdentity.swift` |
 | `OutputID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `OutputManagementHeadID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `OutputManagementModeID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
@@ -44,3 +49,4 @@ Run `swift run wck identity verify --update` after reviewing an intentional iden
 | `WaylandProtocolObjectID` | raw protocol identity | `public` | `rawValue` | `public` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `WindowDialogID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
 | `WindowID` | client identity | `package` | `rawValue` | `package` | `Sources/WaylandClient/Public/Generated/GeneratedPublicIdentityDeclarations.swift` |
+| `WindowStateToken` | public value identity | — | — | — | `Sources/WaylandClient/Public/Window/WindowStateToken.swift` |

@@ -1,6 +1,28 @@
 import WaylandClient
 
 extension ManagedSurfaceSmokeRun {
+    func routeRedraw(for window: Window, color: UInt32) async throws {
+        let skipsRoutingEvent = CommandLine.arguments.contains("--skip-redraw-routing")
+        var events = display.events.makeAsyncIterator()
+        try await window.requestRedraw()
+        if skipsRoutingEvent {
+            try await Task.sleep(for: .milliseconds(20))
+        } else {
+            try await requireRedraw(
+                from: &events,
+                surface: .window(window.id),
+                label: "window redraw"
+            )
+        }
+        let outcome = try await retryPresentation(label: "window redraw") {
+            try await window.redraw { frame in
+                drawManagedSurfaceFrame(frame, color: color)
+            }
+        }
+        try requireRedrawPresented(outcome, label: "window redraw")
+        print("redraw routing: window")
+    }
+
     func routeRedraw(for popup: PopupSurface, color: UInt32) async throws {
         let skipsRoutingEvent = CommandLine.arguments.contains("--skip-redraw-routing")
         var events = display.events.makeAsyncIterator()

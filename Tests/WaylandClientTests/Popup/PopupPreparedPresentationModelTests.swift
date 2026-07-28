@@ -16,7 +16,7 @@ struct PopupPreparedPresentationModelTests {
             .configureReceived(configure(serial: 2, originX: 99))
         )
         #expect(!model.isCurrentSoftwarePresentation(request))
-        #expect(configureEffects.contains(.publishRedrawRequested(lifecycleEvent)))
+        #expect(!configureEffects.contains(.publishRedrawRequested(lifecycleEvent)))
 
         let supersessionEffects = try model.reduce(
             .softwarePresentationSuperseded(
@@ -26,7 +26,7 @@ struct PopupPreparedPresentationModelTests {
         )
         #expect(model.presentation == .idle)
         #expect(model.redraw.isDirty)
-        #expect(!supersessionEffects.contains(.publishRedrawRequested(lifecycleEvent)))
+        #expect(supersessionEffects == [.publishRedrawRequested(lifecycleEvent)])
     }
 
     @Test
@@ -38,7 +38,7 @@ struct PopupPreparedPresentationModelTests {
             .contentInvalidated(bufferAvailability: .available)
         )
         #expect(!model.isCurrentSoftwarePresentation(request))
-        #expect(invalidationEffects == [.publishRedrawRequested(lifecycleEvent)])
+        #expect(invalidationEffects.isEmpty)
 
         let repeatedInvalidationEffects = try model.reduce(
             .contentInvalidated(bufferAvailability: .available)
@@ -51,7 +51,7 @@ struct PopupPreparedPresentationModelTests {
                 bufferAvailability: .available
             )
         )
-        #expect(supersessionEffects.isEmpty)
+        #expect(supersessionEffects == [.publishRedrawRequested(lifecycleEvent)])
         #expect(model.redraw.isDirty)
     }
 

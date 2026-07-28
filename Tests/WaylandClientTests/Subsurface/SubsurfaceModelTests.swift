@@ -45,10 +45,7 @@ struct SubsurfaceModelTests {
         let replacementGeometry = try geometry(width: 96)
         let request = try startPresentation(in: &model, geometry: originalGeometry)
 
-        #expect(
-            try model.reduce(.scaleChanged(bufferAvailability: .available))
-                == [.publishRedrawRequested]
-        )
+        #expect(try model.reduce(.scaleChanged(bufferAvailability: .available)).isEmpty)
         #expect(!model.isCurrentSoftwarePresentation(request, geometry: replacementGeometry))
         #expect(
             try model.reduce(
@@ -56,7 +53,7 @@ struct SubsurfaceModelTests {
                     generation: request.generation,
                     bufferAvailability: .available
                 )
-            ).isEmpty
+            ) == [.publishRedrawRequested]
         )
         #expect(model.presentation == .idle)
         #expect(model.redraw.isDirty)
@@ -74,7 +71,7 @@ struct SubsurfaceModelTests {
                     .desynchronized,
                     bufferAvailability: .available
                 )
-            ) == [.publishRedrawRequested]
+            ).isEmpty
         )
         #expect(model.synchronizationMode == .desynchronized)
         #expect(!model.isCurrentSoftwarePresentation(request, geometry: geometry))
@@ -84,7 +81,7 @@ struct SubsurfaceModelTests {
                     generation: request.generation,
                     bufferAvailability: .available
                 )
-            ).isEmpty
+            ) == [.publishRedrawRequested]
         )
     }
 

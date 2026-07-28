@@ -399,6 +399,10 @@ struct IdentityPolicy: Decodable {
     func validateVisibility(failures: inout [String]) {
         guard access == .public, let auditCategory else { return }
         switch auditCategory {
+        case .compositeIdentity, .publicValueIdentity:
+            failures.append(
+                "\(type) value identities must be declared as manually audited enums"
+            )
         case .rawProtocolIdentity, .applicationIdentity, .opaqueProtocolToken:
             if storageAccess != .public {
                 failures.append(

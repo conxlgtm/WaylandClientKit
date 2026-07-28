@@ -4,13 +4,16 @@
     {"category":"opaque protocol token","constructor":"public","storage":"value","storageVisibility":"public","type":"ActivationToken"},
     {"category":"public projection","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"ClipboardOfferIdentity"},
     {"category":"public projection","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"ClipboardSourceIdentity"},
+    {"category":"composite identity","type":"DataTransferOfferIdentity"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"DiagnosticID"},
     {"category":"public projection","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"DragOfferIdentity"},
     {"category":"public projection","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"DragSourceIdentity"},
+    {"category":"public value identity","type":"EventStreamIdentity"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"ForeignToplevelID"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"IdleInhibitorID"},
     {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"InputSerial"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"KeyboardShortcutsInhibitorID"},
+    {"category":"composite identity","type":"ManagedSurfaceIdentity"},
     {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"OutputID"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"OutputManagementHeadID"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"OutputManagementModeID"},
@@ -37,6 +40,7 @@
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"WaylandGraphicsExternalSyncTimelineID"},
     {"category":"raw protocol identity","constructor":"public","storage":"rawValue","storageVisibility":"public","type":"WaylandProtocolObjectID"},
     {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"WindowDialogID"},
-    {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"WindowID"}
+    {"category":"client identity","constructor":"package","storage":"rawValue","storageVisibility":"package","type":"WindowID"},
+    {"category":"public value identity","type":"WindowStateToken"}
   ]
 }

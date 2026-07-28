@@ -133,8 +133,10 @@ extension SubsurfaceModel {
         bufferAvailability: RedrawBufferAvailability
     ) -> [SubsurfaceEffect] {
         guard lifecycle == .active else { return [] }
+        let redrawAvailability =
+            presentation.isIdle ? bufferAvailability : .unavailable
         return map(
-            redraw.reduce(.contentInvalidated, bufferAvailability: bufferAvailability)
+            redraw.reduce(.contentInvalidated, bufferAvailability: redrawAvailability)
         )
     }
 
@@ -200,11 +202,10 @@ extension SubsurfaceModel {
     ) throws -> [SubsurfaceEffect] {
         try requireDrawingGeneration(generation)
         presentation = .idle
-        let replacementAlreadyPublished = redraw.hasOutstandingRedrawRequest
         let effects = redraw.supersedeSoftwarePresentation(
             bufferAvailability: bufferAvailability
         )
-        return replacementAlreadyPublished ? [] : map(effects)
+        return map(effects)
     }
 
     private mutating func completePresentation(

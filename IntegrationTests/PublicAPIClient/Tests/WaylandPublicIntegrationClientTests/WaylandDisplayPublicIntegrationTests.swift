@@ -100,6 +100,36 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 
     @Test
+    func invalidPopupDamageDoesNotPoisonFollowingPresentation() async throws {
+        try await withPublicConnection { display in
+            let window = try await display.createTopLevelWindow(
+                configuration: testWindowConfiguration()
+            )
+            try await show(window, color: 0x0020_2020)
+            let popup = try await window.createPopup(configuration: testPopupConfiguration())
+            let invalidRect = try LogicalRect(x: 65, y: 0, width: 1, height: 1)
+            let metadata = SurfaceFrameMetadata(
+                damage: try SurfaceDamageRegion([invalidRect])
+            )
+
+            do {
+                _ = try await popup.show(
+                    metadata: metadata,
+                    timeoutMilliseconds: publicIntegrationTimeoutMilliseconds,
+                    drawColor(0x0040_4040)
+                )
+                Issue.record("expected invalid popup damage")
+            } catch let error as SurfaceRegionError {
+                #expect(error == .damageRectangleOutOfBounds(invalidRect))
+            }
+
+            #expect(try await popup.show(drawColor(0x0050_5050)) == .presented)
+            await popup.close()
+            await window.close()
+        }
+    }
+
+    @Test
     func hiddenCursorRequestWithoutPointerFocusIsDeterministic() async throws {
         try await WaylandDisplay.withConnection(
             applicationID: "org.waylandclientkit.PublicIntegration",

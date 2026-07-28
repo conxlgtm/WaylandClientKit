@@ -43,7 +43,7 @@ struct ManagedPresentationFeedbackTests {
     }
 
     @Test
-    func popupAndSubsurfaceFeedbackReachRootAndFilteredStreams() async throws {
+    func allManagedFeedbackReachesRootAndFilteredStreams() async throws {
         try await withPublicConnection { display in
             try await exerciseManagedFeedback(on: display)
         }
@@ -62,10 +62,15 @@ struct ManagedPresentationFeedbackTests {
         let window = try await display.createTopLevelWindow(
             configuration: testWindowConfiguration()
         )
-        let windowOutcome = try await window.show { frame in
-            fill(frame, color: 0x0012_2436)
+        try await expectFeedback(
+            from: window.presentationEvents,
+            surface: .window(window.id),
+            rootEvents: display.events
+        ) {
+            try await window.show(requestPresentationFeedback: true) { frame in
+                fill(frame, color: 0x0012_2436)
+            }
         }
-        #expect(windowOutcome == .presented)
 
         let popup = try await window.createPopup(configuration: testPopupConfiguration())
         try await expectFeedback(

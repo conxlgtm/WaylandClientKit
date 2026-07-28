@@ -167,6 +167,7 @@ extension SubsurfaceRoleSurface {
         guard let pendingReservation = softwarePresentationCoordinator.cancel(reservation) else {
             return
         }
+        pendingReservation.reservedFrame.drawingBuffer.discard()
         supersedeSoftwarePresentationIfStillActive(
             generation: pendingReservation.request.generation
         )

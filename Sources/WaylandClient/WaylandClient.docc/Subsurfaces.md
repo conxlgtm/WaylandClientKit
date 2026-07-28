@@ -6,7 +6,7 @@ Use ``Window/createSubsurface(configuration:)`` when a child needs its own conte
 
 ## Drawing
 
-``Subsurface`` uses the same direct and prepared `show` and `redraw` contract as windows and popups. It accepts ``SurfaceFrameMetadata``, returns ``SoftwarePresentationOutcome``, exposes ``Subsurface/presentationEvents``, and publishes redraw work through ``DisplayEvent/redrawRequested(_:)`` with ``ManagedSurfaceIdentity/subsurface(_:)``.
+``Subsurface`` uses the same direct and prepared `show` and `redraw` contract as windows and popups. It accepts ``SurfaceFrameMetadata``, returns ``SoftwarePresentationOutcome``, exposes ``Subsurface/presentationEvents``, and publishes redraw work through `DisplayEvent.redrawRequested(ManagedSurfaceIdentity)` with `ManagedSurfaceIdentity.subsurface(SubsurfaceIdentity)`.
 
 Subsurfaces do not wait for an initial configure. Their prepared request captures the redraw generation, authoritative geometry, and synchronization mode. Scale changes, synchronization-mode changes, explicit redraws, cancellation, close, and parent close are revalidated before drawing.
 

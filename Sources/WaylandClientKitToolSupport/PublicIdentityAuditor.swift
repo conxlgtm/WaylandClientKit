@@ -1,5 +1,8 @@
 import Foundation
 
+// The auditor deliberately keeps discovery, validation, and report rendering in
+// one type so both verify and update traverse exactly the same policy path.
+// swiftlint:disable:next type_body_length
 public struct PublicIdentityAuditor {
     public let repository: Repository
     public let fileSystem: FileSystem
@@ -64,6 +67,8 @@ public struct PublicIdentityAuditor {
             "This file is generated from `docs/identity-categories.json` and public Swift "
                 + "declarations. It records which identities callers may construct and which "
                 + "stored values are public.",
+            "Composite and public-value enums use public cases instead of raw-value storage;",
+            "their constructor and storage columns are shown as `—`.",
             "",
             "Run `swift run wck identity verify --update` after reviewing an intentional "
                 + "identity contract change.",
@@ -76,55 +81,75 @@ public struct PublicIdentityAuditor {
         return lines.joined(separator: "\n")
     }
 
+    // swiftlint:disable:next function_body_length
     private func auditRecords(
         manifest: IdentityManifest,
         declarations: [String: IdentityDeclaration]
     ) throws -> [IdentityAuditRecord] {
+        // swiftlint:disable:next closure_body_length
         try manifest.identities.map { identity in
             guard let declaration = declarations[identity.type] else {
                 throw ToolError("Missing public identity declaration: \(identity.type)")
             }
-            let constructor = try constructorVisibility(in: declaration.body)
-            let storage = try storageVisibility(
-                named: identity.storage,
-                in: declaration.body,
-                typeName: identity.type
-            )
-            try validate(
-                identity: identity,
-                constructor: constructor,
-                storage: storage
-            )
-            return IdentityAuditRecord(
-                type: identity.type,
-                category: identity.category,
-                constructor: constructor,
-                storage: identity.storage,
-                storageVisibility: storage,
-                source: declaration.source
-            )
-        }.sorted { $0.type < $1.type }
-    }
 
-    private func validate(
-        identity: IdentityManifestEntry,
-        constructor: IdentityAccessLevel,
-        storage: IdentityAccessLevel
-    ) throws {
-        guard constructor == identity.constructor else {
-            throw ToolError(
-                "\(identity.type) constructor is \(constructor.rawValue), expected "
-                    + identity.constructor.rawValue,
-                exitCode: ToolExitCode.data
-            )
-        }
-        guard storage == identity.storageVisibility else {
-            throw ToolError(
-                "\(identity.type).\(identity.storage) is \(storage.rawValue), expected "
-                    + identity.storageVisibility.rawValue,
-                exitCode: ToolExitCode.data
-            )
-        }
+            switch declaration.kind {
+            case .structure:
+                guard let expectedConstructor = identity.constructor,
+                    let storageName = identity.storage,
+                    let expectedStorageVisibility = identity.storageVisibility
+                else {
+                    throw ToolError(
+                        "struct identity \(identity.type) requires constructor and storage policy"
+                    )
+                }
+                let constructor = try constructorVisibility(in: declaration.body)
+                let storage = try storageVisibility(
+                    named: storageName,
+                    in: declaration.body,
+                    typeName: identity.type
+                )
+                guard constructor == expectedConstructor else {
+                    throw ToolError(
+                        "\(identity.type) constructor is \(constructor.rawValue), expected "
+                            + expectedConstructor.rawValue,
+                        exitCode: ToolExitCode.data
+                    )
+                }
+                guard storage == expectedStorageVisibility else {
+                    throw ToolError(
+                        "\(identity.type).\(storageName) is \(storage.rawValue), expected "
+                            + expectedStorageVisibility.rawValue,
+                        exitCode: ToolExitCode.data
+                    )
+                }
+                return IdentityAuditRecord(
+                    type: identity.type,
+                    category: identity.category,
+                    constructor: constructor,
+                    storage: storageName,
+                    storageVisibility: storage,
+                    source: declaration.source
+                )
+            case .enumeration:
+                guard identity.constructor == nil,
+                    identity.storage == nil,
+                    identity.storageVisibility == nil
+                else {
+                    throw ToolError(
+                        "enum identity \(identity.type) must not declare "
+                            + "constructor or storage policy"
+                    )
+                }
+                return IdentityAuditRecord(
+                    type: identity.type,
+                    category: identity.category,
+                    constructor: nil,
+                    storage: nil,
+                    storageVisibility: nil,
+                    source: declaration.source
+                )
+            }
+        }.sorted { $0.type < $1.type }
     }
 
     private func loadManifest() throws -> IdentityManifest {
@@ -144,7 +169,7 @@ public struct PublicIdentityAuditor {
             repository.url("Sources/WaylandGraphicsPreview/Public"),
         ]
         let declarationPattern =
-            #"\bpublic\s+struct\s+([A-Za-z_][A-Za-z0-9_]*(?:ID|Identity|Token|Serial))\b"#
+            #"\bpublic\s+(struct|enum)\s+([A-Za-z_][A-Za-z0-9_]*(?:ID|Identity|Token|Serial))\b"#
         let expression = try NSRegularExpression(pattern: declarationPattern)
         var declarations: [String: IdentityDeclaration] = [:]
         for root in roots {
@@ -154,7 +179,8 @@ public struct PublicIdentityAuditor {
                 let range = NSRange(source.startIndex..<source.endIndex, in: source)
                 for match in expression.matches(in: source, range: range) {
                     guard
-                        let nameRange = Range(match.range(at: 1), in: source),
+                        let kindRange = Range(match.range(at: 1), in: source),
+                        let nameRange = Range(match.range(at: 2), in: source),
                         let declarationRange = Range(match.range(at: 0), in: source),
                         let openingBrace = source[declarationRange.upperBound...].firstIndex(
                             of: "{"),
@@ -162,11 +188,19 @@ public struct PublicIdentityAuditor {
                     else {
                         throw ToolError("Malformed public identity declaration in \(url.path)")
                     }
+                    guard
+                        let kind = IdentityDeclarationKind(
+                            rawValue: String(source[kindRange])
+                        )
+                    else {
+                        throw ToolError("Unknown public identity declaration kind in \(url.path)")
+                    }
                     let name = String(source[nameRange])
                     guard declarations[name] == nil else {
                         throw ToolError("Duplicate public identity declaration: \(name)")
                     }
                     declarations[name] = IdentityDeclaration(
+                        kind: kind,
                         body: String(source[openingBrace...closingBrace]),
                         source: repository.relativePath(url)
                     )
@@ -233,8 +267,11 @@ public struct PublicIdentityAuditor {
     }
 
     private func render(_ record: IdentityAuditRecord) -> String {
-        "| `\(record.type)` | \(record.category.rawValue) | `\(record.constructor.rawValue)` | "
-            + "`\(record.storage)` | `\(record.storageVisibility.rawValue)` | "
+        let constructor = record.constructor.map { "`\($0.rawValue)`" } ?? "—"
+        let storage = record.storage.map { "`\($0)`" } ?? "—"
+        let storageVisibility = record.storageVisibility.map { "`\($0.rawValue)`" } ?? "—"
+        return "| `\(record.type)` | \(record.category.rawValue) | \(constructor) | "
+            + "\(storage) | \(storageVisibility) | "
             + "`\(record.source)` |"
     }
 }
@@ -246,22 +283,28 @@ private struct IdentityManifest: Decodable {
 private struct IdentityManifestEntry: Decodable {
     let type: String
     let category: IdentityAuditCategory
-    let constructor: IdentityAccessLevel
-    let storage: String
-    let storageVisibility: IdentityAccessLevel
+    let constructor: IdentityAccessLevel?
+    let storage: String?
+    let storageVisibility: IdentityAccessLevel?
 }
 
 private struct IdentityDeclaration {
+    let kind: IdentityDeclarationKind
     let body: String
     let source: String
+}
+
+private enum IdentityDeclarationKind: String {
+    case structure = "struct"
+    case enumeration = "enum"
 }
 
 private struct IdentityAuditRecord {
     let type: String
     let category: IdentityAuditCategory
-    let constructor: IdentityAccessLevel
-    let storage: String
-    let storageVisibility: IdentityAccessLevel
+    let constructor: IdentityAccessLevel?
+    let storage: String?
+    let storageVisibility: IdentityAccessLevel?
     let source: String
 }
 

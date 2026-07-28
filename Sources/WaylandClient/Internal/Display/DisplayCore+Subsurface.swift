@@ -84,7 +84,8 @@ extension DisplayCore {
                     )
                 },
                 commitSynchronizedParent: {
-                    parentWindow.commitSubsurfaceParentStateOnOwnerThread()
+                    parentWindow
+                        .commitSynchronizedSubsurfacePresentationParentStateOnOwnerThread()
                 },
                 { frame in
                     try draw(prepared, frame)

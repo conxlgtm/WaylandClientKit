@@ -4,7 +4,7 @@ Frame callbacks and presentation feedback serve different purposes. Frame callba
 
 Pass `requestPresentationFeedback: true` to the direct or prepared `show` and `redraw` methods on ``Window``, ``PopupSurface``, or ``Subsurface``. Feedback is requested inside the accepted callback-feedback-commit transaction. Superseded, deferred, closed, canceled, and metadata-rejected attempts request neither feedback nor a frame callback and do not commit.
 
-Every feedback result enters the root stream as ``DisplayEvent/presentation(_:)``:
+Every feedback result enters the root stream as `DisplayEvent.presentation(ManagedSurfacePresentationEvent)`:
 
 ```swift
 case .presentation(let event):

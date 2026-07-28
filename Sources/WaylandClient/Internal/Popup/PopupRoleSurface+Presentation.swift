@@ -63,7 +63,11 @@ extension PopupRoleSurface {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else { return .closed }
         try validateSurfaceFrameMetadataSupport(metadata)
-        _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        if model.currentPlacement == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        } else {
+            _ = try consumeLatestConfigureIfAvailable()
+        }
         return try reserveSoftwareFrameForCurrentRedraw(metadata: metadata)
     }
 
@@ -92,8 +96,10 @@ extension PopupRoleSurface {
         }
 
         let request = pendingReservation.request
+        let currentGeometry: SurfaceGeometry
         do {
             _ = try consumeLatestConfigureIfAvailable()
+            currentGeometry = try self.currentGeometry()
         } catch {
             pendingReservation.reservedFrame.drawingBuffer.discard()
             failSoftwarePresentationIfStillActive(generation: request.generation)
@@ -105,7 +111,6 @@ extension PopupRoleSurface {
             return .closed
         }
 
-        let currentGeometry = try currentGeometry()
         guard
             !Task.isCancelled,
             model.isCurrentSoftwarePresentation(request),
@@ -257,6 +262,8 @@ extension PopupRoleSurface {
     private func reserveSoftwareFrameForCurrentRedraw(
         metadata: SurfaceFrameMetadata
     ) throws -> SoftwareSurfaceFrameReservationOutcome {
+        let geometry = try currentGeometry()
+        try metadata.damage?.validate(within: geometry)
         try SurfaceMetadataSupport.ensureObjectsInstalled(
             for: metadata.surfaceCommitMetadata,
             connection: connection,
@@ -279,8 +286,6 @@ extension PopupRoleSurface {
         }
 
         try interpretPopupEffects(model.reduce(.presentationStarted(request)))
-        let geometry = try currentGeometry()
-        try metadata.damage?.validate(within: geometry)
 
         do {
             let reservationID = softwarePresentationCoordinator.allocateIdentity()

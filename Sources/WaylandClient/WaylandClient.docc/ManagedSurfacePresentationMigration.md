@@ -26,7 +26,7 @@ Popup lifecycle events continue to carry ``PopupLifecycleEvent`` through `popupD
 
 ## Presentation Feedback
 
-Replace ``WindowPresentationEvent`` and ``WindowPresentationEvents`` with ``ManagedSurfacePresentationEvent`` and ``ManagedSurfacePresentationEvents``. Root events now expose ``ManagedSurfacePresentationEvent/surface`` instead of `windowID`. Every `Window`, `PopupSurface`, and `Subsurface` exposes a filtered `presentationEvents` sequence.
+Replace `WindowPresentationEvent` and `WindowPresentationEvents` with ``ManagedSurfacePresentationEvent`` and ``ManagedSurfacePresentationEvents``. Root events now expose ``ManagedSurfacePresentationEvent/surface`` instead of `windowID`. Every `Window`, `PopupSurface`, and `Subsurface` exposes a filtered `presentationEvents` sequence.
 
 Do not use ``SurfacePresentationIdentity`` as a stable surface key. It identifies one feedback request. Use ``ManagedSurfaceIdentity`` for the underlying managed role.
 

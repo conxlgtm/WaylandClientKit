@@ -30,7 +30,7 @@ Prepared presentation reserves one exact redraw generation. After preparation re
 - authoritative geometry and scale; and
 - metadata capability support.
 
-Stale work returns `.superseded` before drawing or issuing callback, feedback, damage, attachment, or commit requests. The newest dirty generation remains eligible and produces one replacement ``DisplayEvent/redrawRequested(_:)`` when pacing permits.
+Stale work returns `.superseded` before drawing or issuing callback, feedback, damage, attachment, or commit requests. The newest dirty generation remains eligible and produces one replacement `DisplayEvent.redrawRequested(ManagedSurfaceIdentity)` when pacing permits.
 
 ``SoftwarePresentationOutcome`` has four terminal states:
 

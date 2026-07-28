@@ -165,9 +165,14 @@ extension PopupModel {
         nextActiveState.placement = sequence.placement
 
         var effects: [PopupEffect] = [.ackConfigure(sequence.serial)]
+        let redrawAvailability: RedrawBufferAvailability =
+            nextActiveState.presentation.isIdle ? .available : .unavailable
         effects.append(
             contentsOf: mapRedrawEffects(
-                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available)
+                nextActiveState.redraw.reduce(
+                    .contentInvalidated,
+                    bufferAvailability: redrawAvailability
+                )
             )
         )
         lifecycle = .active(nextActiveState)
@@ -276,11 +281,9 @@ extension PopupModel {
                 windowID: windowID
             )
             activeState.presentation = .idle
-            let replacementAlreadyPublished = activeState.redraw.hasOutstandingRedrawRequest
             let redrawEffects = activeState.redraw.supersedeSoftwarePresentation(
                 bufferAvailability: bufferAvailability
             )
-            guard !replacementAlreadyPublished else { return [] }
             return Self.mapRedrawEffects(redrawEffects, event: event)
         }
     }
@@ -331,8 +334,12 @@ extension PopupModel {
         guard !isClosed else { return [] }
         let lifecycleEvent = lifecycleEvent
         return updateActivePopupStateIfPresent { activeState in
-            Self.mapRedrawEffects(
-                activeState.redraw.reduce(event, bufferAvailability: bufferAvailability),
+            let redrawAvailability =
+                event == .contentInvalidated && !activeState.presentation.isIdle
+                ? RedrawBufferAvailability.unavailable
+                : bufferAvailability
+            return Self.mapRedrawEffects(
+                activeState.redraw.reduce(event, bufferAvailability: redrawAvailability),
                 event: lifecycleEvent
             )
         }

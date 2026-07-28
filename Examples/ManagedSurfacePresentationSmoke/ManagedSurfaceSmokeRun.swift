@@ -45,6 +45,7 @@ struct ManagedSurfaceSmokeRun {
         if CommandLine.arguments.contains("--skip-redraw-routing") {
             print("redraw routing: skipped for compositor evidence run")
         } else {
+            try await routeRedraw(for: window, color: 0x0040_6080)
             try await routeRedraw(for: popup, color: 0x0080_50A0)
             try await routeRedraw(for: synchronized, color: 0x0050_A080)
             try await routeRedraw(for: desynchronized, color: 0x00A0_8050)

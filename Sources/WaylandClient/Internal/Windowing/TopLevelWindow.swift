@@ -2110,6 +2110,19 @@ extension TopLevelWindow {
     package func commitSubsurfaceParentStateOnOwnerThread() {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else { return }
+        commitSubsurfaceParentState()
+    }
+
+    package func commitSynchronizedSubsurfacePresentationParentStateOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+        precondition(
+            !model.isClosed,
+            "prevalidated synchronized subsurface parent closed before activation commit"
+        )
+        commitSubsurfaceParentState()
+    }
+
+    private func commitSubsurfaceParentState() {
         surface.commit()
         #if DEBUG
             onSubsurfaceParentCommitForTesting?()

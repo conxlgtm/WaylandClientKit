@@ -2,6 +2,7 @@ import WaylandClient
 
 extension ManagedSurfaceSmokeRun {
     func presentWindow(_ window: Window, requestsFeedback: Bool) async throws {
+        var rootEvents = display.events.makeAsyncIterator()
         var feedback = window.presentationEvents.makeAsyncIterator()
         let outcome = try await retryPresentation(label: "window initial presentation") {
             try await window.show(requestPresentationFeedback: requestsFeedback) { frame in
@@ -10,12 +11,18 @@ extension ManagedSurfaceSmokeRun {
         }
         try requirePresented(outcome, label: "window initial presentation")
         if requestsFeedback {
+            try await requireRootFeedback(
+                from: &rootEvents,
+                surface: .window(window.id),
+                label: "window"
+            )
             try await requireFeedback(from: &feedback, label: "window")
         }
         print("window initial presentation: presented")
     }
 
     func presentPopup(_ popup: PopupSurface, requestsFeedback: Bool) async throws {
+        var rootEvents = display.events.makeAsyncIterator()
         var feedback = popup.presentationEvents.makeAsyncIterator()
         let outcome = try await retryPresentation(label: "popup initial presentation") {
             try await popup.show(
@@ -26,6 +33,11 @@ extension ManagedSurfaceSmokeRun {
         }
         try requirePresented(outcome, label: "popup initial presentation")
         if requestsFeedback {
+            try await requireRootFeedback(
+                from: &rootEvents,
+                surface: .popup(popup.id),
+                label: "popup"
+            )
             try await requireFeedback(from: &feedback, label: "popup")
         }
         print("popup initial presentation: presented")
@@ -37,6 +49,7 @@ extension ManagedSurfaceSmokeRun {
         color: UInt32,
         requestsFeedback: Bool
     ) async throws {
+        var rootEvents = display.events.makeAsyncIterator()
         var feedback = subsurface.presentationEvents.makeAsyncIterator()
         let outcome = try await retryPresentation(label: label) {
             try await subsurface.show(
@@ -47,6 +60,11 @@ extension ManagedSurfaceSmokeRun {
         }
         try requirePresented(outcome, label: label)
         if requestsFeedback {
+            try await requireRootFeedback(
+                from: &rootEvents,
+                surface: .subsurface(subsurface.identity),
+                label: label
+            )
             try await requireFeedback(from: &feedback, label: label)
         }
         print("\(label): presented")
@@ -91,5 +109,21 @@ extension ManagedSurfaceSmokeRun {
             throw ManagedSurfaceSmokeError.presentationStreamEnded(label)
         }
         print("\(label) feedback: \(feedback)")
+    }
+
+    private func requireRootFeedback(
+        from iterator: inout DisplayEventsIterator,
+        surface: ManagedSurfaceIdentity,
+        label: String
+    ) async throws {
+        while let event = try await iterator.next() {
+            if case .presentation(let presentation) = event,
+                presentation.surface == surface
+            {
+                print("\(label) root feedback: \(presentation.feedback)")
+                return
+            }
+        }
+        throw ManagedSurfaceSmokeError.eventStreamEnded("\(label) root feedback")
     }
 }
