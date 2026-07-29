@@ -183,8 +183,8 @@ extension SubsurfaceRoleSurface {
 
         let feedbackSurface = surface
         let coordinator = presentationFeedbackCoordinator
-        let onFailure: (any Error) -> Void = { [weak self] _ in
-            self?.surfaceRuntime.resetTransientTransactionState()
+        let onFailure: (any Error) -> Void = { [weak self] error in
+            self?.reportPresentationFeedbackFailure(error)
         }
         return SurfacePresentationFeedbackCommitRequest(
             request: {
@@ -215,14 +215,38 @@ extension SubsurfaceRoleSurface {
             surface: surface,
             outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
             onFeedback: onFeedback
-        ) { [weak self] _ in
-            self?.surfaceRuntime.resetTransientTransactionState()
+        ) { [weak self] error in
+            self?.reportPresentationFeedbackFailure(error)
         }
     }
 
     package func cancelPresentationFeedbackOnOwnerThread(_ identity: SurfacePresentationIdentity) {
         connection.preconditionIsOwnerThread()
         presentationFeedbackCoordinator.cancel(identity)
+    }
+
+    private func reportPresentationFeedbackFailure(_ feedbackError: any Error) {
+        do {
+            let effects = try model.reduce(.presentationFeedbackFailed)
+            assert(effects.isEmpty)
+        } catch {
+            failureSink.reportWindowFailure(
+                WindowFailureClassifier.classify(
+                    windowID: parentWindowID,
+                    operation: .presentationFeedback,
+                    error: error
+                )
+            )
+            return
+        }
+
+        failureSink.reportWindowFailure(
+            WindowFailureClassifier.classify(
+                windowID: parentWindowID,
+                operation: .presentationFeedback,
+                error: feedbackError
+            )
+        )
     }
 }
 

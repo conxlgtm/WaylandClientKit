@@ -89,7 +89,9 @@ public struct ManagedSurfacePresentationEvent: Equatable, Sendable {
 ///
 /// This stream preserves presentation order for its surface, but not ordering
 /// relative to other event families. Use ``DisplayEvents`` when cross-family
-/// ordering matters.
+/// ordering matters. Closing the selected surface cancels its outstanding
+/// feedback but does not finish this display-owned sequence. Closing the display
+/// drains already-published feedback and then finishes the sequence.
 @safe
 public struct ManagedSurfacePresentationEvents: AsyncSequence, Sendable {
     public typealias Element = SurfacePresentationFeedback

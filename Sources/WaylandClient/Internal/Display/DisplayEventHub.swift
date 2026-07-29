@@ -82,7 +82,9 @@ final class DisplayEventHub: Sendable {
     ) -> ManagedSurfacePresentationEvents {
         ManagedSurfacePresentationEvents(
             surface: surface,
-            subscriptions: InternalEventSubscriptionFactory(presentationBroker)
+            subscriptions: InternalEventSubscriptionFactory(presentationBroker) { event in
+                event.surface == surface
+            }
         )
     }
 

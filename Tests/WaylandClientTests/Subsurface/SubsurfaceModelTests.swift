@@ -39,6 +39,32 @@ struct SubsurfaceModelTests {
     }
 
     @Test
+    func presentationFeedbackFailurePreservesCommittedFramePacing() throws {
+        var model = SubsurfaceModel(synchronizationMode: .synchronized)
+        let request = try startPresentation(in: &model, geometry: geometry(width: 80))
+
+        #expect(
+            try model.reduce(
+                .presentationSucceeded(
+                    generation: request.generation,
+                    bufferAvailability: .available
+                )
+            ).isEmpty
+        )
+        #expect(
+            try model.reduce(.contentInvalidated(bufferAvailability: .available)).isEmpty
+        )
+        let stateBeforeFeedbackFailure = model
+
+        #expect(try model.reduce(.presentationFeedbackFailed).isEmpty)
+        #expect(model == stateBeforeFeedbackFailure)
+        #expect(
+            try model.reduce(.frameBecameReady(bufferAvailability: .available))
+                == [.publishRedrawRequested]
+        )
+    }
+
+    @Test
     func scaleChangeDuringPreparationSupersedesWithoutDuplicatePublication() throws {
         var model = SubsurfaceModel(synchronizationMode: .synchronized)
         let originalGeometry = try geometry(width: 80)

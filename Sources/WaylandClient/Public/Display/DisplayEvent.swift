@@ -117,13 +117,18 @@ package struct InternalEventSubscription<Element: Sendable>: Sendable {
 @safe
 package struct InternalEventSubscriptionFactory<Element: Sendable>: Sendable {
     private let broker: TypedEventBroker<Element>
+    private let includes: @Sendable (Element) -> Bool
 
-    init(_ eventBroker: TypedEventBroker<Element>) {
+    init(
+        _ eventBroker: TypedEventBroker<Element>,
+        where eventFilter: @escaping @Sendable (Element) -> Bool = { _ in true }
+    ) {
         broker = eventBroker
+        includes = eventFilter
     }
 
     package func makeAsyncIterator() -> InternalEventSubscriptionIterator<Element> {
-        broker.subscribe().makeAsyncIterator()
+        broker.subscribe(where: includes).makeAsyncIterator()
     }
 }
 

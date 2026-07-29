@@ -7,7 +7,8 @@ extension DisplayCore {
             let parentWindow = try requireOpenWindow(windowID)
             let subsurface = try requireSession().createSubsurfaceOnOwnerThread(
                 parent: parentWindow,
-                configuration: subsurfaceConfiguration
+                configuration: subsurfaceConfiguration,
+                failureSink: WeakWindowFailureSink(self)
             )
             guard !isClosed else {
                 subsurface.closeOnOwnerThread()

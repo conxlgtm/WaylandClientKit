@@ -33,6 +33,7 @@ enum SubsurfaceEvent: Equatable, Sendable {
         generation: UInt64,
         bufferAvailability: RedrawBufferAvailability
     )
+    case presentationFeedbackFailed
     case transientStateReset
     case explicitClose
     case parentWindowClosed
@@ -119,6 +120,8 @@ struct SubsurfaceModel: Equatable, Sendable {
                 generation: generation,
                 bufferAvailability: bufferAvailability
             )
+        case .presentationFeedbackFailed:
+            return []
         case .transientStateReset:
             guard lifecycle == .active else { return [] }
             presentation = .idle

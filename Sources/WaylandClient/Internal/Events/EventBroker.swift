@@ -125,6 +125,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
     }
 
     private struct Subscriber {
+        let includes: @Sendable (Element) -> Bool
         var state: SubscriberState = .open(buffer: [], drops: .none)
     }
 
@@ -140,9 +141,11 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
         var subscribers: [Int: Subscriber] = [:]
         var lifecycle = BrokerLifecycle.open
 
-        mutating func subscribe() -> Int {
+        mutating func subscribe(
+            where includes: @escaping @Sendable (Element) -> Bool
+        ) -> Int {
             defer { nextID += 1 }
-            subscribers[nextID] = Subscriber()
+            subscribers[nextID] = Subscriber(includes: includes)
             return nextID
         }
 
@@ -171,6 +174,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
 
             for subscriberID in subscribers.keys.sorted() {
                 guard var subscriber = subscribers[subscriberID] else { continue }
+                guard subscriber.includes(element) else { continue }
                 publish(
                     element,
                     for: &subscriber,
@@ -367,8 +371,10 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
         overflowStrategy = eventOverflowStrategy
     }
 
-    func subscribe() -> InternalEventSubscription<Element> {
-        let subscriberID = state.withLock { $0.subscribe() }
+    func subscribe(
+        where includes: @escaping @Sendable (Element) -> Bool = { _ in true }
+    ) -> InternalEventSubscription<Element> {
+        let subscriberID = state.withLock { $0.subscribe(where: includes) }
         return InternalEventSubscription(EventSubscription(broker: self, id: subscriberID))
     }
 

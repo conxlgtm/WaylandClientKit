@@ -19,7 +19,7 @@ A synchronized subsurface requests feedback for the child surface commit. The fo
 
 ``DisplayEvents`` preserves root publication order across redraw, presentation, lifecycle, input, data-transfer, output, and diagnostic events. A handle-specific presentation sequence preserves order only for its selected surface.
 
-Uncommitted feedback objects are canceled on precommit failure. Surface or display close terminates outstanding feedback and eventually finishes both root and filtered streams after already-published events are delivered.
+Uncommitted feedback objects are canceled on precommit failure. Surface close terminates outstanding feedback for that surface but does not finish display-owned event sequences. Display close terminates all outstanding feedback and finishes both root and filtered streams after already-published events are delivered.
 
 ## Capability Gate
 

@@ -124,7 +124,8 @@ active.
 `ManagedSurfacePresentationSmoke --interactive-dismissal` waits for a compositor
 `popup_done` event after prompting for an outside click. The automated evidence
 rows above use explicit popup close; interactive dismissal can be recorded as an
-additional desktop observation without changing the bounded default smoke.
+additional desktop observation without changing the bounded evidence mode that
+uses `--skip-feedback --skip-redraw-routing`.
 
 ## External Graphics Buffer Evidence
 

@@ -16,6 +16,7 @@ package final class SubsurfaceRoleSurface {
 
     let connection: RawDisplayConnection
     let bufferCount: PositiveInt
+    let failureSink: any WindowFailureSink
     var size: PositiveLogicalSize
     var model: SubsurfaceModel
     let softwarePresentationCoordinator =
@@ -33,12 +34,14 @@ package final class SubsurfaceRoleSurface {
         id subsurfaceID: SubsurfaceID,
         parent parentWindow: TopLevelWindow,
         connection rawConnection: RawDisplayConnection,
-        configuration subsurfaceConfiguration: SubsurfaceConfiguration
+        configuration subsurfaceConfiguration: SubsurfaceConfiguration,
+        failureSink subsurfaceFailureSink: any WindowFailureSink = DefaultWindowFailureSink()
     ) throws {
         id = subsurfaceID
         parentWindowID = parentWindow.id
         connection = rawConnection
         bufferCount = subsurfaceConfiguration.bufferCount
+        failureSink = subsurfaceFailureSink
         size = subsurfaceConfiguration.size
         model = SubsurfaceModel(
             synchronizationMode: subsurfaceConfiguration.synchronizationMode

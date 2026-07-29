@@ -49,6 +49,41 @@ struct DisplayEventHubPresentationTests {
     }
 
     @Test
+    func unrelatedPresentationEventsDoNotConsumeSurfaceSubscriberCapacity() async throws {
+        let hub = DisplayEventHub(
+            configuration: EventStreamConfiguration(
+                presentationEventCapacity: try PositiveInt(1))
+        )
+        let selectedSurface: ManagedSurfaceIdentity = .popup(
+            PopupSurfaceIdentity(PopupID(rawValue: 2))
+        )
+        let otherSurface: ManagedSurfaceIdentity = .window(WindowID(rawValue: 1))
+        let expected = SurfacePresentationFeedback.discarded(
+            SurfacePresentationIdentity(rawValue: 3)
+        )
+        var iterator = hub.managedSurfacePresentationEvents(
+            surface: selectedSurface
+        ).makeAsyncIterator()
+
+        for identity in 1...2 {
+            hub.publishPresentation(
+                ManagedSurfacePresentationEvent(
+                    surface: otherSurface,
+                    feedback: .discarded(SurfacePresentationIdentity(rawValue: UInt64(identity)))
+                )
+            )
+        }
+        hub.publishPresentation(
+            ManagedSurfacePresentationEvent(
+                surface: selectedSurface,
+                feedback: expected
+            )
+        )
+
+        #expect(try await iterator.next() == expected)
+    }
+
+    @Test
     func presentationSubscriberOverflowUsesConfiguredCapacity() async throws {
         let hub = DisplayEventHub(
             configuration: EventStreamConfiguration(
