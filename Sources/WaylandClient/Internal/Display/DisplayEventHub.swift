@@ -18,7 +18,7 @@ final class DisplayEventHub: Sendable {
     private let inputBroker: TypedEventBroker<InputEvent>
     private let dataTransferBroker: TypedEventBroker<DataTransferEvent>
     private let textInputBroker: TypedEventBroker<TextInputEvent>
-    private let presentationBroker: TypedEventBroker<WindowPresentationEvent>
+    private let presentationBroker: TypedEventBroker<ManagedSurfacePresentationEvent>
     private let diagnosticsBroker: TypedEventBroker<DisplayDiagnostic>
     private let diagnosticIDGenerator: DiagnosticIDGenerator
 
@@ -44,7 +44,7 @@ final class DisplayEventHub: Sendable {
             stream: .textInputEvents,
             capacity: configuration.textInputEventCapacity.rawValue
         )
-        presentationBroker = TypedEventBroker<WindowPresentationEvent>(
+        presentationBroker = TypedEventBroker<ManagedSurfacePresentationEvent>(
             stream: .presentationEvents,
             capacity: configuration.presentationEventCapacity.rawValue
         )
@@ -77,10 +77,14 @@ final class DisplayEventHub: Sendable {
         TextInputEvents(InternalEventSubscriptionFactory(textInputBroker))
     }
 
-    func windowPresentationEvents(windowID: WindowID) -> WindowPresentationEvents {
-        WindowPresentationEvents(
-            windowID: windowID,
-            subscriptions: InternalEventSubscriptionFactory(presentationBroker)
+    func managedSurfacePresentationEvents(
+        surface: ManagedSurfaceIdentity
+    ) -> ManagedSurfacePresentationEvents {
+        ManagedSurfacePresentationEvents(
+            surface: surface,
+            subscriptions: InternalEventSubscriptionFactory(presentationBroker) { event in
+                event.surface == surface
+            }
         )
     }
 
@@ -101,7 +105,7 @@ final class DisplayEventHub: Sendable {
         case .presentation(let presentationEvent):
             publishPresentation(presentationEvent)
         case .windowCloseRequested, .windowClosed, .popupDismissed, .popupClosed,
-            .redrawRequested, .popupRedrawRequested, .outputChanged, .outputRemoved,
+            .redrawRequested, .outputChanged, .outputRemoved,
             .windowOutputsChanged, .keyboardShortcutsInhibitorChanged:
             displayBroker.publish(event)
         }
@@ -143,7 +147,7 @@ final class DisplayEventHub: Sendable {
         textInputBroker.publish(event)
     }
 
-    func publishPresentation(_ event: WindowPresentationEvent) {
+    func publishPresentation(_ event: ManagedSurfacePresentationEvent) {
         displayBroker.publish(.presentation(event))
         presentationBroker.publish(event)
     }

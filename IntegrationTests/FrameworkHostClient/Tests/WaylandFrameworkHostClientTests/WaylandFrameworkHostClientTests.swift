@@ -36,6 +36,11 @@ struct WaylandFrameworkHostClientTests {
                 constraintAdjustment: [.slideX, .slideY]
             )
         )
+        let subsurfaceConfiguration = SubsurfaceConfiguration(
+            position: LogicalOffset(x: 8, y: 8),
+            size: try PositiveLogicalSize(width: 48, height: 32),
+            synchronizationMode: .synchronized
+        )
         let graphicsConfiguration = WaylandGraphicsConfiguration(
             presentationPolicy: .software,
             synchronizationPolicy: .implicitOnly,
@@ -48,6 +53,7 @@ struct WaylandFrameworkHostClientTests {
         #expect(displayConfiguration.eventStreams == streams)
         #expect(windowConfiguration.initialSize.width.rawValue == 128)
         #expect(popupConfiguration.positioner.size.width.rawValue == 64)
+        #expect(subsurfaceConfiguration.size.width.rawValue == 48)
         #expect(graphicsConfiguration.presentationPolicy == .software)
         #expect(metadata.damage == nil)
     }
@@ -72,6 +78,12 @@ struct WaylandFrameworkHostClientTests {
                     )
                 )
             )
+            let subsurface = try await window.createSubsurface(
+                configuration: SubsurfaceConfiguration(
+                    position: LogicalOffset(x: 4, y: 4),
+                    size: try PositiveLogicalSize(width: 24, height: 24)
+                )
+            )
 
             _ = display.events
             _ = display.inputEvents
@@ -79,10 +91,13 @@ struct WaylandFrameworkHostClientTests {
             _ = display.dataTransferEvents
             _ = display.diagnostics
             _ = window.presentationEvents
+            _ = popup.presentationEvents
+            _ = subsurface.presentationEvents
             _ = capabilities.dragAndDrop
             _ = try await window.geometry
             _ = try await window.needsRedraw
             _ = try await popup.placement
+            _ = try await subsurface.geometry
 
             try await window.requestRedraw()
             try await window.show { frame in
@@ -91,6 +106,18 @@ struct WaylandFrameworkHostClientTests {
             try await window.redraw { frame in
                 fill(frame, color: 0x0030_2010)
             }
+            try await popup.show(
+                preparing: { reservation in reservation.id },
+                { _, frame in fill(frame, color: 0x0020_4030) }
+            )
+            try await subsurface.show(
+                preparing: { reservation in reservation.id },
+                { _, frame in fill(frame, color: 0x0040_3020) }
+            )
+            try await popup.requestRedraw()
+            try await subsurface.requestRedraw()
+            try await popup.redraw { frame in fill(frame, color: 0x0030_4020) }
+            try await subsurface.redraw { frame in fill(frame, color: 0x0020_3040) }
 
             if capabilities.dragAndDrop.isAvailable {
                 let source = try await window.startDrag(
@@ -110,6 +137,7 @@ struct WaylandFrameworkHostClientTests {
             }
 
             await popup.close()
+            await subsurface.close()
             await window.close()
         }
 
@@ -149,6 +177,31 @@ struct WaylandFrameworkHostClientTests {
             try await window.show { frame in
                 fill(frame, color: 0x0020_3040)
             }
+            let popup = try await window.createPopup(
+                configuration: try PopupConfiguration(
+                    positioner: PopupPositioner(
+                        anchorRect: LogicalRect(x: 0, y: 0, width: 24, height: 24),
+                        size: PositiveLogicalSize(width: 40, height: 32)
+                    )
+                )
+            )
+            let subsurface = try await window.createSubsurface(
+                configuration: SubsurfaceConfiguration(
+                    position: LogicalOffset(x: 8, y: 8),
+                    size: try PositiveLogicalSize(width: 32, height: 24),
+                    synchronizationMode: .synchronized
+                )
+            )
+            #expect(
+                try await popup.show { frame in fill(frame, color: 0x0030_2040) }
+                    == .presented
+            )
+            #expect(
+                try await subsurface.show(
+                    preparing: { reservation in reservation.id },
+                    { _, frame in fill(frame, color: 0x0040_2030) }
+                ) == .presented
+            )
             let geometry = try await window.geometry
             #expect(geometry.bufferSize.width.rawValue > 0)
             #expect(try await !window.isClosed)
@@ -167,6 +220,8 @@ struct WaylandFrameworkHostClientTests {
                 }
             }
 
+            await popup.close()
+            await subsurface.close()
             await window.close()
         }
     }

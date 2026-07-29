@@ -125,7 +125,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
         metadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         try withFatalFailureFinalization {
             guard !isClosed, let window = surfaces.window(windowID) else {
                 return .closed
@@ -169,7 +169,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func reserveSoftwareFrameForRedraw(
         _ windowID: WindowID,
         metadata frameMetadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         try withFatalFailureFinalization {
             guard !isClosed, let window = surfaces.window(windowID) else {
                 return .closed
@@ -320,7 +320,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
                 closeKeyboardShortcutsInhibitor(inhibitorID)
             }
             for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
-                closeSubsurface(subsurfaceID)
+                closeSubsurface(subsurfaceID, parentWindowClosed: true)
             }
             for popupID in popupIDsTopDown(parentedBy: windowID) {
                 closePopup(popupID)
@@ -414,7 +414,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func publishWindowRedrawRequested(_ windowID: WindowID) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
-        eventHub.publish(.redrawRequested(windowID))
+        eventHub.publish(.redrawRequested(.window(windowID)))
     }
 
     private func handleWindowOutputsChanged(
@@ -488,7 +488,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             closeKeyboardShortcutsInhibitor(inhibitorID)
         }
         for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
-            closeSubsurface(subsurfaceID)
+            closeSubsurface(subsurfaceID, parentWindowClosed: true)
         }
         for popupID in popupIDsTopDown(parentedBy: windowID) {
             closePopup(popupID)

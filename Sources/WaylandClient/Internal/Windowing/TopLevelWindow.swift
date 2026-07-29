@@ -32,7 +32,7 @@ package struct TopLevelWindowRoleResources {
 struct PendingSoftwareFrameReservation {
     let request: PresentationRequest
     let geometry: SurfaceGeometry
-    let reservedFrame: WindowReservedSoftwareFrame
+    let reservedFrame: ReservedSoftwareSurfaceFrame
 }
 
 private struct StagedSoftwarePresentationSuccess {
@@ -149,8 +149,12 @@ package final class TopLevelWindow {
     private let initialConfigurePump: (Int32) throws -> Void
     private let surface: RawSurface
     private let configureState = XDGConfigureState()
-    private let softwarePresentationCoordinator = WindowSoftwareReservationCoordinator()
-    private let presentationFeedbackCoordinator = WindowPresentationFeedbackCoordinator()
+    private let softwarePresentationCoordinator =
+        SoftwareSurfaceReservationCoordinator<PendingSoftwareFrameReservation>(
+            reservation: { $0.reservedFrame.reservation },
+            retire: { $0.reservedFrame.drawingBuffer.discard() }
+        )
+    private let presentationFeedbackCoordinator = SurfacePresentationFeedbackCoordinator()
     private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
 
     private let failureSink: any WindowFailureSink
@@ -497,7 +501,7 @@ package final class TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         guard !model.isClosed else { return .skippedClosed }
@@ -536,10 +540,11 @@ package final class TopLevelWindow {
     private func reserveSoftwareFrameForCurrentRedraw(
         metadata frameMetadata: SurfaceFrameMetadata = .default
     )
-        throws -> WindowSoftwareFrameReservationOutcome
+        throws -> SoftwareSurfaceFrameReservationOutcome
     {
         guard !model.isClosed else { return .closed }
         try validateSurfaceFrameMetadataSupport(frameMetadata)
+        try ensureMetadataObjectsInstalled(for: frameMetadata.surfaceCommitMetadata)
         guard let request = try consumeSoftwarePresentationRequest() else { return .deferred }
 
         try interpretWindowEffects(
@@ -550,8 +555,8 @@ package final class TopLevelWindow {
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
             try frameMetadata.damage?.validate(within: geometry)
             let result = try softwarePresenter().reserve(
-                context: WindowSoftwarePresentationContext(
-                    request: request,
+                context: SoftwareSurfacePresentationContext(
+                    generation: request.generation,
                     geometry: geometry,
                     submitConstraints: .default,
                     metadata: frameMetadata.surfaceCommitMetadata,
@@ -576,7 +581,7 @@ package final class TopLevelWindow {
                 for: reservedFrame.reservation.reservationID
             )
             return .reserved(reservedFrame.reservation)
-        } catch let failure as WindowSoftwarePresentationFailure {
+        } catch let failure as SoftwareSurfacePresentationFailure {
             failSoftwarePresentationIfStillActive(generation: request.generation)
             throw failure.underlying
         } catch {
@@ -682,7 +687,7 @@ package final class TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest?,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         try validateSurfaceCommitMetadataSupport(metadata)
@@ -692,12 +697,12 @@ package final class TopLevelWindow {
 
         let successStagingContext = softwarePresentationSuccessStagingContext()
         var stagedSuccess: StagedSoftwarePresentationSuccess?
-        let result: WindowSoftwarePresentationResult
+        let result: SoftwareSurfacePresentationResult
         do {
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
             result = try softwarePresenter().present(
-                context: WindowSoftwarePresentationContext(
-                    request: request,
+                context: SoftwareSurfacePresentationContext(
+                    generation: request.generation,
                     geometry: geometry,
                     submitConstraints: submitConstraints,
                     metadata: metadata,
@@ -714,10 +719,10 @@ package final class TopLevelWindow {
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
             )
-        } catch let failure as WindowSoftwarePresentationFailure {
+        } catch let failure as SoftwareSurfacePresentationFailure {
             failSoftwarePresentationIfStillActive(generation: request.generation)
             if case .userDraw = failure.presentationError {
-                throw WindowSoftwareDrawFailure(underlying: failure.underlying)
+                throw SoftwareSurfaceDrawFailure(underlying: failure.underlying)
             }
             throw failure.underlying
         } catch {
@@ -745,8 +750,8 @@ package final class TopLevelWindow {
         }
     }
 
-    private func softwarePresenter() -> WindowSoftwarePresenter {
-        WindowSoftwarePresenter(
+    private func softwarePresenter() -> SoftwareSurfacePresenter {
+        SoftwareSurfacePresenter(
             surface: surface,
             scaleInstallation: scaleInstallation,
             createSharedMemoryPool: { [self] bufferSize in
@@ -762,20 +767,20 @@ package final class TopLevelWindow {
                     self?.handleBufferReleased()
                 }
             },
-            isWindowClosed: { [self] in model.isClosed },
+            isSurfaceClosed: { [self] in model.isClosed },
             onFrame: { [weak self] in
                 self?.handleFrameDone()
             }
         )
     }
 
-    // swiftlint:disable:next function_parameter_count
+    // swiftlint:disable:next function_parameter_count function_body_length
     private func submitReservedSoftwareFrame(
         _ reservation: SoftwareFrameReservation,
         submitConstraints: SurfaceSubmitConstraints,
         metadata frameMetadata: SurfaceFrameMetadata,
         damage: SurfaceDamageRegion?,
-        makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest?,
+        makePresentationFeedback: () throws -> SurfacePresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> SoftwarePresentationOutcome {
         guard !model.isClosed else {
@@ -787,19 +792,20 @@ package final class TopLevelWindow {
         }
 
         var stagedSuccess: StagedSoftwarePresentationSuccess?
-        let result: WindowSoftwarePresentationResult
+        let result: SoftwareSurfacePresentationResult
         do {
             guard try isCurrentSoftwarePresentation(pendingReservation) else {
                 return try supersedeSoftwarePresentation(pendingReservation)
             }
             try validateSurfaceFrameMetadataSupport(frameMetadata)
+            try ensureMetadataObjectsInstalled(for: frameMetadata.surfaceCommitMetadata)
             let successStagingContext = softwarePresentationSuccessStagingContext()
 
             let presentationFeedback = try makePresentationFeedback()
             result = try softwarePresenter().presentReserved(
                 pendingReservation.reservedFrame,
-                context: WindowSoftwarePresentationContext(
-                    request: pendingReservation.request,
+                context: SoftwareSurfacePresentationContext(
+                    generation: pendingReservation.request.generation,
                     geometry: pendingReservation.geometry,
                     submitConstraints: submitConstraints,
                     metadata: frameMetadata.surfaceCommitMetadata,
@@ -816,13 +822,13 @@ package final class TopLevelWindow {
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
             )
-        } catch let failure as WindowSoftwarePresentationFailure {
+        } catch let failure as SoftwareSurfacePresentationFailure {
             pendingReservation.reservedFrame.drawingBuffer.discard()
             failSoftwarePresentationIfStillActive(
                 generation: pendingReservation.request.generation
             )
             if case .userDraw = failure.presentationError {
-                throw WindowSoftwareDrawFailure(underlying: failure.underlying)
+                throw SoftwareSurfaceDrawFailure(underlying: failure.underlying)
             }
             throw failure.underlying
         } catch {
@@ -866,7 +872,7 @@ package final class TopLevelWindow {
     }
 
     private func interpretDeferredSoftwarePresentation(
-        _ result: WindowSoftwarePresentationResult,
+        _ result: SoftwareSurfacePresentationResult,
         pendingReservation: PendingSoftwareFrameReservation
     ) throws -> SoftwarePresentationOutcome {
         do {
@@ -941,7 +947,7 @@ package final class TopLevelWindow {
     }
 
     private func interpretSoftwarePresentationFollowUp(
-        _ followUp: WindowSoftwarePresentationFollowUp?
+        _ followUp: SoftwareSurfacePresentationFollowUp?
     ) throws {
         guard let followUp else { return }
 
@@ -1465,7 +1471,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         var outcome = RedrawOutcome.skippedPendingFrame
@@ -1633,7 +1639,7 @@ extension TopLevelWindow {
         _ buffer: RawSurfaceBuffer,
         submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata = .default,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil
     ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
@@ -1798,22 +1804,12 @@ extension TopLevelWindow {
     private func ensureMetadataObjectsInstalled(
         for metadata: SurfaceCommitMetadata
     ) throws {
-        if metadata.contentType != nil {
-            try ensureContentTypeObjectInstalled()
-        }
-        if metadata.alpha != nil {
-            try ensureAlphaModifierObjectInstalled()
-        }
-        if metadata.presentationHint != nil {
-            try ensureTearingControlObjectInstalled()
-        }
-        if metadata.colorRepresentation != nil {
-            try ensureColorRepresentationObjectInstalled()
-        }
-        if let colorDescription = metadata.colorDescription {
-            try ensureColorManagementObjectInstalled()
-            try ensureColorDescriptionInstalled(colorDescription)
-        }
+        try SurfaceMetadataSupport.ensureObjectsInstalled(
+            for: metadata,
+            connection: connection,
+            surface: surface,
+            runtime: &surfaceRuntime
+        )
     }
 
     private func validateSurfaceFrameMetadataSupport(
@@ -1831,113 +1827,9 @@ extension TopLevelWindow {
     }
 
     private func refreshMetadataCapabilitiesFromBoundGlobals() {
-        guard let extensions = connection.boundGlobals?.extensions else {
-            surfaceRuntime.setContentTypeCapability(.unavailable)
-            surfaceRuntime.setAlphaModifierCapability(.unavailable)
-            surfaceRuntime.setTearingControlCapability(.unavailable)
-            surfaceRuntime.setColorRepresentationCapability(.unavailable)
-            surfaceRuntime.setColorCapability(.unavailable)
-            return
-        }
-
-        surfaceRuntime.setContentTypeCapability(
-            extensions.surfaceContentTypeCapability
-        )
-        surfaceRuntime.setAlphaModifierCapability(
-            extensions.surfaceAlphaModifierCapability
-        )
-        surfaceRuntime.setTearingControlCapability(
-            extensions.surfaceTearingControlCapability
-        )
-        surfaceRuntime.setColorRepresentationCapability(
-            extensions.surfaceColorRepresentationCapability
-        )
-        surfaceRuntime.setColorCapability(extensions.surfaceColorCapability)
-    }
-
-    private func ensureContentTypeObjectInstalled() throws {
-        guard !surfaceRuntime.hasContentTypeObject else { return }
-        guard
-            let manager = connection.boundGlobals?.extensions
-                .contentTypeManager.boundObject
-        else {
-            throw SurfaceCommitMetadataError.contentTypeUnavailable
-        }
-
-        surfaceRuntime.installContentTypeObject(try manager.contentType(for: surface))
-    }
-
-    private func ensureAlphaModifierObjectInstalled() throws {
-        guard !surfaceRuntime.hasAlphaModifierObject else { return }
-        guard
-            let manager = connection.boundGlobals?.extensions
-                .alphaModifierManager.boundObject
-        else {
-            throw SurfaceCommitMetadataError.alphaModifierUnavailable
-        }
-
-        surfaceRuntime.installAlphaModifierObject(try manager.alphaModifier(for: surface))
-    }
-
-    private func ensureTearingControlObjectInstalled() throws {
-        guard !surfaceRuntime.hasTearingControlObject else { return }
-        guard
-            let manager = connection.boundGlobals?.extensions
-                .tearingControlManager.boundObject
-        else {
-            throw SurfaceCommitMetadataError.tearingControlUnavailable
-        }
-
-        surfaceRuntime.installTearingControlObject(
-            try manager.tearingControl(for: surface)
-        )
-    }
-
-    private func ensureColorRepresentationObjectInstalled() throws {
-        surfaceRuntime.setColorRepresentationCapability(
-            connection.boundGlobals?.extensions.surfaceColorRepresentationCapability
-                ?? .unavailable
-        )
-        guard !surfaceRuntime.hasColorRepresentationObject else { return }
-        guard
-            let manager = connection.boundGlobals?.extensions
-                .colorRepresentationManager.boundObject
-        else {
-            throw SurfaceCommitMetadataError.colorRepresentationUnavailable
-        }
-
-        surfaceRuntime.installColorRepresentationObject(
-            try manager.colorRepresentation(for: surface)
-        )
-    }
-
-    private func ensureColorManagementObjectInstalled() throws {
-        guard !surfaceRuntime.hasColorManagementObject else { return }
-        guard
-            let manager = connection.boundGlobals?.extensions
-                .colorManager.boundObject
-        else {
-            throw SurfaceCommitMetadataError.colorUnavailable
-        }
-
-        surfaceRuntime.installColorManagementObject(try manager.surface(for: surface))
-    }
-
-    private func ensureColorDescriptionInstalled(
-        _ reference: SurfaceColorDescriptionReference
-    ) throws {
-        guard !surfaceRuntime.hasColorDescription(reference) else { return }
-        guard
-            let manager = connection.boundGlobals?.extensions
-                .colorManager.boundObject
-        else {
-            throw SurfaceCommitMetadataError.colorUnavailable
-        }
-
-        try surfaceRuntime.resolveColorDescriptionIfNeeded(
-            reference,
-            using: manager,
-            surface: surface
+        SurfaceMetadataSupport.refreshCapabilities(
+            connection: connection,
+            runtime: &surfaceRuntime
         )
     }
 
@@ -1960,17 +1852,14 @@ extension TopLevelWindow {
             )
         }
 
-        let identity = presentationFeedbackCoordinator.allocateIdentity()
-        let feedback = try presentation.requestFeedback(for: surface) { [weak self] rawEvent in
-            self?.handlePresentationFeedback(
-                identity,
-                event: rawEvent,
-                outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
-                onFeedback: onFeedback
-            )
+        return try presentationFeedbackCoordinator.request(
+            presentation: presentation,
+            surface: surface,
+            outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
+            onFeedback: onFeedback
+        ) { [weak self] error in
+            self?.reportCallbackFailure(operation: .presentationFeedback, error: error)
         }
-        presentationFeedbackCoordinator.register(feedback, for: identity)
-        return identity
     }
 
     package func cancelPresentationFeedbackOnOwnerThread(
@@ -2171,7 +2060,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -2193,7 +2082,7 @@ extension TopLevelWindow {
     package func reserveShowSoftwareFrameOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata frameMetadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         connection.preconditionIsOwnerThread()
         try validateSurfaceFrameMetadataSupport(frameMetadata)
 
@@ -2221,6 +2110,19 @@ extension TopLevelWindow {
     package func commitSubsurfaceParentStateOnOwnerThread() {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else { return }
+        commitSubsurfaceParentState()
+    }
+
+    package func commitSynchronizedSubsurfacePresentationParentStateOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+        precondition(
+            !model.isClosed,
+            "prevalidated synchronized subsurface parent closed before activation commit"
+        )
+        commitSubsurfaceParentState()
+    }
+
+    private func commitSubsurfaceParentState() {
         surface.commit()
         #if DEBUG
             onSubsurfaceParentCommitForTesting?()
@@ -2231,7 +2133,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -2252,7 +2154,7 @@ extension TopLevelWindow {
     package func reserveRedrawSoftwareFrameOnOwnerThread(
         metadata frameMetadata: SurfaceFrameMetadata = .default
     )
-        throws -> WindowSoftwareFrameReservationOutcome
+        throws -> SoftwareSurfaceFrameReservationOutcome
     {
         connection.preconditionIsOwnerThread()
 
@@ -2268,7 +2170,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceFrameMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        makePresentationFeedback: () throws -> WindowPresentationFeedbackCommitRequest? = { nil },
+        makePresentationFeedback: () throws -> SurfacePresentationFeedbackCommitRequest? = { nil },
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> SoftwarePresentationOutcome {
         connection.preconditionIsOwnerThread()
@@ -2321,7 +2223,7 @@ extension TopLevelWindow {
         submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
-        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
+        presentationFeedback: SurfacePresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try showOnOwnerThread(
@@ -2345,47 +2247,6 @@ extension TopLevelWindow {
 }
 
 extension TopLevelWindow {
-    private func handlePresentationFeedback(
-        _ identity: SurfacePresentationIdentity,
-        event rawEvent: RawPresentationFeedbackEvent,
-        outputIDForPresentationSyncOutput: (RawOutputPointerIdentity) throws -> OutputID?,
-        onFeedback: (SurfacePresentationFeedback) -> Void
-    ) {
-        presentationFeedbackCoordinator.complete(identity)
-
-        do {
-            switch rawEvent {
-            case .presented(let rawPresented):
-                let synchronizedOutput = try rawPresented.synchronizedOutput.flatMap { output in
-                    try outputIDForPresentationSyncOutput(output)
-                }
-                onFeedback(
-                    .presented(
-                        PresentationFeedback(
-                            surface: identity,
-                            timestamp: PresentationTimestamp(
-                                seconds: rawPresented.timestamp.seconds,
-                                nanoseconds: rawPresented.timestamp.nanoseconds
-                            ),
-                            refreshNanoseconds: rawPresented.refreshNanoseconds == 0
-                                ? nil
-                                : rawPresented.refreshNanoseconds,
-                            sequence: PresentationSequence(
-                                value: rawPresented.sequence.value
-                            ),
-                            flags: PresentationFeedbackFlags(rawValue: rawPresented.flags),
-                            synchronizedOutput: synchronizedOutput
-                        )
-                    )
-                )
-            case .discarded:
-                onFeedback(.discarded(identity))
-            }
-        } catch {
-            reportCallbackFailure(operation: .presentationFeedback, error: error)
-        }
-    }
-
     private func cancelPresentationFeedbacks() {
         presentationFeedbackCoordinator.close()
     }

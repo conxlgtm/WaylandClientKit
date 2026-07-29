@@ -1,3 +1,5 @@
+import WaylandRaw
+
 struct StagedPopupPresentationSuccess {
     let model: PopupModel
     let publishesRedrawRequest: Bool
@@ -47,183 +49,372 @@ struct PopupPresentationSuccessStagingContext {
     }
 }
 
+struct PendingPopupSoftwareFrameReservation {
+    let request: PopupPresentationRequest
+    let geometry: SurfaceGeometry
+    let reservedFrame: ReservedSoftwareSurfaceFrame
+}
+
 extension PopupRoleSurface {
-    // swiftlint:disable:next function_body_length
-    func performSoftwarePresent(
-        _ request: PopupPresentationRequest,
+    package func reserveSoftwareFrameForShowOnOwnerThread(
+        timeoutMilliseconds: Int32,
+        metadata: SurfaceFrameMetadata
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { return .closed }
+        try validateSurfaceFrameMetadataSupport(metadata)
+        if model.currentPlacement == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        } else {
+            _ = try consumeLatestConfigureIfAvailable()
+        }
+        return try reserveSoftwareFrameForCurrentRedraw(metadata: metadata)
+    }
+
+    package func reserveSoftwareFrameForRedrawOnOwnerThread(
+        metadata: SurfaceFrameMetadata
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { return .closed }
+        try validateSurfaceFrameMetadataSupport(metadata)
+        _ = try consumeLatestConfigureIfAvailable()
+        return try reserveSoftwareFrameForCurrentRedraw(metadata: metadata)
+    }
+
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
+    package func submitReservedSoftwareFrameOnOwnerThread(
+        _ reservation: SoftwareFrameReservation,
+        metadata: SurfaceFrameMetadata,
+        makePresentationFeedback: () throws -> SurfacePresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws -> RedrawOutcome {
-        try interpretPopupEffects(
-            model.reduce(.presentationStarted(request))
-        )
+    ) throws -> SoftwarePresentationOutcome {
+        connection.preconditionIsOwnerThread()
 
+        guard !model.isClosed else { return .closed }
+        guard let pendingReservation = softwarePresentationCoordinator.take(reservation) else {
+            return model.isClosed ? .closed : .superseded
+        }
+
+        let request = pendingReservation.request
+        let currentGeometry: SurfaceGeometry
         do {
-            guard pendingFrameRegistration == nil else {
-                failActivePresentation(
+            _ = try consumeLatestConfigureIfAvailable()
+            currentGeometry = try self.currentGeometry()
+        } catch {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            failSoftwarePresentationIfStillActive(generation: request.generation)
+            throw error
+        }
+
+        guard !model.isClosed else {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            return .closed
+        }
+
+        guard
+            !Task.isCancelled,
+            model.isCurrentSoftwarePresentation(request),
+            currentGeometry == pendingReservation.geometry
+        else {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            supersedeSoftwarePresentationIfStillActive(generation: request.generation)
+            return .superseded
+        }
+
+        let presentationFeedback: SurfacePresentationFeedbackCommitRequest?
+        do {
+            try validateSurfaceFrameMetadataSupport(metadata)
+            try metadata.damage?.validate(within: currentGeometry)
+            try SurfaceMetadataSupport.ensureObjectsInstalled(
+                for: metadata.surfaceCommitMetadata,
+                connection: connection,
+                surface: surface,
+                runtime: &surfaceRuntime
+            )
+            presentationFeedback = try makePresentationFeedback()
+        } catch {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            failSoftwarePresentationIfStillActive(generation: request.generation)
+            throw error
+        }
+
+        let successStagingContext = PopupPresentationSuccessStagingContext(
+            model: model,
+            parentWindowID: parentWindowID
+        )
+        var stagedSuccess: StagedPopupPresentationSuccess?
+        let result: SoftwareSurfacePresentationResult
+        do {
+            result = try softwarePresenter().presentReserved(
+                pendingReservation.reservedFrame,
+                context: SoftwareSurfacePresentationContext(
                     generation: request.generation,
-                    error: .frameCallbackRequest("frame callback already pending")
-                )
-                return .skippedPendingFrame
-            }
-
-            let geometry = try surfaceGeometry(logicalSize: request.placement.size)
-            let pool = try bufferPool(for: geometry.bufferSize)
-            dropReleasedRetiredPools()
-
-            guard var drawingBuffer = pool.acquireDrawingBuffer() else {
-                try interpretPopupEffects(model.reduce(.presentationBlockedByBuffer))
-                return .waitingForBuffer
-            }
-
-            do {
-                try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
-                    let frame = try unsafe SoftwareFrame(
-                        id: SoftwareFrameBufferID(rawValue: drawingBuffer.identity),
-                        width: drawingBuffer.width,
-                        height: drawingBuffer.height,
-                        stride: drawingBuffer.stride,
-                        geometry: SoftwareFrameGeometry(surface: geometry),
-                        bytes: bytes
+                    geometry: currentGeometry,
+                    submitConstraints: .default,
+                    metadata: metadata.surfaceCommitMetadata,
+                    damage: metadata.damage,
+                    presentationFeedback: presentationFeedback
+                ),
+                draw: draw,
+                stageSuccess: { currentBufferAvailability in
+                    stagedSuccess = try successStagingContext.stage(
+                        generation: request.generation,
+                        bufferAvailability: currentBufferAvailability
                     )
-                    try draw(frame)
-                }
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .userDraw(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
+                },
+                runtime: &surfaceRuntime,
+                pendingFrameRegistration: &pendingFrameRegistration
+            )
+        } catch let failure as SoftwareSurfacePresentationFailure {
+            failSoftwarePresentationIfStillActive(generation: request.generation)
+            throw failure.underlying
+        } catch {
+            pendingReservation.reservedFrame.drawingBuffer.discard()
+            failSoftwarePresentationIfStillActive(generation: request.generation)
+            throw error
+        }
 
-            guard !model.isClosed else {
-                try interpretPopupEffects(model.reduce(.transientStateReset))
-                drawingBuffer.discard()
-                return .skippedClosed
+        if result.outcome == .presented {
+            guard let stagedSuccess else {
+                preconditionFailure("Popup presentation committed without staged success")
             }
-
-            let preparedCommit: PreparedSurfaceFrameCommit
-            do {
-                preparedCommit = try prepareSurfaceFrameCommit(
-                    generation: request.generation,
-                    geometry: geometry,
-                    payload: .buffer(drawingBuffer.surfaceBuffer)
-                )
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .surfaceCommit(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            do {
-                try reserveSurfaceFrameCallback(generation: request.generation)
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .frameCallbackRequest(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            let stagedCommit: StagedSurfaceFrameCommit
-            let stagedSuccess: StagedPopupPresentationSuccess
-            do {
-                stagedCommit = try stageSurfaceFrameCommit(preparedCommit)
-                stagedSuccess = try PopupPresentationSuccessStagingContext(
-                    model: model,
-                    parentWindowID: parentWindowID
-                ).stage(
-                    generation: request.generation,
-                    bufferAvailability: try redrawBufferAvailability()
-                )
-            } catch {
-                pendingFrameRegistration = nil
-                cancelSurfaceFrameCallback()
-                drawingBuffer.discard()
-                throw error
-            }
-
-            _ = drawingBuffer.markBusy(commitGeneration: request.generation)
-            pendingFrameRegistration = requestReservedSurfaceFrameCallback { [weak self] in
-                self?.handleFrameDone()
-            }
-            commitSurfaceFrame(stagedCommit)
             model = stagedSuccess.model
             if stagedSuccess.publishesRedrawRequest {
                 onRedrawRequested?()
             }
             return .presented
-        } catch {
-            failPresentationIfStillActive(
-                generation: request.generation,
-                error: .surfaceCommit(String(describing: error))
+        }
+
+        try interpretSoftwarePresentationFollowUp(result.followUp)
+        return softwarePresentationOutcome(for: result.outcome)
+    }
+
+    package func cancelReservedSoftwareFrameOnOwnerThread(
+        _ reservation: SoftwareFrameReservation
+    ) {
+        connection.preconditionIsOwnerThread()
+        guard let pendingReservation = softwarePresentationCoordinator.cancel(reservation) else {
+            return
+        }
+        pendingReservation.reservedFrame.drawingBuffer.discard()
+        supersedeSoftwarePresentationIfStillActive(
+            generation: pendingReservation.request.generation
+        )
+    }
+
+    package func presentationFeedbackCommitRequestOnOwnerThread(
+        presentation: RawPresentation,
+        outputIDForPresentationSyncOutput: @escaping (RawOutputPointerIdentity) throws -> OutputID?,
+        onFeedback: @escaping (SurfacePresentationFeedback) -> Void
+    ) throws -> SurfacePresentationFeedbackCommitRequest {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { throw ClientError.display(.unknownPopup) }
+
+        let feedbackSurface = surface
+        let coordinator = presentationFeedbackCoordinator
+        let onFailure: (any Error) -> Void = { [weak self] error in
+            self?.reportCallbackFailure(operation: .presentationFeedback, error: error)
+        }
+        return SurfacePresentationFeedbackCommitRequest(
+            request: {
+                try coordinator.request(
+                    presentation: presentation,
+                    surface: feedbackSurface,
+                    outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
+                    onFeedback: onFeedback,
+                    onFailure: onFailure
+                )
+            },
+            cancel: { identity in
+                coordinator.cancel(identity)
+            }
+        )
+    }
+
+    package func requestPresentationFeedbackOnOwnerThread(
+        presentation: RawPresentation,
+        outputIDForPresentationSyncOutput:
+            @escaping (RawOutputPointerIdentity) throws -> OutputID?,
+        onFeedback: @escaping (SurfacePresentationFeedback) -> Void
+    ) throws -> SurfacePresentationIdentity {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else {
+            throw ClientError.display(.unknownPopup)
+        }
+
+        return try presentationFeedbackCoordinator.request(
+            presentation: presentation,
+            surface: surface,
+            outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
+            onFeedback: onFeedback
+        ) { [weak self] error in
+            self?.reportCallbackFailure(operation: .presentationFeedback, error: error)
+        }
+    }
+
+    package func cancelPresentationFeedbackOnOwnerThread(
+        _ identity: SurfacePresentationIdentity
+    ) {
+        connection.preconditionIsOwnerThread()
+        presentationFeedbackCoordinator.cancel(identity)
+    }
+
+    private func reserveSoftwareFrameForCurrentRedraw(
+        metadata: SurfaceFrameMetadata
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
+        let geometry = try currentGeometry()
+        try metadata.damage?.validate(within: geometry)
+        try SurfaceMetadataSupport.ensureObjectsInstalled(
+            for: metadata.surfaceCommitMetadata,
+            connection: connection,
+            surface: surface,
+            runtime: &surfaceRuntime
+        )
+        let currentBufferAvailability = try redrawBufferAvailability()
+        var presentationRequest: PopupPresentationRequest?
+        try interpretPopupEffects(
+            model.reduce(
+                .redrawRequestConsumed(bufferAvailability: currentBufferAvailability)
             )
+        ) { request in
+            presentationRequest = request
+            return .presented
+        }
+
+        guard let request = presentationRequest else {
+            return model.isClosed ? .closed : .deferred
+        }
+
+        try interpretPopupEffects(model.reduce(.presentationStarted(request)))
+
+        do {
+            let reservationID = softwarePresentationCoordinator.allocateIdentity()
+            let reservationResult = try softwarePresenter().reserve(
+                context: SoftwareSurfacePresentationContext(
+                    generation: request.generation,
+                    geometry: geometry,
+                    submitConstraints: .default,
+                    metadata: metadata.surfaceCommitMetadata,
+                    damage: metadata.damage,
+                    presentationFeedback: nil
+                ),
+                reservationID: reservationID,
+                runtime: &surfaceRuntime,
+                hasPendingFrameRegistration: pendingFrameRegistration != nil
+            )
+
+            if let followUp = reservationResult.followUp {
+                try interpretSoftwarePresentationFollowUp(followUp)
+            }
+            guard let reservedFrame = reservationResult.reservedFrame else {
+                return model.isClosed ? .closed : .deferred
+            }
+
+            softwarePresentationCoordinator.register(
+                PendingPopupSoftwareFrameReservation(
+                    request: request,
+                    geometry: geometry,
+                    reservedFrame: reservedFrame
+                ),
+                for: reservedFrame.reservation.reservationID
+            )
+            return .reserved(reservedFrame.reservation)
+        } catch let failure as SoftwareSurfacePresentationFailure {
+            failSoftwarePresentationIfStillActive(generation: request.generation)
+            throw failure.underlying
+        } catch {
+            failSoftwarePresentationIfStillActive(generation: request.generation)
             throw error
         }
     }
 
-    func interpretPresentationEffects(
-        _ effects: [PopupEffect],
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws -> RedrawOutcome {
-        var outcome = RedrawOutcome.skippedPendingFrame
-
-        for effect in effects {
-            switch effect {
-            case .performSoftwarePresent(let request):
-                outcome = try performSoftwarePresent(request, draw)
-            default:
-                try interpretPopupEffects([effect])
-            }
-        }
-
-        return effects.isEmpty ? .skippedPendingFrame : outcome
-    }
-
-    package func interpretPopupEffects(_ effects: [PopupEffect]) throws {
-        try WaylandClient.interpretPopupEffects(
-            effects,
-            parentWindowID: parentWindowID,
-            handlers: PopupEffectHandlers(
-                ackConfigure: { [self] serial in
-                    try acknowledgeSurfaceConfigure(serial: serial)
-                    xdgSurface.ackConfigure(serial: serial)
-                },
-                publishDismissed: { [self] _ in
-                    onDismissed?()
-                    onDismissed = nil
-                },
-                publishClosed: { [self] _ in
-                    onClosed?()
-                    onClosed = nil
-                },
-                publishRedrawRequested: { [self] _ in
-                    onRedrawRequested?()
-                },
-                cancelFrameCallback: { [self] in
-                    pendingFrameRegistration = nil
-                    cancelSurfaceFrameCallback()
-                },
-                retireSwapchain: { [self] in
-                    retireSwapchain()
-                },
-                destroyRoleObjects: { [self] in
-                    try destroyRoleObjects()
+    private func softwarePresenter() -> SoftwareSurfacePresenter {
+        SoftwareSurfacePresenter(
+            surface: surface,
+            scaleInstallation: scaleInstallation,
+            createSharedMemoryPool: { [self] bufferSize in
+                guard let globals = connection.boundGlobals else {
+                    throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
                 }
-            )
+                return try globals.sharedMemory.createPool(
+                    width: bufferSize.width.rawValue,
+                    height: bufferSize.height.rawValue,
+                    bufferCount: bufferCount.rawValue
+                ) { [weak self] in
+                    self?.handleBufferReleased()
+                }
+            },
+            isSurfaceClosed: { [weak self] in self?.model.isClosed ?? true },
+            onFrame: { [weak self] in self?.handleFrameDone() }
         )
     }
 
-    private func destroyRoleObjects() throws {
-        onClose?()
-        onClose = nil
-        onRedrawRequested = nil
+    private func currentGeometry() throws -> SurfaceGeometry {
+        try currentSurfaceGeometry()
+    }
 
-        destroyScaleResources()
-        try destroyRoleResources()
+    private func interpretSoftwarePresentationFollowUp(
+        _ followUp: SoftwareSurfacePresentationFollowUp?
+    ) throws {
+        guard let followUp else { return }
+
+        switch followUp {
+        case .fail(let generation, _):
+            failSoftwarePresentationIfStillActive(generation: generation)
+        case .blockedByBuffer:
+            try interpretPopupEffects(model.reduce(.presentationBlockedByBuffer))
+        case .resetTransientState:
+            guard case .drawing(let request) = model.presentation else { return }
+            supersedeSoftwarePresentationIfStillActive(generation: request.generation)
+        case .succeeded:
+            preconditionFailure(
+                "Popup software-presentation success must be installed from staging")
+        }
+    }
+
+    private func failSoftwarePresentationIfStillActive(generation: UInt64) {
+        supersedeSoftwarePresentationIfStillActive(generation: generation)
+    }
+
+    private func supersedeSoftwarePresentationIfStillActive(generation: UInt64) {
+        guard case .drawing(let request) = model.presentation,
+            request.generation == generation
+        else { return }
+
+        do {
+            try interpretPopupEffects(
+                model.reduce(
+                    .softwarePresentationSuperseded(
+                        generation: generation,
+                        bufferAvailability: try redrawBufferAvailability()
+                    )
+                )
+            )
+        } catch {
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
+        }
+    }
+
+    private func softwarePresentationOutcome(
+        for outcome: RedrawOutcome
+    ) -> SoftwarePresentationOutcome {
+        switch outcome {
+        case .presented:
+            return .presented
+        case .skippedClosed:
+            return .closed
+        case .skippedPendingFrame, .waitingForBuffer:
+            return .deferred
+        }
+    }
+
+    private func validateSurfaceFrameMetadataSupport(
+        _ metadata: SurfaceFrameMetadata
+    ) throws {
+        try SurfaceMetadataSupport.validate(
+            metadata,
+            connection: connection,
+            runtime: &surfaceRuntime
+        )
     }
 }

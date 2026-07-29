@@ -61,13 +61,13 @@ struct WaylandDisplayPublicIntegrationTests {
             let redrawEvent = try await displayEvent(
                 in: displayEvents,
                 matching: { event in
-                    event == .redrawRequested(window.id)
+                    event == .redrawRequested(.window(window.id))
                 },
                 after: {
                     try await window.requestRedraw()
                 }
             )
-            #expect(redrawEvent == .redrawRequested(window.id))
+            #expect(redrawEvent == .redrawRequested(.window(window.id)))
             #expect(try await window.needsRedraw)
 
             try await window.redraw { frame in
@@ -95,6 +95,36 @@ struct WaylandDisplayPublicIntegrationTests {
             try await redraw(popup, parent: window, events: displayEvents)
             try await close(popup, parent: window, events: displayEvents)
 
+            await window.close()
+        }
+    }
+
+    @Test
+    func invalidPopupDamageDoesNotPoisonFollowingPresentation() async throws {
+        try await withPublicConnection { display in
+            let window = try await display.createTopLevelWindow(
+                configuration: testWindowConfiguration()
+            )
+            try await show(window, color: 0x0020_2020)
+            let popup = try await window.createPopup(configuration: testPopupConfiguration())
+            let invalidRect = try LogicalRect(x: 65, y: 0, width: 1, height: 1)
+            let metadata = SurfaceFrameMetadata(
+                damage: try SurfaceDamageRegion([invalidRect])
+            )
+
+            do {
+                _ = try await popup.show(
+                    metadata: metadata,
+                    timeoutMilliseconds: publicIntegrationTimeoutMilliseconds,
+                    drawColor(0x0040_4040)
+                )
+                Issue.record("expected invalid popup damage")
+            } catch let error as SurfaceRegionError {
+                #expect(error == .damageRectangleOutOfBounds(invalidRect))
+            }
+
+            #expect(try await popup.show(drawColor(0x0050_5050)) == .presented)
+            await popup.close()
             await window.close()
         }
     }
@@ -151,7 +181,7 @@ func testWindowConfiguration() throws -> WindowConfiguration {
     )
 }
 
-private func testPopupConfiguration() throws -> PopupConfiguration {
+func testPopupConfiguration() throws -> PopupConfiguration {
     let anchorRect = try LogicalRect(x: 0, y: 0, width: 32, height: 32)
     let popupSize = try PositiveLogicalSize(width: 64, height: 48)
 
@@ -175,7 +205,13 @@ func show(_ window: Window, color: UInt32) async throws {
 
 private func show(_ popup: PopupSurface, color: UInt32) async throws {
     let timeout = publicIntegrationTimeoutMilliseconds
-    try await popup.show(timeoutMilliseconds: timeout, drawColor(color))
+    let outcome = try await popup.show(
+        requestPresentationFeedback: true,
+        timeoutMilliseconds: timeout,
+        preparing: { reservation in reservation.id },
+        { _, frame in fill(frame, color: color) }
+    )
+    #expect(outcome == .presented)
 }
 
 private struct PublicStreamSources: Sendable {
@@ -264,35 +300,32 @@ private func expectShownPopup(_ popup: PopupSurface) async throws {
 
 private func redraw(
     _ popup: PopupSurface,
-    parent window: Window,
+    parent _: Window,
     events displayEvents: DisplayEvents
 ) async throws {
     let redrawEvent = try await displayEvent(
         in: displayEvents,
         matching: { event in
-            isPopupLifecycleEvent(
-                event,
-                eventCase: .redrawRequested,
-                popup: popup.identity,
-                parentWindowID: window.id
-            )
+            event == .redrawRequested(.popup(popup.identity))
         },
         after: {
             try await popup.requestRedraw()
         }
     )
 
-    guard case .popupRedrawRequested(let lifecycleEvent) = redrawEvent else {
+    guard case .redrawRequested(.popup(let identity)) = redrawEvent else {
         Issue.record("Expected popup redraw event, got \(redrawEvent)")
         return
     }
-    #expect(lifecycleEvent.popup == popup.identity)
-    #expect(lifecycleEvent.parentWindowID == window.id)
+    #expect(identity == popup.identity)
     #expect(try await popup.needsRedraw)
 
-    try await popup.redraw { frame in
-        fill(frame, color: 0x0050_5050)
-    }
+    let outcome = try await popup.redraw(
+        requestPresentationFeedback: true,
+        preparing: { reservation in reservation.id },
+        { _, frame in fill(frame, color: 0x0050_5050) }
+    )
+    #expect(outcome == .presented)
 }
 
 private func close(
@@ -321,9 +354,8 @@ private func close(
     let closeEvent = try await displayEvent(
         in: displayEvents,
         matching: { event in
-            isPopupLifecycleEvent(
+            isPopupClosedEvent(
                 event,
-                eventCase: .closed,
                 popup: popup.identity,
                 parentWindowID: window.id
             )
@@ -343,26 +375,12 @@ private func close(
     #expect(try await popup.isClosed)
 }
 
-private enum PopupEventCase {
-    case redrawRequested
-    case closed
-}
-
-private func isPopupLifecycleEvent(
+private func isPopupClosedEvent(
     _ event: DisplayEvent,
-    eventCase expectedCase: PopupEventCase,
     popup expectedPopup: PopupSurfaceIdentity,
     parentWindowID expectedParentWindowID: WindowID
 ) -> Bool {
-    let lifecycleEvent: PopupLifecycleEvent
-    switch (expectedCase, event) {
-    case (.redrawRequested, .popupRedrawRequested(let event)):
-        lifecycleEvent = event
-    case (.closed, .popupClosed(let event)):
-        lifecycleEvent = event
-    case (.redrawRequested, _), (.closed, _):
-        return false
-    }
+    guard case .popupClosed(let lifecycleEvent) = event else { return false }
 
     return lifecycleEvent.popup == expectedPopup
         && lifecycleEvent.parentWindowID == expectedParentWindowID

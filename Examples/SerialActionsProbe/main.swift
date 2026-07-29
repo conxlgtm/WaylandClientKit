@@ -86,7 +86,7 @@ enum SerialActionsProbe {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
-            case .redrawRequested(let windowID) where windowID == window.id:
+            case .redrawRequested(.window(let windowID)) where windowID == window.id:
                 try await redrawIfNeeded(window: window, state: state)
             case .windowCloseRequested(let windowID) where windowID == window.id:
                 await window.close()

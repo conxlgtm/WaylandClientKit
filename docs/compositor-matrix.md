@@ -43,6 +43,7 @@ swift run --package-path Examples TabletInputSmoke -- --auto-close --print-summa
 swift run --package-path Examples CompositorSessionSmoke -- --auto-close --print-summary
 swift run --package-path Examples TextInputSmoke -- --auto-close --print-summary
 swift run --package-path Examples OutputTopologySmoke -- --auto-close --print-summary
+swift run --package-path Examples ManagedSurfacePresentationSmoke
 swift run --package-path Examples GPUPreviewSmokeClient
 swift run --package-path Examples GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
@@ -68,7 +69,8 @@ example or manual probe has been run:
 | partial damage | `DamageRegionSmoke` logical and mapped damage logs |
 | subsurface creation | `SubsurfaceSmoke` child creation and cleanup |
 | subsurface positioning | `SubsurfaceSmoke` movement logs |
-| subsurface sync/desync | `SubsurfaceSmoke` mode logs |
+| subsurface sync/desync | `ManagedSurfacePresentationSmoke` child-then-parent and child-only presentation logs |
+| managed surface presentation | `ManagedSurfacePresentationSmoke` window, popup, synchronized/desynchronized subsurface, redraw routing, feedback, and cleanup |
 | custom cursor image | `CustomCursorSmoke` custom/hidden/theme transitions |
 | cursor animation | `CursorAnimationSmoke` animated/theme/hidden/static/default transitions |
 | cursor scale policy | `CursorPolicySmoke` focused-output cursor scale logs |
@@ -111,6 +113,19 @@ active.
 | GNOME / Mutter | Fedora GNOME Wayland VM on `wayland-0`, 2026-06-11 | `wayland-info`: dmabuf v3, presentation v2, FIFO v1, commit timing v1, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, idle inhibit v1, system bell v1, xdg activation v1, color management v2, color representation v1, linux-drm-syncobj unavailable, top-level icon unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, and `swift run wck smoke gpu-preview` passed | GNOME VM integration smoke passed after Fedora Swift index-store/toolchain fixes | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported software fallback `surfaceFeedbackUnavailable` | Real GNOME/Mutter desktop-family evidence. Active GPU was not proven because surface dmabuf feedback was unavailable to the managed GPU path. |
 | KDE / KWin | KDE / plasma session, 2026-06-09 plus manual pointer/serial/data-transfer/managed-GPU-resize addendum on 2026-06-11 | `wayland-info`: dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon v1, idle inhibit v1, system bell v1, xdg activation v1, color metadata advertised, commit timing unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, `swift run wck smoke gpu-preview`, and individual auto-close feature examples passed | live integration smoke passed, `swift run wck ci check` was attempted but hung after building `wck` with no child process/output | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Active GPU presentation and managed GPU resize/reconfigure are proven for clear-frame submission on this run. Manual pointer lock/confine with relative motion is proven. Manual data-transfer drag-source/drop/read/finish is proven. Manual serial move/window-menu requests are proven, serial resize is proven through the managed GPU resize run and drag-source serial is proven through `DataTransferSmoke`. |
 | Sway / wlroots | nested Sway/wlroots under KDE/Plasma, 2026-06-09 | `wayland-info`: dmabuf v4, linux-drm-syncobj v1, presentation v2, text-input v3 v1, cursor-shape v1, pointer constraints v1, relative pointer v1, idle inhibit v1, xdg activation v1, content type/alpha/tearing metadata advertised, FIFO/color management/color representation/top-level icon/system bell unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, and `swift run wck smoke gpu-preview` passed inside nested Sway | nested integration smoke passed | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Nested wlroots evidence. Active GPU clear-frame submission was proven at 96x96, full bare-metal Sway evidence is still desirable. |
+
+## Managed Surface Presentation Evidence
+
+| Compositor | Date | Command | Result |
+| ---------- | ---- | ------- | ------ |
+| Weston 15.0.0 headless | 2026-07-28 | `ManagedSurfacePresentationSmoke` on the headless `wck-managed` socket | PASS: window, popup, synchronized subsurface, and desynchronized subsurface presented; all four produced presentation feedback; popup and both subsurfaces routed redraw events; popup explicit close and parent-close cascade cleaned up. |
+| KDE / KWin 6.6.6 (Plasma 6.6.6) | 2026-07-28 | `ManagedSurfacePresentationSmoke --skip-feedback --skip-redraw-routing` on `wayland-0` | PASS: popup-specific desktop presentation, synchronized and desynchronized subsurface presentation, popup explicit close, and parent-close cascade. KWin's bounded run used the compositor-evidence flags because feedback and paced replacement redraws did not complete inside the 20-second probe; those paths remain covered by Weston and public integration tests. |
+
+`ManagedSurfacePresentationSmoke --interactive-dismissal` waits for a compositor
+`popup_done` event after prompting for an outside click. The automated evidence
+rows above use explicit popup close; interactive dismissal can be recorded as an
+additional desktop observation without changing the bounded evidence mode that
+uses `--skip-feedback --skip-redraw-routing`.
 
 ## External Graphics Buffer Evidence
 

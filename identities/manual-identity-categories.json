@@ -15,6 +15,18 @@
       "storageVisibility": "public"
     },
     {
+      "type": "DataTransferOfferIdentity",
+      "category": "composite identity"
+    },
+    {
+      "type": "EventStreamIdentity",
+      "category": "public value identity"
+    },
+    {
+      "type": "ManagedSurfaceIdentity",
+      "category": "composite identity"
+    },
+    {
       "type": "PointerConstraintID",
       "category": "client identity",
       "constructor": "package",
@@ -34,6 +46,10 @@
       "constructor": "package",
       "storage": "submissionID",
       "storageVisibility": "public"
+    },
+    {
+      "type": "WindowStateToken",
+      "category": "public value identity"
     }
   ]
 }

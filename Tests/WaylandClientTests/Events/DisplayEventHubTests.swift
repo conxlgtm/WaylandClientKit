@@ -11,9 +11,9 @@ struct DisplayEventHubTests {
         let stream = hub.displayEvents()
         var iterator = stream.makeAsyncIterator()
 
-        hub.publish(.redrawRequested(windowID))
+        hub.publish(.redrawRequested(.window(windowID)))
 
-        await expectNext(.redrawRequested(windowID), from: &iterator)
+        await expectNext(.redrawRequested(.window(windowID)), from: &iterator)
     }
 
     @Test
@@ -273,7 +273,7 @@ struct DisplayEventHubFailureTests {
         var inputIterator = hub.inputEvents().makeAsyncIterator()
 
         hub.publishInput(inputEvent)
-        hub.publish(.redrawRequested(WindowID(rawValue: 9)))
+        hub.publish(.redrawRequested(.window(WindowID(rawValue: 9))))
 
         await expectNext(.input(inputEvent), from: &displayIterator)
         await expectNext(
@@ -290,7 +290,10 @@ struct DisplayEventHubFailureTests {
             .inputPipelineOverflow(overflow),
             from: &inputIterator
         )
-        await expectNext(.redrawRequested(WindowID(rawValue: 9)), from: &displayIterator)
+        await expectNext(
+            .redrawRequested(.window(WindowID(rawValue: 9))),
+            from: &displayIterator
+        )
     }
 
     @Test

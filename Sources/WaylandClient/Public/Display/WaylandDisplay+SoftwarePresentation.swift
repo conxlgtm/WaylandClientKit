@@ -40,7 +40,7 @@ extension WaylandDisplay {
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
         metadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         guard let core = coreIfActive() else { return .closed }
         return try core.reserveSoftwareFrameForShow(
             windowID,
@@ -84,7 +84,7 @@ extension WaylandDisplay {
     package func reserveSoftwareFrameForRedraw(
         _ windowID: WindowID,
         metadata frameMetadata: SurfaceFrameMetadata = .default
-    ) throws -> WindowSoftwareFrameReservationOutcome {
+    ) throws -> SoftwareSurfaceFrameReservationOutcome {
         guard let core = coreIfActive() else { return .closed }
         return try core.reserveSoftwareFrameForRedraw(
             windowID,

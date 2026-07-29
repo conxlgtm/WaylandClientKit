@@ -2,7 +2,6 @@ import Foundation
 import WaylandRaw
 import WaylandRuntime
 
-// swiftlint:disable:next type_body_length
 public actor WaylandDisplay {
     public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
     public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000
@@ -154,25 +153,6 @@ public actor WaylandDisplay {
         configuration popupConfiguration: PopupConfiguration
     ) throws -> PopupID {
         try requireCore().createPopup(parent: windowID, configuration: popupConfiguration)
-    }
-
-    package func showPopup(
-        _ popupID: PopupID,
-        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMilliseconds,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try requireCore().showPopup(
-            popupID,
-            timeoutMilliseconds: timeoutMilliseconds,
-            draw
-        )
-    }
-
-    package func redrawPopup(
-        _ popupID: PopupID,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try requireCore().redrawPopup(popupID, draw)
     }
 
     package func windowIsClosed(_ windowID: WindowID) throws -> Bool {

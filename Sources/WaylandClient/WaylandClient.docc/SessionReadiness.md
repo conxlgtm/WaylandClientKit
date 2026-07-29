@@ -26,7 +26,7 @@ Local restoration state does not require a compositor session-management
 protocol. It does depend on normal window lifecycle:
 
 - create a toplevel through ``WaylandDisplay/createTopLevelWindow(configuration:)``
-- wait for the initial configure by calling ``Window/show(timeoutMilliseconds:_:)``
+- wait for the initial configure by calling `Window.show(metadata:requestPresentationFeedback:timeoutMilliseconds:_:)`
 - capture ``Window/restorationSnapshot`` after configure
 
 Activation is optional and capability-gated by

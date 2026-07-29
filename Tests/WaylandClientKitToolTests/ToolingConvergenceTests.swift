@@ -189,6 +189,7 @@ struct ToolingConvergenceTests {
         #expect(ExampleBuilder.targets.contains("GraphicsPreviewColorMetadataSmoke"))
         #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferSmoke"))
         #expect(ExampleBuilder.targets.contains("KeyboardShortcutsInhibitSmoke"))
+        #expect(ExampleBuilder.targets.contains("ManagedSurfacePresentationSmoke"))
         #expect(ExampleBuilder.targets.contains("OutputManagementSmoke"))
         #expect(ExampleBuilder.targets.contains("OutputTopologySmoke"))
         #expect(ExampleBuilder.targets.contains("PointerGesturesSmoke"))
@@ -198,7 +199,7 @@ struct ToolingConvergenceTests {
         #expect(ExampleBuilder.targets.contains("TabletInputSmoke"))
         #expect(ExampleBuilder.targets.contains("ToplevelDragSmoke"))
         #expect(ExampleBuilder.targets.contains("WaylandClientKitDemo"))
-        #expect(ExampleBuilder.targets.count == 36)
+        #expect(ExampleBuilder.targets.count == 37)
     }
 
     @Test

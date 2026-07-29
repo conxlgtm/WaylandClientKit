@@ -6,6 +6,9 @@
 
     @testable import WaylandClient
 
+    // Request-path helpers remain colocated so every raw recorder uses the same
+    // serialized lifecycle and teardown boundary.
+    // swiftlint:disable type_body_length
     @Suite(
         .enabled(
             if: SubsurfaceRequestTestEnvironment.isEnabled,
@@ -38,8 +41,12 @@
                 let probe = try await installParentCommitProbe(in: display, for: window)
                 probe.reset()
 
-                try await subsurface.show(drawSolid)
+                let outcome = try await subsurface.show(
+                    requestPresentationFeedback: true,
+                    drawSolid
+                )
 
+                #expect(outcome == .presented)
                 #expect(probe.count == 1)
                 await subsurface.close()
             }
@@ -54,10 +61,65 @@
                 let probe = try await installParentCommitProbe(in: display, for: window)
                 probe.reset()
 
-                try await subsurface.show(drawSolid)
+                let outcome = try await subsurface.show(drawSolid)
 
+                #expect(outcome == .presented)
                 #expect(probe.isEmpty)
                 await subsurface.close()
+            }
+        }
+
+        @Test
+        func synchronizationModeChangeDuringPreparationSupersedesWithoutParentCommit() async throws
+        {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration(synchronizationMode: .synchronized)
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+                let gate = SubsurfacePreparationGate()
+
+                async let staleOutcome = subsurface.show(
+                    preparing: { reservation in
+                        await gate.suspendPreparation()
+                        return reservation.id
+                    },
+                    { _, _ in throw UnexpectedSubsurfaceDraw() }
+                )
+                await gate.waitUntilSuspended()
+                try await subsurface.setDesynchronized()
+                await gate.resumePreparation()
+
+                #expect(try await staleOutcome == .superseded)
+                #expect(probe.isEmpty)
+                #expect(try await subsurface.needsRedraw)
+                await subsurface.close()
+            }
+        }
+
+        @Test
+        func preparationFailureReleasesSingleBufferReservation() async throws {
+            try await withSubsurfaceConnection { _, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: try subsurfaceConfiguration(
+                        bufferCount: PositiveInt(unchecked: 1)
+                    )
+                )
+
+                do {
+                    _ = try await subsurface.show(
+                        preparing: { _ -> Int in throw InjectedPreparationFailure() },
+                        { _, frame in drawSolid(frame) }
+                    )
+                    Issue.record("expected preparation failure")
+                } catch is InjectedPreparationFailure {
+                    // The original error remains observable after cancellation cleanup.
+                }
+
+                #expect(try await subsurface.show(drawSolid) == .presented)
+                await subsurface.close()
+                await window.close()
             }
         }
 
@@ -287,11 +349,13 @@
     }
 
     private func subsurfaceConfiguration(
+        bufferCount: PositiveInt = SubsurfaceConfiguration.defaultBufferCount,
         synchronizationMode: SubsurfaceSynchronizationMode = .synchronized
     ) throws -> SubsurfaceConfiguration {
         SubsurfaceConfiguration(
             position: LogicalOffset(x: 8, y: 8),
             size: try PositiveLogicalSize(width: 48, height: 48),
+            bufferCount: bufferCount,
             synchronizationMode: synchronizationMode
         )
     }
@@ -381,6 +445,35 @@
         }
     }
 
+    private actor SubsurfacePreparationGate {
+        private var isSuspended = false
+        private var suspensionWaiters: [CheckedContinuation<Void, Never>] = []
+        private var resumeContinuation: CheckedContinuation<Void, Never>?
+
+        func suspendPreparation() async {
+            isSuspended = true
+            let waiters = suspensionWaiters
+            suspensionWaiters.removeAll()
+            for waiter in waiters {
+                waiter.resume()
+            }
+            await withCheckedContinuation { resumeContinuation = $0 }
+        }
+
+        func waitUntilSuspended() async {
+            guard !isSuspended else { return }
+            await withCheckedContinuation { suspensionWaiters.append($0) }
+        }
+
+        func resumePreparation() {
+            resumeContinuation?.resume()
+            resumeContinuation = nil
+        }
+    }
+
+    private struct UnexpectedSubsurfaceDraw: Error {}
+    private struct InjectedPreparationFailure: Error {}
+
     private enum SubsurfaceRequestTestEnvironment {
         static var isEnabled: Bool {
             let environment = ProcessInfo.processInfo.environment
@@ -389,5 +482,7 @@
                 && environment["WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS"] == "1"
         }
     }
+
+// swiftlint:enable type_body_length
 
 #endif

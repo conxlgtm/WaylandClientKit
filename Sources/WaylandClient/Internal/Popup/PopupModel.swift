@@ -1,68 +1,3 @@
-package enum PopupEvent: Equatable, Sendable {
-    case initialCommitSent
-    case configureReceived(PopupConfigureSequence)
-    case contentInvalidated(bufferAvailability: RedrawBufferAvailability)
-    case frameBecameReady(bufferAvailability: RedrawBufferAvailability)
-    case bufferBecameAvailable(bufferAvailability: RedrawBufferAvailability)
-    case redrawRequestConsumed(bufferAvailability: RedrawBufferAvailability)
-    case redrawRequestCanceled(bufferAvailability: RedrawBufferAvailability)
-    case presentationStarted(PopupPresentationRequest)
-    case presentationBlockedByBuffer
-    case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
-    case presentationFailed(generation: UInt64, PresentationError)
-    case explicitClose
-    case compositorDismissed
-    case transientStateReset
-}
-
-package enum PopupEffect: Equatable, Sendable {
-    case ackConfigure(UInt32)
-    case publishDismissed(PopupLifecycleEvent)
-    case publishClosed(PopupLifecycleEvent)
-    case publishRedrawRequested(PopupLifecycleEvent)
-    case cancelFrameCallback
-    case performSoftwarePresent(PopupPresentationRequest)
-    case retireSwapchain
-    case destroyRoleObjects
-}
-
-package struct PopupPresentationRequest: Equatable, Sendable {
-    package let generation: UInt64
-    package let placement: PopupPlacement
-
-    var summary: PopupPresentationRequestSummary {
-        PopupPresentationRequestSummary(generation: generation, placement: placement)
-    }
-}
-
-package typealias PopupPresentationState = PresentationState<PopupPresentationRequest>
-
-package enum PopupLifecycle: Equatable, Sendable, CustomStringConvertible {
-    case created
-    case waitingForInitialConfigure
-    case active(ActivePopupState)
-    case destroyed
-
-    package var description: String {
-        switch self {
-        case .created:
-            "created"
-        case .waitingForInitialConfigure:
-            "waitingForInitialConfigure"
-        case .active:
-            "active"
-        case .destroyed:
-            "destroyed"
-        }
-    }
-}
-
-package struct ActivePopupState: Equatable, Sendable {
-    package var placement: PopupPlacement
-    var redraw = WindowRedrawState()
-    package var presentation = PopupPresentationState.idle
-}
-
 package struct PopupModel: Equatable, Sendable {
     package let id: PopupID
     package let parentWindowID: WindowID
@@ -108,6 +43,14 @@ package struct PopupModel: Equatable, Sendable {
         activeState?.presentation ?? .idle
     }
 
+    package func isCurrentSoftwarePresentation(_ request: PopupPresentationRequest) -> Bool {
+        guard case .active(let activeState) = lifecycle else { return false }
+
+        return activeState.presentation == .drawing(request: request)
+            && activeState.placement == request.placement
+            && activeState.redraw.generationForCurrentDraw == request.generation
+    }
+
     // swiftlint:disable:next cyclomatic_complexity
     package mutating func reduce(_ event: PopupEvent) throws -> [PopupEffect] {
         switch event {
@@ -129,6 +72,11 @@ package struct PopupModel: Equatable, Sendable {
             return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer:
             return try reducePresentationBlockedByBuffer()
+        case .softwarePresentationSuperseded(let generation, let bufferAvailability):
+            return try reduceSoftwarePresentationSuperseded(
+                generation: generation,
+                bufferAvailability: bufferAvailability
+            )
         case .presentationSucceeded(let generation, let bufferAvailability):
             return try reducePresentationSucceeded(
                 generation: generation,
@@ -217,9 +165,14 @@ extension PopupModel {
         nextActiveState.placement = sequence.placement
 
         var effects: [PopupEffect] = [.ackConfigure(sequence.serial)]
+        let redrawAvailability: RedrawBufferAvailability =
+            nextActiveState.presentation.isIdle ? .available : .unavailable
         effects.append(
             contentsOf: mapRedrawEffects(
-                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available)
+                nextActiveState.redraw.reduce(
+                    .contentInvalidated,
+                    bufferAvailability: redrawAvailability
+                )
             )
         )
         lifecycle = .active(nextActiveState)
@@ -315,6 +268,26 @@ extension PopupModel {
         }
     }
 
+    private mutating func reduceSoftwarePresentationSuperseded(
+        generation: UInt64,
+        bufferAvailability: RedrawBufferAvailability
+    ) throws -> [PopupEffect] {
+        let windowID = parentWindowID
+        let event = lifecycleEvent
+        return try transitionActivePopupState { activeState in
+            try Self.requireActivePresentation(
+                generation: generation,
+                in: activeState,
+                windowID: windowID
+            )
+            activeState.presentation = .idle
+            let redrawEffects = activeState.redraw.supersedeSoftwarePresentation(
+                bufferAvailability: bufferAvailability
+            )
+            return Self.mapRedrawEffects(redrawEffects, event: event)
+        }
+    }
+
     private mutating func reducePresentationSucceeded(
         generation: UInt64,
         bufferAvailability: RedrawBufferAvailability
@@ -361,8 +334,12 @@ extension PopupModel {
         guard !isClosed else { return [] }
         let lifecycleEvent = lifecycleEvent
         return updateActivePopupStateIfPresent { activeState in
-            Self.mapRedrawEffects(
-                activeState.redraw.reduce(event, bufferAvailability: bufferAvailability),
+            let redrawAvailability =
+                event == .contentInvalidated && !activeState.presentation.isIdle
+                ? RedrawBufferAvailability.unavailable
+                : bufferAvailability
+            return Self.mapRedrawEffects(
+                activeState.redraw.reduce(event, bufferAvailability: redrawAvailability),
                 event: lifecycleEvent
             )
         }

@@ -18,22 +18,6 @@ extension WaylandDisplay {
         )
     }
 
-    package func showSubsurface(
-        _ subsurfaceID: SubsurfaceID,
-        damage: SurfaceDamageRegion?,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try requireCore().showSubsurface(subsurfaceID, damage: damage, draw)
-    }
-
-    package func redrawSubsurface(
-        _ subsurfaceID: SubsurfaceID,
-        damage: SurfaceDamageRegion?,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try requireCore().redrawSubsurface(subsurfaceID, damage: damage, draw)
-    }
-
     package func requestSubsurfaceRedraw(_ subsurfaceID: SubsurfaceID) throws {
         try requireCore().requestSubsurfaceRedraw(subsurfaceID)
     }

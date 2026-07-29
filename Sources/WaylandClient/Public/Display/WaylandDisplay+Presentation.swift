@@ -1,7 +1,7 @@
 extension WaylandDisplay {
-    package nonisolated func windowPresentationEvents(
-        for windowID: WindowID
-    ) -> WindowPresentationEvents {
-        lifetimeAnchor.eventHub.windowPresentationEvents(windowID: windowID)
+    package nonisolated func managedSurfacePresentationEvents(
+        for surface: ManagedSurfaceIdentity
+    ) -> ManagedSurfacePresentationEvents {
+        lifetimeAnchor.eventHub.managedSurfacePresentationEvents(surface: surface)
     }
 }

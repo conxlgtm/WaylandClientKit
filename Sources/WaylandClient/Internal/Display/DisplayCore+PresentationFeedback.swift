@@ -11,7 +11,10 @@ extension DisplayCore {
                 },
                 onFeedback: { [weak self] feedback in
                     self?.eventHub.publishPresentation(
-                        WindowPresentationEvent(windowID: windowID, feedback: feedback)
+                        ManagedSurfacePresentationEvent(
+                            surface: .window(windowID),
+                            feedback: feedback
+                        )
                     )
                 }
             )
@@ -23,12 +26,12 @@ extension DisplayCore {
         windowID: WindowID,
         isRequested: Bool,
         onFeedback: (@Sendable (SurfacePresentationFeedback) -> Void)? = nil
-    ) throws -> WindowPresentationFeedbackCommitRequest? {
+    ) throws -> SurfacePresentationFeedbackCommitRequest? {
         guard isRequested else { return nil }
 
         let session = try requireSession()
         let presentation = try session.presentationOnOwnerThread()
-        return WindowPresentationFeedbackCommitRequest(
+        return SurfacePresentationFeedbackCommitRequest(
             request: {
                 try window.requestPresentationFeedbackOnOwnerThread(
                     presentation: presentation,
@@ -37,8 +40,8 @@ extension DisplayCore {
                     },
                     onFeedback: { [weak self] feedback in
                         self?.eventHub.publishPresentation(
-                            WindowPresentationEvent(
-                                windowID: windowID,
+                            ManagedSurfacePresentationEvent(
+                                surface: .window(windowID),
                                 feedback: feedback
                             )
                         )
@@ -48,6 +51,56 @@ extension DisplayCore {
             },
             cancel: { identity in
                 window.cancelPresentationFeedbackOnOwnerThread(identity)
+            }
+        )
+    }
+
+    func presentationFeedbackCommitRequest(
+        for popup: PopupRoleSurface,
+        popupID: PopupID,
+        isRequested: Bool
+    ) throws -> SurfacePresentationFeedbackCommitRequest? {
+        guard isRequested else { return nil }
+
+        let session = try requireSession()
+        let presentation = try session.presentationOnOwnerThread()
+        return try popup.presentationFeedbackCommitRequestOnOwnerThread(
+            presentation: presentation,
+            outputIDForPresentationSyncOutput: { output in
+                try session.outputIDForPresentationSyncOutput(output)
+            },
+            onFeedback: { [weak self] feedback in
+                self?.eventHub.publishPresentation(
+                    ManagedSurfacePresentationEvent(
+                        surface: .popup(PopupSurfaceIdentity(popupID)),
+                        feedback: feedback
+                    )
+                )
+            }
+        )
+    }
+
+    func presentationFeedbackCommitRequest(
+        for subsurface: SubsurfaceRoleSurface,
+        subsurfaceID: SubsurfaceID,
+        isRequested: Bool
+    ) throws -> SurfacePresentationFeedbackCommitRequest? {
+        guard isRequested else { return nil }
+
+        let session = try requireSession()
+        let presentation = try session.presentationOnOwnerThread()
+        return try subsurface.presentationFeedbackCommitRequestOnOwnerThread(
+            presentation: presentation,
+            outputIDForPresentationSyncOutput: { output in
+                try session.outputIDForPresentationSyncOutput(output)
+            },
+            onFeedback: { [weak self] feedback in
+                self?.eventHub.publishPresentation(
+                    ManagedSurfacePresentationEvent(
+                        surface: .subsurface(SubsurfaceIdentity(subsurfaceID)),
+                        feedback: feedback
+                    )
+                )
             }
         )
     }

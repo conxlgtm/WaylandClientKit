@@ -77,6 +77,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "ManagedSurfacePresentationSmoke",
+            dependencies: [.product(name: "WaylandClient", package: "WaylandClientKit")],
+            path: "ManagedSurfacePresentationSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "PresentationFeedbackAnimation",
             dependencies: [
                 .product(name: "WaylandClient", package: "WaylandClientKit"),

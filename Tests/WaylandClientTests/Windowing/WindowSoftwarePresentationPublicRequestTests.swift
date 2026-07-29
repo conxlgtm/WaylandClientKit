@@ -222,8 +222,8 @@
                     }
                 )
                 Issue.record("expected draw failure")
-            } catch let failure as WindowSoftwareDrawFailure {
-                #expect(failure.underlying is InjectedSoftwareDrawFailure)
+            } catch is InjectedSoftwareDrawFailure {
+                // The original draw error must remain observable.
             }
         }
     }
@@ -305,7 +305,7 @@
                 var iterator = displayEvents.makeAsyncIterator()
                 try await trigger()
                 while let event = try await iterator.next() {
-                    if event == .redrawRequested(window.id) {
+                    if event == .redrawRequested(.window(window.id)) {
                         return event
                     }
                 }

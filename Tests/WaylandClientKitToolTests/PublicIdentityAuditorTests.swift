@@ -43,6 +43,7 @@ struct PublicIdentityAuditorTests {
             encoding: .utf8
         )
         #expect(report.contains("| `FixtureID` | client identity | `package` |"))
+        #expect(report.contains("| `FixtureIdentity` | composite identity | — | — | — |"))
         #expect(report.contains("| `PreviewFixtureID` | client identity | `package` |"))
 
         try fixtureSource(constructor: "public").write(
@@ -67,6 +68,10 @@ struct PublicIdentityAuditorTests {
               "storageVisibility": "package"
             },
             {
+              "type": "FixtureIdentity",
+              "category": "composite identity"
+            },
+            {
               "type": "PreviewFixtureID",
               "category": "client identity",
               "constructor": "package",
@@ -86,6 +91,10 @@ struct PublicIdentityAuditorTests {
             \(constructor) init(rawValue: UInt64) {
                 self.rawValue = rawValue
             }
+        }
+
+        public enum FixtureIdentity {
+            case fixture(FixtureID)
         }
         """
     }

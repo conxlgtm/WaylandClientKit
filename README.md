@@ -22,8 +22,8 @@ Both products are baseline and audit tracked under the
 
 Current public coverage includes:
 
-- display, window, popup, dialog, and subsurface lifecycle
-- software drawing, damage, scale, regions, and presentation feedback
+- display and managed window, popup, dialog, and subsurface lifecycle
+- transactional software drawing, damage, scale, regions, and presentation feedback
 - pointer, keyboard, touch, tablet, gesture, cursor, and text input
 - clipboard, primary selection, and drag-and-drop
 - desktop and output integration

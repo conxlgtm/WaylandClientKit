@@ -4,7 +4,7 @@ Connect to a Wayland compositor from Swift and build client-side Linux GUI
 substrate code.
 
 WaylandClientKit's public `WaylandClient` API covers display connection lifetime,
-window and popup surfaces, software rendering through shared memory, input
+window, popup, and subsurface roles, software rendering through shared memory, input
 events, keyboard interpretation, relative pointer and pointer constraints,
 pointer gestures, pointer warp requests, tablet input, cursor requests, data
 transfer, text-input sessions, XDG activation, desktop relationship hints,
@@ -31,9 +31,10 @@ targets.
 - ``WaylandCapabilities``
 - ``ProtocolAvailability``
 
-### Windows And Popups
+### Managed Surfaces
 
-- <doc:WindowDrawing>
+- <doc:ManagedSurfaceDrawing>
+- <doc:ManagedSurfacePresentationMigration>
 - <doc:SurfaceRegionsAndDamage>
 - <doc:Subsurfaces>
 - <doc:SessionReadiness>
@@ -57,6 +58,7 @@ targets.
 - ``SurfaceColorRepresentation``
 - ``SurfaceColorAlphaMode``
 - ``SurfaceFrameMetadataError``
+- ``ManagedSurfaceIdentity``
 - ``SurfaceGeometry``
 - ``SurfaceScale``
 - ``OutputSnapshot``
@@ -154,8 +156,10 @@ targets.
 ### Presentation
 
 - <doc:PresentationFeedbackAndFrameCallbacks>
-- ``WindowPresentationEvents``
-- ``WindowPresentationEvent``
+- ``ManagedSurfacePresentationEvents``
+- ``ManagedSurfacePresentationEvent``
+- ``SurfacePresentationFeedback``
+- ``SurfacePresentationIdentity``
 - ``PresentationFeedback``
 
 ### Diagnostics

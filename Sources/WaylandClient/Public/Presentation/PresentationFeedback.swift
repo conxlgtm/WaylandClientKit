@@ -68,73 +68,83 @@ public struct PresentationFeedback: Equatable, Sendable {
     }
 }
 
-public struct WindowPresentationEvent: Equatable, Sendable {
-    public let windowID: WindowID
+/// Presentation feedback correlated to its managed surface.
+public struct ManagedSurfacePresentationEvent: Equatable, Sendable {
+    /// The window, popup, or subsurface that owned the committed feedback request.
+    public let surface: ManagedSurfaceIdentity
+    /// The compositor's result for the committed request.
     public let feedback: SurfacePresentationFeedback
 
+    /// Creates a managed-surface presentation event.
     public init(
-        windowID eventWindowID: WindowID,
+        surface eventSurface: ManagedSurfaceIdentity,
         feedback eventFeedback: SurfacePresentationFeedback
     ) {
-        windowID = eventWindowID
+        surface = eventSurface
         feedback = eventFeedback
     }
 }
 
-/// A window-scoped presentation-feedback convenience stream.
+/// A managed-surface-scoped presentation-feedback convenience stream.
 ///
-/// This stream preserves presentation order for its window, but not ordering
+/// This stream preserves presentation order for its surface, but not ordering
 /// relative to other event families. Use ``DisplayEvents`` when cross-family
-/// ordering matters.
+/// ordering matters. Closing the selected surface cancels its outstanding
+/// feedback but does not finish this display-owned sequence. Closing the display
+/// drains already-published feedback and then finishes the sequence.
 @safe
-public struct WindowPresentationEvents: AsyncSequence, Sendable {
+public struct ManagedSurfacePresentationEvents: AsyncSequence, Sendable {
     public typealias Element = SurfacePresentationFeedback
     public typealias Failure = WaylandDisplayError
 
-    private let windowID: WindowID
-    private let subscriptions: InternalEventSubscriptionFactory<WindowPresentationEvent>
+    private let surface: ManagedSurfaceIdentity
+    private let subscriptions: InternalEventSubscriptionFactory<ManagedSurfacePresentationEvent>
 
     package init(
-        windowID eventsWindowID: WindowID,
-        subscriptions eventSubscriptions: InternalEventSubscriptionFactory<WindowPresentationEvent>
+        surface eventsSurface: ManagedSurfaceIdentity,
+        subscriptions eventSubscriptions:
+            InternalEventSubscriptionFactory<ManagedSurfacePresentationEvent>
     ) {
-        windowID = eventsWindowID
+        surface = eventsSurface
         subscriptions = eventSubscriptions
     }
 
-    public func makeAsyncIterator() -> WindowPresentationEventsIterator {
-        WindowPresentationEventsIterator(
-            windowID: windowID,
+    public func makeAsyncIterator() -> ManagedSurfacePresentationEventsIterator {
+        ManagedSurfacePresentationEventsIterator(
+            surface: surface,
             base: subscriptions.makeAsyncIterator()
         )
     }
 }
 
+/// An iterator over presentation feedback for one managed surface.
 @safe
-public struct WindowPresentationEventsIterator: AsyncIteratorProtocol {
+public struct ManagedSurfacePresentationEventsIterator: AsyncIteratorProtocol {
     public typealias Element = SurfacePresentationFeedback
     public typealias Failure = WaylandDisplayError
 
-    private let windowID: WindowID
-    private var base: InternalEventSubscriptionIterator<WindowPresentationEvent>
+    private let surface: ManagedSurfaceIdentity
+    private var base: InternalEventSubscriptionIterator<ManagedSurfacePresentationEvent>
 
     package init(
-        windowID iteratorWindowID: WindowID,
-        base iterator: InternalEventSubscriptionIterator<WindowPresentationEvent>
+        surface iteratorSurface: ManagedSurfaceIdentity,
+        base iterator: InternalEventSubscriptionIterator<ManagedSurfacePresentationEvent>
     ) {
-        windowID = iteratorWindowID
+        surface = iteratorSurface
         base = iterator
     }
 
+    /// Returns the next feedback result for the selected surface.
     public mutating func next() async throws(WaylandDisplayError) -> SurfacePresentationFeedback? {
         try await next(isolation: nil)
     }
 
+    /// Returns the next result while preserving the caller's isolation context.
     public mutating func next(
         isolation actor: isolated (any Actor)?
     ) async throws(WaylandDisplayError) -> SurfacePresentationFeedback? {
         while let event = try await base.next(isolation: actor) {
-            guard event.windowID == windowID else { continue }
+            guard event.surface == surface else { continue }
             return event.feedback
         }
 

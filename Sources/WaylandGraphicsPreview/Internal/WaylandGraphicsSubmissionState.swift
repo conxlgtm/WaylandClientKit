@@ -2,7 +2,7 @@ import WaylandClient
 
 package enum WaylandGraphicsErrorMapper {
     package static func callerDrawError(from error: any Error) -> (any Error)? {
-        guard let drawFailure = error as? WindowSoftwareDrawFailure else {
+        guard let drawFailure = error as? SoftwareSurfaceDrawFailure else {
             return nil
         }
 

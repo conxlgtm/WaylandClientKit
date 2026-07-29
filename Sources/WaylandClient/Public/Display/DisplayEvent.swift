@@ -3,8 +3,7 @@ public enum DisplayEvent: Equatable, Sendable {
     case windowClosed(WindowID)
     case popupDismissed(PopupLifecycleEvent)
     case popupClosed(PopupLifecycleEvent)
-    case redrawRequested(WindowID)
-    case popupRedrawRequested(PopupLifecycleEvent)
+    case redrawRequested(ManagedSurfaceIdentity)
     case outputChanged(OutputSnapshot)
     case outputRemoved(OutputID)
     case windowOutputsChanged(WindowOutputMembershipEvent)
@@ -13,7 +12,7 @@ public enum DisplayEvent: Equatable, Sendable {
     case input(InputEvent)
     case textInput(TextInputEvent)
     case dataTransfer(DataTransferEvent)
-    case presentation(WindowPresentationEvent)
+    case presentation(ManagedSurfacePresentationEvent)
     case diagnostic(DisplayDiagnostic)
 }
 
@@ -118,13 +117,18 @@ package struct InternalEventSubscription<Element: Sendable>: Sendable {
 @safe
 package struct InternalEventSubscriptionFactory<Element: Sendable>: Sendable {
     private let broker: TypedEventBroker<Element>
+    private let includes: @Sendable (Element) -> Bool
 
-    init(_ eventBroker: TypedEventBroker<Element>) {
+    init(
+        _ eventBroker: TypedEventBroker<Element>,
+        where eventFilter: @escaping @Sendable (Element) -> Bool = { _ in true }
+    ) {
         broker = eventBroker
+        includes = eventFilter
     }
 
     package func makeAsyncIterator() -> InternalEventSubscriptionIterator<Element> {
-        broker.subscribe().makeAsyncIterator()
+        broker.subscribe(where: includes).makeAsyncIterator()
     }
 }
 

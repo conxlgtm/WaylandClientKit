@@ -81,7 +81,7 @@ enum CursorPolicySmoke {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
-            case .redrawRequested(let windowID) where windowID == window.id:
+            case .redrawRequested(.window(let windowID)) where windowID == window.id:
                 try await redraw(window)
             case .windowOutputsChanged(let outputs) where outputs.windowID == window.id:
                 log("window outputs=\(outputs.outputs)")

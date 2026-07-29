@@ -3,7 +3,7 @@ public struct Subsurface: Sendable, Hashable, Identifiable {
     public let id: SubsurfaceIdentity
     public let parentWindowID: WindowID
 
-    private let display: WaylandDisplay
+    package let display: WaylandDisplay
     private let ownership: DisplayOwnedIdentity<SubsurfaceID>
 
     package init(
@@ -26,34 +26,12 @@ public struct Subsurface: Sendable, Hashable, Identifiable {
         ownership.isOwned(by: owningDisplay)
     }
 
-    public func show(
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.showSubsurface(subsurfaceID, damage: nil, draw)
-    }
-
-    public func show(
-        damage: SurfaceDamageRegion?,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.showSubsurface(subsurfaceID, damage: damage, draw)
-    }
-
-    public func redraw(
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.redrawSubsurface(subsurfaceID, damage: nil, draw)
-    }
-
-    public func redraw(
-        damage: SurfaceDamageRegion?,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) async throws {
-        try await display.redrawSubsurface(subsurfaceID, damage: damage, draw)
-    }
-
     public func requestRedraw() async throws {
         try await display.requestSubsurfaceRedraw(subsurfaceID)
+    }
+
+    public var presentationEvents: ManagedSurfacePresentationEvents {
+        display.managedSurfacePresentationEvents(for: .subsurface(id))
     }
 
     public func setInputRegion(_ region: SurfaceRegion?) async throws {

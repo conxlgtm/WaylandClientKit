@@ -88,6 +88,8 @@ enum IdentityAuditCategory: String, Codable {
     case seatScopedIdentity = "seat-scoped identity"
     case opaqueProtocolToken = "opaque protocol token"
     case applicationIdentity = "application identity"
+    case compositeIdentity = "composite identity"
+    case publicValueIdentity = "public value identity"
 }
 
 struct IdentityAuditManifest: Codable {
@@ -97,7 +99,7 @@ struct IdentityAuditManifest: Codable {
 struct IdentityAuditEntry: Codable {
     let type: String
     let category: IdentityAuditCategory
-    let constructor: IdentityAccess
-    let storage: String
-    let storageVisibility: IdentityAccess
+    let constructor: IdentityAccess?
+    let storage: String?
+    let storageVisibility: IdentityAccess?
 }

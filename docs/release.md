@@ -37,6 +37,16 @@ This checkpoint contains source-breaking `WaylandClient` and
   same atomic `requestPresentationFeedback` option. Move `damage:` arguments
   into `SurfaceFrameMetadata.damage`; remove explicit no-op-preparation and
   legacy `Void` wrappers. Prepared generations are revalidated before drawing.
+- Apply the same direct/prepared contract to `PopupSurface` and `Subsurface`.
+  Popup configure/redraw/lifecycle changes and subsurface scale, synchronization,
+  cancellation, and parent-close changes now produce typed latest-wins outcomes.
+  Remove the subsurface `damage:` overloads and pass damage through metadata.
+- Replace `DisplayEvent.redrawRequested(WindowID)`, `popupRedrawRequested`, and
+  `presentation(WindowPresentationEvent)` with role-qualified
+  `redrawRequested(ManagedSurfaceIdentity)` and
+  `presentation(ManagedSurfacePresentationEvent)`. Replace
+  `WindowPresentationEvents` with `ManagedSurfacePresentationEvents`; all three
+  managed handles expose a filtered presentation sequence.
 - Replace `WaylandGraphicsFrameMetadata`, `WaylandGraphicsDamageRegion`,
   `WaylandGraphicsContentType`, `WaylandGraphicsPresentationHint`,
   `WaylandGraphicsAlphaModifier`, `WaylandGraphicsColorAlphaMode`, and

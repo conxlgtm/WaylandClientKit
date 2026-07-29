@@ -86,17 +86,6 @@ extension PopupRoleSurface {
         surfaceRuntime.retireSharedMemoryPools(reason: .windowClosed)
     }
 
-    func drawAndPresent(
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws -> RedrawOutcome {
-        guard !model.isClosed else { return .skippedClosed }
-
-        let effects = try model.reduce(
-            .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
-        )
-        return try interpretPresentationEffects(effects, draw)
-    }
-
     package func failPresentationIfStillActive(
         generation: UInt64,
         error: PresentationError
