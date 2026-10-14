@@ -38,7 +38,7 @@ descriptor integers; raw pointers; or unsafe implementation handles.
 
 ## Build And Run
 
-Swift 6.3.2 or newer is required.
+Swift 6.4.0 or newer is required; the package uses Swift 6 language mode.
 
 ```bash
 nix develop
@@ -47,6 +47,11 @@ swift run wck bootstrap check
 swift build --disable-index-store
 swift run wayland-client-kit-smoke
 ```
+
+The Nix shell selects the required Swiftly toolchain, or an explicit `SWIFT_BIN`
+provided before entering the shell. It generates a compiler-specific Swift SDK
+and supplies its selection to ordinary SwiftPM commands using the default build
+backend. No global SDK installation or legacy-backend flag is needed.
 
 Without Nix, install the packages in
 [Linux Dependencies](docs/linux-dependencies.md) before running the checks.

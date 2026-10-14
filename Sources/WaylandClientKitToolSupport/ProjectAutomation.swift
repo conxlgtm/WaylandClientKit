@@ -521,7 +521,7 @@ public struct SwiftCommandResolver {
         guard swiftLintEnforcesCustomRules(executable) else {
             throw strictSwiftLintError()
         }
-        try context.runner.run(executable, args, workingDirectory: context.repository.root)
+        try context.swift.runSwiftTool(executable, args, repository: context.repository)
     }
 
     private func swiftLintEnforcesCustomRules(_ executable: String) -> Bool {
@@ -545,13 +545,13 @@ public struct SwiftCommandResolver {
         }
 
         do {
-            let result = try context.runner.run(
+            let result = try context.swift.runSwiftTool(
                 executable,
                 [
                     "lint", "--strict", "--no-cache", "--quiet", "--force-exclude", "--config",
                     ".swiftlint.yml", probe.path,
                 ],
-                workingDirectory: context.repository.root,
+                repository: context.repository,
                 requireSuccess: false
             )
             let output = result.stdout + result.stderr
@@ -744,17 +744,19 @@ public struct VerificationChecks {
             ["build", "--disable-index-store", "-c", "release", "--target", "CGBMShims"],
             repository: context.repository)
         _ = try context.runner.executableURL(for: "nm")
-        let buildRoot = context.swift.swiftPMBuildRoot(repository: context.repository)
-        let objects = try context.fileSystem.walk(
-            buildRoot, includingDirectories: false
-        )
-        .filter { url in
-            url.pathExtension == "o"
-                && (url.path.contains("/release/CWaylandProtocols.build/")
-                    || url.path.contains("/release/CGBMShims.build/"))
+        let binPath = try context.swift.runSwift(
+            ["build", "-c", "release", "--show-bin-path"],
+            repository: context.repository
+        ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !binPath.isEmpty else {
+            throw ToolError("SwiftPM did not report release products", exitCode: ToolExitCode.data)
         }
-        guard !objects.isEmpty else {
-            throw ToolError("No release shim objects were found.", exitCode: ToolExitCode.data)
+        let artifacts = try SwiftBuildArtifacts(
+            buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+            productsDirectory: URL(fileURLWithPath: binPath),
+            fileSystem: context.fileSystem)
+        let objects = try ["CWaylandProtocols", "CGBMShims"].flatMap { target in
+            try artifacts.releaseObjects(target: target)
         }
         var failures: [String] = []
         for object in objects {
@@ -911,7 +913,8 @@ public struct PublicAPIAuditor {
     public func dump(environment: [String: String] = [:]) throws -> String {
         let verifier = DocCVerifier(
             repository: context.repository,
-            buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+            buildRoot: context.swift.swiftPMBuildRoot(
+                repository: context.repository, environment: environment),
             fileSystem: context.fileSystem,
             diagnostics: context.diagnostics
         )
@@ -953,7 +956,8 @@ public struct PublicAPIAuditor {
         let report = try dump(environment: environment)
         let symbolGraphs = try DocCVerifier(
             repository: context.repository,
-            buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+            buildRoot: context.swift.swiftPMBuildRoot(
+                repository: context.repository, environment: environment),
             fileSystem: context.fileSystem,
             diagnostics: context.diagnostics
         ).publicProductSymbolGraphs()

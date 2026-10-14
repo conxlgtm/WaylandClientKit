@@ -655,7 +655,7 @@ package final class TopLevelWindow {
 
         do {
             try unsafe drawingBuffer.withUnsafeMutableBytes { destinationBytes in
-                try unsafe image.pixels.withUnsafeBytes { sourceBytes in
+                try image.pixels.withUnsafeBytes { sourceBytes in
                     guard sourceBytes.count <= destinationBytes.count else {
                         throw ClientError.display(
                             .invalidWindowIconImagePixelCount(

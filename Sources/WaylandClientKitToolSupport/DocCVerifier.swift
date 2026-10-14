@@ -176,14 +176,23 @@ public struct DocCVerifier {
 
     private func requireSymbolGraph(for moduleName: String) throws -> URL {
         let primaryName = "\(moduleName).symbols.json"
-        guard
-            let graph = try findSymbolGraphs(for: moduleName)
-                .first(where: { $0.lastPathComponent == primaryName })
-        else {
+        let graphs = try findSymbolGraphs(for: moduleName)
+        let primaryGraphs = graphs.filter { $0.lastPathComponent == primaryName }
+        guard primaryGraphs.count == 1, let graph = primaryGraphs.first else {
             throw ToolError(
-                "Missing \(moduleName) symbol graph under \(buildRoot.path)/*/symbolgraph",
+                "Missing \(moduleName) symbol graph, or multiple candidates, "
+                    + "under \(buildRoot.path)",
                 exitCode: ToolExitCode.data
             )
+        }
+        guard
+            graphs.allSatisfy({ candidate in
+                candidate.deletingLastPathComponent().path == graph.deletingLastPathComponent().path
+            })
+        else {
+            throw ToolError(
+                "\(moduleName) symbol graphs span multiple build outputs under \(buildRoot.path)",
+                exitCode: ToolExitCode.data)
         }
         return graph
     }
@@ -229,22 +238,15 @@ public struct DocCVerifier {
                 guard graph.deletingLastPathComponent().lastPathComponent == "symbolgraph" else {
                     return false
                 }
+                let root = buildRoot.resolvingSymlinksInPath().path + "/"
+                guard graph.resolvingSymlinksInPath().path.hasPrefix(root) else {
+                    return false
+                }
                 let name = graph.lastPathComponent
                 return name == "\(moduleName).symbols.json"
                     || (name.hasPrefix("\(moduleName)@") && name.hasSuffix(".symbols.json"))
             }
             .sorted { $0.path < $1.path }
-    }
-
-    private static func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> ToolError {
-        ToolError(
-            """
-            command failed with exit code \(result.exitCode): \(result.commandLine)
-            \(result.stderr.isEmpty ? result.stdout : result.stderr)
-            \(detail)
-            """,
-            exitCode: ToolExitCode.process
-        )
     }
 
     private func symbolTitles(from url: URL, moduleName: String) throws -> Set<String> {
@@ -264,5 +266,18 @@ public struct DocCVerifier {
             }
         }
         return titles
+    }
+}
+
+extension DocCVerifier {
+    private static func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> ToolError {
+        ToolError(
+            """
+            command failed with exit code \(result.exitCode): \(result.commandLine)
+            \(result.stderr.isEmpty ? result.stdout : result.stderr)
+            \(detail)
+            """,
+            exitCode: ToolExitCode.process
+        )
     }
 }

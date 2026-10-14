@@ -9,7 +9,7 @@
             let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x5101)
             let offer = try unsafe #require(OpaquePointer(bitPattern: 0x5202))
             var record = unsafe swl_test_primary_selection_offer_offer_record()
-            try unsafe "text/plain;charset=utf-8".withCString { mimeType in
+            try "text/plain;charset=utf-8".withCString { mimeType in
                 unsafe swl_test_primary_selection_offer_listener_emit_offer(
                     data,
                     offer,
@@ -31,7 +31,7 @@
             let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x5303)
             let source = try unsafe #require(OpaquePointer(bitPattern: 0x5404))
             var sendRecord = unsafe swl_test_primary_selection_source_send_record()
-            try unsafe "text/plain".withCString { mimeType in
+            try "text/plain".withCString { mimeType in
                 unsafe swl_test_primary_selection_source_listener_emit_send(
                     data,
                     source,
@@ -99,7 +99,7 @@
                 expectedKind: SWL_TEST_PRIMARY_SELECTION_SOURCE_OFFER,
                 object: source
             ) {
-                try unsafe "text/plain".withCString { mimeType in
+                try "text/plain".withCString { mimeType in
                     unsafe swl_primary_selection_source_offer(source, mimeType)
                     let record = unsafe swl_test_primary_selection_request_record()
                     let recordedMimeType = try unsafe #require(record.mime_type)
@@ -110,7 +110,7 @@
                 expectedKind: SWL_TEST_PRIMARY_SELECTION_OFFER_RECEIVE,
                 object: offer
             ) {
-                try unsafe "text/uri-list".withCString { mimeType in
+                try "text/uri-list".withCString { mimeType in
                     unsafe swl_primary_selection_offer_receive(offer, mimeType, 23)
                     let record = unsafe swl_test_primary_selection_request_record()
                     let recordedMimeType = try unsafe #require(record.mime_type)

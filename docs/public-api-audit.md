@@ -13,6 +13,33 @@ The minimal DocC catalog for this boundary lives in
 The generated [`identity-visibility.md`](identity-visibility.md) table tracks
 public identity constructors and stored-value access.
 
+## Swift 6.4 Toolchain Cutover
+
+The minimum compiler is Swift 6.4.0; Swift 6 language mode and the existing
+isolation and memory-safety settings remain unchanged. Source ownership records
+now distinguish `borrow`/`mutate` accessors from borrowing/consuming getters,
+including public properties in copyable types. This tooling change does not
+introduce a new public rendering API.
+
+Documentation coverage measures product-authored abstracts, not inherited
+standard-library comments. The Swift 6.4 default backend emits graphs during
+compilation, unlike the standalone module extraction used by the earlier
+backend. Compiler probes confirmed the inherited-comment difference. The
+`WaylandClient` documentation baseline is 98/1,552; the previous 183/1,552
+included 85 inherited Swift abstracts. Eligible symbols and product source
+documentation are unchanged by this measurement migration.
+
+The refreshed semantic baseline records Swift 6.4's source-form `Self` and
+closure-parameter labels, omission of implicit `nonisolated(nonsending)` in
+emitted closure signatures, and explicit cross-module extension blocks.
+Source declarations, isolation settings, and ownership records are unchanged;
+these are compiler/backend representation changes, not new public handles.
+
+The private integration stream drainer uses `next(isolation: nil)`, matching
+the public iterators' existing nonisolated forwarding. This avoids passing a
+potentially isolated generic iterator conformance to the legacy `@concurrent`
+requirement; a Swift 6.4 compiler probe verified the diagnostic difference.
+
 ## Products
 
 ### `WaylandClient`

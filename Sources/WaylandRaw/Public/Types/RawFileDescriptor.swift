@@ -22,7 +22,7 @@ package struct RawFileDescriptor: ~Copyable {
             throw RuntimeError.invalidArgument("shared memory file name")
         }
 
-        let fd = unsafe name.withCString { namePointer in
+        let fd = name.withCString { namePointer in
             unsafe swl_memfd_create(namePointer, swl_mfd_cloexec())
         }
 
@@ -38,7 +38,7 @@ package struct RawFileDescriptor: ~Copyable {
         writeEnd: Int32
     ) {
         var descriptors = [Int32](repeating: -1, count: 2)
-        let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
+        let result = descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
             unsafe swl_pipe_cloexec(descriptorBuffer.baseAddress)
         }
 
@@ -59,7 +59,7 @@ package struct RawFileDescriptor: ~Copyable {
 
         var buffer = [UInt8](repeating: 0, count: maximumByteCount)
         while true {
-            let readCount = unsafe buffer.withUnsafeMutableBufferPointer { byteBuffer in
+            let readCount = buffer.withUnsafeMutableBufferPointer { byteBuffer in
                 unsafe Glibc.read(fileDescriptor, byteBuffer.baseAddress, maximumByteCount)
             }
 
@@ -85,7 +85,7 @@ package struct RawFileDescriptor: ~Copyable {
         bytes: ArraySlice<UInt8>
     ) throws(RuntimeError) -> Int {
         while true {
-            let writeCount = unsafe bytes.withUnsafeBufferPointer { byteBuffer in
+            let writeCount = bytes.withUnsafeBufferPointer { byteBuffer in
                 unsafe swl_write_no_sigpipe(
                     fileDescriptor,
                     byteBuffer.baseAddress,

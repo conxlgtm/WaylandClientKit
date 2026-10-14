@@ -48,7 +48,7 @@
                 try Test.cancel("No accessible DRM render node.")
             }
 
-            let fd = unsafe path.withCString { pathPointer in
+            let fd = path.withCString { pathPointer in
                 unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
             }
             guard fd >= 0 else {
@@ -128,7 +128,7 @@
         private func firstRenderNodePath() -> String? {
             for index in 128..<192 {
                 let path = "/dev/dri/renderD\(index)"
-                let isAccessible = unsafe path.withCString { pathPointer in
+                let isAccessible = path.withCString { pathPointer in
                     unsafe Glibc.access(pathPointer, R_OK | W_OK)
                 }
                 if isAccessible == 0 {

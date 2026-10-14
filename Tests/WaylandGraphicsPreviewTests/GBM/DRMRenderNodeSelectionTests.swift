@@ -35,8 +35,8 @@ struct DRMRenderNodeSelectionTests {
         let byteCount = max(Int(swl_drm_device_id_byte_count()) - 1, 0)
         let deviceIDBytes = [UInt8](repeating: 0, count: byteCount)
 
-        let result = unsafe deviceIDBytes.withUnsafeBufferPointer { bytes in
-            unsafe path.withUnsafeMutableBufferPointer { pathBytes in
+        let result = deviceIDBytes.withUnsafeBufferPointer { bytes in
+            path.withUnsafeMutableBufferPointer { pathBytes in
                 unsafe swl_drm_render_node_path_from_device_bytes(
                     bytes.baseAddress,
                     UInt32(bytes.count),
@@ -80,7 +80,7 @@ private func selectedNodePath(
     var path = [CChar](repeating: 0, count: Int(swl_drm_render_node_path_max()))
     let result = unsafe withOptionalCString(primaryNodePath) { primaryPathPointer in
         unsafe withOptionalCString(renderNodePath) { renderPathPointer in
-            unsafe path.withUnsafeMutableBufferPointer { pathBytes in
+            path.withUnsafeMutableBufferPointer { pathBytes in
                 unsafe swl_drm_node_path_from_available_nodes(
                     availableNodes,
                     primaryPathPointer,
@@ -94,7 +94,7 @@ private func selectedNodePath(
     #expect(result == 0)
     try #require(result == 0)
 
-    let selectedPath = unsafe path.withUnsafeBufferPointer { pathBytes -> String? in
+    let selectedPath = path.withUnsafeBufferPointer { pathBytes -> String? in
         guard let baseAddress = pathBytes.baseAddress else { return nil }
 
         return unsafe String(cString: baseAddress)
@@ -110,7 +110,7 @@ private func nodePathSelectionResult(
     var path = [CChar](repeating: 0, count: Int(swl_drm_render_node_path_max()))
     return unsafe withOptionalCString(primaryNodePath) { primaryPathPointer in
         unsafe withOptionalCString(renderNodePath) { renderPathPointer in
-            unsafe path.withUnsafeMutableBufferPointer { pathBytes in
+            path.withUnsafeMutableBufferPointer { pathBytes in
                 unsafe swl_drm_node_path_from_available_nodes(
                     availableNodes,
                     primaryPathPointer,
@@ -131,7 +131,7 @@ private func withOptionalCString<Result>(
         return body(nil)
     }
 
-    return unsafe string.withCString { pointer in
+    return string.withCString { pointer in
         unsafe body(pointer)
     }
 }

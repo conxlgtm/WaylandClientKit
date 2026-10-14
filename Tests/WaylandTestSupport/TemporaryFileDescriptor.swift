@@ -14,7 +14,7 @@ public func makeTemporaryFileDescriptor(
 ) throws -> Int32 {
     let directory = FileManager.default.temporaryDirectory.path
     var template = Array("\(directory)/\(prefix)-XXXXXX".utf8CString)
-    let descriptor = unsafe template.withUnsafeMutableBufferPointer { buffer in
+    let descriptor = template.withUnsafeMutableBufferPointer { buffer in
         guard let baseAddress = buffer.baseAddress else {
             return Int32(-1)
         }
@@ -25,13 +25,13 @@ public func makeTemporaryFileDescriptor(
         throw TemporaryFileDescriptorError.createFailed(errno: errno)
     }
 
-    unsafe template.withUnsafeBufferPointer { buffer in
+    template.withUnsafeBufferPointer { buffer in
         if let baseAddress = buffer.baseAddress {
             unsafe unlink(baseAddress)
         }
     }
 
-    let writeResult = unsafe bytes.withUnsafeBytes { rawBytes in
+    let writeResult = bytes.withUnsafeBytes { rawBytes in
         unsafe write(descriptor, rawBytes.baseAddress, bytes.count)
     }
     guard writeResult == bytes.count else {

@@ -5,24 +5,6 @@ import WaylandClientKitToolSupport
 @Suite
 struct ToolRuntimeTests {
     @Test
-    func cCompilerFilterResolvesBareExecutableThroughPath() throws {
-        let root = try temporaryRepository()
-        let bin = root.appendingPathComponent("bin")
-        let wck = bin.appendingPathComponent("wck")
-        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-        try "".write(to: wck, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: wck.path)
-
-        let resolved = try CCompilerFilter.filterExecutableURL(
-            commandPath: "wck",
-            workingDirectory: root,
-            runner: ProcessRunner(environment: ["PATH": bin.path])
-        )
-
-        #expect(resolved.path == wck.standardizedFileURL.path)
-    }
-
-    @Test
     func headlessWestonReadinessRejectsPlainSocketPathFiles() throws {
         let root = try temporaryRepository()
         let socketPath = root.appendingPathComponent("wayland-0")

@@ -78,7 +78,7 @@ final class XKBContextOwner {
         precondition(!locale.isEmpty, "compose table locale must not be empty")
         precondition(!locale.utf8.contains(0), "compose table locale must not contain NUL bytes")
         let createdTable = XKBComposeTableCreation.lock.withLock { _ -> CreatedTable? in
-            unsafe locale.withCString { localePointer in
+            locale.withCString { localePointer in
                 unsafe xkb_compose_table_new_from_locale(
                     pointer,
                     localePointer,
@@ -101,7 +101,7 @@ final class XKBContextOwner {
         let byteCount = buffer.utf8.count
         let createdTable = XKBComposeTableCreation.lock.withLock { _ -> CreatedTable? in
             unsafe buffer.withCString { bufferPointer -> OpaquePointer? in
-                unsafe locale.withCString { localePointer in
+                locale.withCString { localePointer in
                     unsafe xkb_compose_table_new_from_buffer(
                         pointer,
                         bufferPointer,
@@ -129,7 +129,7 @@ final class XKBKeymapOwner {
             throw .unsupportedKeymapFormat(payload.format.rawValue)
         }
 
-        let newPointer = unsafe bytes.rawValue.withUnsafeBytes { rawBuffer -> OpaquePointer? in
+        let newPointer = bytes.rawValue.withUnsafeBytes { rawBuffer -> OpaquePointer? in
             guard let baseAddress = rawBuffer.baseAddress else {
                 return nil
             }
@@ -246,7 +246,7 @@ final class KeyboardLayoutState {
     func modifierMask(named name: String) -> UInt32? {
         threadAffinity.preconditionIsOwnerThread()
 
-        return unsafe name.withCString { namePointer -> UInt32? in
+        return name.withCString { namePointer -> UInt32? in
             let index = unsafe xkb_keymap_mod_get_index(keymap.pointer, namePointer)
             guard index != XKB_MOD_INVALID, index < UInt32.bitWidth else {
                 return nil

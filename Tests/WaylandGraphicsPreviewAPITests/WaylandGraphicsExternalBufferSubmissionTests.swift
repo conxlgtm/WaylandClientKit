@@ -2896,7 +2896,7 @@ private func testExternalPlane(
 
 private func testOwnedFileDescriptor() throws -> OwnedFileDescriptor {
     var descriptors = [Int32](repeating: -1, count: 2)
-    let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+    let result = descriptors.withUnsafeMutableBufferPointer { buffer in
         unsafe Glibc.pipe(buffer.baseAddress)
     }
     guard result == 0 else {

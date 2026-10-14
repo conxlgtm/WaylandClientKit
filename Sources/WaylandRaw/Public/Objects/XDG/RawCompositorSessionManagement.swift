@@ -66,7 +66,7 @@ package final class RawCompositorSessionManager {
     ) throws -> RawCompositorSession {
         if let existingID {
             guard
-                let sessionPointer = unsafe existingID.value.withCString({ sessionIDPointer in
+                let sessionPointer = existingID.value.withCString({ sessionIDPointer in
                     unsafe swl_xdg_session_manager_v1_get_session(
                         pointer,
                         reason.rawValue,
@@ -162,7 +162,7 @@ package final class RawCompositorSession {
         onEvent: @escaping (RawCompositorToplevelSessionEvent) -> Void
     ) throws -> RawCompositorToplevelSession {
         guard
-            let toplevelSessionPointer = unsafe name.withCString({ namePointer in
+            let toplevelSessionPointer = name.withCString({ namePointer in
                 unsafe swl_xdg_session_v1_add_toplevel(pointer, toplevel.pointer, namePointer)
             })
         else {
@@ -181,7 +181,7 @@ package final class RawCompositorSession {
         onEvent: @escaping (RawCompositorToplevelSessionEvent) -> Void
     ) throws -> RawCompositorToplevelSession {
         guard
-            let toplevelSessionPointer = unsafe name.withCString({ namePointer in
+            let toplevelSessionPointer = name.withCString({ namePointer in
                 unsafe swl_xdg_session_v1_restore_toplevel(
                     pointer,
                     toplevel.pointer,
@@ -199,7 +199,7 @@ package final class RawCompositorSession {
     }
 
     package func removeToplevel(named name: String) {
-        unsafe name.withCString { namePointer in
+        name.withCString { namePointer in
             unsafe swl_xdg_session_v1_remove_toplevel(pointer, namePointer)
         }
     }
@@ -291,7 +291,7 @@ package final class RawCompositorToplevelSession {
     }
 
     package func rename(_ name: String) {
-        unsafe name.withCString { namePointer in
+        name.withCString { namePointer in
             unsafe swl_xdg_toplevel_session_v1_rename(pointer, namePointer)
         }
     }

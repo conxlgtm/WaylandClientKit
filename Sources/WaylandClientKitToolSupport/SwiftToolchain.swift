@@ -67,8 +67,38 @@ public struct SwiftToolchain: Sendable {
         )
     }
 
+    @discardableResult
+    public func runSwiftTool(
+        _ executable: String,
+        _ arguments: [String],
+        repository: Repository,
+        requireSuccess: Bool = true
+    ) throws -> ProcessResult {
+        if let loader = runner.environment["WAYLAND_CLIENT_KIT_SWIFT_TOOL_LOADER"],
+            let libraries = runner.environment["WAYLAND_CLIENT_KIT_SWIFT_TOOL_LIBRARIES"]
+        {
+            let tool = try runner.executableURL(for: executable)
+            let file = try FileHandle(forReadingFrom: tool)
+            let header = try file.read(upToCount: 4)
+            try file.close()
+            // Script overrides retain their interpreter; only ELF tools use the loader.
+            if header?.starts(with: "\u{7f}ELF".utf8) == true {
+                return try runner.run(
+                    loader,
+                    ["--library-path", libraries, "--argv0", tool.path, tool.path] + arguments,
+                    workingDirectory: repository.root, requireSuccess: requireSuccess)
+            }
+        }
+        return try runner.run(
+            executable, arguments, workingDirectory: repository.root,
+            environment: swiftRuntimeEnvironment(), requireSuccess: requireSuccess)
+    }
+
     public func swiftRuntimeEnvironment(_ overrides: [String: String] = [:]) -> [String: String] {
         var env = overrides
+        if runner.environment["WAYLAND_CLIENT_KIT_SWIFT_TOOL_LOADER"] != nil {
+            return env
+        }
         let compat =
             runner.environment["SWIFT_COMPAT_LIBS"]
             ?? URL(fileURLWithPath: NSHomeDirectory())

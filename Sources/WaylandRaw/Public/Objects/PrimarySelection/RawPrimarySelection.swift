@@ -94,7 +94,7 @@ package final class RawPrimarySelectionOffer {
     }
 
     package func receive(mimeType: String, fd: Int32) {
-        unsafe mimeType.withCString { mimeTypePointer in
+        mimeType.withCString { mimeTypePointer in
             unsafe swl_primary_selection_offer_receive(pointer, mimeTypePointer, fd)
         }
     }
@@ -132,7 +132,7 @@ package final class RawPrimarySelectionSource {
     }
 
     package func offer(mimeType: String) {
-        unsafe mimeType.withCString { mimeTypePointer in
+        mimeType.withCString { mimeTypePointer in
             unsafe swl_primary_selection_source_offer(pointer, mimeTypePointer)
         }
     }

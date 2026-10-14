@@ -22,7 +22,7 @@
                 #expect(unsafe serialRecord.seat == UnsafeMutableRawPointer(seat))
                 #expect(unsafe serialRecord.serial == 77)
 
-                unsafe "org.waylandclientkit.Test".withCString { appID in
+                "org.waylandclientkit.Test".withCString { appID in
                     unsafe swl_xdg_activation_token_v1_set_app_id(token, appID)
                 }
                 let appIDRecord = unsafe swl_test_activation_request_record()
@@ -61,7 +61,7 @@
                 #expect(unsafe tokenRecord.kind == SWL_TEST_ACTIVATION_GET_TOKEN)
                 #expect(unsafe tokenRecord.object == UnsafeMutableRawPointer(activation))
 
-                unsafe "opaque-token".withCString { tokenValue in
+                "opaque-token".withCString { tokenValue in
                     unsafe swl_xdg_activation_v1_activate(activation, tokenValue, surface)
                 }
                 let activateRecord = unsafe swl_test_activation_request_record()
@@ -80,7 +80,7 @@
             let token = try unsafe #require(OpaquePointer(bitPattern: 0xA302))
             var record = unsafe swl_test_activation_listener_record()
 
-            unsafe "done-token".withCString { tokenValue in
+            "done-token".withCString { tokenValue in
                 unsafe swl_test_activation_listener_emit_done(
                     data,
                     token,

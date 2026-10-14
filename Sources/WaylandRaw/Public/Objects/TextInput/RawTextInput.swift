@@ -200,7 +200,7 @@ package final class RawTextInput {
     }
 
     package func setSurroundingText(_ text: String, cursor: Int32, anchor: Int32) {
-        unsafe text.withCString { textPointer in
+        text.withCString { textPointer in
             unsafe swl_text_input_v3_set_surrounding_text(
                 pointer,
                 textPointer,

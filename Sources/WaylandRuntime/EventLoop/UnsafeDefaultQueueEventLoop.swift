@@ -171,7 +171,7 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
         _ descriptors: inout [pollfd],
         timeoutMilliseconds: Int32
     ) throws(UnsafeDefaultQueueEventLoopError) -> Int32 {
-        unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        descriptors.withUnsafeMutableBufferPointer { buffer in
             unsafe operations.pollFileDescriptor(
                 buffer.baseAddress,
                 nfds_t(buffer.count),

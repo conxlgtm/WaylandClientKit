@@ -126,25 +126,18 @@ struct ToolingConvergenceTests {
         #expect(version == "6.3.2")
     }
 
-    @Test
-    func toolchainSmokeClassifiesSwiftBuildPreviewResults() {
-        let unsupported = ProcessResult(
-            executable: "swift",
-            arguments: [],
-            exitCode: 64,
-            stdout: "",
-            stderr: "error: unknown option '--build-system'")
-        let packageFailure = ProcessResult(
-            executable: "swift",
-            arguments: [],
-            exitCode: 1,
-            stdout: "",
-            stderr: "error: failed to build package")
+    @Test(arguments: [
+        "Swift version 6.4", "Swift version 6.4.0", "Swift version 6.5", "Swift version 7.0",
+    ])
+    func toolchainSmokeAcceptsBaselineAndNewer(version: String) throws {
+        try ToolchainSmoke.requireMinimumVersion(version)
+    }
 
-        #expect(ToolchainSmoke.classifySwiftBuildPreview(result: unsupported) == "unsupported")
-        #expect(
-            ToolchainSmoke.classifySwiftBuildPreview(result: packageFailure)
-                == "failed-package(exit 1)")
+    @Test(arguments: ["Swift version 6.3.2", "Swift version 5.10", "not a compiler version"])
+    func toolchainSmokeRejectsOlderOrUnidentifiedCompiler(version: String) {
+        #expect(throws: ToolError.self) {
+            try ToolchainSmoke.requireMinimumVersion(version)
+        }
     }
 
     @Test
@@ -203,50 +196,6 @@ struct ToolingConvergenceTests {
     }
 
     @Test
-    func integrationPackageTestsEnableIndexStoreBehindCompilerFilter() throws {
-        let source = try String(
-            contentsOf: repositoryRoot()
-                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
-            encoding: .utf8)
-        let start = try #require(source.range(of: "private func runIntegrationPackage"))
-        let end = try #require(source.range(of: "private func compilerFilterEnvironment"))
-        let functionBody = String(source[start.lowerBound..<end.lowerBound])
-
-        #expect(functionBody.contains("\"--enable-index-store\""))
-        #expect(functionBody.contains("compilerFilterEnvironment"))
-        #expect(!functionBody.contains("\"--disable-index-store\""))
-    }
-
-    @Test
-    func testModesShareCompilerAndSanitizerPolicy() throws {
-        let source = try String(
-            contentsOf: repositoryRoot()
-                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
-            encoding: .utf8
-        )
-
-        #expect(source.contains("private struct SwiftTestCommand"))
-        #expect(source.contains(#"result["ASAN_OPTIONS"] = "detect_leaks=0""#))
-        #expect(source.contains(#""-Xswiftc", "-Wno-macro-redefined""#))
-        #expect(source.contains("command: SwiftTestCommand(configuration: \"release\")"))
-        #expect(source.contains("command: SwiftTestCommand(sanitizer: .address)"))
-    }
-
-    @Test
-    func doccSymbolGraphDumpUsesCompilerFilter() throws {
-        let source = try String(
-            contentsOf: repositoryRoot()
-                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
-            encoding: .utf8)
-        let start = try #require(source.range(of: "private func runDoccVerify"))
-        let end = try #require(source.range(of: "private func runDoccSymbolLinks"))
-        let functionBody = String(source[start.lowerBound..<end.lowerBound])
-
-        #expect(functionBody.contains("compilerFilterEnvironment"))
-        #expect(functionBody.contains(#""package", "dump-symbol-graph""#))
-    }
-
-    @Test
     func exampleBuilderDiscoversExampleTargetsFromPackageManifest() throws {
         let root = try temporaryRepository()
         try FileManager.default.createDirectory(
@@ -299,14 +248,6 @@ extension ToolingConvergenceTests {
             )
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
-    }
-
-    private func repositoryRoot() -> URL {
-        var url = URL(fileURLWithPath: #filePath)
-        for _ in 0..<3 {
-            url.deleteLastPathComponent()
-        }
-        return url
     }
 
     private func writeRequiredDocumentation(

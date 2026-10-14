@@ -291,7 +291,7 @@ struct DataTransferSourceWriterTests {  // swiftlint:disable:this type_body_leng
 
     private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
         var descriptors = [Int32](repeating: -1, count: 2)
-        let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
+        let result = descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
             unsafe Glibc.pipe(descriptorBuffer.baseAddress)
         }
         guard result == 0 else {

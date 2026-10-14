@@ -304,7 +304,7 @@ private enum GPUPreviewLiveEnvironment {
 private func firstRenderNodePath() -> String? {
     for index in 128..<192 {
         let path = "/dev/dri/renderD\(index)"
-        let isAccessible = unsafe path.withCString { pathPointer in
+        let isAccessible = path.withCString { pathPointer in
             unsafe Glibc.access(pathPointer, R_OK | W_OK)
         }
         if isAccessible == 0 {
