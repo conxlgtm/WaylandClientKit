@@ -39,7 +39,7 @@ package final class CursorTheme {
     }
 
     package func cursorImages(named name: String) throws -> [CursorImage] {
-        let cursorPointer = unsafe name.withCString { namePointer in
+        let cursorPointer = name.withCString { namePointer in
             unsafe swl_cursor_theme_get_cursor(pointer, namePointer)
         }
 

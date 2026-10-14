@@ -102,7 +102,7 @@ struct GBMDmabufExportTests {
         export = nil
 
         var byte = UInt8(0)
-        let readByteCount = unsafe withUnsafeMutableBytes(of: &byte) { buffer in
+        let readByteCount = withUnsafeMutableBytes(of: &byte) { buffer in
             unsafe Glibc.read(descriptors.readEnd, buffer.baseAddress, 1)
         }
         #expect(readByteCount == 0)

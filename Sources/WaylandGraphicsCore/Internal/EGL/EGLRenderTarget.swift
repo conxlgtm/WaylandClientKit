@@ -219,7 +219,7 @@ package final class EGLGBMRenderTarget {
 
         var pixelBytes = [UInt8](repeating: 0, count: 4)
         guard
-            unsafe pixelBytes.withUnsafeMutableBufferPointer({ pointer in
+            pixelBytes.withUnsafeMutableBufferPointer({ pointer in
                 unsafe swl_gles2_read_center_pixel_rgba8(
                     size.width,
                     size.height,

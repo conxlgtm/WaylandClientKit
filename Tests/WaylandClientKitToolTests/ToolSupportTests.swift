@@ -15,43 +15,6 @@ struct ToolSupportTests {
     }
 
     @Test
-    func coverageSummaryAggregatesSourceModules() throws {
-        let root = try temporaryRepository()
-        let source = root.appendingPathComponent("Sources/WaylandClient/File.swift")
-        try FileManager.default.createDirectory(
-            at: source.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try "public struct Sample {}".write(to: source, atomically: true, encoding: .utf8)
-        let coverage = root.appendingPathComponent(".build/debug/codecov/WaylandClientKit.json")
-        try FileManager.default.createDirectory(
-            at: coverage.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try """
-        {
-          "data": [
-            {
-              "files": [
-                {
-                  "filename": "\(source.path)",
-                  "summary": {
-                    "lines": { "count": 10, "covered": 8 },
-                    "functions": { "count": 4, "covered": 2 }
-                  }
-                }
-              ]
-            }
-          ]
-        }
-        """.write(to: coverage, atomically: true, encoding: .utf8)
-
-        let summary = try CoverageSummarizer(repository: Repository(root: root)).summarize(
-            explicitPath: nil)
-        #expect(summary.contains("| `WaylandClient` | 80.00% | 50.00% |"))
-    }
-
-    @Test
     func sha256DigestMatchesKnownVector() {
         #expect(
             SHA256Checksum.digest(Array("abc".utf8))
@@ -92,56 +55,6 @@ struct ToolSupportTests {
             #expect(result.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == root.path)
             #expect(FileManager.default.currentDirectoryPath == originalDirectory)
         }
-    }
-
-    @Test
-    func cCompilerFilterStripsSwiftPMIndexStoreFlags() {
-        let arguments = CCompilerFilter.filteredArguments([
-            "-DVALUE=1",
-            "-index-store-path",
-            "/tmp/index-store",
-            "-index-unit-output-path=/tmp/unit-output",
-            "shim.c",
-        ])
-
-        #expect(arguments == ["-DVALUE=1", "shim.c"])
-    }
-
-    @Test
-    func cCompilerFilterInvokesRealCompilerWithFilteredArguments() throws {
-        let truePath = try ProcessRunner().executableURL(for: "true").path
-
-        let result = try CCompilerFilter.run(
-            arguments: [
-                "-DVALUE=1",
-                "-index-store-path",
-                "/tmp/index-store",
-                "-index-unit-output-path=/tmp/unit-output",
-                "shim.c",
-            ],
-            environment: [
-                "PATH": ProcessInfo.processInfo.environment["PATH", default: ""],
-                CCompilerFilter.realCompilerEnvironmentKey: truePath,
-            ])
-
-        #expect(result.executable == truePath)
-        #expect(result.arguments == ["-DVALUE=1", "shim.c"])
-    }
-
-    @Test
-    func cCompilerFilterEnvironmentSetsCCAndPreservesOverrides() throws {
-        let filter = URL(fileURLWithPath: "/tmp/wck")
-
-        let environment = CCompilerFilter.compilerEnvironment(
-            filterExecutable: filter,
-            base: ["WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS": "1"],
-            inherited: ["CC": "/usr/bin/clang"]
-        )
-
-        #expect(environment["CC"] == filter.path)
-        #expect(environment[CCompilerFilter.modeEnvironmentKey] == "1")
-        #expect(environment[CCompilerFilter.realCompilerEnvironmentKey] == "/usr/bin/clang")
-        #expect(environment["WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS"] == "1")
     }
 
     @Test

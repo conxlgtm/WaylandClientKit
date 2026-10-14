@@ -14,33 +14,7 @@ import WaylandClientKitToolSupport
 @main
 enum WaylandClientKitToolMain {
     static func main() {
-        let environment = ProcessInfo.processInfo.environment
-        if CCompilerFilter.isEnabled(environment: environment) {
-            runCCompilerFilter(environment: environment)
-        }
         Wck.main()
-    }
-
-    private static func runCCompilerFilter(environment: [String: String]) -> Never {
-        do {
-            let result = try CCompilerFilter.run(
-                arguments: Array(CommandLine.arguments.dropFirst()),
-                environment: environment)
-            write(result.stdout, to: FileHandle.standardOutput)
-            write(result.stderr, to: FileHandle.standardError)
-            exit(result.exitCode)
-        } catch let error as ToolError {
-            write("Error: \(error.message)\n", to: FileHandle.standardError)
-            exit(error.exitCode)
-        } catch {
-            write("Error: \(error)\n", to: FileHandle.standardError)
-            exit(ToolExitCode.failure)
-        }
-    }
-
-    private static func write(_ text: String, to handle: FileHandle) {
-        guard !text.isEmpty, let data = text.data(using: .utf8) else { return }
-        handle.write(data)
     }
 }
 
@@ -191,7 +165,9 @@ struct Tools: ParsableCommand {
             try context.fileSystem.copyItem(at: candidate, to: destinationURL)
             try FileManager.default.setAttributes(
                 [.posixPermissions: 0o755], ofItemAtPath: destinationURL.path)
-            let installed = try context.runner.run(destinationURL.path, ["version"]).stdout
+            let installed = try context.swift.runSwiftTool(
+                destinationURL.path, ["version"], repository: context.repository
+            ).stdout
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             context.diagnostics.success("swiftlint \(installed): \(destinationURL.path)")
         }
@@ -200,17 +176,13 @@ struct Tools: ParsableCommand {
     struct ToolchainSmokeCommand: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "toolchain-smoke")
 
-        @Flag(help: "Skip the allowed-failure Swift Build preview probe.")
-        var skipSwiftBuildPreview = false
-
         @Flag(name: .long)
         var verbose = false
 
         func run() throws {
             let context = try context()
             context.diagnostics.info(
-                try ToolchainSmoke(context: context).report(
-                    runSwiftBuildPreview: !skipSwiftBuildPreview))
+                try ToolchainSmoke(context: context).report())
         }
     }
 }
@@ -371,8 +343,28 @@ struct Coverage: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
+            var productsDirectory: URL?
+            if coverageJSON?.isEmpty != false {
+                let binPath = try context.swift.runSwift(
+                    ["build", "--show-bin-path"], repository: context.repository
+                ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !binPath.isEmpty else {
+                    throw ToolError(
+                        "SwiftPM did not report build products", exitCode: ToolExitCode.data)
+                }
+                productsDirectory = URL(fileURLWithPath: binPath)
+                try SwiftBuildArtifacts(
+                    buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+                    productsDirectory: URL(fileURLWithPath: binPath),
+                    fileSystem: context.fileSystem
+                ).exportCoverage(swift: context.swift, repository: context.repository)
+            }
             context.diagnostics.info(
-                try CoverageSummarizer(repository: context.repository).summarize(
+                try CoverageSummarizer(
+                    repository: context.repository,
+                    buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+                    productsDirectory: productsDirectory
+                ).summarize(
                     explicitPath: coverageJSON))
         }
     }
@@ -482,11 +474,7 @@ struct API: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            context.diagnostics.info(
-                try PublicAPIAuditor(context: context).dump(
-                    environment: compilerFilterEnvironment(context: context)
-                )
-            )
+            context.diagnostics.info(try PublicAPIAuditor(context: context).dump())
         }
     }
 
@@ -496,10 +484,7 @@ struct API: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            try PublicAPIAuditor(context: context).verify(
-                update: update,
-                environment: compilerFilterEnvironment(context: context)
-            )
+            try PublicAPIAuditor(context: context).verify(update: update)
         }
     }
 }
@@ -897,7 +882,6 @@ private func runDoccVerify(context: ToolContext) throws {
             "--skip-synthesized-members",
         ],
         repository: context.repository,
-        environment: try compilerFilterEnvironment(context: context),
         requireSuccess: false
     )
     try verifier.requirePublicProductSymbolGraphs(
@@ -942,6 +926,7 @@ private struct SwiftTestCommand {
     var configuration: String?
     var sanitizer: SwiftTestSanitizer = .none
     var coverage = false
+    var resetCoverage = true
     var jobs: Int?
     var filters: [String] = []
     var buildTestsOnly = false
@@ -981,14 +966,12 @@ private struct SwiftTestCommand {
         return result
     }
 
-    func environment(context: ToolContext, base: [String: String] = [:]) throws
-        -> [String: String]
-    {
+    func environment(base: [String: String] = [:]) -> [String: String] {
         var result = base
         if sanitizer == .address {
             result["ASAN_OPTIONS"] = "detect_leaks=0"
         }
-        return try compilerFilterEnvironment(context: context, base: result)
+        return result
     }
 }
 
@@ -997,11 +980,35 @@ private func runSwiftTests(
     command: SwiftTestCommand,
     baseEnvironment: [String: String] = [:]
 ) throws {
+    var coverageArtifacts: SwiftBuildArtifacts?
+    if command.coverage {
+        var arguments = ["build", "--show-bin-path"]
+        if let configuration = command.configuration {
+            arguments.append(contentsOf: ["-c", configuration])
+        }
+        let binPath = try context.swift.runSwift(
+            arguments, repository: context.repository, environment: baseEnvironment
+        ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !binPath.isEmpty else {
+            throw ToolError("SwiftPM did not report coverage products", exitCode: ToolExitCode.data)
+        }
+        let artifacts = try SwiftBuildArtifacts(
+            buildRoot: context.swift.swiftPMBuildRoot(
+                repository: context.repository, environment: baseEnvironment),
+            productsDirectory: URL(fileURLWithPath: binPath),
+            fileSystem: context.fileSystem)
+        if command.resetCoverage { try artifacts.resetCoverage() }
+        coverageArtifacts = artifacts
+    }
     try context.swift.runSwift(
         command.arguments(),
         repository: context.repository,
-        environment: try command.environment(context: context, base: baseEnvironment)
+        environment: command.environment(base: baseEnvironment)
     )
+    if let coverageArtifacts {
+        try coverageArtifacts.accumulateCoverage(
+            swift: context.swift, repository: context.repository)
+    }
 }
 
 private func runIntegrationPackage(
@@ -1014,32 +1021,12 @@ private func runIntegrationPackage(
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
     try context.swift.runSwift(
         [
-            "test", "--enable-index-store", "--package-path",
+            "test", "--no-parallel", "--enable-index-store", "--package-path",
             context.repository.url(packagePath).path, "--scratch-path", scratch.path,
         ],
         repository: context.repository,
-        environment: try compilerFilterEnvironment(context: context, base: environment)
+        environment: environment
     )
-}
-
-private func compilerFilterEnvironment(
-    context: ToolContext,
-    base: [String: String] = [:]
-) throws -> [String: String] {
-    try CCompilerFilter.compilerEnvironment(
-        filterExecutable: currentExecutableURL(context: context),
-        base: base,
-        inherited: context.runner.environment)
-}
-
-private func currentExecutableURL(context: ToolContext) throws -> URL {
-    guard let path = CommandLine.arguments.first, !path.isEmpty else {
-        throw ToolError("cannot resolve wck executable path", exitCode: ToolExitCode.environment)
-    }
-    return try CCompilerFilter.filterExecutableURL(
-        commandPath: path,
-        workingDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
-        runner: context.runner)
 }
 
 private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) throws {
@@ -1053,7 +1040,6 @@ private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) t
             "--scratch-path", scratch.path,
         ],
         repository: context.repository,
-        environment: try compilerFilterEnvironment(context: context),
         requireSuccess: false
     )
     guard result.exitCode != 0 else {
@@ -1088,7 +1074,6 @@ private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws
                 "--scratch-path", scratch.path, "--target", target,
             ],
             repository: context.repository,
-            environment: try compilerFilterEnvironment(context: context),
             requireSuccess: false
         )
         guard result.exitCode != 0 else {
@@ -1129,7 +1114,6 @@ private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) t
                 "--scratch-path", scratch.path, "--target", target,
             ],
             repository: context.repository,
-            environment: try compilerFilterEnvironment(context: context),
             requireSuccess: false
         )
         guard result.exitCode != 0 else {
@@ -1159,7 +1143,6 @@ private func verifyMissingApplicationIdentityIsRejected(context: ToolContext) th
             "--scratch-path", scratch.path,
         ],
         repository: context.repository,
-        environment: try compilerFilterEnvironment(context: context),
         requireSuccess: false
     )
     guard result.exitCode != 0 else {
@@ -1239,13 +1222,14 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
         break
     }
 
-    for filter in filters {
+    for (index, filter) in filters.enumerated() {
         try runSwiftTests(
             context: context,
             command: SwiftTestCommand(
                 sanitizer: sanitizer == .address ? .address : .none,
                 coverage: context.runner.environment["WAYLAND_CLIENT_KIT_HEADLESS_COVERAGE"]
                     == "1",
+                resetCoverage: index == 0,
                 filters: [filter]
             ),
             baseEnvironment: environment
@@ -1259,28 +1243,15 @@ private func runThreadSanitizerTests(
     filters: [String] = []
 ) throws {
     let suppressions = context.repository.url("safety/tsan-suppressions.txt")
-    var sanitizerEnvironment = baseEnvironment
-    sanitizerEnvironment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
+    var environment = baseEnvironment
+    environment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
         suppressions: suppressions,
         inherited: context.runner.environment
     )
-    let environment = try compilerFilterEnvironment(
-        context: context,
-        base: sanitizerEnvironment
-    )
 
     #if os(Linux)
-        try runSwiftTests(
-            context: context,
-            command: SwiftTestCommand(
-                sanitizer: .thread,
-                jobs: 2,
-                buildTestsOnly: true
-            ),
-            baseEnvironment: sanitizerEnvironment
-        )
         let binPathResult = try context.swift.runSwift(
-            ["build", "--show-bin-path"],
+            ["build", "--sanitize=thread", "--show-bin-path"],
             repository: context.repository,
             environment: environment
         )
@@ -1291,37 +1262,37 @@ private func runThreadSanitizerTests(
                 exitCode: ToolExitCode.data
             )
         }
-        let testExecutable = URL(fileURLWithPath: binPath)
-            .appendingPathComponent("WaylandClientKitPackageTests.xctest")
-        let runtimeEnvironment = context.swift.swiftRuntimeEnvironment(environment)
-
-        func runTestBundle(filter: String?) throws {
-            var arguments = ["--sanitize=thread", "--no-parallel"]
-            if let filter {
-                arguments.append(contentsOf: ["--filter", filter])
-            }
-            arguments.append(contentsOf: ["--testing-library", "swift-testing"])
-            try context.runner.run(
-                testExecutable.path,
-                arguments,
-                workingDirectory: context.repository.root,
-                environment: runtimeEnvironment
-            )
+        let artifacts = try SwiftBuildArtifacts(
+            buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+            productsDirectory: URL(fileURLWithPath: binPath),
+            fileSystem: context.fileSystem)
+        // Clear old runners so deleted test targets cannot execute stale binaries.
+        for executable in try context.fileSystem.walk(
+            artifacts.productsDirectory, includingDirectories: false
+        )
+        where executable.lastPathComponent.hasSuffix("-test-runner")
+            && executable.deletingLastPathComponent().path == artifacts.productsDirectory.path
+        {
+            try context.fileSystem.removeItem(executable)
         }
-
-        if filters.isEmpty {
-            try runTestBundle(filter: nil)
-        } else {
-            for filter in filters {
-                try runTestBundle(filter: filter)
-            }
-        }
+        try runSwiftTests(
+            context: context,
+            command: SwiftTestCommand(
+                sanitizer: .thread,
+                jobs: 2,
+                buildTestsOnly: true
+            ),
+            baseEnvironment: environment
+        )
+        try artifacts.runThreadSanitizerTests(
+            runner: context.runner, repository: context.repository,
+            environment: context.swift.swiftRuntimeEnvironment(environment), filters: filters)
     #else
         if filters.isEmpty {
             try runSwiftTests(
                 context: context,
                 command: SwiftTestCommand(sanitizer: .thread, jobs: 2),
-                baseEnvironment: sanitizerEnvironment
+                baseEnvironment: environment
             )
         } else {
             for filter in filters {
@@ -1332,7 +1303,7 @@ private func runThreadSanitizerTests(
                         jobs: 2,
                         filters: [filter]
                     ),
-                    baseEnvironment: sanitizerEnvironment
+                    baseEnvironment: environment
                 )
             }
         }
@@ -1380,10 +1351,7 @@ private func runCheap(context: ToolContext) throws {
 }
 
 private func runRequired(context: ToolContext) throws {
-    try PublicAPIAuditor(context: context).verify(
-        update: false,
-        environment: compilerFilterEnvironment(context: context)
-    )
+    try PublicAPIAuditor(context: context).verify(update: false)
     try context.swift.runSwift(
         [
             "build", "--disable-index-store", "-Xswiftc", "-strict-concurrency=complete",
@@ -1456,7 +1424,7 @@ private func runRelease(context: ToolContext) throws {
 
 private func runFoundationCheck(context: ToolContext) throws {
     context.diagnostics.info(
-        try ToolchainSmoke(context: context).report(runSwiftBuildPreview: true))
+        try ToolchainSmoke(context: context).report())
     try runCheckBase(context: context)
     try context.swift.runSwift(
         ["build", "--disable-index-store", "-c", "release"],

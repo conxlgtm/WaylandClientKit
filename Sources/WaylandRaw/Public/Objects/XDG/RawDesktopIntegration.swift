@@ -93,7 +93,7 @@ package final class RawXDGToplevelIcon {
 
     package func setName(_ name: String) throws {
         try preconditionMutable()
-        unsafe name.withCString { namePointer in
+        name.withCString { namePointer in
             unsafe swl_xdg_toplevel_icon_v1_set_name(pointer, namePointer)
         }
     }

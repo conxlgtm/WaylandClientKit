@@ -197,15 +197,7 @@ struct RepositoryNixTools {
             return ["SWIFT_BIN": override]
         }
 
-        let nixOSSwift = URL(fileURLWithPath: "/run/current-system/sw/bin/swift")
-        if fileSystem.isExecutable(nixOSSwift) {
-            return ["SWIFT_BIN": nixOSSwift.path]
-        }
-
-        do {
-            return ["SWIFT_BIN": try runner.executableURL(for: "swift").path]
-        } catch {
-            return [:]
-        }
+        // The flake chooses the required toolchain when SWIFT_BIN is unset.
+        return [:]
     }
 }

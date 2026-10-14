@@ -352,7 +352,7 @@ private final class WriterDescriptorCloseRecorder: Sendable {
 
 private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
     var descriptors = [Int32](repeating: -1, count: 2)
-    let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
+    let result = descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
         unsafe Glibc.pipe(descriptorBuffer.baseAddress)
     }
     guard result == 0 else {
@@ -368,7 +368,7 @@ private func fillPipeUntilWouldBlock(_ descriptor: Int32) throws {
     try setNonblocking(descriptor)
     let bytes = [UInt8](repeating: 0, count: 4_096)
     while true {
-        let result = unsafe bytes.withUnsafeBytes { buffer in
+        let result = bytes.withUnsafeBytes { buffer in
             unsafe Glibc.write(descriptor, buffer.baseAddress, buffer.count)
         }
         if result >= 0 {

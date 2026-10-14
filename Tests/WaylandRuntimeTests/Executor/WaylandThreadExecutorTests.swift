@@ -92,7 +92,7 @@
             }
 
             var byte = UInt8(1)
-            _ = unsafe withUnsafeBytes(of: &byte) { buffer in
+            _ = withUnsafeBytes(of: &byte) { buffer in
                 unsafe Glibc.write(signalWriteDescriptor, buffer.baseAddress, 1)
             }
         }
@@ -157,7 +157,7 @@
             }
 
             var byte = UInt8(1)
-            _ = unsafe withUnsafeBytes(of: &byte) { buffer in
+            _ = withUnsafeBytes(of: &byte) { buffer in
                 unsafe Glibc.write(signalWriteDescriptor, buffer.baseAddress, 1)
             }
         }

@@ -17,7 +17,15 @@ swift run wck tools toolchain-smoke
 swift run wck bootstrap check
 ```
 
-WaylandClientKit currently requires Swift 6.3.2 or newer.
+WaylandClientKit requires Swift 6.4.0 or newer and uses Swift 6 language mode.
+
+The Nix shell uses Swiftly's 6.4.0 distribution by default. To choose another
+supported toolchain, run `SWIFT_BIN=/path/to/toolchain/usr/bin/swift nix develop`.
+The compiler, Clang, formatter, symbol graphs, and generated Swift SDK all use
+that toolchain.
+
+The commands below use the default SwiftPM build backend with the generated SDK.
+Do not add `--build-system native` or export a synthetic `SDKROOT`.
 
 ## 2. Build WaylandClientKit
 

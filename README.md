@@ -1,44 +1,24 @@
 # WaylandClientKit
 
-WaylandClientKit is a Swift 6 package for native Wayland clients and GUI
-framework infrastructure on Linux. It uses Wayland system libraries directly
-and keeps protocol handles, file descriptors, unsafe lifetimes, and C interop
-behind typed Swift APIs.
+WaylandClientKit provides typed Swift APIs for Wayland clients and GUI
+frameworks on Linux, using the Wayland system libraries directly.
 
-## Status And Products
+## Products
 
-WaylandClientKit is pre-foundation, so source-breaking changes are possible.
+The project is in early development, and source-breaking changes are possible.
 
-- `WaylandClient` is the public product for windows, input, text input, data
-  transfer, cursors, output facts, presentation feedback, and desktop
-  integration.
-- `WaylandGraphicsPreview` is a source-breaking preview product for graphics
-  submission experiments.
+- `WaylandClient` covers windows, popups, dialogs, subsurfaces, software drawing,
+  input, text input, data transfer, cursors, presentation feedback, and desktop
+  and output integration.
+- `WaylandGraphicsPreview` is a preview product for graphics submission
+  experiments, with explicit software fallback reporting.
 
 Both products are baseline and audit tracked under the
 [compatibility policy](docs/compatibility-policy.md).
 
-## Scope
-
-Current public coverage includes:
-
-- display and managed window, popup, dialog, and subsurface lifecycle
-- transactional software drawing, damage, scale, regions, and presentation feedback
-- pointer, keyboard, touch, tablet, gesture, cursor, and text input
-- clipboard, primary selection, and drag-and-drop
-- desktop and output integration
-- preview GPU submission with explicit software fallback reporting
-
-See the [Support Matrix](docs/support-matrix.md) for protocol-level status.
-
-WaylandClientKit does not provide widgets, layout, styling, accessibility
-semantics, scene management, application architecture, or renderer selection.
-It does not expose public raw Wayland, GBM, EGL, or DRM objects; borrowed file
-descriptor integers; raw pointers; or unsafe implementation handles.
-
 ## Build And Run
 
-Swift 6.3.2 or newer is required.
+Swift 6.4.0 or newer is required; the package uses Swift 6 language mode.
 
 ```bash
 nix develop
@@ -48,12 +28,15 @@ swift build --disable-index-store
 swift run wayland-client-kit-smoke
 ```
 
-Without Nix, install the packages in
-[Linux Dependencies](docs/linux-dependencies.md) before running the checks.
-The smoke executable requires a Wayland session. For a first client, follow
-[Getting Started](docs/getting-started.md).
+Nix selects the Swiftly toolchain and configures a compiler-specific SDK for
+SwiftPM's default backend. Set `SWIFT_BIN` before entering the shell to override
+the compiler.
 
-## Repository Checks
+Without Nix, install the packages in
+[Linux Dependencies](docs/linux-dependencies.md) before building.
+The smoke executable needs a Wayland session.
+
+## Checks
 
 ```bash
 swift run wck ci cheap
@@ -64,14 +47,8 @@ swift run wck protocols verify-generated
 swift run wck identity verify-generated
 ```
 
-`ci cheap` runs static checks. `ci required` adds the public API baseline,
-strict build, unit tests, external integration packages, and expected-failure
-clients for invalid graphics policy and graphics-lease copying or reuse. `ci check`
-also verifies Markdown and DocC.
-
-See [Tooling](docs/tooling.md) and
-[Protocol Generation](docs/generation.md) for command ownership and generated
-files.
+See [Tooling](docs/tooling.md) for check details and
+[Protocol Generation](docs/generation.md) for generated files.
 
 ## Documentation
 
@@ -89,15 +66,11 @@ Examples are separate Swift package targets. Run one from the repository root:
 swift run --package-path Examples WaylandClientKitDemo
 ```
 
-The [API chooser](docs/which-api-should-i-use.md) links features to examples.
-Build every example with `swift run wck examples build`.
+## Contributing And License
 
-## Policies
+See [Contributing](CONTRIBUTING.md), [Support](SUPPORT.md), and the
+[Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities privately according
+to [Security](SECURITY.md).
 
-Read [Contributing](CONTRIBUTING.md), [Support](SUPPORT.md), and the
-[Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities according to
-[Security](SECURITY.md), not through public issues.
-
-WaylandClientKit is licensed under the [Apache License 2.0](LICENSE). Vendored
-protocol XML and generated artifacts retain upstream license and provenance
-notices.
+Licensed under the [Apache License 2.0](LICENSE). Vendored protocol XML and
+generated artifacts keep their upstream license and provenance notices.

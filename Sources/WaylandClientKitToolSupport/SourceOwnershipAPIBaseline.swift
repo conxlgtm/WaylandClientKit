@@ -31,18 +31,13 @@ public struct SourceOwnershipAPIBaseline {
             var parsedSources: [ParsedOwnershipSource] = []
             for source in sources {
                 let sourceText = try fileSystem.readText(source)
-                guard
-                    sourceText.contains("Copyable")
-                        || sourceText.contains("borrowing")
-                        || sourceText.contains("consuming")
-                else {
-                    continue
-                }
                 let result = try runner.run(
                     swiftCompilerExecutable,
                     [
                         "-frontend",
                         "-dump-parse",
+                        "-swift-version",
+                        "6",
                         "-D",
                         "SWIFT_PACKAGE",
                         source.path,
@@ -95,14 +90,18 @@ private struct SwiftParseDumpParser {
                     indentation: indentation,
                     name: firstQuotedValue(in: text),
                     sourceLocation: sourceLocation(in: text),
+                    accessorKind: nodeKind == "accessor_decl" ? accessorKind(in: text) : nil,
                     parent: stack.last
                 )
                 declarations.append(declaration)
                 stack.append(declarations.index(before: declarations.endIndex))
-            } else if nodeKind == "access_control_attr", text.contains("access_level=public") {
-                if let owner = stack.last {
-                    declarations[owner].hasPublicAccess = true
-                }
+            } else if nodeKind == "access_control_attr", let owner = stack.last {
+                declarations[owner].hasExplicitAccess = true
+                declarations[owner].hasPublicAccess =
+                    text.contains("access_level=public") || text.contains("access_level=open")
+            } else if nodeKind == "setter_access_attr", let owner = stack.last {
+                declarations[owner].hasRestrictedSetter =
+                    !text.contains("access=public") && !text.contains("access=open")
             } else if nodeKind == "borrowing_attr", let owner = stack.last {
                 declarations[owner].hasBorrowingAttribute = true
             } else if nodeKind == "consuming_attr", let owner = stack.last {
@@ -117,6 +116,11 @@ private struct SwiftParseDumpParser {
         guard trimmed.first == "(" else { return nil }
         let remainder = trimmed.dropFirst()
         return String(remainder.prefix { !$0.isWhitespace && $0 != ")" })
+    }
+
+    private func accessorKind(in line: String) -> String? {
+        guard let property = line.range(of: " for=") else { return nil }
+        return line[..<property.lowerBound].split(separator: " ").last.map(String.init)
     }
 
     private func firstQuotedValue(in line: String) -> String? {
@@ -162,6 +166,21 @@ private struct SourceOwnershipExtractor {
         module: String,
         sources: [ParsedOwnershipSource]
     ) -> Set<String> {
+        // Files without ownership markers can still declare hidden types whose
+        // extensions add ownership-bearing properties in another file.
+        var hiddenTypes = Set<String>()
+        for source in sources {
+            for (index, declaration) in source.declarations.enumerated()
+            where declaration.isTypeDeclaration
+                && !isExternallyPublic(index, in: source.declarations)
+                && isModuleScopedType(index, in: source.declarations)
+            {
+                if let name = typeName(for: index, in: source.declarations) {
+                    hiddenTypes.insert(name)
+                }
+            }
+        }
+
         var noncopyableTypes = Set<String>()
         for source in sources {
             for (index, declaration) in source.declarations.enumerated()
@@ -170,7 +189,9 @@ private struct SourceOwnershipExtractor {
                 && NoncopyableInheritanceParser(source: source.source)
                     .containsMarker(at: declaration.sourceLocation)
             {
-                if let typeName = typeName(for: index, in: source.declarations) {
+                if let typeName = typeName(for: index, in: source.declarations),
+                    !isHidden(typeName, in: hiddenTypes)
+                {
                     noncopyableTypes.insert(typeName)
                 }
             }
@@ -178,40 +199,66 @@ private struct SourceOwnershipExtractor {
 
         var records = Set(noncopyableTypes.map { "\(module).\($0)\t~Copyable" })
         for source in sources {
-            for (index, declaration) in source.declarations.enumerated()
-            where declaration.kind == "var_decl"
-                && isPublicMember(index, in: source.declarations)
-            {
+            for declaration in source.declarations
+            where declaration.kind == "accessor_decl" {
                 guard
-                    let containingType = containingTypeName(for: index, in: source.declarations),
-                    noncopyableTypes.contains(containingType),
-                    let propertyName = declaration.name,
-                    let getterOwnership = getterOwnership(index, in: source.declarations)
+                    let property = declaration.parent,
+                    source.declarations[property].kind == "var_decl",
+                    isExternallyPublic(property, in: source.declarations),
+                    let containingType = containingTypeName(
+                        for: property, in: source.declarations
+                    ),
+                    !isHidden(containingType, in: hiddenTypes),
+                    let propertyName = source.declarations[property].name,
+                    let accessor = ownershipAccessor(declaration),
+                    declaration.accessorKind != "mutate"
+                        || !source.declarations[property].hasRestrictedSetter
                 else { continue }
-                records.insert(
-                    "\(module).\(containingType).\(propertyName)\t\(getterOwnership) get"
-                )
+                records.insert("\(module).\(containingType).\(propertyName)\t\(accessor)")
             }
         }
         return records
     }
 
-    private func getterOwnership(
-        _ property: Int,
+    private func ownershipAccessor(_ declaration: ParsedSwiftDeclaration) -> String? {
+        guard let kind = declaration.accessorKind else { return nil }
+        let ownership: String?
+        if declaration.hasBorrowingAttribute {
+            ownership = "borrowing"
+        } else if declaration.hasConsumingAttribute {
+            ownership = "consuming"
+        } else {
+            ownership = nil
+        }
+        if kind == "borrow" || kind == "mutate" {
+            return ownership.map { "\($0) \(kind)" } ?? kind
+        }
+        guard kind == "get", let ownership else { return nil }
+        return "\(ownership) get"
+    }
+
+    private func isModuleScopedType(
+        _ declaration: Int,
         in declarations: [ParsedSwiftDeclaration]
-    ) -> String? {
-        for index in declarations.indices
-        where declarations[index].parent == property
-            && declarations[index].kind == "accessor_decl"
-        {
-            if declarations[index].hasBorrowingAttribute {
-                return "borrowing"
-            }
-            if declarations[index].hasConsumingAttribute {
-                return "consuming"
+    ) -> Bool {
+        var ancestor = declarations[declaration].parent
+        while let index = ancestor {
+            let node = declarations[index]
+            guard node.isTypeDeclaration || node.kind == "extension_decl" else { return false }
+            ancestor = node.parent
+        }
+        return true
+    }
+
+    private func isHidden(_ typeName: String, in hiddenTypes: Set<String>) -> Bool {
+        var prefix = ""
+        for component in typeName.split(separator: ".") {
+            prefix = prefix.isEmpty ? String(component) : "\(prefix).\(component)"
+            if hiddenTypes.contains(prefix) {
+                return true
             }
         }
-        return nil
+        return false
     }
 
     private func isExternallyPublic(
@@ -234,8 +281,8 @@ private struct SourceOwnershipExtractor {
         _ declaration: Int,
         in declarations: [ParsedSwiftDeclaration]
     ) -> Bool {
-        if declarations[declaration].hasPublicAccess {
-            return true
+        if declarations[declaration].hasExplicitAccess {
+            return declarations[declaration].hasPublicAccess
         }
         guard let parent = declarations[declaration].parent else { return false }
         return declarations[parent].kind == "extension_decl"
@@ -403,8 +450,11 @@ private struct ParsedSwiftDeclaration {
     let indentation: Int
     let name: String?
     let sourceLocation: SourceLocation?
+    let accessorKind: String?
     let parent: Int?
     var hasPublicAccess = false
+    var hasExplicitAccess = false
+    var hasRestrictedSetter = false
     var hasBorrowingAttribute = false
     var hasConsumingAttribute = false
 

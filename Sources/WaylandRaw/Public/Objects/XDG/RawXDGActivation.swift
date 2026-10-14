@@ -63,7 +63,7 @@ package final class RawXDGActivation {
     }
 
     package func activate(token: RawXDGActivationTokenValue, surface: RawSurface) {
-        unsafe token.value.withCString { tokenPointer in
+        token.value.withCString { tokenPointer in
             unsafe swl_xdg_activation_v1_activate(pointer, tokenPointer, surface.pointer)
         }
     }
@@ -113,7 +113,7 @@ package final class RawXDGActivationToken {
     package func setAppID(_ appID: String) {
         guard case .pending = state else { return }
 
-        unsafe appID.withCString { appIDPointer in
+        appID.withCString { appIDPointer in
             unsafe swl_xdg_activation_token_v1_set_app_id(pointer, appIDPointer)
         }
     }

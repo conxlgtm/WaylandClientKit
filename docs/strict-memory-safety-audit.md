@@ -2,6 +2,18 @@
 
 WaylandClientKit treats raw Wayland objects and shared-memory mappings as explicit unsafe islands. Public client-facing APIs should not expose raw C pointers or mmap lifetimes directly.
 
+## Swift 6.4 Unsafe Markers
+
+Swift 6.4 flags redundant `unsafe` markers on safe standard-library pointer-scope
+closure calls. The outer markers have been removed. Pointer loads, C calls,
+borrowed-memory operations, and project APIs inside those closures keep their
+required acknowledgments. `@safe`, strict memory-safety errors, owner-thread
+checks, and allocation/lease lifetimes are unchanged.
+
+The deferred window presentation-feedback request explicitly captures its
+display core strongly, as it did implicitly before. The callback still uses a
+weak capture. Actor isolation and callback executors are unchanged.
+
 ## Unsafe Boundary Reference
 
 This table records the lifetime facts that are easy to lose when the code around an

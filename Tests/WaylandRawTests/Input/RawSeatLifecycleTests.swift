@@ -455,7 +455,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
         let callbacks = try unsafe #require(recorder.keyboardCallbacks)
         var pressedKeys = [UInt32(30), UInt32(31)]
         let keyArrayByteCount = pressedKeys.count * MemoryLayout<UInt32>.stride
-        unsafe pressedKeys.withUnsafeMutableBufferPointer { keyBuffer in
+        pressedKeys.withUnsafeMutableBufferPointer { keyBuffer in
             var keyArray = unsafe wl_array(
                 size: keyArrayByteCount,
                 alloc: keyArrayByteCount,

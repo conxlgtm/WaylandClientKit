@@ -22,6 +22,7 @@ private struct DocumentationSymbolGraphModule: Decodable { let name: String }
 private struct DocumentationSymbolKind: Decodable { let identifier: String }
 private struct DocumentationSymbolDocLine: Decodable { let text: String }
 private struct DocumentationSymbolDocComment: Decodable {
+    let module: String?
     let lines: [DocumentationSymbolDocLine]
 }
 private struct DocumentationSymbol: Decodable {
@@ -60,9 +61,11 @@ public struct DocumentationSymbolCoverageVerifier {
             {
                 totals[graph.module.name, default: (0, 0)].eligible += 1
                 let hasAbstract =
-                    symbol.docComment?.lines.contains { line in
+                    (symbol.docComment?.module == nil
+                        || symbol.docComment?.module == graph.module.name)
+                    && (symbol.docComment?.lines.contains { line in
                         !line.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    } ?? false
+                    } ?? false)
                 if hasAbstract {
                     totals[graph.module.name, default: (0, 0)].documented += 1
                 }

@@ -124,12 +124,12 @@ private func formatTableBytes(_ entries: [RawLinuxDmabufFormatModifier]) -> [UIn
     var bytes: [UInt8] = []
     for entry in entries {
         var format = entry.format
-        unsafe withUnsafeBytes(of: &format) { formatBytes in
+        withUnsafeBytes(of: &format) { formatBytes in
             bytes.append(contentsOf: unsafe Array(formatBytes))
         }
         bytes.append(contentsOf: [0, 0, 0, 0])
         var modifier = entry.modifier
-        unsafe withUnsafeBytes(of: &modifier) { modifierBytes in
+        withUnsafeBytes(of: &modifier) { modifierBytes in
             bytes.append(contentsOf: unsafe Array(modifierBytes))
         }
     }
@@ -148,7 +148,7 @@ private func pipeWriteEndIsClosed(readEnd: Int32) -> Bool {
 
     var byte: UInt8 = 0
     while true {
-        let readCount = unsafe withUnsafeMutableBytes(of: &byte) { byteBuffer in
+        let readCount = withUnsafeMutableBytes(of: &byte) { byteBuffer in
             unsafe Glibc.read(readEnd, byteBuffer.baseAddress, 1)
         }
 

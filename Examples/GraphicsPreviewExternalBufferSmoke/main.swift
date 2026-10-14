@@ -361,7 +361,7 @@ enum GraphicsPreviewExternalBufferSmoke {
 
     private static func pipeReadDescriptor() throws -> OwnedFileDescriptor {
         var descriptors = [Int32](repeating: -1, count: 2)
-        let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        let result = descriptors.withUnsafeMutableBufferPointer { buffer in
             unsafe Glibc.pipe(buffer.baseAddress)
         }
         guard result == 0 else {
@@ -659,7 +659,7 @@ private final class ExternalDmabufRenderer {
 
     private static func openRenderNode(deviceIDBytes: [UInt8]) throws -> Int32 {
         let path = try renderNodePath(deviceIDBytes: deviceIDBytes)
-        let fileDescriptor = unsafe path.withCString { pathPointer in
+        let fileDescriptor = path.withCString { pathPointer in
             unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
         }
         guard fileDescriptor >= 0 else {
@@ -678,8 +678,8 @@ private final class ExternalDmabufRenderer {
             repeating: 0,
             count: Int(swl_drm_render_node_path_max())
         )
-        let result = unsafe deviceIDBytes.withUnsafeBufferPointer { deviceBytes in
-            unsafe pathBytes.withUnsafeMutableBufferPointer { outputPathBytes in
+        let result = deviceIDBytes.withUnsafeBufferPointer { deviceBytes in
+            pathBytes.withUnsafeMutableBufferPointer { outputPathBytes in
                 guard let deviceBaseAddress = deviceBytes.baseAddress,
                     let outputBaseAddress = outputPathBytes.baseAddress
                 else {
@@ -698,7 +698,7 @@ private final class ExternalDmabufRenderer {
             throw WaylandGraphicsError.unavailable(.noRenderNode)
         }
 
-        let path = unsafe pathBytes.withUnsafeBufferPointer { pathBuffer in
+        let path = pathBytes.withUnsafeBufferPointer { pathBuffer in
             guard let baseAddress = pathBuffer.baseAddress else { return "" }
 
             return unsafe String(cString: baseAddress)

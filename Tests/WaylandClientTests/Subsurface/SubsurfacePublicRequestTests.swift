@@ -117,7 +117,8 @@
                     // The original error remains observable after cancellation cleanup.
                 }
 
-                #expect(try await subsurface.show(drawSolid) == .presented)
+                let outcome = try await subsurface.show(drawSolid)
+                #expect(outcome == .presented)
                 await subsurface.close()
                 await window.close()
             }

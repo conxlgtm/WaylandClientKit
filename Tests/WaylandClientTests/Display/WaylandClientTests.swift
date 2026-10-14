@@ -155,7 +155,7 @@ struct WaylandClientTests {
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
         // swiftlint:disable:next closure_body_length
-        try unsafe storage.withUnsafeMutableBufferPointer { buffer in
+        try storage.withUnsafeMutableBufferPointer { buffer in
             let frame = try unsafe SoftwareFrame(
                 id: softwareFrameTestBufferID(),
                 width: 2,
@@ -200,7 +200,7 @@ struct WaylandClientTests {
         var storage = [UInt32](repeating: 0, count: 3)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
-        _ = unsafe storage.withUnsafeMutableBufferPointer { buffer in
+        _ = storage.withUnsafeMutableBufferPointer { buffer in
             #expect(
                 throws: ClientError.invalidWindowState(
                     .softwareFrameLayout(

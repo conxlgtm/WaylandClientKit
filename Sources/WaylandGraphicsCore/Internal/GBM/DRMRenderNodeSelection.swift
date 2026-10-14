@@ -22,8 +22,8 @@ package enum DRMRenderNodeSelector {
             repeating: 0,
             count: Int(swl_drm_render_node_path_max())
         )
-        let result = unsafe device.bytes.withUnsafeBufferPointer { deviceIDBytes in
-            unsafe pathBytes.withUnsafeMutableBufferPointer { outputPathBytes in
+        let result = device.bytes.withUnsafeBufferPointer { deviceIDBytes in
+            pathBytes.withUnsafeMutableBufferPointer { outputPathBytes in
                 unsafe swl_drm_render_node_path_from_device_bytes(
                     deviceIDBytes.baseAddress,
                     UInt32(deviceIDBytes.count),
@@ -38,7 +38,7 @@ package enum DRMRenderNodeSelector {
             )
         }
 
-        let path = unsafe pathBytes.withUnsafeBufferPointer { pathBuffer -> String? in
+        let path = pathBytes.withUnsafeBufferPointer { pathBuffer -> String? in
             guard let baseAddress = pathBuffer.baseAddress else { return nil }
 
             return unsafe String(cString: baseAddress)
@@ -54,7 +54,7 @@ package enum DRMRenderNodeSelector {
         for device: RawLinuxDmabufDevice
     ) throws(GBMAllocationError) -> GBMRenderNodeFileDescriptor {
         let path = try renderNodePath(for: device)
-        let fd = unsafe path.withCString { pathPointer in
+        let fd = path.withCString { pathPointer in
             unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
         }
         guard fd >= 0 else {

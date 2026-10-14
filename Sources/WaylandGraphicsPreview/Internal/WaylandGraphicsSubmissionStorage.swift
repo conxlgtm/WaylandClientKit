@@ -91,7 +91,7 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
             throw WaylandGraphicsError.unavailable(.noRenderNode)
         }
 
-        let fileDescriptor = unsafe path.withCString { pathPointer in
+        let fileDescriptor = path.withCString { pathPointer in
             unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
         }
         guard fileDescriptor >= 0 else {

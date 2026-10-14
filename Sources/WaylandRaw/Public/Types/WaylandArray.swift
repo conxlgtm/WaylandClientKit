@@ -31,7 +31,7 @@ enum WaylandArray {
             )
         }
 
-        return unsafe bytes.withUnsafeBytes { buffer in
+        return bytes.withUnsafeBytes { buffer in
             stride(from: 0, to: bytes.count, by: elementSize).map { offset in
                 unsafe buffer.loadUnaligned(fromByteOffset: offset, as: UInt16.self)
             }

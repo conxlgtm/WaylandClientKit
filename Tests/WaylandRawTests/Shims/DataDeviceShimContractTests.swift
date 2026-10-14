@@ -10,7 +10,7 @@
             let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x1001)
             let offer = try unsafe #require(OpaquePointer(bitPattern: 0x2002))
             var offerRecord = unsafe swl_test_data_offer_offer_record()
-            try unsafe "text/plain;charset=utf-8".withCString { mimeType in
+            try "text/plain;charset=utf-8".withCString { mimeType in
                 unsafe swl_test_data_offer_listener_emit_offer(data, offer, mimeType, &offerRecord)
                 let recordedMimeType = try unsafe #require(offerRecord.mime_type)
                 #expect(unsafe String(cString: recordedMimeType) == "text/plain;charset=utf-8")
@@ -98,7 +98,7 @@
         func dataSourceRequestWrappersPreserveArguments() async throws {
             let source = try unsafe #require(OpaquePointer(bitPattern: 0x9009))
             try await assertDataRequest(expectedKind: SWL_TEST_DATA_SOURCE_OFFER, object: source) {
-                try unsafe "text/plain".withCString { mimeType in
+                try "text/plain".withCString { mimeType in
                     unsafe swl_data_source_offer(source, mimeType)
                     let record = unsafe swl_test_data_request_record()
                     let recordedMimeType = try unsafe #require(record.mime_type)
@@ -118,7 +118,7 @@
         func dataOfferRequestWrappersPreserveArguments() async throws {
             let offer = try unsafe #require(OpaquePointer(bitPattern: 0xA00A))
             try await assertDataRequest(expectedKind: SWL_TEST_DATA_OFFER_ACCEPT, object: offer) {
-                try unsafe "text/uri-list".withCString { mimeType in
+                try "text/uri-list".withCString { mimeType in
                     unsafe swl_data_offer_accept(offer, 77, mimeType)
                     let record = unsafe swl_test_data_request_record()
                     let recordedMimeType = try unsafe #require(record.mime_type)
@@ -127,7 +127,7 @@
                 }
             }
             try await assertDataRequest(expectedKind: SWL_TEST_DATA_OFFER_RECEIVE, object: offer) {
-                try unsafe "text/plain;charset=utf-8".withCString { mimeType in
+                try "text/plain;charset=utf-8".withCString { mimeType in
                     unsafe swl_data_offer_receive(offer, mimeType, 14)
                     let record = unsafe swl_test_data_request_record()
                     let recordedMimeType = try unsafe #require(record.mime_type)
@@ -215,7 +215,7 @@
         source: OpaquePointer
     ) throws {
         var record = unsafe swl_test_data_source_send_record()
-        try unsafe "text/uri-list".withCString { mimeType in
+        try "text/uri-list".withCString { mimeType in
             unsafe swl_test_data_source_listener_emit_target(data, source, mimeType, &record)
             let recordedMimeType = try unsafe #require(record.mime_type)
             #expect(unsafe String(cString: recordedMimeType) == "text/uri-list")
@@ -232,7 +232,7 @@
         source: OpaquePointer
     ) throws {
         var record = unsafe swl_test_data_source_send_record()
-        try unsafe "text/plain".withCString { mimeType in
+        try "text/plain".withCString { mimeType in
             unsafe swl_test_data_source_listener_emit_send(data, source, mimeType, 12, &record)
             let recordedMimeType = try unsafe #require(record.mime_type)
             #expect(unsafe String(cString: recordedMimeType) == "text/plain")
