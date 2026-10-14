@@ -67,6 +67,9 @@ unrelated tools on `PATH`.
 The public API baseline supplements symbol graphs with compiler-parsed ownership
 records, distinguishing `borrow` and `mutate` accessors from `borrowing get` and
 `consuming get`, including public properties in copyable value types.
+The visibility index excludes function-local types, including declarations
+inside initializers, accessors, and closures. Local name shadowing cannot remove
+public ownership records.
 
 Documentation coverage counts product-authored public symbol abstracts.
 Documentation inherited from dependency modules does not count toward

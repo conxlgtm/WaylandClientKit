@@ -173,6 +173,7 @@ private struct SourceOwnershipExtractor {
             for (index, declaration) in source.declarations.enumerated()
             where declaration.isTypeDeclaration
                 && !isExternallyPublic(index, in: source.declarations)
+                && isModuleScopedType(index, in: source.declarations)
             {
                 if let name = typeName(for: index, in: source.declarations) {
                     hiddenTypes.insert(name)
@@ -234,6 +235,19 @@ private struct SourceOwnershipExtractor {
         }
         guard kind == "get", let ownership else { return nil }
         return "\(ownership) get"
+    }
+
+    private func isModuleScopedType(
+        _ declaration: Int,
+        in declarations: [ParsedSwiftDeclaration]
+    ) -> Bool {
+        var ancestor = declarations[declaration].parent
+        while let index = ancestor {
+            let node = declarations[index]
+            guard node.isTypeDeclaration || node.kind == "extension_decl" else { return false }
+            ancestor = node.parent
+        }
+        return true
     }
 
     private func isHidden(_ typeName: String, in hiddenTypes: Set<String>) -> Bool {

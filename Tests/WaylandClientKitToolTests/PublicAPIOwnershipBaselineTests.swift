@@ -250,3 +250,78 @@ struct PublicAPIOwnershipBaselineTests {
         return Set(report.split(separator: "\n").filter { $0.contains("\t") }.map(String.init))
     }
 }
+
+extension PublicAPIOwnershipBaselineTests {
+    @Test
+    func preservesPublicOwnershipWhenFunctionLocalTypesShadowModuleTypes() throws {
+        let records = try ownershipRecords(sources: [
+            "Lease.swift": """
+            public struct Lease: ~Copyable {
+                public var value: Int { borrowing get { 42 } }
+            }
+            """,
+            "Implementation.swift": """
+            func implementationDetail() {
+                struct Lease {}
+                _ = Lease()
+            }
+            """,
+        ])
+
+        #expect(
+            records == [
+                "Fixture.Lease\t~Copyable",
+                "Fixture.Lease.value\tborrowing get",
+            ])
+    }
+
+    @Test(arguments: [
+        """
+        func implementationDetail() {
+            struct Lease {}
+            _ = Lease()
+        }
+        """,
+        """
+        init() {
+            struct Lease {}
+            _ = Lease()
+        }
+        """,
+        """
+        var implementationDetail: Int {
+            struct Lease {}
+            _ = Lease()
+            return 0
+        }
+        """,
+        """
+        var implementationDetail: Int = {
+            struct Lease {}
+            _ = Lease()
+            return 0
+        }()
+        """,
+    ])
+    func preservesPublicOwnershipWhenLocalTypesShadowNestedTypes(
+        _ implementation: String
+    ) throws {
+        let records = try ownershipRecords(sources: [
+            "Container.swift": """
+            public struct Container {
+                public struct Lease: ~Copyable {
+                    public var value: Int { borrowing get { 42 } }
+                }
+
+                \(implementation)
+            }
+            """
+        ])
+
+        #expect(
+            records == [
+                "Fixture.Container.Lease\t~Copyable",
+                "Fixture.Container.Lease.value\tborrowing get",
+            ])
+    }
+}
