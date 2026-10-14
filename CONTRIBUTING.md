@@ -17,9 +17,9 @@ swift run wck tools toolchain-smoke
 swift run wck bootstrap check
 ```
 
-These commands report missing tools and libraries. They do not install packages
-or switch Swift toolchains. Set `SWIFT_BIN=/path/to/swift` to select a toolchain;
-on Nix, set it before entering `nix develop` so the SDK and tools use that compiler.
+These commands check for missing tools and libraries without installing packages
+or changing toolchains. To choose a compiler, set `SWIFT_BIN=/path/to/swift`.
+On Nix, set it before running `nix develop` so the SDK uses the same compiler.
 
 CI tests dynamic glibc Linux with shared libraries resolved through
 `pkg-config`. Musl, static Linux SDK builds, and static linking are not supported.

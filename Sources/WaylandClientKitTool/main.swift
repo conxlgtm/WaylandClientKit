@@ -1266,7 +1266,7 @@ private func runThreadSanitizerTests(
             buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
             productsDirectory: URL(fileURLWithPath: binPath),
             fileSystem: context.fileSystem)
-        // Remove previous runners so a removed test target cannot run stale code.
+        // Clear old runners so deleted test targets cannot execute stale binaries.
         for executable in try context.fileSystem.walk(
             artifacts.productsDirectory, includingDirectories: false
         )

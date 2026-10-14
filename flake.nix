@@ -25,7 +25,7 @@
           nixSwiftIsCurrent =
             !(lib.versionOlder pkgs.swift.version minimumSwiftVersion);
 
-          # Upstream Swift binaries still expect libxml2.so.2.
+          # Upstream Swift tools need libxml2.so.2.
           # nixos-unstable may expose newer libxml2 with a different SONAME,
           # so prefer a compat/older package when available.
           swiftCompatibleLibxml2Candidates =
@@ -164,8 +164,8 @@
             WAYLAND_CLIENT_KIT_MINIMUM_SWIFT = minimumSwiftVersion;
 
             shellHook = ''
-              # Generate from this Nix platform and the explicitly selected compiler.
-              # Tool wrappers scope runtime libraries; Git and hooks keep the host libc.
+              # Build the SDK for this Nix platform and the selected compiler.
+              # Set runtime paths per tool so Git and hooks keep the host libc.
               swift_environment="$(${pkgs.python3}/bin/python ${./nix/swift-toolchain.py} ${swiftSDKConfiguration})" || exit 1
               eval "$swift_environment"
             '';

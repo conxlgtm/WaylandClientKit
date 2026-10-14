@@ -1,4 +1,4 @@
-"""Prepare a compiler-specific Swift SDK and scoped tool wrappers for nix develop."""
+"""Set up the selected Swift compiler's SDK and tool wrappers for nix develop."""
 
 import fcntl
 import hashlib
@@ -80,8 +80,8 @@ def main():
             if not destination.exists() and not destination.is_symlink():
                 destination.symlink_to(source)
 
-    # The loader search path applies to each tool only, never to its child environment.
-    # Explicit argv[0] and frontend selection preserve Swift's multicall tool modes.
+    # Set the loader's search path per tool, leaving the child environment unchanged.
+    # Swift's multicall tools need their original argv[0] and selected frontend.
     def invocation(name):
         binary = toolchain / name
         return [config["dynamicLinker"], "--library-path", config["runtimeLibraryPath"],
@@ -102,8 +102,8 @@ def main():
             destination.symlink_to(source)
     linux_resources = resource_hint / "linux"
     linux_resources.mkdir(exist_ok=True)
-    # Swift runtime RUNPATHs use $ORIGIN, not the executable's search paths.
-    # A symlink-only overlay keeps their Nix dependencies in that same directory.
+    # Swift runtime libraries resolve $ORIGIN-relative dependencies through their RUNPATHs.
+    # Put symlinks to their Nix dependencies alongside the libraries.
     for library_root in [str(original_resources / "linux")] + config["librarySearchPaths"]:
         directory = Path(library_root)
         if not directory.is_dir():
@@ -213,12 +213,12 @@ def main():
 
     sdk_flags = shlex.join(["--toolchain", str(root), "--swift-sdks-path", str(sdks),
                             "--swift-sdk", identifier])
-    # Dispatch SwiftPM directly so the driver cannot find a different Swift installation.
+    # Call SwiftPM directly to avoid the driver's toolchain lookup.
     swift = wrappers / "swift"
     dispatch = []
     for name in ["build", "run", "test", "package"]:
-        # Swift Build's resource-bundle task hardcodes /usr/bin/touch. Supply
-        # Nix coreutils in a child mount namespace without changing the host.
+        # Swift Build calls /usr/bin/touch for resource bundles. Bind Nix coreutils
+        # there in the child mount namespace only.
         command = shlex.join([
             config["bubblewrap"], "--bind", "/", "/", "--dev-bind", "/dev", "/dev",
             "--proc", "/proc", "--ro-bind", "/sys", "/sys",

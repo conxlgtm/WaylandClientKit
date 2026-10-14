@@ -1,6 +1,6 @@
 import Foundation
 
-/// Artifact discovery is anchored to SwiftPM's selected products directory, not a tree-wide glob.
+/// Finds build artifacts only in SwiftPM's selected products directory.
 public struct SwiftBuildArtifacts {
     public let buildRoot: URL
     public let productsDirectory: URL

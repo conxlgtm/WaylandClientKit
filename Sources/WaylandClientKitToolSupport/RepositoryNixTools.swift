@@ -197,7 +197,7 @@ struct RepositoryNixTools {
             return ["SWIFT_BIN": override]
         }
 
-        // Without an explicit override, let the flake select its required toolchain.
+        // The flake chooses the required toolchain when SWIFT_BIN is unset.
         return [:]
     }
 }

@@ -22,7 +22,7 @@ struct CoverageProfileAccumulationTests {
 
         try writeProfile("alpha\n0\n1\n2\n\n", to: managed)
         try artifacts.accumulateCoverage(swift: swift, repository: repository)
-        // Each SwiftPM filtered test invocation replaces its managed directory.
+        // Simulate SwiftPM replacing the coverage directory between test filters.
         try FileManager.default.removeItem(at: managed)
         try writeProfile("alpha\n0\n1\n3\n\nbeta\n0\n1\n7\n\n", to: managed)
         try artifacts.accumulateCoverage(swift: swift, repository: repository)

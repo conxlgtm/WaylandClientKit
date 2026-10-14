@@ -8,23 +8,28 @@ Review [Compatibility Policy](compatibility-policy.md) for public API changes an
 
 ## Current Checkpoint Migration
 
-The minimum toolchain is now Swift 6.4.0, while packages retain Swift 6 language
-mode. On Nix, ordinary SwiftPM commands use a compiler-specific SDK/toolset with
-the default Swift Build backend. Swift-native tooling uses scoped runtime paths
-and the selected SourceKit library rather than a global libc override. See
+Swift 6.4.0 is now the minimum toolchain. Packages still use Swift 6 language
+mode. On Nix, SwiftPM uses a compiler-specific SDK/toolset and the default Swift
+Build backend. Swift-native tools use per-tool runtime paths and the selected
+SourceKit library without a global libc override. See
 [Linux Dependencies](linux-dependencies.md) and [Tooling](tooling.md).
 
-Backend artifact checks now account for per-target test runners, coverage
-exports, and release object lists. The ownership baseline distinguishes `borrow`
-and `mutate` accessors from borrowing/consuming getters before public accessor
-migration. These changes do not introduce new public rendering behavior.
+Artifact checks support per-target test runners, coverage exports, and release
+object lists. The ownership baseline distinguishes `borrow` and `mutate`
+accessors from borrowing/consuming getters before public accessor migration.
+Public rendering behavior is unchanged.
 
-Documentation coverage now excludes dependency-inherited abstracts consistently.
-Swift 6.4 compiler probes show that compile-time symbol emission omits inherited
-Swift comments that standalone module extraction includes. The `WaylandClient`
-baseline records 98 product-authored abstracts out of 1,552 eligible symbols;
-the previous count of 183 included 85 inherited standard-library abstracts.
-No product documentation was removed.
+Documentation coverage counts product-authored abstracts. Swift 6.4 compiler
+probes confirmed that compile-time symbol emission omits inherited Swift
+comments included by standalone module extraction.
+
+| `WaylandClient` baseline | Counted abstracts | Eligible symbols |
+| --- | --- | --- |
+| Swift 6.4 | 98 | 1,552 |
+| Previous | 183 | 1,552 |
+
+The previous count included 85 inherited standard-library abstracts.
+Product documentation is unchanged.
 
 This checkpoint contains source-breaking `WaylandClient` and
 `WaylandGraphicsPreview` changes:
@@ -84,32 +89,32 @@ This checkpoint contains source-breaking `WaylandClient` and
 The local x86_64 Nix validation used the default Swift Build backend:
 
 - `nix develop --command env -u WAYLAND_DISPLAY swift run wck ci release --verbose`
-  passed using isolated headless Weston. This includes strict and release builds,
+  passed with isolated headless Weston. It covered strict and release builds,
   unit tests, public and invalid clients, examples, DocC/API gates, both release
   shim targets, and the headless live, integration, TSan, and ASan paths.
-- `nix develop --command swift run wck test tsan --verbose` executed all ten
-  per-target runners successfully.
-- Unit coverage exports all ten test bundles together. Request coverage retains
-  executed LLVM records from all five filters after SwiftPM replaces its managed
-  coverage directory; profile reset and counter accumulation have a real
-  `llvm-profdata` regression test.
-- DocC and API verification passed with
-  `WAYLAND_CLIENT_KIT_SWIFTPM_SCRATCH=/tmp/wck-phase1-isolated-symbols`, not an
-  existing graph tree.
-- Bootstrap and its SwiftPM command plugin passed. Swift 6.3.2 was rejected at
-  the 6.4 manifest boundary before product compilation.
-- Linked executables use the matching Nix glibc loader. Foundation child
+- `nix develop --command swift run wck test tsan --verbose` passed all ten
+  per-target runners.
+- Unit coverage exports all ten test bundles together. Request coverage keeps
+  executed LLVM records from all five filters when SwiftPM replaces its managed
+  coverage directory. A regression test using `llvm-profdata` checks profile
+  reset and counter accumulation.
+- DocC and API verification passed using a fresh scratch tree at
+  `WAYLAND_CLIENT_KIT_SWIFTPM_SCRATCH=/tmp/wck-phase1-isolated-symbols`.
+- Bootstrap and its SwiftPM command plugin passed. Swift 6.3.2 was rejected by
+  the 6.4 manifest before product compilation.
+- Linked executables used the matching Nix glibc loader. Foundation child
   processes ran with empty and custom environments. Both declared Nix
-  architectures derived platform-specific SDK metadata; aarch64 execution was
-  not tested on this x86_64 host.
-- The desktop SHM smoke client observed its frame callback. This is not active
-  managed-GPU evidence.
+  architectures produced platform-specific SDK metadata. Runtime checks ran on
+  x86_64 only; aarch64 execution was not tested.
+- The desktop SHM smoke client received its frame callback. This check exercised
+  SHM, not active managed GPU.
 
-Desktop request tests under TSan also observed `.superseded` presentation
-outcomes and failed their retained `.presented` assertions. The isolated Weston
-TSan and ASan request-path commands passed; this does not establish every
-compositor's compatibility or foundation readiness. Retained compiler/runtime
-warnings are described in [Linux Dependencies](linux-dependencies.md).
+Desktop request tests under TSan returned `.superseded` presentation outcomes
+and failed their existing `.presented` assertions. The isolated Weston TSan and
+ASan request-path commands passed. Those results apply to Weston; they do not
+establish compatibility with every compositor or foundation readiness.
+See [Linux Dependencies](linux-dependencies.md) for the compiler and runtime
+warnings from these runs.
 
 ## Required Gates
 

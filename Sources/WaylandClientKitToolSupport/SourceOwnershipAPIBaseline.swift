@@ -166,8 +166,8 @@ private struct SourceOwnershipExtractor {
         module: String,
         sources: [ParsedOwnershipSource]
     ) -> Set<String> {
-        // Parse every source: an ownership-free file can still declare a hidden
-        // type whose extension contains ownership-bearing properties elsewhere.
+        // Files without ownership markers can still declare hidden types whose
+        // extensions add ownership-bearing properties in another file.
         var hiddenTypes = Set<String>()
         for source in sources {
             for (index, declaration) in source.declarations.enumerated()

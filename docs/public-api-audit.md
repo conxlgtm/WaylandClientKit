@@ -13,32 +13,37 @@ The minimal DocC catalog for this boundary lives in
 The generated [`identity-visibility.md`](identity-visibility.md) table tracks
 public identity constructors and stored-value access.
 
-## Swift 6.4 Toolchain Cutover
+## Swift 6.4 Update
 
-The minimum compiler is Swift 6.4.0; Swift 6 language mode and the existing
-isolation and memory-safety settings remain unchanged. Source ownership records
-now distinguish `borrow`/`mutate` accessors from borrowing/consuming getters,
-including public properties in copyable types. This tooling change does not
-introduce a new public rendering API.
+Swift 6.4.0 is the minimum compiler. Packages still use Swift 6 language mode
+with the existing isolation and memory-safety settings. The ownership auditor
+records `borrow` and `mutate` accessors separately from borrowing/consuming
+getters, including public properties in copyable types. Public rendering APIs
+are unchanged.
 
-Documentation coverage measures product-authored abstracts, not inherited
-standard-library comments. The Swift 6.4 default backend emits graphs during
-compilation, unlike the standalone module extraction used by the earlier
-backend. Compiler probes confirmed the inherited-comment difference. The
-`WaylandClient` documentation baseline is 98/1,552; the previous 183/1,552
-included 85 inherited Swift abstracts. Eligible symbols and product source
-documentation are unchanged by this measurement migration.
+Documentation coverage counts product-authored abstracts. Swift 6.4's default
+backend emits symbol graphs during compilation; the earlier backend used
+standalone module extraction. Compiler probes confirmed that standalone
+extraction includes inherited Swift comments that compile-time emission omits.
 
-The refreshed semantic baseline records Swift 6.4's source-form `Self` and
-closure-parameter labels, omission of implicit `nonisolated(nonsending)` in
-emitted closure signatures, and explicit cross-module extension blocks.
-Source declarations, isolation settings, and ownership records are unchanged;
-these are compiler/backend representation changes, not new public handles.
+| `WaylandClient` baseline | Counted abstracts | Eligible symbols |
+| --- | --- | --- |
+| Swift 6.4 | 98 | 1,552 |
+| Previous | 183 | 1,552 |
 
-The private integration stream drainer uses `next(isolation: nil)`, matching
-the public iterators' existing nonisolated forwarding. This avoids passing a
-potentially isolated generic iterator conformance to the legacy `@concurrent`
-requirement; a Swift 6.4 compiler probe verified the diagnostic difference.
+The previous count included 85 inherited standard-library abstracts.
+Eligible symbols and product source documentation are unchanged.
+
+Swift 6.4 symbol graphs use source-form `Self` and closure-parameter labels,
+omit implicit `nonisolated(nonsending)` from closure signatures, and include
+explicit cross-module extension blocks. These changes affect the baseline's
+format; source declarations, isolation settings, ownership records, and public
+handles are unchanged.
+
+The private integration stream drainer calls `next(isolation: nil)`, as the
+public iterators already do. This avoids sending a potentially isolated generic
+iterator conformance to the legacy `@concurrent` requirement. A Swift 6.4
+compiler probe confirmed the difference in diagnostics.
 
 ## Products
 

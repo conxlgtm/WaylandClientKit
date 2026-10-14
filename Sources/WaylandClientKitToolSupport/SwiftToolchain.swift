@@ -81,7 +81,7 @@ public struct SwiftToolchain: Sendable {
             let file = try FileHandle(forReadingFrom: tool)
             let header = try file.read(upToCount: 4)
             try file.close()
-            // Script overrides retain their interpreter; only ELF tools use the loader.
+            // Use the loader for ELF tools; scripts keep their own interpreters.
             if header?.starts(with: "\u{7f}ELF".utf8) == true {
                 return try runner.run(
                     loader,

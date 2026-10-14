@@ -109,8 +109,8 @@ struct PublicAPIOwnershipBaselineTests {
     @Test
     func omitsHiddenTypesAndExplicitlyHiddenExtensionMembers() throws {
         let records = try ownershipRecords(sources: [
-            // This file deliberately has no ownership markers; it still determines
-            // whether extension properties in another file are externally public.
+            // Hidden types must exclude extension properties in other files,
+            // even when this file contains no ownership markers.
             "Declarations.swift": """
             public struct Visible {
                 public struct Nested {}
