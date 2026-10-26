@@ -11,7 +11,7 @@ extension WaylandThreadExecutor {
     ) throws(WaylandThreadExecutorError) {
         var value = UInt64(0)
         while true {
-            let bytesRead = unsafe withUnsafeMutablePointer(to: &value) { pointer in
+            let bytesRead = withUnsafeMutablePointer(to: &value) { pointer in
                 unsafe read(fileDescriptor, pointer, MemoryLayout<UInt64>.size)
             }
 
@@ -40,7 +40,7 @@ extension WaylandThreadExecutor {
     ) throws(WaylandThreadExecutorError) -> WaylandThreadExecutorWakeSignalResult {
         var value = UInt64(1)
         while true {
-            let bytesWritten = unsafe withUnsafePointer(to: &value) { pointer in
+            let bytesWritten = withUnsafePointer(to: &value) { pointer in
                 unsafe write(fileDescriptor, pointer, MemoryLayout<UInt64>.size)
             }
 

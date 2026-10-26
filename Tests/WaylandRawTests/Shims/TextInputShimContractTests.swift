@@ -29,7 +29,7 @@
                 expectedKind: SWL_TEST_TEXT_INPUT_SET_SURROUNDING_TEXT,
                 object: textInput
             ) {
-                try unsafe "aé".withCString { text in
+                try "aé".withCString { text in
                     unsafe swl_text_input_v3_set_surrounding_text(
                         textInput,
                         text,
@@ -187,7 +187,7 @@
         textInput: OpaquePointer
     ) throws {
         var preedit = unsafe swl_test_text_input_listener_record()
-        try unsafe "compose".withCString { text in
+        try "compose".withCString { text in
             unsafe swl_test_text_input_listener_emit_preedit_string(
                 data,
                 textInput,
@@ -204,7 +204,7 @@
         #expect(unsafe preedit.cursor_end == 4)
 
         var commit = unsafe swl_test_text_input_listener_record()
-        try unsafe "é".withCString { text in
+        try "é".withCString { text in
             unsafe swl_test_text_input_listener_emit_commit_string(
                 data,
                 textInput,
@@ -217,7 +217,7 @@
         #expect(unsafe commit.kind == SWL_TEST_TEXT_INPUT_LISTENER_COMMIT_STRING)
 
         var language = unsafe swl_test_text_input_listener_record()
-        try unsafe "fr-CA".withCString { text in
+        try "fr-CA".withCString { text in
             unsafe swl_test_text_input_listener_emit_language(
                 data,
                 textInput,

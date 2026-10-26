@@ -40,7 +40,7 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
 
         do {
             try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
-                try unsafe image.pixels.withUnsafeBytes { sourceBytes in
+                try image.pixels.withUnsafeBytes { sourceBytes in
                     guard sourceBytes.count <= bytes.count else {
                         throw ClientError.cursor(
                             .invalidConfiguration(

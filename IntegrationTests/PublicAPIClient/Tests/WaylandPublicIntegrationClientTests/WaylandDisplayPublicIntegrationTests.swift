@@ -263,7 +263,7 @@ private func waitForTermination<Stream: AsyncSequence & Sendable>(
     of stream: Stream
 ) async throws -> Bool {
     var iterator = stream.makeAsyncIterator()
-    while try await iterator.next() != nil {
+    while try await iterator.next(isolation: nil) != nil {
         // Consume queued events before observing stream termination.
     }
     return true

@@ -56,9 +56,9 @@ public struct SwiftToolchain: Sendable {
         repository: Repository,
         environment overrides: [String: String] = [:],
         requireSuccess: Bool = true
-    ) throws -> ProcessResult {
+    ) async throws -> ProcessResult {
         let environment = swiftRuntimeEnvironment(overrides)
-        return try runner.run(
+        return try await runner.run(
             swiftExecutable(environment: runner.environment),
             swiftPMArguments(arguments, environment: environment),
             workingDirectory: repository.root,
@@ -67,8 +67,38 @@ public struct SwiftToolchain: Sendable {
         )
     }
 
+    @discardableResult
+    public func runSwiftTool(
+        _ executable: String,
+        _ arguments: [String],
+        repository: Repository,
+        requireSuccess: Bool = true
+    ) async throws -> ProcessResult {
+        if let loader = runner.environment["WAYLAND_CLIENT_KIT_SWIFT_TOOL_LOADER"],
+            let libraries = runner.environment["WAYLAND_CLIENT_KIT_SWIFT_TOOL_LIBRARIES"]
+        {
+            let tool = try runner.executableURL(for: executable)
+            let file = try FileHandle(forReadingFrom: tool)
+            let header = try file.read(upToCount: 4)
+            try file.close()
+            // Use the loader for ELF tools; scripts keep their own interpreters.
+            if header?.starts(with: "\u{7f}ELF".utf8) == true {
+                return try await runner.run(
+                    loader,
+                    ["--library-path", libraries, "--argv0", tool.path, tool.path] + arguments,
+                    workingDirectory: repository.root, requireSuccess: requireSuccess)
+            }
+        }
+        return try await runner.run(
+            executable, arguments, workingDirectory: repository.root,
+            environment: swiftRuntimeEnvironment(), requireSuccess: requireSuccess)
+    }
+
     public func swiftRuntimeEnvironment(_ overrides: [String: String] = [:]) -> [String: String] {
         var env = overrides
+        if runner.environment["WAYLAND_CLIENT_KIT_SWIFT_TOOL_LOADER"] != nil {
+            return env
+        }
         let compat =
             runner.environment["SWIFT_COMPAT_LIBS"]
             ?? URL(fileURLWithPath: NSHomeDirectory())
@@ -81,8 +111,8 @@ public struct SwiftToolchain: Sendable {
         return env
     }
 
-    public func version(repository: Repository) throws -> String {
-        let result = try runSwift(["--version"], repository: repository)
+    public func version(repository: Repository) async throws -> String {
+        let result = try await runSwift(["--version"], repository: repository)
         return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

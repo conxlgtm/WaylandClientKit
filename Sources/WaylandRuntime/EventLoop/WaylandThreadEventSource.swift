@@ -20,7 +20,7 @@ extension WaylandThreadEventSource {
         _ descriptors: inout [pollfd],
         timeoutMilliseconds: Int32
     ) throws -> Int32 {
-        unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        descriptors.withUnsafeMutableBufferPointer { buffer in
             unsafe Glibc.poll(buffer.baseAddress, nfds_t(buffer.count), timeoutMilliseconds)
         }
     }

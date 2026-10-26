@@ -1,7 +1,7 @@
 import Foundation
 
 public struct ToolchainSmoke {
-    public static let stableBaseline = "6.3.2"
+    public static let stableBaseline = "6.4.0"
 
     public let context: ToolContext
 
@@ -9,27 +9,38 @@ public struct ToolchainSmoke {
         self.context = context
     }
 
-    public func report(runSwiftBuildPreview: Bool = true) throws -> String {
-        var lines: [String] = []
-        lines.append("WaylandClientKit toolchain smoke")
-        lines.append(
-            "Swift wrapper version: \(try context.swift.version(repository: context.repository))")
-        lines.append(
+    public func report() async throws -> String {
+        let version = try await context.swift.version(repository: context.repository)
+        try Self.requireMinimumVersion(version)
+        try await context.swift.runSwift(
+            ["build", "--disable-index-store", "--target", "WaylandClientKitToolSupport"],
+            repository: context.repository)
+        return [
+            "WaylandClientKit toolchain smoke",
+            "Swift wrapper version: \(version)",
             "Package.swift tools version: "
                 + (try Self.packageToolsVersion(
-                    repository: context.repository,
-                    fileSystem: context.fileSystem)))
-        lines.append("Current stable baseline: Swift \(Self.stableBaseline)")
-        lines.append("Swift 6.4.x snapshot: optional allowed-failure")
-        lines.append(
-            "SWIFT_NEXT_BIN: "
-                + (try swiftNextStatus(environment: context.runner.environment)))
-        if runSwiftBuildPreview {
-            lines.append("Swift Build preview: \(try swiftBuildPreviewStatus())")
-        } else {
-            lines.append("Swift Build preview: skipped")
+                    repository: context.repository, fileSystem: context.fileSystem)),
+            "Required baseline: Swift \(Self.stableBaseline)",
+            "Default Swift Build backend: build passed",
+        ].joined(separator: "\n")
+    }
+
+    public static func requireMinimumVersion(_ output: String) throws {
+        let regex = try NSRegularExpression(pattern: #"Swift version (\d+)\.(\d+)(?:\.(\d+))?"#)
+        let range = NSRange(output.startIndex..<output.endIndex, in: output)
+        guard let match = regex.firstMatch(in: output, range: range),
+            let majorRange = Range(match.range(at: 1), in: output),
+            let minorRange = Range(match.range(at: 2), in: output),
+            let major = Int(output[majorRange]), let minor = Int(output[minorRange])
+        else {
+            throw ToolError("Cannot identify Swift version: \(output)", exitCode: ToolExitCode.data)
         }
-        return lines.joined(separator: "\n")
+        guard major > 6 || (major == 6 && minor >= 4) else {
+            throw ToolError(
+                "Swift \(Self.stableBaseline) or newer is required: \(output)",
+                exitCode: ToolExitCode.environment)
+        }
     }
 
     public static func packageToolsVersion(repository: Repository, fileSystem: FileSystem) throws
@@ -46,55 +57,5 @@ public struct ToolchainSmoke {
                 "Package.swift is missing swift-tools-version", exitCode: ToolExitCode.data)
         }
         return line.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
-    }
-
-    public static func classifySwiftBuildPreview(result: ProcessResult) -> String {
-        if result.exitCode == 0 {
-            return "available"
-        }
-        let output = "\(result.stdout)\n\(result.stderr)".lowercased()
-        if output.contains("unknown option '--build-system'")
-            || output.contains("unknown option")
-                && output.contains("build-system")
-        {
-            return "unsupported"
-        }
-        if output.contains("toolchain")
-            || output.contains("swiftly")
-        {
-            return "failed-toolchain-layout"
-        }
-        return "failed-package(exit \(result.exitCode))"
-    }
-
-    private func swiftNextStatus(environment: [String: String]) throws -> String {
-        guard let swiftNext = environment["SWIFT_NEXT_BIN"], !swiftNext.isEmpty else {
-            return "not set"
-        }
-        let result: ProcessResult
-        do {
-            result = try context.runner.run(swiftNext, ["--version"], requireSuccess: false)
-        } catch {
-            return "set but not runnable (\(swiftNext))"
-        }
-        let version =
-            result.stdout.split(separator: "\n").first
-            ?? result.stderr.split(separator: "\n").first
-        guard result.exitCode == 0, let version else {
-            return "set but not runnable (\(swiftNext))"
-        }
-        return "\(swiftNext) (\(version))"
-    }
-
-    private func swiftBuildPreviewStatus() throws -> String {
-        let result = try context.swift.runSwift(
-            [
-                "build", "--build-system", "swiftbuild", "--disable-index-store",
-                "--target", "WaylandClientKitToolSupport",
-            ],
-            repository: context.repository,
-            requireSuccess: false
-        )
-        return Self.classifySwiftBuildPreview(result: result)
     }
 }

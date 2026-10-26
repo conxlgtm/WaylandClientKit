@@ -1,10 +1,11 @@
 # Linux Dependencies
 
-WaylandClientKit requires Swift 6.3.2 or newer. `swift run wck bootstrap check`
+WaylandClientKit requires Swift 6.4.0 or newer. `swift run wck bootstrap check`
 verifies Swift and Linux system dependencies. It does not install or switch
 toolchains.
 
-Set `SWIFT_BIN=/path/to/swift` for custom toolchain resolution.
+To choose a compiler, set `SWIFT_BIN=/path/to/swift`. On Nix, set it before
+running `nix develop`.
 
 Current CI validates dynamic glibc Linux on Ubuntu Noble with shared libraries
 resolved through `pkg-config`. Musl, static Linux SDK builds, and static linking
@@ -14,7 +15,7 @@ are not part of the current support contract.
 
 A supported build requires these capabilities:
 
-- Swift 6.3.2 or newer
+- Swift 6.4.0 or newer
 - `clang`
 - `pkg-config`
 - `pkg-config --exists egl`
@@ -48,10 +49,53 @@ Alpine package installation is mapped for Wayland dependencies, but Swift
 toolchain availability may require separate setup. The Alpine row is a
 dependency lookup aid, not a Musl support claim.
 
-Nix/NixOS support is declarative through `flake.nix`. Use `nix develop` for the
-project development shell.
+Run `nix develop` to enter the Nix/NixOS development shell defined in `flake.nix`.
+The shell builds a Swift SDK/toolset for the selected compiler and Nix platform,
+including glibc headers, start objects, the linker, and the dynamic loader.
+Compiler wrappers and a symlink-only Swift runtime overlay are cached under
+`$XDG_CACHE_HOME/waylandclientkit/swift-sdk` (by default,
+`~/.cache/waylandclientkit/swift-sdk`). The shell passes SDK selection to
+`swift build`, `run`, `test`, and `package`; a global SDK installation is not
+required.
 
-On openSUSE, Swift 6.3.2 SwiftPM may require a compatibility `libxml2.so.2`
+Runtime search paths apply to each tool invocation and linked executable.
+Git, hooks, and other system tools keep their host environment without a global
+`LD_LIBRARY_PATH` override. Swift-native tools such as SwiftLint use the same
+loader and the selected toolchain's SourceKit library. Script overrides use
+their own interpreters.
+
+The initial compiler metadata probe emits a `libc not found` warning.
+Debug and release executables, including tool subprocesses, must use the
+generated SDK's matching glibc loader.
+Keep the default build backend when investigating this warning.
+
+Local SwiftPM runs also report `safeExec` signal 32/33 warnings. C compilation
+against glibc 2.42 headers can report `__INT64_C` and `__UINT64_C` macro
+redefinitions. Include these diagnostics in validation reports. The existing
+test-only C-import warning policy still applies.
+
+Nix builds require unprivileged user/mount namespaces. SwiftPM runs in a child
+mount namespace with Nix coreutils at `/usr/bin` for Swift Build's hardcoded
+resource-bundle `touch` task. It keeps native access to `/dev`, `/proc`, and `/sys`
+and leaves the host filesystem and unrelated processes unchanged.
+
+### GPU Drivers in Nix
+
+Host Mesa drivers may require a newer glibc than the SDK. If GBM or EGL fails to
+load, select the shell's pinned Mesa inside `nix develop`, from the repository:
+
+```bash
+mesa=$(nix eval --impure --raw --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.${builtins.currentSystem}.mesa.outPath')
+export GBM_BACKENDS_PATH="$mesa/lib/gbm"
+export LIBGL_DRIVERS_PATH="$mesa/lib/dri"
+export __EGL_VENDOR_LIBRARY_FILENAMES="$mesa/share/glvnd/egl_vendor.d/50_mesa.json"
+```
+
+These overrides affect the current shell, not the host configuration.
+
+### Toolchain Compatibility Libraries
+
+On openSUSE, upstream SwiftPM may need a compatibility `libxml2.so.2`
 that the distro `libxml2-16` package does not provide. Project Swift wrappers
 load `$SWIFT_COMPAT_LIBS` when present, defaulting to
 `$HOME/.local/share/swift-compat-libs`. Tools that invoke the Swift toolchain

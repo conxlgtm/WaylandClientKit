@@ -122,7 +122,8 @@ struct ManagedPresentationFeedbackTests {
             gate: subscriptionGate
         )
         await subscriptionGate.waitUntilReady()
-        #expect(try await presenting() == .presented)
+        let outcome = try await presenting()
+        #expect(outcome == .presented)
 
         let (resolvedRootEvent, resolvedFilteredFeedback) = try await (
             rootEvent,

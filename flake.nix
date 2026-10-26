@@ -20,12 +20,12 @@
       devShells = forEachSystem (pkgs:
         let
           lib = pkgs.lib;
-          minimumSwiftVersion = "6.3.2";
+          minimumSwiftVersion = "6.4.0";
 
           nixSwiftIsCurrent =
             !(lib.versionOlder pkgs.swift.version minimumSwiftVersion);
 
-          # Swift 6.3.2 upstream binaries still expect libxml2.so.2.
+          # Upstream Swift tools need libxml2.so.2.
           # nixos-unstable may expose newer libxml2 with a different SONAME,
           # so prefer a compat/older package when available.
           swiftCompatibleLibxml2Candidates =
@@ -57,6 +57,7 @@
             pkgs.clang
             pkgs.git
             pkgs.just
+            pkgs.python3
             pkgs.pkg-config
             pkgs.ripgrep
             pkgs.swiftlint
@@ -77,7 +78,6 @@
           swiftlyRuntimeLibraries = [
             pkgs.stdenv.cc.cc.lib
             pkgs.glibc
-            pkgs.glibc.dev
             swiftCompatibleLibxml2
             pkgs.icu
             pkgs.libedit
@@ -108,16 +108,6 @@
           gccSupportLibraryPath =
             "${pkgs.stdenv.cc.cc}/lib/gcc/${pkgs.stdenv.hostPlatform.config}/${pkgs.stdenv.cc.cc.version}";
 
-          compilerSearchPath = lib.concatStringsSep ":" [
-            "${pkgs.glibc}/lib"
-            gccSupportLibraryPath
-          ];
-
-          linkLibraryPath = lib.concatStringsSep ":" [
-            gccSupportLibraryPath
-            runtimeLibraryPath
-          ];
-
           swiftLibcHeaders = pkgs.buildEnv {
             name = "waylandclientkit-swift-libc-headers";
             paths = [
@@ -144,152 +134,40 @@
             pkgs.libdrm
             pkgs.mesa
           ];
+
+          swiftSDKConfiguration = pkgs.writeText "waylandclientkit-swift-sdk.json"
+            (builtins.toJSON {
+              minimumVersion = minimumSwiftVersion;
+              targetTriple = pkgs.stdenv.hostPlatform.config;
+              bash = "${pkgs.bash}/bin/bash";
+              bubblewrap = "${pkgs.bubblewrap}/bin/bwrap";
+              hostTools = "${pkgs.coreutils}/bin";
+              dynamicLinker = pkgs.stdenv.cc.bintools.dynamicLinker;
+              linker = "${pkgs.stdenv.cc.bintools}/bin/ld";
+              gccRoot = toString pkgs.stdenv.cc.cc;
+              nixStore = builtins.storeDir;
+              libcHeaders = "${swiftLibcHeaders}/include";
+              libcLibraryPaths = [
+                "${pkgs.glibc}/lib"
+              ];
+              inherit runtimeLibraryPath;
+              includeSearchPaths = lib.splitString ":" includePath;
+              librarySearchPaths =
+                [ gccSupportLibraryPath ] ++ lib.splitString ":" runtimeLibraryPath;
+            });
         in
         {
           default = pkgs.mkShell {
             packages = tools ++ swiftTooling ++ allLibraries;
 
-            LD_LIBRARY_PATH = runtimeLibraryPath;
-            LIBRARY_PATH = linkLibraryPath;
-            COMPILER_PATH = compilerSearchPath;
-            NIX_LD_LIBRARY_PATH = runtimeLibraryPath;
             CPATH = includePath;
             WAYLAND_CLIENT_KIT_MINIMUM_SWIFT = minimumSwiftVersion;
 
             shellHook = ''
-              export LD_LIBRARY_PATH="${runtimeLibraryPath}"
-              export LIBRARY_PATH="${linkLibraryPath}"
-              export COMPILER_PATH="${compilerSearchPath}"
-              export NIX_LD_LIBRARY_PATH="${runtimeLibraryPath}"
-              export CPATH="${includePath}"
-
-              if [ -f "''${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh" ]; then
-                . "''${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
-              fi
-
-              swiftly_toolchain_bin="''${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/toolchains/$WAYLAND_CLIENT_KIT_MINIMUM_SWIFT/usr/bin"
-
-              if [ -x "$swiftly_toolchain_bin/swift" ]; then
-                export PATH="$swiftly_toolchain_bin:$PATH"
-                export SWIFT_BIN="$swiftly_toolchain_bin/swift"
-                export CC="$swiftly_toolchain_bin/clang"
-                export CXX="$swiftly_toolchain_bin/clang++"
-              elif [ -z "''${SWIFT_BIN:-}" ]; then
-                SWIFT_BIN="$(command -v swift || true)"
-                export SWIFT_BIN
-              fi
-
-              if [ -z "$SWIFT_BIN" ] || [ ! -x "$SWIFT_BIN" ]; then
-                echo "error: WaylandClientKit requires Swift $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT or newer, but swift was not found" >&2
-                echo "hint: install Swift $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT with Swiftly or set SWIFT_BIN to the desired toolchain" >&2
-                exit 1
-              fi
-
-              swl_check_version() {
-                tool_name="$1"
-                version="$2"
-                major="''${version%%.*}"
-                rest="''${version#*.}"
-                minor="''${rest%%.*}"
-                patch="''${rest#*.}"
-                patch="''${patch%%[^0-9]*}"
-
-                minimum_major="''${WAYLAND_CLIENT_KIT_MINIMUM_SWIFT%%.*}"
-                minimum_rest="''${WAYLAND_CLIENT_KIT_MINIMUM_SWIFT#*.}"
-                minimum_minor="''${minimum_rest%%.*}"
-                minimum_patch="''${minimum_rest#*.}"
-
-                if [ -z "$major" ] || [ -z "$minor" ] || [ -z "$patch" ]; then
-                  echo "error: could not parse $tool_name version: $version" >&2
-                  return 1
-                fi
-
-                case "$major" in
-                  *[!0-9]*)
-                    echo "error: could not parse $tool_name version: $version" >&2
-                    return 1
-                    ;;
-                esac
-
-                case "$minor" in
-                  *[!0-9]*)
-                    echo "error: could not parse $tool_name version: $version" >&2
-                    return 1
-                    ;;
-                esac
-
-                case "$patch" in
-                  *[!0-9]*)
-                    echo "error: could not parse $tool_name version: $version" >&2
-                    return 1
-                    ;;
-                esac
-
-                if [ "$major" -lt "$minimum_major" ] \
-                  || { [ "$major" -eq "$minimum_major" ] && [ "$minor" -lt "$minimum_minor" ]; } \
-                  || { [ "$major" -eq "$minimum_major" ] && [ "$minor" -eq "$minimum_minor" ] && [ "$patch" -lt "$minimum_patch" ]; } \
-                  || [ "$major" -ge 100 ]; then
-                  echo "error: $tool_name $version is too old; WaylandClientKit requires $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT or newer" >&2
-                  return 1
-                fi
-              }
-
-              swift_output="$("$SWIFT_BIN" --version 2>&1 || true)"
-              swift_line="$(printf '%s\n' "$swift_output" | grep -m1 '^Swift version ' || true)"
-              swift_version="''${swift_line#Swift version }"
-              swift_version="''${swift_version%% *}"
-
-              if [ -z "$swift_version" ]; then
-                echo "error: could not find Swift version in output:" >&2
-                printf '%s\n' "$swift_output" >&2
-                exit 1
-              fi
-
-              swl_check_version "Swift" "$swift_version" || exit 1
-
-              swift_resource_dir="$("$SWIFT_BIN" -print-target-info 2>/dev/null \
-                | sed -n 's/.*"runtimeResourcePath"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
-                | head -n 1)"
-              if [ -z "$swift_resource_dir" ]; then
-                echo "error: Swift toolchain did not report a runtime resource path" >&2
-                echo "hint: check that SWIFT_BIN points to a working Swift compiler or wrapper" >&2
-                exit 1
-              fi
-              swift_libc_arch="${pkgs.stdenv.hostPlatform.parsed.cpu.name}"
-              swift_glibc_modulemap="$swift_resource_dir/linux/$swift_libc_arch/glibc.modulemap"
-              swift_glibc_runtime="$swift_resource_dir/linux/$swift_libc_arch/swiftrt.o"
-              swift_sdkroot="''${TMPDIR:-/tmp}/waylandclientkit-swift-sdk"
-
-              if [ ! -f "$swift_glibc_modulemap" ] || [ ! -f "$swift_glibc_runtime" ]; then
-                echo "error: Swift toolchain is missing the expected Linux Glibc module files" >&2
-                exit 1
-              fi
-
-              mkdir -p "$swift_sdkroot/usr" "$swift_sdkroot/usr/lib"
-              ln -sfn "${swiftLibcHeaders}/include" "$swift_sdkroot/usr/include"
-              ln -sfn "$swift_resource_dir" "$swift_sdkroot/usr/lib/swift"
-              export SDKROOT="$swift_sdkroot"
-
-              swift_symbolgraph_extract="$(command -v swift-symbolgraph-extract || true)"
-              if [ -n "$swift_symbolgraph_extract" ] && [ -x "$swift_symbolgraph_extract" ]; then
-                swift_symbolgraph_wrapper="$swift_sdkroot/bin/swift-symbolgraph-extract"
-                mkdir -p "$swift_sdkroot/bin"
-                cat > "$swift_symbolgraph_wrapper" <<EOF
-#!/usr/bin/env bash
-exec "$swift_symbolgraph_extract" -sdk "$SDKROOT" -resource-dir "$swift_resource_dir" "\$@"
-EOF
-                chmod +x "$swift_symbolgraph_wrapper"
-                export SWIFT_SYMBOLGRAPH_EXTRACT="$swift_symbolgraph_wrapper"
-              fi
-
-              if [ -z "''${SWIFT_FORMAT_BIN:-}" ]; then
-                SWIFT_FORMAT_BIN="$(command -v swift-format || true)"
-                export SWIFT_FORMAT_BIN
-              fi
-
-              if [ -z "$SWIFT_FORMAT_BIN" ] || [ ! -x "$SWIFT_FORMAT_BIN" ]; then
-                echo "warning: swift-format $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT or newer was not found" >&2
-              fi
+              # Build the SDK for this Nix platform and the selected compiler.
+              # Set runtime paths per tool so Git and hooks keep the host libc.
+              swift_environment="$(${pkgs.python3}/bin/python ${./nix/swift-toolchain.py} ${swiftSDKConfiguration})" || exit 1
+              eval "$swift_environment"
             '';
           };
         });

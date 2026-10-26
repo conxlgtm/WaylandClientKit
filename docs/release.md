@@ -8,6 +8,36 @@ Review [Compatibility Policy](compatibility-policy.md) for public API changes an
 
 ## Current Checkpoint Migration
 
+Swift 6.4.0 is now the minimum toolchain. Packages still use Swift 6 language
+mode. On Nix, SwiftPM uses a compiler-specific SDK/toolset and the default Swift
+Build backend. Swift-native tools use per-tool runtime paths and the selected
+SourceKit library without a global libc override. See
+[Linux Dependencies](linux-dependencies.md) and [Tooling](tooling.md).
+
+Graphics lease inspection uses stored `borrow` accessors; owned snapshots can
+still outlive a consumed lease. Connection scopes await close, including window
+observers, before returning a result or error. Dma-buf imports consume inline
+descriptor or GBM export values on the display thread. See
+[Frame Leases](../Sources/WaylandGraphicsPreview/WaylandGraphicsPreview.docc/FrameLeases.md).
+
+Maintainer commands use one async `Subprocess` backend with file-backed output
+and ordered child/Weston teardown. Public products remain free of tool
+dependencies. Artifact checks support per-target test runners, coverage exports,
+and release object lists. The ownership baseline distinguishes `borrow` and
+`mutate` from borrowing/consuming getters.
+
+Documentation coverage counts product-authored abstracts. Swift 6.4 compiler
+probes confirmed that compile-time symbol emission omits inherited Swift
+comments included by standalone module extraction.
+
+| `WaylandClient` baseline | Counted abstracts | Eligible symbols |
+| --- | --- | --- |
+| Swift 6.4 | 98 | 1,552 |
+| Previous | 183 | 1,552 |
+
+The previous count included 85 inherited standard-library abstracts.
+Product documentation is unchanged.
+
 This checkpoint contains source-breaking `WaylandClient` and
 `WaylandGraphicsPreview` changes:
 
@@ -61,6 +91,65 @@ This checkpoint contains source-breaking `WaylandClient` and
   new frame after a throwing terminal operation, and remove handling for the
   deleted `WaylandGraphicsError.frameLeaseConsumed` case.
 
+## Swift 6.4 Cutover Validation
+
+The local x86_64 Nix validation used the default Swift Build backend:
+
+- `nix develop --command env -u WAYLAND_DISPLAY swift run wck ci release --verbose`
+  passed with isolated headless Weston. It covered strict and release builds,
+  unit tests, public and invalid clients, examples, DocC/API gates, both release
+  shim targets, and the headless live, integration, TSan, and ASan paths.
+- `nix develop --command swift run wck test tsan --verbose` passed all ten
+  per-target runners.
+- Unit coverage exports all ten test bundles together. Request coverage keeps
+  executed LLVM records from all five filters when SwiftPM replaces its managed
+  coverage directory. A regression test using `llvm-profdata` checks profile
+  reset and counter accumulation.
+- DocC and API verification passed using a fresh scratch tree at
+  `WAYLAND_CLIENT_KIT_SWIFTPM_SCRATCH=/tmp/wck-phase1-isolated-symbols`.
+- Bootstrap and its SwiftPM command plugin passed. Swift 6.3.2 was rejected by
+  the 6.4 manifest before product compilation.
+- Linked executables used the matching Nix glibc loader. Foundation child
+  processes ran with empty and custom environments. Both declared Nix
+  architectures produced platform-specific SDK metadata. Runtime checks ran on
+  x86_64 only; aarch64 execution was not tested.
+- The desktop SHM smoke client received its frame callback. This check exercised
+  SHM, not active managed GPU.
+
+Desktop request tests under TSan returned `.superseded` presentation outcomes
+and failed their existing `.presented` assertions. The isolated Weston TSan and
+ASan request-path commands passed. Those results apply to Weston; they do not
+establish compatibility with every compositor or foundation readiness.
+See [Linux Dependencies](linux-dependencies.md) for the compiler and runtime
+warnings from these runs.
+
+## Swift 6.4 Adoption Validation
+
+The x86_64 Nix checks for the remaining adoption work covered:
+
+- `swift run wck ci release --verbose` passed with `WAYLAND_DISPLAY` unset and
+  both coverage flags enabled. It covered strict/release builds, unit and public
+  clients, invalid ownership clients, examples, DocC/API and shim gates, and
+  isolated Weston live, integration, TSan, and ASan paths.
+- `swift run wck test tsan --verbose` and `swift run wck test asan --verbose`
+  passed across all ten test targets with `WAYLAND_DISPLAY` unset.
+- Unit and headless request coverage, plus the LLVM summary, passed with
+  freshly rebuilt coverage-instrumented test bundles.
+- Real one-to-four-plane imports, partial transfer, native failures, and
+  owner-thread retirement; owned lease snapshots survived cancel and submit.
+- Live Weston connection scopes awaited close observers and native cleanup
+  before returning a value, body error, or cancellation error. Closed-display
+  rejection disposed of an untouched four-plane payload.
+- The public API baseline, real process fixtures, and the bootstrap command
+  plugin passed. Tool dependencies remain isolated from public products.
+- Optimized lease tests passed with the synchronous `Ref` inspection helper
+  kept non-inlined. Inlining it into the async test crashes Swift 6.4's
+  `LoadableByAddress` pass; production optimization remains enabled.
+- Desktop SHM, managed-GPU rendering, and external-buffer reuse passed. The
+  external smoke caller now waits for redraw requests instead of overlapping
+  frame submissions; debug and release stress runs both passed. Commands and
+  driver selection are recorded in the [Compositor Matrix](compositor-matrix.md).
+
 ## Required Gates
 
 Run from a clean working tree:
@@ -79,6 +168,13 @@ Wayland path.
 
 `compositor evidence-summary` reports incomplete cells in the compositor matrix.
 It does not replace review of the recorded command output.
+
+For a Swift-package dependency inventory, run
+`swift package generate-sbom --sbom-spec cyclonedx --sbom-output-dir .build/sboms`.
+SwiftPM warns that this command omits build-time conditionals; the installed
+schema bundle was also unavailable during validation. Treat the output as an
+inventory, not a validated release attestation. Keep the vendored protocol
+provenance and [Linux Dependencies](linux-dependencies.md) inventory separately.
 
 Use `swift run wck ci foundation-check` only for a foundation-candidate claim.
 It rejects incomplete compositor cells, environment skips, and manual-interaction
@@ -125,7 +221,7 @@ and optional-protocol skips.
 
 ## Tag Sequence
 
-1. Confirm the working tree is clean and Swift 6.3.2 or newer is active.
+1. Confirm the working tree is clean and Swift 6.4.0 or newer is active.
 2. Run the required gates.
 3. Run applicable sanitizer and live compositor checks.
 4. Update `docs/compositor-matrix.md` with command output and environment facts.

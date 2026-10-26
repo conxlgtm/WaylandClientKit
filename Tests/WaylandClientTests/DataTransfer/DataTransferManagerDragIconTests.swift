@@ -197,7 +197,7 @@
     private func xrgb8888Bytes(_ pixels: [UInt32]) -> [UInt8] {
         pixels.flatMap { pixel in
             var littleEndianPixel = pixel.littleEndian
-            return unsafe withUnsafeBytes(of: &littleEndianPixel) { bytes in
+            return withUnsafeBytes(of: &littleEndianPixel) { bytes in
                 unsafe Array(bytes)
             }
         }

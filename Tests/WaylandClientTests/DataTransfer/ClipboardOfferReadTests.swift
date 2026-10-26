@@ -313,7 +313,7 @@ private func expectDataTransferError(
 
 private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
     var descriptors = [Int32](repeating: -1, count: 2)
-    let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+    let result = descriptors.withUnsafeMutableBufferPointer { buffer in
         unsafe Glibc.pipe(buffer.baseAddress)
     }
     guard result == 0 else {
@@ -330,7 +330,7 @@ private func writeAll(_ bytes: [UInt8], to descriptor: Int32) throws {
 
     while writtenByteCount < bytes.count {
         let remainingBytes = bytes[writtenByteCount...]
-        let result = unsafe remainingBytes.withUnsafeBufferPointer { buffer in
+        let result = remainingBytes.withUnsafeBufferPointer { buffer in
             unsafe Glibc.write(descriptor, buffer.baseAddress, buffer.count)
         }
         guard result > 0 else {

@@ -91,7 +91,7 @@ private final class WaylandGraphicsExternalReleaseTimeline: @unchecked Sendable 
             throw WaylandGraphicsError.unavailable(.noRenderNode)
         }
 
-        let fileDescriptor = unsafe path.withCString { pathPointer in
+        let fileDescriptor = path.withCString { pathPointer in
             unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
         }
         guard fileDescriptor >= 0 else {
@@ -738,6 +738,16 @@ private final class WaylandGraphicsExternalReleaseRetirementNotifier: @unchecked
 // swiftlint:disable:next type_body_length
 package actor WaylandGraphicsWindowBackingStorage {
     let window: any WaylandGraphicsManagedWindow
+
+    // The retained window keeps its executor-owning actor alive.
+    nonisolated package var unownedExecutor: UnownedSerialExecutor {
+        unsafe window.graphicsPreviewActor.unownedExecutor
+    }
+
+    isolated deinit {
+        // Native presenter fields retire on the window's executor even when abandoned.
+    }
+
     private let configuration: WaylandGraphicsConfiguration
     private let managedGPUBacking: (any WaylandGraphicsManagedGPUBacking)?
     private let externalReleaseRegistry: WaylandGraphicsExternalReleaseRegistry
@@ -1188,7 +1198,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
     private func validateExternalBufferRegistration(
         _ descriptor: borrowing WaylandGraphicsExternalBufferDescriptor,
-        contract frameContract: WaylandGraphicsFrameContract,
+        contract frameContract: borrowing WaylandGraphicsFrameContract,
         configurationID externalConfigurationID: WaylandGraphicsExternalConfigurationID
     ) throws -> WaylandGraphicsExternalBufferConfiguration {
         guard case .externalGPU = configuration.presentationPolicy else {
@@ -1224,7 +1234,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     private func validateExternalSynchronizationAvailability(
-        _ frameContract: WaylandGraphicsFrameContract
+        _ frameContract: borrowing WaylandGraphicsFrameContract
     ) throws {
         guard configuration.synchronizationPolicy == .requireExplicit else {
             return
@@ -2404,7 +2414,7 @@ extension WaylandGraphicsWindowBackingStorage {
     }
 
     private func validateRegisteredExternalBuffer(
-        _ externalBuffer: WaylandGraphicsExternalBuffer,
+        _ externalBuffer: borrowing WaylandGraphicsExternalBuffer,
         geometry: SurfaceGeometry,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) throws {

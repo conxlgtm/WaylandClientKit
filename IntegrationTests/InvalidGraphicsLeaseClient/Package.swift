@@ -1,4 +1,4 @@
-// swift-tools-version: 6.3.2
+// swift-tools-version: 6.4.0
 import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
@@ -32,6 +32,26 @@ let package = Package(
             dependencies: [
                 .product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")
             ],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "FrameLeaseBorrowCancelClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "FrameLeaseBorrowSubmitClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "RenderLeaseBorrowCancelClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "RenderLeaseBorrowSubmitClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
             swiftSettings: swiftSettings
         ),
     ]

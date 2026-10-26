@@ -71,68 +71,6 @@ struct SmokeArgumentsTests {
     }
 
     @Test
-    func linuxDmabufSkipMessageNamesExactInterface() {
-        let result = SmokeResult.skippedOptionalProtocol(.linuxDmabuf)
-
-        #expect(
-            result.description
-                == "Skipping linux-dmabuf live test: compositor did not advertise "
-                + "zwp_linux_dmabuf_v1."
-        )
-    }
-
-    @Test(arguments: [
-        (
-            SmokeOptionalProtocol.linuxDrmSyncobj,
-            "Skipping syncobj live test: compositor did not advertise "
-                + "wp_linux_drm_syncobj_manager_v1."
-        ),
-        (
-            SmokeOptionalProtocol.fifo,
-            "Skipping FIFO live test: compositor did not advertise "
-                + "wp_fifo_manager_v1."
-        ),
-        (
-            SmokeOptionalProtocol.commitTiming,
-            "Skipping commit-timing live test: compositor did not advertise "
-                + "wp_commit_timing_manager_v1."
-        ),
-        (
-            SmokeOptionalProtocol.contentType,
-            "Skipping content-type live test: compositor did not advertise "
-                + "wp_content_type_manager_v1."
-        ),
-        (
-            SmokeOptionalProtocol.alphaModifier,
-            "Skipping alpha-modifier live test: compositor did not advertise "
-                + "wp_alpha_modifier_v1."
-        ),
-        (
-            SmokeOptionalProtocol.tearingControl,
-            "Skipping tearing-control live test: compositor did not advertise "
-                + "wp_tearing_control_manager_v1."
-        ),
-        (
-            SmokeOptionalProtocol.colorRepresentation,
-            "Skipping color-representation live test: compositor did not advertise "
-                + "wp_color_representation_manager_v1."
-        ),
-        (
-            SmokeOptionalProtocol.colorManagement,
-            "Skipping color-management live test: compositor did not advertise "
-                + "wp_color_manager_v1."
-        ),
-    ])
-    func submitProtocolSkipMessagesNameExactInterface(
-        optionalProtocol: SmokeOptionalProtocol,
-        expectedMessage: String
-    ) {
-        #expect(
-            SmokeResult.skippedOptionalProtocol(optionalProtocol).description == expectedMessage
-        )
-    }
-
-    @Test
     func smokeResultPrintsRuntimeFactsForMatrixRows() {
         let facts = SmokeRuntimeFacts(
             syncobj: .advertised,

@@ -9,19 +9,19 @@ struct RepositoryNixTools {
     func executablePath(
         for executable: String,
         probeArguments: [String] = []
-    ) throws -> String {
-        if canRunPathTool(executable, probeArguments: probeArguments) {
+    ) async throws -> String {
+        if await canRunPathTool(executable, probeArguments: probeArguments) {
             return try runner.executableURL(for: executable).path
         }
 
-        if let nixPath = nixExecutablePath(for: executable, probeArguments: probeArguments) {
+        if let nixPath = await nixExecutablePath(for: executable, probeArguments: probeArguments) {
             return nixPath
         }
 
         return try runner.executableURL(for: executable).path
     }
 
-    func canRunPathTool(_ executable: String, probeArguments: [String]) -> Bool {
+    func canRunPathTool(_ executable: String, probeArguments: [String]) async -> Bool {
         guard runner.canFind(executable) else {
             return false
         }
@@ -31,7 +31,7 @@ struct RepositoryNixTools {
         }
 
         do {
-            let result = try runner.run(
+            let result = try await runner.run(
                 executable,
                 probeArguments,
                 workingDirectory: repository.root,
@@ -48,13 +48,13 @@ struct RepositoryNixTools {
         probeArguments: [String],
         requiresSwift: Bool,
         label: String
-    ) -> Bool {
+    ) async -> Bool {
         guard hasFlake, let nixExecutable else {
             return false
         }
 
         do {
-            let result = try runner.run(
+            let result = try await runner.run(
                 nixExecutable,
                 nixArguments(command: executable, arguments: probeArguments),
                 workingDirectory: repository.root,
@@ -77,9 +77,9 @@ struct RepositoryNixTools {
         _ executable: String,
         _ arguments: [String],
         requiresSwift: Bool
-    ) throws {
+    ) async throws {
         guard let nixExecutable else {
-            try runner.run(
+            try await runner.run(
                 "nix",
                 nixArguments(command: executable, arguments: arguments),
                 workingDirectory: repository.root,
@@ -88,7 +88,7 @@ struct RepositoryNixTools {
             return
         }
 
-        try runner.run(
+        try await runner.run(
             nixExecutable,
             nixArguments(command: executable, arguments: arguments),
             workingDirectory: repository.root,
@@ -120,13 +120,13 @@ struct RepositoryNixTools {
     private func nixExecutablePath(
         for executable: String,
         probeArguments: [String]
-    ) -> String? {
+    ) async -> String? {
         guard hasFlake, let nixExecutable else {
             return nil
         }
 
         do {
-            let result = try runner.run(
+            let result = try await runner.run(
                 nixExecutable,
                 nixCommandLookupArguments(executable),
                 workingDirectory: repository.root,
@@ -144,7 +144,7 @@ struct RepositoryNixTools {
                 diagnostics.verbose("flake \(executable) lookup returned non-executable: \(path)")
                 return nil
             }
-            guard canRunResolvedTool(path, probeArguments: probeArguments) else {
+            guard await canRunResolvedTool(path, probeArguments: probeArguments) else {
                 diagnostics.verbose("flake \(executable) resolved path failed probe: \(path)")
                 return nil
             }
@@ -155,13 +155,13 @@ struct RepositoryNixTools {
         }
     }
 
-    private func canRunResolvedTool(_ executable: String, probeArguments: [String]) -> Bool {
+    private func canRunResolvedTool(_ executable: String, probeArguments: [String]) async -> Bool {
         guard !probeArguments.isEmpty else {
             return true
         }
 
         do {
-            let result = try runner.run(
+            let result = try await runner.run(
                 executable,
                 probeArguments,
                 workingDirectory: repository.root,
@@ -197,15 +197,7 @@ struct RepositoryNixTools {
             return ["SWIFT_BIN": override]
         }
 
-        let nixOSSwift = URL(fileURLWithPath: "/run/current-system/sw/bin/swift")
-        if fileSystem.isExecutable(nixOSSwift) {
-            return ["SWIFT_BIN": nixOSSwift.path]
-        }
-
-        do {
-            return ["SWIFT_BIN": try runner.executableURL(for: "swift").path]
-        } catch {
-            return [:]
-        }
+        // The flake chooses the required toolchain when SWIFT_BIN is unset.
+        return [:]
     }
 }

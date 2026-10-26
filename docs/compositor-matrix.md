@@ -139,6 +139,11 @@ same-registration reuse smoke update before claiming sustained reuse evidence.
 | KDE / KWin | KDE / Plasma Wayland session, 2026-06-23 | `swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer --stress-frames 120` | renderer active, 3 registrations, 3 Wayland imports, 120 submissions, 117 releases, 117 reuse cycles, maximum compositor ownership 3, implicit sync, no WCK readback, no WCK software staging, cleanup pass |
 | Sway / wlroots | Sway 1.11, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
 | Hyprland / wlroots-family | Hyprland 0.55.2, 2026-06-21 | `swift run GraphicsPreviewExternalBufferSmoke` | renderer active, format `875713089`, modifier `144115188757872388`, 2 planes, import pass, submit pass, implicit sync, `wl_buffer.release`, no WCK readback, no WCK software staging, release `released`, cleanup pass |
+| KDE / KWin | KDE / Plasma Wayland session, Swift 6.4, 2026-10-26 | `.build/out/Products/Debug-linux-x86_64/GraphicsPreviewExternalBufferSmoke --internal-test-buffer --stress-frames 120`, also repeated with the release executable | PASS in debug and release: renderer active, 3 registrations and native imports, 120 submissions, 117 confirmed releases and reuse cycles, implicit sync, no WCK readback or software staging, cleanup pass. |
+
+The first run hit `nestedPresentation` because the caller submitted before the
+previous frame callback finished. Both external-buffer smoke modes now wait for
+the window's redraw request; the native presentation guard is unchanged.
 
 KDE/KWin manual interaction addendum on 2026-06-11:
 `swift run --package-path Examples PointerCaptureSmoke` passed manual pointer-lock, pointer-confine, and
@@ -263,6 +268,12 @@ resource setup and frame submission.
 | KDE / KWin | wayland-0, KDE / plasma, 2026-06-09 | dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, content type, alpha, tearing, color representation, color management advertised, commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1, runtime advertised | advertised | unavailable | advertised | advertised v1, runtime advertised | success show, 192x192 | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none, fallback none, active GPU proven |
 | KDE / KWin | wayland-0, KDE / plasma, 2026-06-13 | dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, content type, alpha, tearing, color representation, color management advertised, commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1, preferExplicit active and requireExplicit active | preferFIFO active | preferCommitTiming fallback(commitTimingUnavailable) | content type active and tearing control active for prefer metadata game/async, alpha/color advertised | advertised v1, runtime advertised | preferExplicit/FIFO, requireExplicit, commit-timing fallback, and metadata runs succeeded | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none, fallback none except commitTimingUnavailable when requested |
 | Sway / wlroots | wayland-1, nested Sway/wlroots under KDE/Plasma, 2026-06-09 | dmabuf v4, linux-drm-syncobj v1, presentation v2, content type, alpha, tearing advertised, FIFO unavailable, color representation unavailable, color management unavailable | advertised v4, runtime active | usable | active | configured | advertised v1, runtime advertised | unavailable | unavailable | mixed advertised/unavailable | advertised v1, runtime advertised | success show, 96x96 | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none, fallback none, active GPU proven in nested session |
+| KDE / KWin | wayland-0, KDE / plasma, Swift 6.4, 2026-10-26 | dmabuf v5, linux-drm-syncobj v1, FIFO, content type, alpha, tearing, color representation and color management advertised; commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1, runtime advertised | advertised | unavailable | advertised, not requested | advertised v1, runtime advertised | success redraw, 3 frames, 630x420 | managed by GPU buffer lifecycle | managedGPU | failure none, fallback none, cleanup pass |
+
+The 2026-10-26 runs selected the Nix shell's Mesa 26.1.1 GBM, DRI, and EGL vendor
+paths as described in [Linux Dependencies](linux-dependencies.md#gpu-drivers-in-nix).
+The managed-GPU command was
+`.build/out/Products/Debug-linux-x86_64/GraphicsPreviewManagedGPUClear --auto-close --print-summary --duration-seconds 3`.
 
 KDE/KWin graphics preview addendum on 2026-06-13:
 

@@ -1715,6 +1715,8 @@ void swl_test_core_request_recording_begin(void);
 void swl_test_core_request_recording_begin_forwarding(void);
 void swl_test_core_request_recording_end(void);
 struct swl_test_core_request_record swl_test_core_request_record(void);
+void swl_test_buffer_destroy_thread_recording_begin(struct wl_buffer *buffer);
+uintptr_t swl_test_buffer_destroy_thread(void);
 
 void swl_test_metadata_request_recording_begin(void);
 void swl_test_metadata_request_recording_end(void);

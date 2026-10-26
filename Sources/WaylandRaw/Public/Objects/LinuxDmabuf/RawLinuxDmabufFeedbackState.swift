@@ -127,14 +127,16 @@ package enum RawLinuxDmabufFormatTable {
             unsafe munmap(mapping, byteCount)
         }
 
-        let bytes = unsafe UnsafeRawBufferPointer(start: mapping, count: byteCount)
+        let bytes = unsafe RawSpan(
+            _unsafeBytes: UnsafeRawBufferPointer(start: mapping, count: byteCount)
+        )
         return stride(from: 0, to: byteCount, by: entryByteCount).map { offset in
             RawLinuxDmabufFormatModifier(
-                format: unsafe bytes.loadUnaligned(
+                format: bytes.load(
                     fromByteOffset: offset,
                     as: UInt32.self
                 ),
-                modifier: unsafe bytes.loadUnaligned(
+                modifier: bytes.load(
                     fromByteOffset: offset + 8,
                     as: UInt64.self
                 )

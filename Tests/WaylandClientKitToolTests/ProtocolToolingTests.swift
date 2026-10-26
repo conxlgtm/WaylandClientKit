@@ -113,7 +113,8 @@ struct ProtocolToolingTests {
     }
 
     @Test
-    func protocolSyncRemovesExistingVendoredXMLAndWritesRegularFileFromSymlinkSource() throws {
+    func protocolSyncRemovesExistingVendoredXMLAndWritesRegularFileFromSymlinkSource() async throws
+    {
         let root = try temporaryRepository()
         try writeProtocolXML(in: root)
         try writeProtocolManifest(in: root)
@@ -134,7 +135,7 @@ struct ProtocolToolingTests {
         )
         try FileManager.default.createSymbolicLink(at: source, withDestinationURL: actualSource)
 
-        try ProtocolTooling(
+        try await ProtocolTooling(
             repository: Repository(root: root),
             runner: ProcessRunner(environment: ["WAYLAND_CORE_XML_SOURCE": source.path])
         ).syncProtocols()
@@ -149,7 +150,7 @@ struct ProtocolToolingTests {
     }
 
     @Test
-    func protocolGenerationResolvesWaylandScannerFromNixDevelop() throws {
+    func protocolGenerationResolvesWaylandScannerFromNixDevelop() async throws {
         let root = try temporaryRepository()
         try "".write(
             to: root.appendingPathComponent("flake.nix"),
@@ -190,8 +191,8 @@ struct ProtocolToolingTests {
             ])
 
         let tooling = ProtocolTooling(repository: Repository(root: root), runner: runner)
-        try tooling.generateProtocols()
-        try tooling.verifyGenerated()
+        try await tooling.generateProtocols()
+        try await tooling.verifyGenerated()
 
         let invocations = try String(contentsOf: scannerInvocations, encoding: .utf8)
         #expect(invocations.contains("client-header"))
@@ -210,6 +211,36 @@ struct ProtocolToolingTests {
             encoding: .utf8
         )
         #expect(optionalGlobalDescriptors.contains("package enum OptionalGlobalDescriptors"))
+    }
+
+    @Test
+    func generationRejectsMalformedXMLBeforeReplacingArtifacts() async throws {
+        let root = try temporaryRepository()
+        defer {
+            do { try FileManager.default.removeItem(at: root) } catch {
+                Issue.record("Fixture cleanup failed: \(error)")
+            }
+        }
+        try writeProtocolXML(in: root)
+        let malformed = "<protocol name=\"broken\"><interface name=\"unfinished\" version=\"1\">"
+        let source = root.appendingPathComponent("protocols/upstream/core/wayland.xml")
+        try malformed.write(to: source, atomically: true, encoding: .utf8)
+        try writeProtocolManifest(in: root, sha256: SHA256Checksum.digest(Array(malformed.utf8)))
+        let sentinel = root.appendingPathComponent(
+            "Sources/CWaylandProtocols/include/generated/previous.h")
+        try FileManager.default.createDirectory(
+            at: sentinel.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "previous\n".write(to: sentinel, atomically: true, encoding: .utf8)
+
+        do {
+            try await ProtocolTooling(
+                repository: Repository(root: root), runner: ProcessRunner(environment: ["PATH": ""])
+            ).generateProtocols()
+            Issue.record("expected malformed protocol XML to fail")
+        } catch let error as WaylandProtocolXMLParserError {
+            #expect(String(describing: error).contains("wayland.xml"))
+        }
+        #expect(try String(contentsOf: sentinel, encoding: .utf8) == "previous\n")
     }
 }
 

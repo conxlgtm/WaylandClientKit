@@ -31,13 +31,13 @@ package final class RawXDGTopLevel {
     }
 
     package func setTitle(_ title: String) {
-        unsafe title.withCString { titlePointer in
+        title.withCString { titlePointer in
             unsafe swl_xdg_toplevel_set_title(pointer, titlePointer)
         }
     }
 
     package func setAppID(_ appID: String) {
-        unsafe appID.withCString { appIDPointer in
+        appID.withCString { appIDPointer in
             unsafe swl_xdg_toplevel_set_app_id(pointer, appIDPointer)
         }
     }

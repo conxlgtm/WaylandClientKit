@@ -26,7 +26,7 @@ jobs:
   cheap:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install system dependencies
@@ -58,7 +58,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'cheap' }}
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install build dependencies
@@ -87,7 +87,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'cheap' }}
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install headless test dependencies
@@ -137,7 +137,7 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install system dependencies
@@ -180,7 +180,7 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install generation dependencies
@@ -201,7 +201,7 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install build dependencies
@@ -232,7 +232,7 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-22.04
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
       # TSan needs a fixed address layout. Permit setarch to establish it before
       # Swift starts so the hosted test bundle does not depend on runtime re-exec.
       options: --security-opt seccomp=unconfined
@@ -278,7 +278,7 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install sanitizer dependencies
@@ -310,7 +310,7 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.2-noble
+      image: swift:6.4.0-noble
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install smoke dependencies

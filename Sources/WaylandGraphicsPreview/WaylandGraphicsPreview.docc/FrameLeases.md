@@ -8,8 +8,11 @@ one frame through a ``WaylandGraphicsWindowBacking``.
 Call ``WaylandGraphicsWindowBacking/nextFrame()`` to obtain a lease. Inspect
 ``WaylandGraphicsFrameLease/contract`` before rendering; it contains the current
 surface generation, authoritative geometry, buffer candidates, synchronization,
-and render-device identity. Reading `size`, `contract`, or `runtimePath` borrows
-the lease without consuming it.
+and render-device identity. The `size`, `contract`, and `runtimePath` accessors
+borrow their stored values, as do a render lease's `buffer` and `contract`.
+Borrowed references cannot remain live across a consuming operation. An ordinary
+local snapshot, such as `let contract = lease.contract`, is independently owned
+and can outlive the lease or be passed to a task.
 
 Submit the lease once with ``WaylandGraphicsFrameLease/submit(_:)``,
 ``WaylandGraphicsFrameLease/submitSoftware(metadata:_:)``, or by reserving a
@@ -40,6 +43,11 @@ preview code. On software backing or fallback, WaylandClientKit fills a
 For external buffers, the renderer owns allocation and rendering; WCK owns
 import, commit, release tracking, and reuse gating.
 
+Registering an external descriptor transfers its plane descriptors to WCK.
+Import and native buffer retirement run on the display's owner thread. Import
+failure closes any untransferred descriptors. The renderer still owns the
+underlying allocation.
+
 Use `SurfaceFrameMetadata` and `SurfaceDamageRegion` to describe optional
 surface metadata and logical damage. `nil` damage is the only full-frame
 representation; a non-`nil` region contains at least one validated rectangle.
@@ -48,7 +56,9 @@ Validation failure still terminally releases the consumed frame authority.
 
 WaylandClientKit owns lease state, new-frame retry behavior after pre-commit
 failures, post-commit terminal state, and buffer reuse. Frameworks own frame
-scheduling and failure policy.
+scheduling and failure policy. For continuous external rendering, call
+`Window.requestRedraw()` and wait for that window's `DisplayEvent.redrawRequested`
+before submitting the next frame.
 
 A contract generation changes with surface geometry. Work for stale geometry
 belongs to a new frame rather than the current lease.

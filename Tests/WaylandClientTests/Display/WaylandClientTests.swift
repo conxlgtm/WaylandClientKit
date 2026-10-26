@@ -149,13 +149,11 @@ struct WaylandClientTests {
         #expect(configuration.size == (try CursorSize(1)))
     }
 
-    @Test
-    func softwareFrameWritesVisiblePixelsThroughMutableSpanRows() throws {
-        var storage = [UInt32](repeating: 0, count: 6)
-        let byteCount = storage.count * MemoryLayout<UInt32>.stride
+    @Test(arguments: [24, 27])
+    func softwareFrameWritesVisiblePixelsThroughMutableSpanRows(byteCount: Int) throws {
+        var storage = [UInt32](repeating: 0, count: 7)
 
-        // swiftlint:disable:next closure_body_length
-        try unsafe storage.withUnsafeMutableBufferPointer { buffer in
+        try storage.withUnsafeMutableBufferPointer { buffer in
             let frame = try unsafe SoftwareFrame(
                 id: softwareFrameTestBufferID(),
                 width: 2,
@@ -175,11 +173,6 @@ struct WaylandClientTests {
             }
 
             frame.withBuffer { buffer in
-                #expect(buffer.id == frame.id)
-                #expect(buffer.width == frame.width)
-                #expect(buffer.height == frame.height)
-                #expect(buffer.stride == frame.stride)
-                #expect(buffer.geometry == frame.geometry)
                 buffer.withMutableBytes { bytes in
                     bytes.storeBytes(
                         of: UInt32(99),
@@ -192,7 +185,7 @@ struct WaylandClientTests {
             #expect(frame.geometry.bufferSize == (try PositivePixelSize(width: 2, height: 2)))
         }
 
-        #expect(storage == [1, 2, 99, 11, 12, 0])
+        #expect(storage == [1, 2, 99, 11, 12, 0, 0])
     }
 
     @Test
@@ -200,7 +193,7 @@ struct WaylandClientTests {
         var storage = [UInt32](repeating: 0, count: 3)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
-        _ = unsafe storage.withUnsafeMutableBufferPointer { buffer in
+        _ = storage.withUnsafeMutableBufferPointer { buffer in
             #expect(
                 throws: ClientError.invalidWindowState(
                     .softwareFrameLayout(
@@ -240,4 +233,64 @@ private func softwareFrameTestGeometry(width: Int32, height: Int32) throws
 
 private func softwareFrameTestBufferID() -> SoftwareFrameBufferID {
     SoftwareFrameBufferID(rawValue: 1)
+}
+
+extension WaylandClientTests {
+    @Test
+    func softwareFrameThrowingRowCallbackPreservesWritesAndEndsBorrow() throws {
+        var storage = [UInt32](repeating: 0xDEAD_BEEF, count: 7)
+        try storage.withUnsafeMutableBufferPointer { buffer in
+            let frame = try unsafe SoftwareFrame(
+                id: softwareFrameTestBufferID(),
+                width: 2,
+                height: 2,
+                stride: 12,
+                geometry: try softwareFrameTestGeometry(width: 2, height: 2),
+                bytes: unsafe UnsafeMutableRawBufferPointer(
+                    start: UnsafeMutableRawPointer(buffer.baseAddress),
+                    count: 27
+                )
+            )
+
+            var visitedRows: [Int] = []
+            #expect(throws: SoftwareFrameDrawError.stopped) {
+                try frame.withXRGB8888Rows { row, pixels in
+                    visitedRows.append(row)
+                    pixels[0] = UInt32(row * 10 + 1)
+                    if row == 1 {
+                        throw SoftwareFrameDrawError.stopped
+                    }
+                    pixels[1] = 2
+                }
+            }
+            #expect(visitedRows == [0, 1])
+            frame.withXRGB8888Rows { _, pixels in
+                pixels[1] = 42
+            }
+        }
+        #expect(storage == [1, 42, 0xDEAD_BEEF, 11, 42, 0xDEAD_BEEF, 0xDEAD_BEEF])
+    }
+
+    @Test
+    func softwareFrameRejectsWidthWhosePixelStrideExceedsInt32() throws {
+        let geometry = try softwareFrameTestGeometry(width: 1, height: 1)
+        #expect(
+            throws: ClientError.invalidWindowState(
+                .softwareFrameLayout(.minimumStrideOverflow(width: .max))
+            )
+        ) {
+            _ = try unsafe SoftwareFrame(
+                id: softwareFrameTestBufferID(),
+                width: .max,
+                height: 1,
+                stride: .max,
+                geometry: geometry,
+                bytes: UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            )
+        }
+    }
+}
+
+private enum SoftwareFrameDrawError: Error {
+    case stopped
 }

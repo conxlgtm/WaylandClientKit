@@ -99,14 +99,18 @@ public struct Window: Sendable, Hashable {
         )
     }
 
-    package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
+    package var graphicsPreviewActor: any Actor { display }
+
+    package func withGraphicsPreviewLinuxDmabuf<Payload: ~Copyable & Sendable, Result: Sendable>(
+        _ payload: consuming Payload,
         _ body:
             @Sendable (
+                consuming Payload,
                 RawLinuxDmabuf,
                 _ syncDisplay: (Int32) throws -> Void
             ) throws -> Result
     ) async throws -> Result {
-        try await display.withGraphicsPreviewLinuxDmabuf(body)
+        try await display.withGraphicsPreviewLinuxDmabuf(payload, body)
     }
 
     public func close() async {

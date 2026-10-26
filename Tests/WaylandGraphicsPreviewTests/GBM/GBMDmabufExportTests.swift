@@ -32,7 +32,7 @@ struct GBMDmabufExportTests {
         defer {
             Glibc.close(descriptors.readEnd)
         }
-        let export = GBMDmabufExport(
+        var export = GBMDmabufExport(
             adopting: rawExport(fileDescriptor: descriptors.writeEnd)
         )
         var planeDescriptor = try export.takePlaneFileDescriptor(at: 0)
@@ -50,7 +50,7 @@ struct GBMDmabufExportTests {
         defer {
             Glibc.close(descriptors.readEnd)
         }
-        let export = GBMDmabufExport(
+        var export = GBMDmabufExport(
             adopting: rawExport(
                 fileDescriptor: descriptors.writeEnd,
                 offset: 32,
@@ -75,15 +75,15 @@ struct GBMDmabufExportTests {
         defer {
             Glibc.close(descriptors.readEnd)
         }
-        var export: GBMDmabufExport? = GBMDmabufExport(
+        var export = GBMDmabufExport(
             adopting: rawExport(fileDescriptor: descriptors.writeEnd)
         )
-        var planeDescriptor = try #require(export).takePlaneFileDescriptor(at: 0)
+        var planeDescriptor = try export.takePlaneFileDescriptor(at: 0)
         defer {
             planeDescriptor.close()
         }
 
-        export = nil
+        _ = consume export
 
         #expect(Glibc.fcntl(planeDescriptor.rawValue, F_GETFD) != -1)
     }
@@ -95,14 +95,14 @@ struct GBMDmabufExportTests {
             Glibc.close(descriptors.readEnd)
         }
         try makeNonBlocking(descriptors.readEnd)
-        var export: GBMDmabufExport? = GBMDmabufExport(
+        let export = GBMDmabufExport(
             adopting: rawExport(fileDescriptor: descriptors.writeEnd)
         )
-        #expect(export?.planeCount == 1)
-        export = nil
+        #expect(export.planeCount == 1)
+        _ = consume export
 
         var byte = UInt8(0)
-        let readByteCount = unsafe withUnsafeMutableBytes(of: &byte) { buffer in
+        let readByteCount = withUnsafeMutableBytes(of: &byte) { buffer in
             unsafe Glibc.read(descriptors.readEnd, buffer.baseAddress, 1)
         }
         #expect(readByteCount == 0)
@@ -114,7 +114,7 @@ struct GBMDmabufExportTests {
         defer {
             Glibc.close(descriptors.readEnd)
         }
-        let export = GBMDmabufExport(
+        var export = GBMDmabufExport(
             adopting: rawExport(fileDescriptor: descriptors.writeEnd)
         )
         var planeDescriptor = try export.takePlaneFileDescriptor(at: 0)
@@ -124,6 +124,53 @@ struct GBMDmabufExportTests {
 
         #expect(throws: GBMAllocationError.planeFileDescriptorAlreadyTaken(0)) {
             _ = try export.takePlaneFileDescriptor(at: 0)
+        }
+    }
+
+    @Test(arguments: 1...4)
+    func movedExportClosesEveryUntakenPlaneAfterPartialTransfer(planeCount: Int) async throws {
+        for takenCount in 0...planeCount {
+            let pipes = try (0..<planeCount).map { _ in try RawFileDescriptor.pipeDescriptors() }
+            defer {
+                for pipe in pipes {
+                    Glibc.close(pipe.readEnd)
+                }
+            }
+            var raw = rawExport(fileDescriptor: pipes[0].writeEnd)
+            raw.plane_count = UInt32(planeCount)
+            for index in 0..<planeCount {
+                let plane = swl_gbm_bo_plane(
+                    fd: pipes[index].writeEnd, offset: UInt32(index * 16), stride: 256
+                )
+                switch index {
+                case 0: raw.planes.0 = plane
+                case 1: raw.planes.1 = plane
+                case 2: raw.planes.2 = plane
+                default: raw.planes.3 = plane
+                }
+                try makeNonBlocking(pipes[index].readEnd)
+            }
+            let owner = GBMExportTransferOwner()
+            var export = await owner.transfer(GBMDmabufExport(adopting: raw))
+            for index in 0..<takenCount {
+                var plane = try export.takePlaneExport(at: index)
+                #expect(plane.layout.offset == UInt32(index * 16))
+                #expect(plane.layout.stride == 256)
+                #expect(plane.descriptor.rawValue == pipes[index].writeEnd)
+                plane.descriptor.close()
+            }
+            for index in takenCount..<planeCount {
+                var byte: UInt8 = 0
+                let count = unsafe Glibc.read(pipes[index].readEnd, &byte, 1)
+                #expect(count == -1)
+                #expect(errno == EAGAIN)
+            }
+            _ = consume export
+            for pipe in pipes {
+                var byte: UInt8 = 0
+                let count = unsafe Glibc.read(pipe.readEnd, &byte, 1)
+                #expect(count == 0)
+            }
         }
     }
 }
@@ -154,4 +201,10 @@ private func makeNonBlocking(_ fileDescriptor: Int32) throws {
 
     let result = Glibc.fcntl(fileDescriptor, F_SETFL, flags | O_NONBLOCK)
     #expect(result == 0)
+}
+
+private actor GBMExportTransferOwner {
+    func transfer(_ export: consuming GBMDmabufExport) -> GBMDmabufExport {
+        export
+    }
 }

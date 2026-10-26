@@ -3,88 +3,73 @@ import Foundation
 public struct CoverageSummarizer {
     public let repository: Repository
     public let fileSystem: FileSystem
+    public let buildRoot: URL
+    public let productsDirectory: URL
 
-    public init(repository: Repository, fileSystem: FileSystem = LocalFileSystem()) {
+    public init(
+        repository: Repository, buildRoot: URL? = nil, productsDirectory: URL? = nil,
+        fileSystem: FileSystem = LocalFileSystem()
+    ) {
         self.repository = repository
+        self.buildRoot = buildRoot ?? repository.url(".build")
+        self.productsDirectory = productsDirectory ?? self.buildRoot.appendingPathComponent("debug")
         self.fileSystem = fileSystem
     }
 
     public func summarize(explicitPath: String?) throws -> String {
-        let coverageURL: URL
+        let url: URL
         if let explicitPath, !explicitPath.isEmpty {
-            coverageURL =
+            url =
                 URL(fileURLWithPath: explicitPath, relativeTo: repository.root).standardizedFileURL
         } else {
-            guard let discovered = try latestCoverageJSON() else {
+            let coverageRoot = productsDirectory.appendingPathComponent("codecov")
+                .resolvingSymlinksInPath()
+            guard coverageRoot.path.hasPrefix(buildRoot.resolvingSymlinksInPath().path + "/") else {
                 throw ToolError(
-                    "Coverage JSON was not found: .build/*/debug/codecov/WaylandClientKit.json",
-                    exitCode: ToolExitCode.data
-                )
+                    "Coverage is outside selected scratch tree", exitCode: ToolExitCode.data)
             }
-            coverageURL = discovered
+            url = coverageRoot.appendingPathComponent("all-targets.json")
         }
-
-        guard fileSystem.exists(coverageURL) else {
+        guard fileSystem.exists(url) else {
             throw ToolError(
-                "Coverage JSON was not found: \(coverageURL.path)", exitCode: ToolExitCode.data)
+                "Coverage JSON was not found at \(url.path)", exitCode: ToolExitCode.data)
         }
+        return markdown(for: try collectCoverage(url))
+    }
 
-        let object = try JSONHelpers.loadObject(from: coverageURL)
-        guard let data = object["data"] as? [[String: Any]] else {
-            throw ToolError("coverage JSON has no data array", exitCode: ToolExitCode.data)
+    private func collectCoverage(_ url: URL) throws -> [String: CoverageAggregate] {
+        let object = try JSONSerialization.jsonObject(with: fileSystem.readData(url))
+        guard let object = object as? [String: Any],
+            let data = object["data"] as? [[String: Any]]
+        else {
+            throw ToolError(
+                "Coverage JSON has no data array: \(url.path)", exitCode: ToolExitCode.data)
         }
-
-        var modules: [String: CoverageAggregate] = [:]
         let sourcesRoot = repository.url("Sources").path
-        for dataEntry in data {
-            guard let files = dataEntry["files"] as? [[String: Any]] else { continue }
-            for file in files {
-                guard
-                    let filename = file["filename"] as? String,
-                    filename.hasPrefix(sourcesRoot + "/")
-                else {
-                    continue
-                }
-                let relative = String(filename.dropFirst(sourcesRoot.count + 1))
-                guard let module = relative.split(separator: "/").first.map(String.init) else {
-                    continue
-                }
-                guard
+        var modules: [String: CoverageAggregate] = [:]
+        var filenames = Set<String>()
+        for entry in data {
+            for file in entry["files"] as? [[String: Any]] ?? [] {
+                guard let filename = file["filename"] as? String,
+                    filename.hasPrefix(sourcesRoot + "/"),
+                    let module = filename.dropFirst(sourcesRoot.count + 1)
+                        .split(separator: "/").first.map(String.init),
                     let summary = file["summary"] as? [String: Any],
                     let lines = summary["lines"] as? [String: Any],
                     let functions = summary["functions"] as? [String: Any]
-                else {
-                    continue
+                else { continue }
+                guard filenames.insert(filename).inserted else {
+                    throw ToolError(
+                        "Repeated coverage for \(filename); export all objects together with LLVM",
+                        exitCode: ToolExitCode.data)
                 }
-                var aggregate = modules[module, default: CoverageAggregate()]
-                aggregate.linesCount += intValue(lines["count"])
-                aggregate.linesCovered += intValue(lines["covered"])
-                aggregate.functionsCount += intValue(functions["count"])
-                aggregate.functionsCovered += intValue(functions["covered"])
-                modules[module] = aggregate
+                modules[module, default: CoverageAggregate()] += CoverageAggregate(
+                    linesCount: intValue(lines["count"]), linesCovered: intValue(lines["covered"]),
+                    functionsCount: intValue(functions["count"]),
+                    functionsCovered: intValue(functions["covered"]))
             }
         }
-
-        return markdown(for: modules)
-    }
-
-    private func latestCoverageJSON() throws -> URL? {
-        let build = repository.url(".build")
-        let candidates = try fileSystem.walk(build, includingDirectories: false)
-            .filter { $0.path.hasSuffix("/debug/codecov/WaylandClientKit.json") }
-            .sorted { lhs, rhs in
-                modificationDate(lhs) > modificationDate(rhs)
-            }
-        return candidates.first
-    }
-
-    private func modificationDate(_ url: URL) -> Date {
-        do {
-            return try url.resourceValues(forKeys: [.contentModificationDateKey])
-                .contentModificationDate ?? .distantPast
-        } catch {
-            return .distantPast
-        }
+        return modules
     }
 
     private func markdown(for modules: [String: CoverageAggregate]) -> String {
@@ -98,15 +83,11 @@ public struct CoverageSummarizer {
             total += aggregate
             let linePercent = percent(aggregate.linesCovered, aggregate.linesCount)
             let functionPercent = percent(aggregate.functionsCovered, aggregate.functionsCount)
-            lines.append(
-                "| `\(module)` | \(linePercent)% | \(functionPercent)% |"
-            )
+            lines.append("| `\(module)` | \(linePercent)% | \(functionPercent)% |")
         }
         let totalLinePercent = percent(total.linesCovered, total.linesCount)
         let totalFunctionPercent = percent(total.functionsCovered, total.functionsCount)
-        lines.append(
-            "| **Source total** | \(totalLinePercent)% | \(totalFunctionPercent)% |"
-        )
+        lines.append("| **Source total** | \(totalLinePercent)% | \(totalFunctionPercent)% |")
         return lines.joined(separator: "\n")
     }
 

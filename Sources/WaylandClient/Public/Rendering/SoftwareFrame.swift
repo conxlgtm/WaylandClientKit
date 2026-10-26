@@ -156,16 +156,15 @@ public struct SoftwareFrame: ~Copyable {
         let visibleHeight = Int(height)
         precondition(wordsPerRow >= visibleWidth)
 
-        try unsafe bytes.withMemoryRebound(to: UInt32.self) { pixels in
-            for row in 0..<visibleHeight {
-                let start = row * wordsPerRow
-                let rowPixels = unsafe UnsafeMutableBufferPointer(
-                    start: pixels.baseAddress?.advanced(by: start),
-                    count: visibleWidth
-                )
-                var rowSpan = unsafe rowPixels.mutableSpan
-                try body(row, &rowSpan)
-            }
+        let rowByteCount = visibleWidth * MemoryLayout<UInt32>.stride
+        // Preserve the whole-word pitch for strides that are not multiples of four.
+        let rowByteStride = wordsPerRow * MemoryLayout<UInt32>.stride
+        var storage = unsafe MutableRawSpan(_unsafeBytes: bytes)
+        for row in 0..<visibleHeight {
+            let start = row * rowByteStride
+            var rowBytes = storage._mutatingExtracting(start..<(start + rowByteCount))
+            var rowSpan = MutableSpan<UInt32>(mutating: &rowBytes)
+            try body(row, &rowSpan)
         }
     }
 }

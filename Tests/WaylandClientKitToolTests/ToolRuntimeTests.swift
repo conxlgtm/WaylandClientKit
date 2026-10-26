@@ -5,26 +5,9 @@ import WaylandClientKitToolSupport
 @Suite
 struct ToolRuntimeTests {
     @Test
-    func cCompilerFilterResolvesBareExecutableThroughPath() throws {
-        let root = try temporaryRepository()
-        let bin = root.appendingPathComponent("bin")
-        let wck = bin.appendingPathComponent("wck")
-        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-        try "".write(to: wck, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: wck.path)
-
-        let resolved = try CCompilerFilter.filterExecutableURL(
-            commandPath: "wck",
-            workingDirectory: root,
-            runner: ProcessRunner(environment: ["PATH": bin.path])
-        )
-
-        #expect(resolved.path == wck.standardizedFileURL.path)
-    }
-
-    @Test
     func headlessWestonReadinessRejectsPlainSocketPathFiles() throws {
         let root = try temporaryRepository()
+        defer { ignoreProcessFixtureCleanup { try FileManager.default.removeItem(at: root) } }
         let socketPath = root.appendingPathComponent("wayland-0")
         try "".write(to: socketPath, atomically: true, encoding: .utf8)
 
@@ -54,12 +37,12 @@ struct ToolRuntimeTests {
         #expect(timeout == 1_200.5)
     }
 
-    @Test
-    func headlessWestonTimeoutRejectsInvalidOverrides() throws {
+    @Test(arguments: ["nope", "0", "-1", "nan", "inf"])
+    func headlessWestonTimeoutRejectsInvalidOverrides(_ value: String) throws {
         let key = HeadlessWestonRunner.requestProcessTimeoutEnvironmentKey
 
         do {
-            _ = try HeadlessWestonRunner.requestProcessTimeoutSeconds(environment: [key: "nope"])
+            _ = try HeadlessWestonRunner.requestProcessTimeoutSeconds(environment: [key: value])
             Issue.record("expected invalid timeout override to fail")
         } catch let error as ToolError {
             #expect(error.message.contains(key))

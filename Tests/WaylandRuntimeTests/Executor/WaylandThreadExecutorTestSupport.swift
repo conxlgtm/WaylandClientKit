@@ -7,7 +7,7 @@
 
     func makeExecutorTestPipeDescriptors() throws -> (readEnd: CInt, writeEnd: CInt) {
         var descriptors = [CInt](repeating: -1, count: 2)
-        let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        let result = descriptors.withUnsafeMutableBufferPointer { buffer in
             unsafe Glibc.pipe(buffer.baseAddress)
         }
         guard result == 0 else {
@@ -27,7 +27,7 @@
         }
 
         var byte = UInt8(0)
-        let readCount = unsafe withUnsafeMutableBytes(of: &byte) { buffer in
+        let readCount = withUnsafeMutableBytes(of: &byte) { buffer in
             unsafe Glibc.read(descriptor, buffer.baseAddress, 1)
         }
         guard readCount == 1 else {

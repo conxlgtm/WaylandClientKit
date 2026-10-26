@@ -173,7 +173,7 @@
 
         var byte: UInt8 = 0
         while true {
-            let readCount = unsafe withUnsafeMutableBytes(of: &byte) { byteBuffer in
+            let readCount = withUnsafeMutableBytes(of: &byte) { byteBuffer in
                 unsafe Glibc.read(readEnd, byteBuffer.baseAddress, 1)
             }
 

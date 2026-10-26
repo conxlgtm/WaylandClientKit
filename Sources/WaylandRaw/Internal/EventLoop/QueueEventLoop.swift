@@ -120,7 +120,7 @@ private struct RawQueueEventLoopSource: QueueEventLoopSource {
         _ descriptors: inout [pollfd],
         timeoutMilliseconds: Int32
     ) throws(RuntimeError) -> Int32 {
-        unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        descriptors.withUnsafeMutableBufferPointer { buffer in
             unsafe Glibc.poll(buffer.baseAddress, nfds_t(buffer.count), timeoutMilliseconds)
         }
     }

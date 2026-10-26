@@ -38,7 +38,7 @@ package final class DragIconRoleSurface: DataTransferDragIconBinding {
 
         do {
             try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
-                try unsafe image.pixels.withUnsafeBytes { sourceBytes in
+                try image.pixels.withUnsafeBytes { sourceBytes in
                     guard sourceBytes.count <= bytes.count else {
                         throw DataTransferError.invalidDragIconPixelCount(
                             expected: sourceBytes.count,

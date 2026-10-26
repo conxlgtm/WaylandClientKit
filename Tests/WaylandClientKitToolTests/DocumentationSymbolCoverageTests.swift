@@ -36,6 +36,27 @@ struct DocumentationSymbolCoverageTests {
         }
     }
 
+    @Test
+    func excludesDocumentationInheritedFromDependencyModules() throws {
+        let scratch = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+        defer { Self.removeScratch(scratch) }
+        let graph = scratch.appendingPathComponent("Example.symbols.json")
+        try """
+        {"module":{"name":"Example"},"symbols":[
+          {"kind":{"identifier":"swift.struct"},"accessLevel":"public",
+           "docComment":{"module":"Example","lines":[{"text":"A product value."}]}},
+          {"kind":{"identifier":"swift.init"},"accessLevel":"public",
+           "docComment":{"module":"Swift","lines":[{"text":"Creates a new raw value."}]}},
+          {"kind":{"identifier":"swift.method"},"accessLevel":"public"}
+        ]}
+        """.write(to: graph, atomically: true, encoding: .utf8)
+
+        let coverage = try DocumentationSymbolCoverageVerifier().measure(symbolGraphs: [graph])
+        #expect(coverage.products["Example"] == .init(eligible: 3, documented: 1))
+    }
+
     private static func graph(documented: Bool) -> String {
         let comment =
             documented

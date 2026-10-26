@@ -366,6 +366,14 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         return try body()
     }
 
+    func withFatalFailureFinalization<Payload: ~Copyable, Result: ~Copyable>(
+        _ payload: consuming Payload,
+        _ body: (consuming Payload) throws -> Result
+    ) rethrows -> Result {
+        defer { finalizeFatalFailureAfterDispatch() }
+        return try body(payload)
+    }
+
     private func finalizeFatalFailureAfterDispatch() {
         guard hasPendingFatalFailure else { return }
         discardSurfaceGraphForFatalCleanup()

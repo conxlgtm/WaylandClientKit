@@ -53,7 +53,7 @@ public struct ExampleBuilder {
         self.context = context
     }
 
-    public func buildAll(configurations: [String] = ["debug", "release"]) throws {
+    public func buildAll(configurations: [String] = ["debug", "release"]) async throws {
         try verifyTargetChecklistMatchesPackage()
         try verifyPublicExampleImportBoundaries()
         context.diagnostics.info(
@@ -64,7 +64,7 @@ public struct ExampleBuilder {
                     Self.rootPackageTargets.contains(target)
                     ? []
                     : ["--package-path", "Examples"]
-                try context.swift.runSwift(
+                try await context.swift.runSwift(
                     [
                         "build"
                     ] + packageArguments + [

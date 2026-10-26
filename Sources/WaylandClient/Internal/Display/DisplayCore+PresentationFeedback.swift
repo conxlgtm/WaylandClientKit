@@ -32,7 +32,7 @@ extension DisplayCore {
         let session = try requireSession()
         let presentation = try session.presentationOnOwnerThread()
         return SurfacePresentationFeedbackCommitRequest(
-            request: {
+            request: { [self] in
                 try window.requestPresentationFeedbackOnOwnerThread(
                     presentation: presentation,
                     outputIDForPresentationSyncOutput: { output in

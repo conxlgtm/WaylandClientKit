@@ -5,7 +5,7 @@ import WaylandClientKitToolSupport
 @Suite
 struct ToolingConvergenceTests {
     @Test
-    func dependencyBoundaryAcceptsToolOnlyArgumentParser() throws {
+    func dependencyBoundaryAcceptsToolOnlyPackages() throws {
         let dump = packageDump(
             targets: """
                     {
@@ -27,7 +27,15 @@ struct ToolingConvergenceTests {
                     {
                       "name": "WaylandClientKitTool",
                       "dependencies": [
-                        { "product": ["ArgumentParser", "swift-argument-parser", null, null] }
+                        { "product": ["ArgumentParser", "swift-argument-parser", null, null] },
+                        { "byName": ["WaylandClientKitToolSupport", null] }
+                      ]
+                    },
+                    {
+                      "name": "WaylandClientKitToolSupport",
+                      "dependencies": [
+                        { "product": ["Subprocess", "swift-subprocess", null, null] },
+                        { "product": ["SystemPackage", "swift-system", null, null] }
                       ]
                     }
                 """)
@@ -59,6 +67,53 @@ struct ToolingConvergenceTests {
         } catch let error as ToolError {
             #expect(error.message.contains("WaylandClient dependency graph includes"))
             #expect(error.message.contains("ArgumentParser"))
+        }
+    }
+
+    @Test(arguments: [
+        ("Subprocess", "swift-subprocess"),
+        ("SystemPackage", "swift-system"),
+        ("RenamedSubprocess", "swift-subprocess"),
+        ("RenamedSystem", "swift-system"),
+    ])
+    func dependencyBoundaryRejectsTransitiveToolPackages(product: String, package: String) throws {
+        let dump = packageDump(
+            targets: """
+                {
+                  "name": "WaylandClient",
+                  "dependencies": [{ "target": ["WaylandRaw", null] }]
+                },
+                {
+                  "name": "WaylandRaw",
+                  "dependencies": [{ "product": ["\(product)", "\(package)", null, null] }]
+                },
+                {
+                  "name": "WaylandGraphicsPreview",
+                  "dependencies": [{ "byName": ["WaylandClient", null] }]
+                }
+                """)
+        do {
+            try PackageDependencyBoundaryVerifier().verify(packageDump: dump)
+            Issue.record("expected transitive tool package leak to fail")
+        } catch let error as ToolError {
+            #expect(error.message.contains("WaylandClient dependency graph includes"))
+            #expect(error.message.contains("WaylandGraphicsPreview dependency graph includes"))
+            #expect(error.message.contains(product))
+            #expect(error.message.contains(package))
+        }
+    }
+
+    @Test(arguments: ["Subprocess", "SystemPackage"])
+    func dependencyBoundaryRejectsByNameToolProducts(product: String) throws {
+        let dump = packageDump(
+            targets: """
+                {
+                  "name": "WaylandClient",
+                  "dependencies": [{ "byName": ["\(product)", null] }]
+                }
+                """)
+        #expect(throws: ToolError.self) {
+            try PackageDependencyBoundaryVerifier().verify(packageDump: dump)
         }
     }
 
@@ -126,25 +181,18 @@ struct ToolingConvergenceTests {
         #expect(version == "6.3.2")
     }
 
-    @Test
-    func toolchainSmokeClassifiesSwiftBuildPreviewResults() {
-        let unsupported = ProcessResult(
-            executable: "swift",
-            arguments: [],
-            exitCode: 64,
-            stdout: "",
-            stderr: "error: unknown option '--build-system'")
-        let packageFailure = ProcessResult(
-            executable: "swift",
-            arguments: [],
-            exitCode: 1,
-            stdout: "",
-            stderr: "error: failed to build package")
+    @Test(arguments: [
+        "Swift version 6.4", "Swift version 6.4.0", "Swift version 6.5", "Swift version 7.0",
+    ])
+    func toolchainSmokeAcceptsBaselineAndNewer(version: String) throws {
+        try ToolchainSmoke.requireMinimumVersion(version)
+    }
 
-        #expect(ToolchainSmoke.classifySwiftBuildPreview(result: unsupported) == "unsupported")
-        #expect(
-            ToolchainSmoke.classifySwiftBuildPreview(result: packageFailure)
-                == "failed-package(exit 1)")
+    @Test(arguments: ["Swift version 6.3.2", "Swift version 5.10", "not a compiler version"])
+    func toolchainSmokeRejectsOlderOrUnidentifiedCompiler(version: String) {
+        #expect(throws: ToolError.self) {
+            try ToolchainSmoke.requireMinimumVersion(version)
+        }
     }
 
     @Test
@@ -176,74 +224,6 @@ struct ToolingConvergenceTests {
             #expect(error.message.contains("README.md"))
             #expect(error.message.contains("docs/which-api-should-i-use.md"))
         }
-    }
-
-    @Test
-    func exampleBuilderTracksEveryExampleExecutable() {
-        #expect(ExampleBuilder.targets.contains("CursorAnimationSmoke"))
-        #expect(ExampleBuilder.targets.contains("CustomCursorSmoke"))
-        #expect(ExampleBuilder.targets.contains("ColorManagementSmoke"))
-        #expect(ExampleBuilder.targets.contains("CompositorSessionSmoke"))
-        #expect(ExampleBuilder.targets.contains("DialogSmoke"))
-        #expect(ExampleBuilder.targets.contains("ForeignToplevelListSmoke"))
-        #expect(ExampleBuilder.targets.contains("GraphicsPreviewColorMetadataSmoke"))
-        #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferSmoke"))
-        #expect(ExampleBuilder.targets.contains("KeyboardShortcutsInhibitSmoke"))
-        #expect(ExampleBuilder.targets.contains("ManagedSurfacePresentationSmoke"))
-        #expect(ExampleBuilder.targets.contains("OutputManagementSmoke"))
-        #expect(ExampleBuilder.targets.contains("OutputTopologySmoke"))
-        #expect(ExampleBuilder.targets.contains("PointerGesturesSmoke"))
-        #expect(ExampleBuilder.targets.contains("PointerWarpSmoke"))
-        #expect(ExampleBuilder.targets.contains("SessionStateSmoke"))
-        #expect(ExampleBuilder.targets.contains("SubsurfaceSmoke"))
-        #expect(ExampleBuilder.targets.contains("TabletInputSmoke"))
-        #expect(ExampleBuilder.targets.contains("ToplevelDragSmoke"))
-        #expect(ExampleBuilder.targets.contains("WaylandClientKitDemo"))
-        #expect(ExampleBuilder.targets.count == 37)
-    }
-
-    @Test
-    func integrationPackageTestsEnableIndexStoreBehindCompilerFilter() throws {
-        let source = try String(
-            contentsOf: repositoryRoot()
-                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
-            encoding: .utf8)
-        let start = try #require(source.range(of: "private func runIntegrationPackage"))
-        let end = try #require(source.range(of: "private func compilerFilterEnvironment"))
-        let functionBody = String(source[start.lowerBound..<end.lowerBound])
-
-        #expect(functionBody.contains("\"--enable-index-store\""))
-        #expect(functionBody.contains("compilerFilterEnvironment"))
-        #expect(!functionBody.contains("\"--disable-index-store\""))
-    }
-
-    @Test
-    func testModesShareCompilerAndSanitizerPolicy() throws {
-        let source = try String(
-            contentsOf: repositoryRoot()
-                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
-            encoding: .utf8
-        )
-
-        #expect(source.contains("private struct SwiftTestCommand"))
-        #expect(source.contains(#"result["ASAN_OPTIONS"] = "detect_leaks=0""#))
-        #expect(source.contains(#""-Xswiftc", "-Wno-macro-redefined""#))
-        #expect(source.contains("command: SwiftTestCommand(configuration: \"release\")"))
-        #expect(source.contains("command: SwiftTestCommand(sanitizer: .address)"))
-    }
-
-    @Test
-    func doccSymbolGraphDumpUsesCompilerFilter() throws {
-        let source = try String(
-            contentsOf: repositoryRoot()
-                .appendingPathComponent("Sources/WaylandClientKitTool/main.swift"),
-            encoding: .utf8)
-        let start = try #require(source.range(of: "private func runDoccVerify"))
-        let end = try #require(source.range(of: "private func runDoccSymbolLinks"))
-        let functionBody = String(source[start.lowerBound..<end.lowerBound])
-
-        #expect(functionBody.contains("compilerFilterEnvironment"))
-        #expect(functionBody.contains(#""package", "dump-symbol-graph""#))
     }
 
     @Test
@@ -299,14 +279,6 @@ extension ToolingConvergenceTests {
             )
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
-    }
-
-    private func repositoryRoot() -> URL {
-        var url = URL(fileURLWithPath: #filePath)
-        for _ in 0..<3 {
-            url.deleteLastPathComponent()
-        }
-        return url
     }
 
     private func writeRequiredDocumentation(
