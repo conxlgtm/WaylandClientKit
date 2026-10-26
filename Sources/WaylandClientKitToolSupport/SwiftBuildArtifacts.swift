@@ -50,7 +50,7 @@ public struct SwiftBuildArtifacts {
         }
     }
 
-    public func accumulateCoverage(swift: SwiftToolchain, repository: Repository) throws {
+    public func accumulateCoverage(swift: SwiftToolchain, repository: Repository) async throws {
         let coverageRoot = productsDirectory.appendingPathComponent("codecov")
         let profiles = try fileSystem.walk(coverageRoot, includingDirectories: false)
             .filter { $0.pathExtension == "profraw" }.sorted { $0.path < $1.path }
@@ -65,14 +65,14 @@ public struct SwiftBuildArtifacts {
         var inputs = profiles.map(\.path)
         if fileSystem.exists(coverageProfile) { inputs.append(coverageProfile.path) }
         // SwiftPM replaces codecov on each test invocation, including filtered runs.
-        try swift.runSwiftTool(
+        try await swift.runSwiftTool(
             tool.path, ["merge", "-sparse"] + inputs + ["-o", coverageProfile.path],
             repository: repository)
     }
 
     public func exportCoverage(
         swift: SwiftToolchain, repository: Repository
-    ) throws {
+    ) async throws {
         let coverageRoot = productsDirectory.appendingPathComponent("codecov")
         let files = try fileSystem.walk(coverageRoot, includingDirectories: false)
         guard fileSystem.exists(coverageProfile) else {
@@ -96,7 +96,7 @@ public struct SwiftBuildArtifacts {
             if index > 0 { arguments.append("-object") }
             arguments.append(bundle.path)
         }
-        let result = try swift.runSwiftTool(
+        let result = try await swift.runSwiftTool(
             tools.appendingPathComponent("llvm-cov").path, arguments, repository: repository)
         for file in files where file.pathExtension == "json" {
             try fileSystem.removeItem(file)
@@ -108,8 +108,8 @@ public struct SwiftBuildArtifacts {
     public func runThreadSanitizerTests(
         runner: ProcessRunner, repository: Repository,
         environment: [String: String], filters: [String]
-    ) throws {
-        let architecture = try runner.run("uname", ["-m"]).stdout
+    ) async throws {
+        let architecture = try await runner.run("uname", ["-m"]).stdout
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let expressions = try filters.map { try Regex($0) }
         var matchedFilters = Set<Int>()
@@ -118,7 +118,7 @@ public struct SwiftBuildArtifacts {
             var tests: [Substring] = []
             if !filters.isEmpty {
                 do {
-                    let listing = try runner.run(
+                    let listing = try await runner.run(
                         "setarch",
                         [
                             architecture, "-R", executable.path, "--list-tests",
@@ -142,7 +142,7 @@ public struct SwiftBuildArtifacts {
                 if let filter { arguments.append(contentsOf: ["--filter", filter]) }
                 arguments.append(contentsOf: ["--testing-library", "swift-testing"])
                 do {
-                    try runner.run(
+                    try await runner.run(
                         "setarch", [architecture, "-R", executable.path] + arguments,
                         workingDirectory: repository.root, environment: environment)
                 } catch {

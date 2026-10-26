@@ -3,6 +3,36 @@ import WaylandGraphicsPreview
 
 @Suite
 struct WaylandGraphicsLeaseLifetimeTests {
+    @Test
+    func storedBorrowProjectionsAllowOwnedSnapshotsAfterCancel() async throws {
+        let storage = try leaseLifetimeStorage()
+        let lease = try await storage.nextFrame()
+        let contract = lease.contract
+        let explicitSnapshot = ownedContractSnapshot(lease.contract)
+        let runtimePath = lease.runtimePath
+        let size = lease.size
+        let inspectedGeneration = inspectContract(lease.contract)
+        #expect(inspectedGeneration == contract.generation)
+        await lease.cancel()
+
+        // swiftlint:disable:next no_unstructured_task
+        let snapshotTask = Task { contract }
+        #expect(await snapshotTask.value == explicitSnapshot)
+        #expect(contract.geometry.bufferSize == size)
+        #expect(contract.runtimePath == runtimePath)
+        await storage.closeForTesting()
+    }
+
+    @Test
+    func storedBorrowProjectionsAllowOwnedSnapshotsAfterSubmit() async throws {
+        let storage = try leaseLifetimeStorage()
+        let lease = try await storage.nextFrame()
+        let contract = lease.contract
+        let result = try await lease.submit(.clearColor(.black))
+        #expect(contract.geometry.bufferSize == result.size)
+        await storage.closeForTesting()
+    }
+
     @Test(.timeLimit(.minutes(1)))
     func abandoningFrameLeaseAllowsNextFrame() async throws {
         let storage = try leaseLifetimeStorage()
@@ -99,4 +129,19 @@ private func expectBackingClosed(
     } catch {
         Issue.record("unexpected error: \(error)")
     }
+}
+
+// Swift 6.4 crashes when this Ref scope is inlined into the async test.
+@inline(never)
+private func inspectContract(
+    _ contract: borrowing WaylandGraphicsFrameContract
+) -> WaylandGraphicsSurfaceGeneration {
+    let reference = Ref(contract)
+    return reference.value.generation
+}
+
+private func ownedContractSnapshot(
+    _ contract: borrowing WaylandGraphicsFrameContract
+) -> WaylandGraphicsFrameContract {
+    copy contract
 }

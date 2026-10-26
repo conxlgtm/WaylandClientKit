@@ -7,8 +7,10 @@ public struct PackageDependencyBoundaryVerifier {
     public let protectedProductTargets: [String: [String]]
 
     public init(
-        forbiddenExternalProducts: Set<String> = ["ArgumentParser"],
-        forbiddenExternalPackages: Set<String> = ["swift-argument-parser"],
+        forbiddenExternalProducts: Set<String> = ["ArgumentParser", "Subprocess", "SystemPackage"],
+        forbiddenExternalPackages: Set<String> = [
+            "swift-argument-parser", "swift-subprocess", "swift-system",
+        ],
         forbiddenTargets: Set<String> = ["WaylandClientKitTool", "WaylandClientKitToolSupport"],
         protectedProductTargets: [String: [String]] = [
             "WaylandClient": ["WaylandClient"],

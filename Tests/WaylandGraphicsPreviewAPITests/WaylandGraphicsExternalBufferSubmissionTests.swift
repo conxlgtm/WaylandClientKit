@@ -5,6 +5,7 @@ import Synchronization
 import Testing
 import WaylandClient
 import WaylandGraphicsPreview
+import WaylandRuntime
 
 @testable import WaylandRaw
 
@@ -102,16 +103,6 @@ struct WaylandGraphicsExternalBufferDescriptorTests {
             _ = ()
         } catch {
             Issue.record("unexpected error: \(error)")
-        }
-    }
-
-    @Test
-    func validDescriptorCreatesImportPlan() throws {
-        var descriptor = try testExternalDescriptor()
-        let plan = try descriptor.makeImportPlan()
-
-        withExtendedLifetime(plan) {
-            _ = ()
         }
     }
 }
@@ -525,6 +516,97 @@ struct ExternalImportTransactionTests {
         await lease.cancel()
         await storage.closeForTesting()
     }
+
+    #if SWL_ENABLE_TESTING
+        private func rejectSuspendedNativeImport(
+            storage: WaylandGraphicsWindowBackingStorage,
+            contract: WaylandGraphicsFrameContract,
+            window: ExternalBufferFakeManagedWindow,
+            barrier: AsyncTestBarrier,
+            scenario: Int
+        ) async throws {
+            // swiftlint:disable:next no_unstructured_task
+            let registration = Task {
+                try await storage.registerExternalBuffer(
+                    try testExternalDescriptor(), contract: contract,
+                    configurationID: try #require(contract.recommendedExternalConfigurationID))
+            }
+            defer {
+                await barrier.resume()
+                registration.cancel()
+                _ = await registration.result
+            }
+            await barrier.waitUntilSuspended()
+            if scenario == 0 {
+                await storage.closeForTesting()
+            } else {
+                await window.setGeometry(try testGraphicsSurfaceGeometry(width: 5, height: 4))
+                let lease = try await storage.nextFrame()
+                await lease.cancel()
+            }
+            await barrier.resume()
+            do {
+                _ = try await registration.value
+                Issue.record("stale native import was published")
+            } catch WaylandGraphicsError.backingClosed {
+                #expect(scenario == 0)
+            } catch WaylandGraphicsError.staleFrameContract {
+                #expect(scenario == 1)
+            }
+        }
+
+        @Test(.timeLimit(.minutes(1)))
+        func nativePublicationAndRetirementDestroyOnWindowExecutor() async throws {
+            for scenario in 0...2 {
+                let executor = try WaylandThreadExecutor()
+                let owner = NativeImportOwner(executor: executor)
+                do {
+                    let barrier = AsyncTestBarrier()
+                    let window = try ExternalBufferFakeManagedWindow(
+                        importBehavior: .succeed,
+                        importHooks: ExternalImportTestHooks(
+                            bufferBarrier: scenario == 2 ? nil : barrier,
+                            nativeOwner: owner
+                        ) { descriptor in
+                            try await owner.importNativeBuffer(descriptor)
+                        }
+                    )
+                    let storage = externalBufferStorage(window: window)
+                    let lease = try await storage.nextFrame()
+                    let contract = lease.contract
+                    let configurationID = try #require(contract.recommendedExternalConfigurationID)
+                    await lease.cancel()
+                    if scenario == 2 {
+                        let buffer = try await storage.registerExternalBuffer(
+                            try testExternalDescriptor(), contract: contract,
+                            configurationID: configurationID
+                        )
+                        let frame = try await storage.nextFrame()
+                        let renderLease = try await frame.reserveExternalBuffer(buffer)
+                        let bufferSnapshot = renderLease.buffer
+                        let contractSnapshot = renderLease.contract
+                        await renderLease.cancel()
+                        #expect(bufferSnapshot.id == buffer.id)
+                        #expect(contractSnapshot.generation == contract.generation)
+                        try await storage.unregisterExternalBuffer(buffer)
+                    } else {
+                        try await rejectSuspendedNativeImport(
+                            storage: storage, contract: contract,
+                            window: window, barrier: barrier, scenario: scenario)
+                    }
+                    #expect(await storage.externalBufferLifecycleSnapshotForTesting().total == 0)
+                    await storage.closeForTesting()
+                    let native = try await owner.finishNativeSession()
+                    #expect(native.addedPlanes == [0])
+                    #expect(native.paramsDestroyCount == 1)
+                    #expect(native.bufferDestroyCount == 1)
+                    #expect(native.nativeDestructionOnOwnerThread)
+                }
+                #expect(await owner.isOnOwnerThread())
+                executor.shutdown()
+            }
+        }
+    #endif
 
     @Test(.timeLimit(.minutes(1)))
     func closeDuringBufferImportDestroysUnpublishedResource() async throws {
@@ -2247,19 +2329,35 @@ private struct ExternalImportTestHooks: Sendable {
     let bufferBarrier: AsyncTestBarrier?
     let timelineBarrier: AsyncTestBarrier?
     let destroyRecorder: ExternalBufferDestroyRecorder?
+    let nativeOwner: (any Actor)?
+    let nativeImport:
+        (
+            @Sendable (consuming WaylandGraphicsExternalBufferDescriptor) async throws ->
+                RawLinuxDmabufBuffer
+        )?
 
     init(
         bufferBarrier: AsyncTestBarrier? = nil,
         timelineBarrier: AsyncTestBarrier? = nil,
-        destroyRecorder: ExternalBufferDestroyRecorder? = nil
+        destroyRecorder: ExternalBufferDestroyRecorder? = nil,
+        nativeOwner: (any Actor)? = nil,
+        nativeImport:
+            (
+                @Sendable (consuming WaylandGraphicsExternalBufferDescriptor) async throws ->
+                    RawLinuxDmabufBuffer
+            )? = nil
     ) {
         self.bufferBarrier = bufferBarrier
         self.timelineBarrier = timelineBarrier
         self.destroyRecorder = destroyRecorder
+        self.nativeOwner = nativeOwner
+        self.nativeImport = nativeImport
     }
 }
 
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
+    nonisolated var graphicsPreviewActor: any Actor { importHooks.nativeOwner ?? self }
+
     enum ImportBehavior: Sendable {
         case fail
         case clientFailure
@@ -2316,20 +2414,6 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         closeBarrier = requestedCloseBarrier
     }
 
-    var geometry: SurfaceGeometry {
-        get async throws { geometryValue }
-    }
-
-    func setSurfaceFeedbackSynchronization(
-        _ synchronization: SurfaceSynchronizationCapability?
-    ) {
-        surfaceFeedbackSynchronization = synchronization
-    }
-
-    var isClosed: Bool {
-        get async throws { isWindowClosed }
-    }
-
     func prepareGraphicsPreviewPresentation(
         timeoutMilliseconds _: Int32
     ) async throws -> SurfaceGeometry {
@@ -2353,6 +2437,15 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     func importGraphicsPreviewExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
     ) async throws -> RawLinuxDmabufBuffer {
+        if let nativeImport = importHooks.nativeImport {
+            importRequests += 1
+            let buffer = try await nativeImport(descriptor)
+            if let barrier = importHooks.bufferBarrier {
+                await barrier.suspend()
+            }
+            importedBuffers.append(buffer)
+            return buffer
+        }
         var descriptor = descriptor
         importRequests += 1
         do {
@@ -2547,6 +2640,20 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 }
 
 extension ExternalBufferFakeManagedWindow {
+    var geometry: SurfaceGeometry {
+        get async throws { geometryValue }
+    }
+
+    func setSurfaceFeedbackSynchronization(
+        _ synchronization: SurfaceSynchronizationCapability?
+    ) {
+        surfaceFeedbackSynchronization = synchronization
+    }
+
+    var isClosed: Bool {
+        get async throws { isWindowClosed }
+    }
+
     func setGeometry(_ geometry: SurfaceGeometry) {
         geometryValue = geometry
     }

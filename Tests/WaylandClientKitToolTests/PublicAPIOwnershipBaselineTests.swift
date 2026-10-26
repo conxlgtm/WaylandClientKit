@@ -5,8 +5,8 @@ import WaylandClientKitToolSupport
 @Suite
 struct PublicAPIOwnershipBaselineTests {
     @Test
-    func capturesOwnershipMarkersOmittedBySymbolGraphs() throws {
-        let records = try ownershipRecords(sources: [
+    func capturesOwnershipMarkersOmittedBySymbolGraphs() async throws {
+        let records = try await ownershipRecords(sources: [
             "FixtureLease.swift": """
             public struct CopyableFixture: Sendable { // ~Copyable
                 private let marker = "} borrowing get borrow mutate"
@@ -49,8 +49,8 @@ struct PublicAPIOwnershipBaselineTests {
     }
 
     @Test
-    func capturesBothAccessorsInBorrowOnlyFiles() throws {
-        let records = try ownershipRecords(sources: [
+    func capturesBothAccessorsInBorrowOnlyFiles() async throws {
+        let records = try await ownershipRecords(sources: [
             "BorrowView.swift": """
             public struct BorrowView {
                 private var stored: Int
@@ -70,8 +70,8 @@ struct PublicAPIOwnershipBaselineTests {
     }
 
     @Test
-    func capturesOwnershipGettersInCopyableTypesAndPublicExtensions() throws {
-        let records = try ownershipRecords(sources: [
+    func capturesOwnershipGettersInCopyableTypesAndPublicExtensions() async throws {
+        let records = try await ownershipRecords(sources: [
             "CopyableViews.swift": """
             public struct CopyableView {
                 public var value: Int { borrowing get { 42 } }
@@ -107,8 +107,8 @@ struct PublicAPIOwnershipBaselineTests {
     }
 
     @Test
-    func omitsHiddenTypesAndExplicitlyHiddenExtensionMembers() throws {
-        let records = try ownershipRecords(sources: [
+    func omitsHiddenTypesAndExplicitlyHiddenExtensionMembers() async throws {
+        let records = try await ownershipRecords(sources: [
             // Hidden types must exclude extension properties in other files,
             // even when this file contains no ownership markers.
             "Declarations.swift": """
@@ -163,8 +163,8 @@ struct PublicAPIOwnershipBaselineTests {
     }
 
     @Test
-    func distinguishesAccessorKindsFromGetterModifiers() throws {
-        let records = try ownershipRecords(sources: [
+    func distinguishesAccessorKindsFromGetterModifiers() async throws {
+        let records = try await ownershipRecords(sources: [
             "AccessorKinds.swift": """
             public struct AccessorKinds {
                 private var stored: Int
@@ -204,8 +204,8 @@ struct PublicAPIOwnershipBaselineTests {
     }
 
     @Test
-    func ignoresOwnershipWordsInCommentsAndLiterals() throws {
-        let records = try ownershipRecords(sources: [
+    func ignoresOwnershipWordsInCommentsAndLiterals() async throws {
+        let records = try await ownershipRecords(sources: [
             "Noise.swift": #"""
             // public struct Phantom: ~Copyable { public var value: Int { borrow { 42 } } }
             /* public extension Noise { var value: Int { consuming get { 42 } } } */
@@ -223,7 +223,7 @@ struct PublicAPIOwnershipBaselineTests {
         #expect(records.isEmpty)
     }
 
-    private func ownershipRecords(sources: [String: String]) throws -> Set<String> {
+    private func ownershipRecords(sources: [String: String]) async throws -> Set<String> {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("waylandclientkit-api-ownership-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -244,7 +244,7 @@ struct PublicAPIOwnershipBaselineTests {
         let compiler = try SwiftToolchain(runner: runner).swiftCompilerExecutable(
             environment: runner.environment
         )
-        let report = try SourceOwnershipAPIBaseline(
+        let report = try await SourceOwnershipAPIBaseline(
             runner: runner, swiftCompilerExecutable: compiler
         ).render(moduleSources: ["Fixture": root])
         return Set(report.split(separator: "\n").filter { $0.contains("\t") }.map(String.init))
@@ -253,8 +253,8 @@ struct PublicAPIOwnershipBaselineTests {
 
 extension PublicAPIOwnershipBaselineTests {
     @Test
-    func preservesPublicOwnershipWhenFunctionLocalTypesShadowModuleTypes() throws {
-        let records = try ownershipRecords(sources: [
+    func preservesPublicOwnershipWhenFunctionLocalTypesShadowModuleTypes() async throws {
+        let records = try await ownershipRecords(sources: [
             "Lease.swift": """
             public struct Lease: ~Copyable {
                 public var value: Int { borrowing get { 42 } }
@@ -305,8 +305,8 @@ extension PublicAPIOwnershipBaselineTests {
     ])
     func preservesPublicOwnershipWhenLocalTypesShadowNestedTypes(
         _ implementation: String
-    ) throws {
-        let records = try ownershipRecords(sources: [
+    ) async throws {
+        let records = try await ownershipRecords(sources: [
             "Container.swift": """
             public struct Container {
                 public struct Lease: ~Copyable {

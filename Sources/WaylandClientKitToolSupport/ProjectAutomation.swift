@@ -1,13 +1,7 @@
 import Foundation
 
-#if os(Linux)
-    import Glibc
-#else
-    import Darwin
-#endif
-
-// This file coordinates repository-wide checks. Each checker is still typed and testable.
-// swiftlint:disable file_length function_body_length
+// Repository-wide checks and command resolution.
+// swiftlint:disable file_length
 
 private let unsafeTokenPattern = [
     #"@unchecked\s+Sendable"#,
@@ -277,10 +271,10 @@ public struct BootstrapChecker {
         self.context = context
     }
 
-    public func check(maintainer: Bool = false) throws {
-        _ = try context.swift.version(repository: context.repository)
+    public func check(maintainer: Bool = false) async throws {
+        _ = try await context.swift.version(repository: context.repository)
         context.diagnostics.success("Swift toolchain")
-        _ = try context.swift.runSwift(
+        _ = try await context.swift.runSwift(
             ["package", "describe", "--type", "json"], repository: context.repository)
         context.diagnostics.success("SwiftPM")
         _ = try context.runner.executableURL(for: "pkg-config")
@@ -290,7 +284,7 @@ public struct BootstrapChecker {
             "wayland-client", "wayland-server", "wayland-cursor", "wayland-egl", "xkbcommon",
             "libdrm", "gbm", "egl", "glesv2",
         ] {
-            let result = try context.runner.run(
+            let result = try await context.runner.run(
                 "pkg-config",
                 ["--exists", module],
                 workingDirectory: context.repository.root,
@@ -315,14 +309,14 @@ public struct BootstrapChecker {
             }
         }
 
-        if canResolveSwiftFormat() {
+        if await canResolveSwiftFormat() {
             context.diagnostics.success("swift-format")
         } else {
             context.diagnostics.warning("swift-format is not installed")
         }
 
         if maintainer {
-            let resolvedSources = try ProtocolTooling(
+            let resolvedSources = try await ProtocolTooling(
                 repository: context.repository,
                 fileSystem: context.fileSystem,
                 runner: context.runner,
@@ -365,7 +359,7 @@ public struct BootstrapChecker {
         }
     }
 
-    private func canResolveSwiftFormat() -> Bool {
+    private func canResolveSwiftFormat() async -> Bool {
         if let override = context.runner.environment["SWIFT_FORMAT_BIN"], !override.isEmpty {
             return context.fileSystem.isExecutable(URL(fileURLWithPath: override))
         }
@@ -373,7 +367,7 @@ public struct BootstrapChecker {
             return true
         }
         do {
-            let result = try context.runner.run(
+            let result = try await context.runner.run(
                 "swift", ["format", "--version"], requireSuccess: false)
             return result.exitCode == 0
         } catch {
@@ -425,12 +419,12 @@ public struct SwiftCommandResolver {
         self.context = context
     }
 
-    public func runSwift(_ arguments: [String], environment: [String: String] = [:]) throws {
-        try context.swift.runSwift(
+    public func runSwift(_ arguments: [String], environment: [String: String] = [:]) async throws {
+        try await context.swift.runSwift(
             arguments, repository: context.repository, environment: environment)
     }
 
-    public func runFormat(mode: String) throws {
+    public func runFormat(mode: String) async throws {
         let files = [
             "Package.swift",
             "IntegrationTests/PublicAPIClient/Package.swift",
@@ -459,7 +453,7 @@ public struct SwiftCommandResolver {
             ? ["format", "--configuration", ".swift-format", "--in-place"]
             : ["lint", "--configuration", ".swift-format", "--strict"]
         for file in files {
-            try runSwiftFormat(base + [file])
+            try await runSwiftFormat(base + [file])
         }
         var recursiveArgs = base
         if mode == "format" {
@@ -467,41 +461,42 @@ public struct SwiftCommandResolver {
         } else {
             recursiveArgs += ["--parallel", "--recursive"]
         }
-        try runSwiftFormat(recursiveArgs + recursive)
+        try await runSwiftFormat(recursiveArgs + recursive)
     }
 
-    public func runSwiftFormat(_ arguments: [String]) throws {
+    public func runSwiftFormat(_ arguments: [String]) async throws {
         if let override = context.runner.environment["SWIFT_FORMAT_BIN"], !override.isEmpty {
-            try context.runner.run(override, arguments, workingDirectory: context.repository.root)
+            try await context.runner.run(
+                override, arguments, workingDirectory: context.repository.root)
             return
         }
         if context.runner.canFind("swift-format") {
-            try context.runner.run(
+            try await context.runner.run(
                 "swift-format", arguments, workingDirectory: context.repository.root)
             return
         }
-        try context.runner.run(
+        try await context.runner.run(
             "swift", ["format"] + arguments, workingDirectory: context.repository.root)
     }
 
-    public func runSwiftLint() throws {
+    public func runSwiftLint() async throws {
         let args = [
             "lint", "--strict", "--no-cache", "--quiet", "--force-exclude", "--config",
             ".swiftlint.yml",
         ]
         if let override = context.runner.environment["SWIFTLINT_BIN"], !override.isEmpty {
-            try runStrictSwiftLint(override, args: args)
+            try await runStrictSwiftLint(override, args: args)
             return
         }
 
         let pinned = context.repository.url(".build/tools/swiftlint")
         if context.fileSystem.isExecutable(pinned) {
-            try runStrictSwiftLint(pinned.path, args: args)
+            try await runStrictSwiftLint(pinned.path, args: args)
             return
         }
 
-        if tools.canRunPathTool("swiftlint", probeArguments: ["version"]) {
-            try runStrictSwiftLint("swiftlint", args: args)
+        if await tools.canRunPathTool("swiftlint", probeArguments: ["version"]) {
+            try await runStrictSwiftLint("swiftlint", args: args)
             return
         }
 
@@ -517,14 +512,14 @@ public struct SwiftCommandResolver {
         )
     }
 
-    private func runStrictSwiftLint(_ executable: String, args: [String]) throws {
-        guard swiftLintEnforcesCustomRules(executable) else {
+    private func runStrictSwiftLint(_ executable: String, args: [String]) async throws {
+        guard await swiftLintEnforcesCustomRules(executable) else {
             throw strictSwiftLintError()
         }
-        try context.swift.runSwiftTool(executable, args, repository: context.repository)
+        try await context.swift.runSwiftTool(executable, args, repository: context.repository)
     }
 
-    private func swiftLintEnforcesCustomRules(_ executable: String) -> Bool {
+    private func swiftLintEnforcesCustomRules(_ executable: String) async -> Bool {
         let probe = context.repository.url(
             "Sources/.swiftlint-custom-rules-probe-\(UUID().uuidString).swift")
         do {
@@ -545,7 +540,7 @@ public struct SwiftCommandResolver {
         }
 
         do {
-            let result = try context.swift.runSwiftTool(
+            let result = try await context.swift.runSwiftTool(
                 executable,
                 [
                     "lint", "--strict", "--no-cache", "--quiet", "--force-exclude", "--config",
@@ -620,8 +615,8 @@ public struct VerificationChecks {
         context.diagnostics.success("target import boundaries are valid")
     }
 
-    public func verifyToolDependencyBoundaries() throws {
-        let dump = try context.swift.runSwift(
+    public func verifyToolDependencyBoundaries() async throws {
+        let dump = try await context.swift.runSwift(
             ["package", "dump-package"], repository: context.repository
         ).stdout
         try PackageDependencyBoundaryVerifier().verify(packageDump: dump)
@@ -736,15 +731,15 @@ public struct VerificationChecks {
             options: .regularExpression) != nil
     }
 
-    public func verifyReleaseShimSymbols() throws {
-        try context.swift.runSwift(
+    public func verifyReleaseShimSymbols() async throws {
+        try await context.swift.runSwift(
             ["build", "--disable-index-store", "-c", "release", "--target", "CWaylandProtocols"],
             repository: context.repository)
-        try context.swift.runSwift(
+        try await context.swift.runSwift(
             ["build", "--disable-index-store", "-c", "release", "--target", "CGBMShims"],
             repository: context.repository)
         _ = try context.runner.executableURL(for: "nm")
-        let binPath = try context.swift.runSwift(
+        let binPath = try await context.swift.runSwift(
             ["build", "-c", "release", "--show-bin-path"],
             repository: context.repository
         ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -760,7 +755,7 @@ public struct VerificationChecks {
         }
         var failures: [String] = []
         for object in objects {
-            let result = try context.runner.run(
+            let result = try await context.runner.run(
                 "nm", ["-g", object.path], workingDirectory: context.repository.root)
             if result.stdout.contains("swl_test_") {
                 failures.append("Test shim symbol found in release object: \(object.path)")
@@ -910,7 +905,7 @@ public struct PublicAPIAuditor {
         self.context = context
     }
 
-    public func dump(environment: [String: String] = [:]) throws -> String {
+    public func dump(environment: [String: String] = [:]) async throws -> String {
         let verifier = DocCVerifier(
             repository: context.repository,
             buildRoot: context.swift.swiftPMBuildRoot(
@@ -919,7 +914,7 @@ public struct PublicAPIAuditor {
             diagnostics: context.diagnostics
         )
         try verifier.removePublicProductSymbolGraphs()
-        let result = try context.swift.runSwift(
+        let result = try await context.swift.runSwift(
             [
                 "package", "dump-symbol-graph", "--minimum-access-level", "public",
                 "--skip-synthesized-members",
@@ -935,7 +930,7 @@ public struct PublicAPIAuditor {
         let report = try SemanticPublicAPIBaseline(fileSystem: context.fileSystem).render(
             symbolGraphs: verifier.publicProductSymbolGraphs()
         )
-        let ownershipReport = try SourceOwnershipAPIBaseline(
+        let ownershipReport = try await SourceOwnershipAPIBaseline(
             fileSystem: context.fileSystem,
             runner: context.runner,
             swiftCompilerExecutable: context.swift.swiftCompilerExecutable(
@@ -951,9 +946,9 @@ public struct PublicAPIAuditor {
         return "# WaylandClientKit Semantic Public API Report\n\n\(report)\n\(ownershipReport)"
     }
 
-    public func verify(update: Bool, environment: [String: String] = [:]) throws {
+    public func verify(update: Bool, environment: [String: String] = [:]) async throws {
         let baseline = context.repository.url("docs/public-api-baseline.md")
-        let report = try dump(environment: environment)
+        let report = try await dump(environment: environment)
         let symbolGraphs = try DocCVerifier(
             repository: context.repository,
             buildRoot: context.swift.swiftPMBuildRoot(
@@ -1003,255 +998,4 @@ public struct PublicAPIAuditor {
     }
 }
 
-public struct HeadlessWestonRunner {
-    public static let requestProcessTimeoutEnvironmentKey =
-        "WAYLAND_CLIENT_KIT_REQUEST_PROCESS_TIMEOUT_SECONDS"
-    public static let defaultRequestProcessTimeoutSeconds: TimeInterval = 600
-
-    public let context: ToolContext
-
-    public init(context: ToolContext) {
-        self.context = context
-    }
-
-    public func run(command: [String], timeoutSeconds: TimeInterval? = nil) throws {
-        guard command.isEmpty == false else {
-            throw ToolError("headless smoke requires a child command", exitCode: ToolExitCode.usage)
-        }
-        let childTimeoutSeconds: TimeInterval
-        if let timeoutSeconds {
-            childTimeoutSeconds = timeoutSeconds
-        } else {
-            childTimeoutSeconds = try Self.requestProcessTimeoutSeconds(
-                environment: context.runner.environment)
-        }
-        let childCommand = try swiftPMCommandIfNeeded(command)
-        _ = try context.runner.executableURL(for: "weston")
-        let runtime = try context.fileSystem.createTemporaryDirectory(
-            prefix: "swlrt")
-        defer { ignoreCleanupError { try context.fileSystem.removeItem(runtime) } }
-        let config = runtime.appendingPathComponent("config")
-        try context.fileSystem.createDirectory(config)
-        try FileManager.default.setAttributes(
-            [.posixPermissions: 0o700], ofItemAtPath: runtime.path)
-
-        let socket = "w\(UUID().uuidString.prefix(8))"
-        let westonLog = runtime.appendingPathComponent("weston.log")
-        let westonProcessLog = runtime.appendingPathComponent("weston-process.log")
-        let childLog = runtime.appendingPathComponent("child.log")
-        let weston = Process()
-        weston.executableURL = try context.runner.executableURL(for: "weston")
-        weston.arguments = [
-            "--backend=headless-backend.so",
-            "--socket=\(socket)",
-            "--idle-time=0",
-            "--log=\(westonLog.path)",
-        ]
-        var env = context.runner.environment
-        env["XDG_RUNTIME_DIR"] = runtime.path
-        env["XDG_CONFIG_HOME"] = config.path
-        env["WAYLAND_DISPLAY"] = socket
-        env.removeValue(forKey: "WAYLAND_SOCKET")
-        weston.environment = env
-        let westonOutput = Pipe()
-        let westonOutputBuffer = HeadlessOutputBuffer()
-        weston.standardOutput = westonOutput
-        weston.standardError = westonOutput
-        westonOutput.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            if data.isEmpty {
-                handle.readabilityHandler = nil
-            } else {
-                westonOutputBuffer.append(data)
-            }
-        }
-        defer {
-            westonOutput.fileHandleForReading.readabilityHandler = nil
-        }
-        try weston.run()
-
-        do {
-            try waitForSocket(runtime.appendingPathComponent(socket), process: weston)
-            try runChild(
-                command: childCommand,
-                environment: env,
-                timeoutSeconds: childTimeoutSeconds,
-                logURL: childLog)
-            stopProcess(weston, killAfter: 5)
-        } catch {
-            stopProcess(weston, killAfter: 5)
-            westonOutputBuffer.append(westonOutput.fileHandleForReading.readDataToEndOfFile())
-            writeLogData(westonOutputBuffer.data, to: westonProcessLog)
-            printFailureLog(westonLog, label: "weston.log")
-            printFailureLog(westonProcessLog, label: "weston process output")
-            printFailureLog(childLog, label: "headless child output")
-            throw error
-        }
-    }
-
-    public static func requestProcessTimeoutSeconds(environment: [String: String]) throws
-        -> TimeInterval
-    {
-        guard
-            let rawValue = environment[requestProcessTimeoutEnvironmentKey]?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-            !rawValue.isEmpty
-        else {
-            return defaultRequestProcessTimeoutSeconds
-        }
-        guard let value = TimeInterval(rawValue), value.isFinite, value > 0 else {
-            throw ToolError(
-                "invalid \(requestProcessTimeoutEnvironmentKey): expected positive seconds",
-                exitCode: ToolExitCode.environment)
-        }
-        return value
-    }
-
-    private func swiftPMCommandIfNeeded(_ command: [String]) throws -> [String] {
-        guard command.first == "wck" else {
-            return command
-        }
-        let swift = try context.swift.swiftExecutable(environment: context.runner.environment)
-        return [swift, "run", "wck"] + Array(command.dropFirst())
-    }
-
-    private func waitForSocket(_ socket: URL, process: Process) throws {
-        for _ in 0..<100 {
-            if Self.isUnixSocket(socket) {
-                return
-            }
-            if !process.isRunning {
-                throw ToolError(
-                    "weston exited before creating \(socket.path)", exitCode: ToolExitCode.process)
-            }
-            Thread.sleep(forTimeInterval: 0.05)
-        }
-        throw ToolError("weston did not create \(socket.path)", exitCode: ToolExitCode.process)
-    }
-
-    public static func isUnixSocket(_ url: URL) -> Bool {
-        var status = stat()
-        guard lstat(url.path, &status) == 0 else { return false }
-        return (status.st_mode & S_IFMT) == S_IFSOCK
-    }
-
-    private func runChild(
-        command: [String],
-        environment: [String: String],
-        timeoutSeconds: TimeInterval,
-        logURL: URL
-    ) throws {
-        let process = Process()
-        process.executableURL = try context.runner.executableURL(for: command[0])
-        process.arguments = Array(command.dropFirst())
-        process.environment = environment
-        process.currentDirectoryURL = context.repository.root
-        let output = Pipe()
-        let outputBuffer = HeadlessOutputBuffer()
-        process.standardOutput = output
-        process.standardError = output
-        output.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            if data.isEmpty {
-                handle.readabilityHandler = nil
-            } else {
-                outputBuffer.append(data)
-            }
-        }
-        defer {
-            output.fileHandleForReading.readabilityHandler = nil
-        }
-        try process.run()
-        let deadline = Date().addingTimeInterval(timeoutSeconds)
-        while process.isRunning, Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.1)
-        }
-        if process.isRunning {
-            stopProcess(process, killAfter: 5)
-            outputBuffer.append(output.fileHandleForReading.readDataToEndOfFile())
-            writeLogData(outputBuffer.data, to: logURL)
-            throw ToolError(
-                "headless command timed out: \(command.joined(separator: " "))",
-                exitCode: process.terminationStatus == 0
-                    ? ToolExitCode.process : process.terminationStatus)
-        }
-        outputBuffer.append(output.fileHandleForReading.readDataToEndOfFile())
-        writeLogData(outputBuffer.data, to: logURL)
-        guard process.terminationStatus == 0 else {
-            let commandText = command.joined(separator: " ")
-            let message =
-                "headless command failed with exit code "
-                + "\(process.terminationStatus): \(commandText)"
-            throw ToolError(
-                message,
-                exitCode: process.terminationStatus
-            )
-        }
-    }
-
-    private func stopProcess(_ process: Process, killAfter: TimeInterval) {
-        guard process.isRunning else { return }
-        process.terminate()
-        guard !waitForExit(process, timeoutSeconds: killAfter) else { return }
-        #if os(Linux)
-            kill(process.processIdentifier, SIGKILL)
-        #else
-            process.terminate()
-        #endif
-        process.waitUntilExit()
-    }
-
-    private func waitForExit(_ process: Process, timeoutSeconds: TimeInterval) -> Bool {
-        let deadline = Date().addingTimeInterval(timeoutSeconds)
-        while process.isRunning, Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.05)
-        }
-        return !process.isRunning
-    }
-
-    private func printFailureLog(_ url: URL, label: String) {
-        let text: String
-        do {
-            text = try context.fileSystem.readText(url)
-        } catch {
-            return
-        }
-        guard !text.isEmpty else { return }
-        context.diagnostics.error("----- \(label) -----\n\(text)\n---------------------")
-    }
-
-    private func writeLogData(_ data: Data, to url: URL) {
-        do {
-            try context.fileSystem.writeData(data, to: url)
-        } catch {
-            // Failure logs are diagnostic only.
-        }
-    }
-
-    private func ignoreCleanupError(_ operation: () throws -> Void) {
-        do {
-            try operation()
-        } catch {
-            // Cleanup best-effort only.
-        }
-    }
-}
-
-// SAFETY: storage is private and every read/write is serialized by lock.
-private final class HeadlessOutputBuffer: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storage = Data()
-
-    var data: Data {
-        lock.withLock { storage }
-    }
-
-    func append(_ data: Data) {
-        guard !data.isEmpty else { return }
-        lock.withLock {
-            storage.append(data)
-        }
-    }
-}
-
-// swiftlint:enable file_length function_body_length
+// swiftlint:enable file_length

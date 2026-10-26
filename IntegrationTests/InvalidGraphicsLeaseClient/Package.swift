@@ -34,5 +34,25 @@ let package = Package(
             ],
             swiftSettings: swiftSettings
         ),
+        .executableTarget(
+            name: "FrameLeaseBorrowCancelClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "FrameLeaseBorrowSubmitClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "RenderLeaseBorrowCancelClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "RenderLeaseBorrowSubmitClient",
+            dependencies: [.product(name: "WaylandGraphicsPreview", package: "WaylandClientKit")],
+            swiftSettings: swiftSettings
+        ),
     ]
 )

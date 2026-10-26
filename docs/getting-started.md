@@ -8,9 +8,8 @@ On Nix/NixOS, enter the project shell:
 nix develop
 ```
 
-On other Linux distributions, install the packages listed in
-[Linux Dependencies](linux-dependencies.md), then verify the
-environment:
+On other Linux distributions, install [Linux Dependencies](linux-dependencies.md),
+then check the environment:
 
 ```bash
 swift run wck tools toolchain-smoke
@@ -33,7 +32,7 @@ Do not add `--build-system native` or export a synthetic `SDKROOT`.
 swift build --disable-index-store
 ```
 
-The local CI gate is:
+Run the local CI gate:
 
 ```bash
 swift run wck ci check
@@ -47,7 +46,7 @@ Under a Wayland session:
 swift run wayland-client-kit-smoke
 ```
 
-Additional live checks are available through:
+Run additional live checks:
 
 ```bash
 swift run wck smoke live
@@ -61,8 +60,7 @@ swift run wck smoke headless -- wck smoke integration
 
 ## 4. Create A Tiny Client
 
-Create a new Swift executable package that depends on WaylandClientKit, or add this
-shape to an existing package target:
+Create a Swift executable package that depends on WaylandClientKit:
 
 ```swift
 import WaylandClient
@@ -103,16 +101,18 @@ struct TinyWaylandClient {
 }
 ```
 
-`WaylandDisplay.withConnection` requires the application's desktop identity,
-opens the display, discovers advertised
-capabilities, starts the owner-thread event loop, runs your async body, and
-closes the display even if the body throws.
+`SoftwareFrame.withXRGB8888Rows` borrows exactly `frame.width` pixels per row.
+Row spans exclude padding and extra backing bytes. A thrown drawing error ends
+the borrow.
 
-`Window.show` is the first buffer-backed presentation for a managed window. It
-waits for the initial xdg configure before mapping the window. `Window.redraw`
-is for subsequent presentations after the window already has a configured
-surface. If you need another frame, call `Window.requestRedraw()` and redraw
-when your app policy decides to produce it.
+`WaylandDisplay.withConnection` requires an application ID, discovers capabilities,
+and starts the owner-thread event loop. Before returning your body's result or
+error, it awaits display close and all window-close observers. This also applies
+when the body is cancelled; cleanup runs in the same task.
+
+`Window.show` waits for the initial xdg configure before mapping the window with
+its first buffer. Use `Window.redraw` for later presentations. Request another
+frame with `Window.requestRedraw()`, then redraw when your app is ready.
 
 ## 5. Read Input And Events
 

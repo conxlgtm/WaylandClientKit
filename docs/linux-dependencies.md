@@ -65,8 +65,8 @@ loader and the selected toolchain's SourceKit library. Script overrides use
 their own interpreters.
 
 The initial compiler metadata probe emits a `libc not found` warning.
-Include it in Nix validation reports. Debug and release linking, along with
-Foundation child processes, must use the generated SDK's matching glibc loader.
+Debug and release executables, including tool subprocesses, must use the
+generated SDK's matching glibc loader.
 Keep the default build backend when investigating this warning.
 
 Local SwiftPM runs also report `safeExec` signal 32/33 warnings. C compilation
@@ -78,6 +78,22 @@ Nix builds require unprivileged user/mount namespaces. SwiftPM runs in a child
 mount namespace with Nix coreutils at `/usr/bin` for Swift Build's hardcoded
 resource-bundle `touch` task. It keeps native access to `/dev`, `/proc`, and `/sys`
 and leaves the host filesystem and unrelated processes unchanged.
+
+### GPU Drivers in Nix
+
+Host Mesa drivers may require a newer glibc than the SDK. If GBM or EGL fails to
+load, select the shell's pinned Mesa inside `nix develop`, from the repository:
+
+```bash
+mesa=$(nix eval --impure --raw --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.${builtins.currentSystem}.mesa.outPath')
+export GBM_BACKENDS_PATH="$mesa/lib/gbm"
+export LIBGL_DRIVERS_PATH="$mesa/lib/dri"
+export __EGL_VENDOR_LIBRARY_FILENAMES="$mesa/share/glvnd/egl_vendor.d/50_mesa.json"
+```
+
+These overrides affect the current shell, not the host configuration.
+
+### Toolchain Compatibility Libraries
 
 On openSUSE, upstream SwiftPM may need a compatibility `libxml2.so.2`
 that the distro `libxml2-16` package does not provide. Project Swift wrappers

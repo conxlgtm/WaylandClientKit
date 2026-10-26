@@ -343,13 +343,15 @@ public struct ProtocolTooling {
         diagnostics.success("protocol manifest metadata normalized")
     }
 
-    public func resolvedSources() throws -> [(ProtocolEntry, URL?)] {
-        try loadManifest().protocols.map { entry in
-            (entry, try resolveSource(for: entry))
+    public func resolvedSources() async throws -> [(ProtocolEntry, URL?)] {
+        var sources: [(ProtocolEntry, URL?)] = []
+        for entry in try loadManifest().protocols {
+            sources.append((entry, try await resolveSource(for: entry)))
         }
+        return sources
     }
 
-    public func resolveSource(for entry: ProtocolEntry) throws -> URL? {
+    public func resolveSource(for entry: ProtocolEntry) async throws -> URL? {
         let source = entry.effectiveSourceResolution
         if let name = source.environmentOverride,
             let value = runner.environment[name],
@@ -363,7 +365,7 @@ public struct ProtocolTooling {
 
         var candidates: [URL] = []
         if let package = source.pkgConfigPackage, let variable = source.pkgConfigVariable {
-            let result = try runner.run(
+            let result = try await runner.run(
                 "pkg-config",
                 ["--variable=\(variable)", package],
                 workingDirectory: repository.root,
@@ -385,9 +387,9 @@ public struct ProtocolTooling {
         return candidates.first { fileSystem.exists($0) }
     }
 
-    public func syncProtocols() throws {
+    public func syncProtocols() async throws {
         try validateManifest()
-        for (entry, source) in try resolvedSources() {
+        for (entry, source) in try await resolvedSources() {
             guard let source else {
                 throw ToolError(
                     "missing XML source for \(entry.name)", exitCode: ToolExitCode.environment)
@@ -403,11 +405,11 @@ public struct ProtocolTooling {
         }
     }
 
-    public func generateProtocols() throws {
-        try generateProtocols(outputRoot: repository.root, validateFirst: true)
+    public func generateProtocols() async throws {
+        try await generateProtocols(outputRoot: repository.root, validateFirst: true)
     }
 
-    private func generateProtocols(outputRoot: URL, validateFirst: Bool) throws {
+    private func generateProtocols(outputRoot: URL, validateFirst: Bool) async throws {
         if validateFirst {
             try validateManifest()
         }
@@ -431,7 +433,7 @@ public struct ProtocolTooling {
             protocols: protocolIRs,
             manifest: manifest
         )
-        let scanner = try RepositoryNixTools(
+        let scanner = try await RepositoryNixTools(
             repository: repository,
             fileSystem: fileSystem,
             runner: runner,
@@ -454,10 +456,10 @@ public struct ProtocolTooling {
             let code = outputRoot.appendingPathComponent(entry.effectiveGeneratedCodePath)
             try fileSystem.createDirectory(header.deletingLastPathComponent())
             try fileSystem.createDirectory(code.deletingLastPathComponent())
-            try runner.run(
+            try await runner.run(
                 scanner, [entry.effectiveHeaderMode, xml.path, header.path],
                 workingDirectory: repository.root)
-            try runner.run(
+            try await runner.run(
                 scanner, [entry.effectiveCodeMode, xml.path, code.path],
                 workingDirectory: repository.root)
             try normalizeGeneratedFile(header)
@@ -490,7 +492,7 @@ public struct ProtocolTooling {
         }
     }
 
-    public func verifyGenerated() throws {
+    public func verifyGenerated() async throws {
         try validateManifest()
 
         let generated = try fileSystem.createTemporaryDirectory(
@@ -503,7 +505,7 @@ public struct ProtocolTooling {
             }
         }
 
-        try generateProtocols(outputRoot: generated, validateFirst: false)
+        try await generateProtocols(outputRoot: generated, validateFirst: false)
 
         var failures: [String] = []
         let paths = [

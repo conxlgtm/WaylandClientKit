@@ -70,10 +70,12 @@ enum GraphicsPreviewExternalBufferSmoke {
                 if options.stressFrames > 0 {
                     backingWasClosed = try await submitStressBuffers(
                         backing: backing,
+                        display: display,
                         frameCount: options.stressFrames
                     )
                 } else {
-                    backingWasClosed = try await submitInternalTestBuffer(backing: backing)
+                    backingWasClosed = try await submitInternalTestBuffer(
+                        backing: backing, display: display)
                 }
             case .negativeTestBuffer:
                 try await submitNegativeTestBuffer(backing: backing)
@@ -88,6 +90,7 @@ enum GraphicsPreviewExternalBufferSmoke {
 
     private static func submitStressBuffers(
         backing: WaylandGraphicsWindowBacking,
+        display: WaylandDisplay,
         frameCount: Int
     ) async throws -> Bool {
         log("mode: renderer-dmabuf-stress")
@@ -112,7 +115,10 @@ enum GraphicsPreviewExternalBufferSmoke {
         let firstRenderLease = try await lease.reserveExternalBuffer(pool.buffers[0])
         receipts[0] = try await firstRenderLease.submit()
 
+        var redrawEvents = display.events.makeAsyncIterator()
+
         for frameIndex in 1..<frameCount {
+            try await waitForRedraw(&redrawEvents, window: backing.window)
             let bufferIndex = frameIndex % pool.buffers.count
             if let receipt = receipts[bufferIndex] {
                 let release = await releaseStatus(receipt)
@@ -142,6 +148,25 @@ enum GraphicsPreviewExternalBufferSmoke {
         )
         await backing.close()
         return true
+    }
+
+    private static func waitForRedraw(
+        _ events: inout DisplayEventsIterator,
+        window: Window
+    ) async throws {
+        try await window.requestRedraw()
+        while let event = try await events.next() {
+            switch event {
+            case .redrawRequested(.window(let windowID)) where windowID == window.id:
+                return
+            case .windowClosed(let windowID) where windowID == window.id,
+                .windowCloseRequested(let windowID) where windowID == window.id:
+                throw WaylandGraphicsError.backingClosed
+            default:
+                break
+            }
+        }
+        throw WaylandGraphicsError.backingClosed
     }
 
     private static func registerStressPool(
@@ -194,7 +219,8 @@ enum GraphicsPreviewExternalBufferSmoke {
     }
 
     private static func submitInternalTestBuffer(
-        backing: WaylandGraphicsWindowBacking
+        backing: WaylandGraphicsWindowBacking,
+        display: WaylandDisplay
     ) async throws -> Bool {
         log("mode: renderer-dmabuf")
         let firstLease = try await backing.nextFrame()
@@ -233,6 +259,8 @@ enum GraphicsPreviewExternalBufferSmoke {
             )
             let renderLease = try await firstLease.reserveExternalBuffer(buffer)
             let result = try await renderLease.submit()
+            var redrawEvents = display.events.makeAsyncIterator()
+            try await waitForRedraw(&redrawEvents, window: backing.window)
             let replacementRenderer = try await submitReplacementBuffer(backing: backing)
             defer {
                 replacementRenderer.close()
@@ -242,9 +270,11 @@ enum GraphicsPreviewExternalBufferSmoke {
                 throw ExternalBufferSmokeFailure.releaseNotObserved(release)
             }
 
+            try await waitForRedraw(&redrawEvents, window: backing.window)
             let reuseLease = try await backing.nextFrame()
             let reuseRenderLease = try await reuseLease.reserveExternalBuffer(buffer)
             let reuseResult = try await reuseRenderLease.submit()
+            try await waitForRedraw(&redrawEvents, window: backing.window)
             let secondReplacementRenderer = try await submitReplacementBuffer(backing: backing)
             defer {
                 secondReplacementRenderer.close()

@@ -59,13 +59,11 @@ struct SwiftBuildArtifactTests {
     #if os(Linux)
 
         @Test
-        func filteredExecutionRunsOnlyTargetsOwningMatchingTests() throws {
-            try withToolProcessFixtureLock {
-                try verifyFilteredRunnerSelection()
-            }
+        func filteredExecutionRunsOnlyTargetsOwningMatchingTests() async throws {
+            try await verifyFilteredRunnerSelection()
         }
 
-        private func verifyFilteredRunnerSelection() throws {
+        private func verifyFilteredRunnerSelection() async throws {
             let root = try temporaryRoot()
             defer { ignoreCleanupError { try FileManager.default.removeItem(at: root) } }
             let products = root.appendingPathComponent("out/Products/Debug-linux-x86_64")
@@ -91,13 +89,13 @@ struct SwiftBuildArtifactTests {
             let artifacts = try SwiftBuildArtifacts(
                 buildRoot: root, productsDirectory: products)
             let runner = ProcessRunner(environment: environment)
-            try artifacts.runThreadSanitizerTests(
+            try await artifacts.runThreadSanitizerTests(
                 runner: runner, repository: Repository(root: root),
                 environment: ["RUNNER_LOG": log.path],
                 filters: ["^FixtureA\\.FirstSuite/", "SecondSuite"])
             #expect(try String(contentsOf: log, encoding: .utf8) == "A\nB\n")
-            #expect(throws: ToolError.self) {
-                try artifacts.runThreadSanitizerTests(
+            await #expect(throws: ToolError.self) {
+                try await artifacts.runThreadSanitizerTests(
                     runner: runner, repository: Repository(root: root),
                     environment: ["RUNNER_LOG": log.path], filters: ["MissingSuite"])
             }
@@ -105,36 +103,34 @@ struct SwiftBuildArtifactTests {
         }
 
         @Test
-        func runsRemainingTargetsAfterFailure() throws {
-            try withToolProcessFixtureLock {
-                let root = try temporaryRoot()
-                defer { ignoreCleanupError { try FileManager.default.removeItem(at: root) } }
-                let products = root.appendingPathComponent("out/Products/Debug-linux-x86_64")
-                let bin = root.appendingPathComponent("bin")
-                let log = root.appendingPathComponent("invocations")
+        func runsRemainingTargetsAfterFailure() async throws {
+            let root = try temporaryRoot()
+            defer { ignoreCleanupError { try FileManager.default.removeItem(at: root) } }
+            let products = root.appendingPathComponent("out/Products/Debug-linux-x86_64")
+            let bin = root.appendingPathComponent("bin")
+            let log = root.appendingPathComponent("invocations")
+            try executable(
+                bin.appendingPathComponent("setarch"),
+                text: "#!/bin/sh\nshift 2\nexec \"$@\"\n")
+            for (name, status) in [("A", 7), ("B", 0)] {
                 try executable(
-                    bin.appendingPathComponent("setarch"),
-                    text: "#!/bin/sh\nshift 2\nexec \"$@\"\n")
-                for (name, status) in [("A", 7), ("B", 0)] {
-                    try executable(
-                        products.appendingPathComponent(name + "-test-runner"),
-                        text:
-                            "#!/bin/sh\nprintf '%s\\n' '\(name)' >> \"$RUNNER_LOG\"\n"
-                            + "exit \(status)\n"
-                    )
-                }
-                var environment = ProcessInfo.processInfo.environment
-                environment["PATH"] = bin.path + ":" + environment["PATH", default: ""]
-                let artifacts = try SwiftBuildArtifacts(
-                    buildRoot: root, productsDirectory: products)
-                #expect(throws: ToolError.self) {
-                    try artifacts.runThreadSanitizerTests(
-                        runner: ProcessRunner(environment: environment),
-                        repository: Repository(root: root),
-                        environment: ["RUNNER_LOG": log.path], filters: [])
-                }
-                #expect(try String(contentsOf: log, encoding: .utf8) == "A\nB\n")
+                    products.appendingPathComponent(name + "-test-runner"),
+                    text:
+                        "#!/bin/sh\nprintf '%s\\n' '\(name)' >> \"$RUNNER_LOG\"\n"
+                        + "exit \(status)\n"
+                )
             }
+            var environment = ProcessInfo.processInfo.environment
+            environment["PATH"] = bin.path + ":" + environment["PATH", default: ""]
+            let artifacts = try SwiftBuildArtifacts(
+                buildRoot: root, productsDirectory: products)
+            await #expect(throws: ToolError.self) {
+                try await artifacts.runThreadSanitizerTests(
+                    runner: ProcessRunner(environment: environment),
+                    repository: Repository(root: root),
+                    environment: ["RUNNER_LOG": log.path], filters: [])
+            }
+            #expect(try String(contentsOf: log, encoding: .utf8) == "A\nB\n")
         }
     #endif
 

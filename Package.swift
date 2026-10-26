@@ -43,7 +43,8 @@ let package = Package(
         .executable(name: "wck", targets: ["WaylandClientKitTool"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.6.0")
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.6.0"),
+        .package(url: "https://github.com/swiftlang/swift-subprocess.git", exact: "1.0.0"),
     ],
     targets: [
         .systemLibrary(
@@ -181,6 +182,9 @@ let package = Package(
         ),
         .target(
             name: "WaylandClientKitToolSupport",
+            dependencies: [
+                .product(name: "Subprocess", package: "swift-subprocess")
+            ],
             swiftSettings: librarySwiftSettings
         ),
         .executableTarget(
@@ -273,8 +277,11 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandGraphicsPreviewAPITests",
-            dependencies: ["WaylandGraphicsPreview", "WaylandClient", "WaylandRaw"],
-            swiftSettings: strictMemorySafetySwiftSettings
+            dependencies: [
+                "WaylandGraphicsPreview", "WaylandClient", "WaylandRaw",
+                "CWaylandProtocols", "WaylandRuntime",
+            ],
+            swiftSettings: cShimTestingSwiftSettings
         ),
         .testTarget(
             name: "WaylandGPUPreviewTests",

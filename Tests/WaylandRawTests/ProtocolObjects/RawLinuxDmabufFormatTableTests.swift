@@ -5,8 +5,8 @@ import Testing
 
 @Suite(.serialized)
 struct RawLinuxDmabufFormatTableTests {
-    @Test
-    func parsesFormatModifierPairsFromReadOnlyMappedFd() throws {
+    @Test(arguments: [1, 2])
+    func parsesRequestedFormatModifierPairsFromReadOnlyMappedFd(entryCount: Int) throws {
         let entries = [
             RawLinuxDmabufFormatModifier(
                 format: 0x3432_5258,
@@ -33,10 +33,10 @@ struct RawLinuxDmabufFormatTableTests {
 
         let parsed = try RawLinuxDmabufFormatTable.parse(
             fileDescriptor: parserDescriptor,
-            byteCount: UInt32(bytes.count)
+            byteCount: UInt32(entryCount * RawLinuxDmabufFormatTable.entryByteCount)
         )
 
-        #expect(parsed == entries)
+        #expect(parsed == Array(entries.prefix(entryCount)))
     }
 
     @Test
@@ -93,8 +93,8 @@ struct RawLinuxDmabufFormatTableTests {
         }
     }
 
-    @Test
-    func formatTableShortFdClosesDescriptor() throws {
+    @Test(arguments: [15, 16])
+    func formatTableFailureClosesDescriptor(byteCount: Int) throws {
         let descriptors = try RawFileDescriptor.pipeDescriptors()
         var parserDescriptorClosed = false
         defer {
@@ -106,17 +106,42 @@ struct RawLinuxDmabufFormatTableTests {
 
         #expect(
             throws: RuntimeError.invalidDmabufFormatTableByteCount(
-                byteCount: RawLinuxDmabufFormatTable.entryByteCount,
+                byteCount: byteCount,
                 entryByteCount: RawLinuxDmabufFormatTable.entryByteCount
             )
         ) {
             _ = try RawLinuxDmabufFormatTable.parse(
                 fileDescriptor: descriptors.writeEnd,
-                byteCount: UInt32(RawLinuxDmabufFormatTable.entryByteCount)
+                byteCount: UInt32(byteCount)
             )
         }
         parserDescriptorClosed = pipeWriteEndIsClosed(readEnd: descriptors.readEnd)
         #expect(parserDescriptorClosed)
+    }
+
+    @Test
+    func emptyFormatTableClosesDescriptor() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            if !pipeWriteEndIsClosed(readEnd: descriptors.readEnd) {
+                Glibc.close(descriptors.writeEnd)
+            }
+            Glibc.close(descriptors.readEnd)
+        }
+
+        let parsed = try RawLinuxDmabufFormatTable.parse(
+            fileDescriptor: descriptors.writeEnd,
+            byteCount: 0
+        )
+        #expect(parsed.isEmpty)
+        #expect(pipeWriteEndIsClosed(readEnd: descriptors.readEnd))
+    }
+
+    @Test
+    func rejectsInvalidDescriptorForEmptyTable() {
+        #expect(throws: RuntimeError.invalidArgument("dmabuf format table fd")) {
+            _ = try RawLinuxDmabufFormatTable.parse(fileDescriptor: -1, byteCount: 0)
+        }
     }
 }
 
@@ -127,7 +152,7 @@ private func formatTableBytes(_ entries: [RawLinuxDmabufFormatModifier]) -> [UIn
         withUnsafeBytes(of: &format) { formatBytes in
             bytes.append(contentsOf: unsafe Array(formatBytes))
         }
-        bytes.append(contentsOf: [0, 0, 0, 0])
+        bytes.append(contentsOf: [0xAA, 0xBB, 0xCC, 0xDD])
         var modifier = entry.modifier
         withUnsafeBytes(of: &modifier) { modifierBytes in
             bytes.append(contentsOf: unsafe Array(modifierBytes))

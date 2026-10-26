@@ -3,6 +3,8 @@ import WaylandGPUPreview
 import WaylandRaw
 
 package protocol WaylandGraphicsManagedWindow: Sendable {
+    /// The executor-owning actor must stay the same for this window's lifetime.
+    nonisolated var graphicsPreviewActor: any Actor { get }
     var id: WindowID { get }
     var geometry: SurfaceGeometry { get async throws }
     var isClosed: Bool { get async throws }
@@ -59,6 +61,10 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
     ) async throws -> PreviewBufferPresentationResult
 
     func close() async
+}
+
+extension WaylandGraphicsManagedWindow where Self: Actor {
+    nonisolated package var graphicsPreviewActor: any Actor { self }
 }
 
 extension WaylandGraphicsManagedWindow {
@@ -119,13 +125,11 @@ extension Window: WaylandGraphicsManagedWindow {
     package func importGraphicsPreviewExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
     ) async throws -> RawLinuxDmabufBuffer {
-        var descriptor = descriptor
-        let importPlan = try descriptor.makeImportPlan()
-        return try await withGraphicsPreviewLinuxDmabuf { linuxDmabuf, syncDisplay in
-            try importPlan.importBuffer(
-                using: linuxDmabuf,
+        return try await withGraphicsPreviewLinuxDmabuf(descriptor) { payload, dmabuf, sync in
+            try payload.importBuffer(
+                using: dmabuf,
                 timeoutMilliseconds: WaylandDisplay.defaultDiscoveryTimeoutMilliseconds,
-                syncDisplay: syncDisplay
+                syncDisplay: sync
             )
         }
     }

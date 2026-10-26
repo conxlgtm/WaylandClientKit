@@ -9,10 +9,10 @@ public struct ToolchainSmoke {
         self.context = context
     }
 
-    public func report() throws -> String {
-        let version = try context.swift.version(repository: context.repository)
+    public func report() async throws -> String {
+        let version = try await context.swift.version(repository: context.repository)
         try Self.requireMinimumVersion(version)
-        try context.swift.runSwift(
+        try await context.swift.runSwift(
             ["build", "--disable-index-store", "--target", "WaylandClientKitToolSupport"],
             repository: context.repository)
         return [

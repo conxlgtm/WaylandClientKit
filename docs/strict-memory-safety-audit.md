@@ -5,14 +5,27 @@ WaylandClientKit treats raw Wayland objects and shared-memory mappings as explic
 ## Swift 6.4 Unsafe Markers
 
 Swift 6.4 flags redundant `unsafe` markers on safe standard-library pointer-scope
-closure calls. The outer markers have been removed. Pointer loads, C calls,
-borrowed-memory operations, and project APIs inside those closures keep their
-required acknowledgments. `@safe`, strict memory-safety errors, owner-thread
+closure calls. The outer markers have been removed. Remaining raw pointer loads,
+C calls, borrowed-memory operations, and project APIs inside those closures keep
+their required acknowledgments. `@safe`, strict memory-safety errors, owner-thread
 checks, and allocation/lease lifetimes are unchanged.
 
 The deferred window presentation-feedback request explicitly captures its
 display core strongly, as it did implicitly before. The callback still uses a
-weak capture. Actor isolation and callback executors are unchanged.
+weak capture. That callback's isolation and executor are unchanged.
+
+## Protocol Array Decoding
+
+`WaylandArray` wraps callback storage in one `RawSpan` and reads native-endian
+`UInt16` or `UInt32` values with bounds-checked scalar loads. Both paths return
+owned arrays; UInt16 decoding no longer copies through an intermediate `[UInt8]`.
+`bytes(from:)` still returns an owned byte copy.
+
+Null arrays, null data, and zero sizes return empty arrays. Nonempty storage must
+contain whole elements. The C callback still supplies the pointer and its valid
+lifetime; `RawSpan` checks byte bounds, not external pointer provenance.
+`WaylandArrayTests` covers unaligned storage, exact final-field bounds, partial
+elements, and null or empty input.
 
 ## Unsafe Boundary Reference
 
@@ -46,6 +59,13 @@ Audit invariant:
 - `RawBuffer.withUnsafeMutableBytes` is the only normal way for client code to borrow buffer memory.
 - `SoftwareFrame` validates dimensions, stride, and byte count before exposing row spans
   or a scoped `SoftwareFrameBuffer` byte-span borrow to redraw code.
+- Each software row view slices exactly `width * 4` bytes before converting to
+  `MutableSpan<UInt32>`. Padding and extra backing bytes stay outside the view,
+  even when the total storage size is not a multiple of four.
+- SHM mappings are page-aligned. `BufferLayout` uses `width * 4` stride, and pool
+  buffer offsets are multiples of the layout byte count, so production rows are
+  UInt32-aligned. Frame validation is unchanged; row access retains its existing
+  whole-word pitch for other internal strides.
 - `SoftwareFrameBufferID` is derived from a monotonically assigned private `RawBuffer`
   token. Public callers can compare buffer reuse without receiving raw pointers, file
   descriptors, Wayland objects, object addresses, or mmap ownership.
@@ -59,6 +79,8 @@ Tests:
 
 - `SharedMemoryLayoutTests` covers layout overflow and buffer lifecycle state.
 - Window presentation tests cover draw failure, frame failure, buffer release, and close cleanup behavior at the model boundary.
+- Software-frame tests cover padded rows, trailing bytes, minimum-stride overflow,
+  undersized storage, and reuse after a throwing row callback.
 
 ## Raw Proxy Ownership
 
@@ -482,9 +504,11 @@ Audit invariant:
   with newly received compositor events.
 - Exact-one feedback events reject duplicates before producing
   `RawLinuxDmabufFeedbackSnapshot`.
-- Format-table byte count, descriptor validity, and descriptor size are
-  validated before reading mapped bytes, so a short fd cannot become a SIGBUS
-  process termination.
+- Format-table parsing validates descriptor validity, byte count, and file size
+  before mapping. A `RawSpan` reads native-endian scalar fields within each
+  16-byte entry, with the modifier at byte offset 8. Teardown unmaps before closing
+  the descriptor. The size check rejects files already too short; it cannot
+  prevent another process from truncating the backing file later.
 - Buffer params reject empty, duplicate, non-zero-starting, and gapped plane
   sets before sending `create`.
 - Version-gated feedback requests require a bound linux-dmabuf object that
@@ -539,11 +563,16 @@ Tests:
 - `LinuxDmabufShimContractTests` covers request wrapper targets, dimensions,
   flags, modifier splitting, and feedback request targets.
 - `WaylandGraphicsExternalBufferSubmissionTests` covers descriptor validation,
-  ownership transfer into an import plan, unavailable/fallback preflight before
+  consuming ownership transfer, unavailable/fallback preflight before
   Wayland import, registered-buffer import-once behavior, release-gated
   reservation and unregistration, public release receipt completion, release
   authority loss, poisoned-slot late callbacks, terminal runtime status, and
   exactly-once backing cleanup and backing-close waiter resolution.
+- `WaylandGraphicsConsumingPayloadTests` uses real descriptors and libwayland
+  requests to cover one-to-four-plane imports, partial transfer, native failures,
+  and closed-display rejection.
+- `ExternalImportTransactionTests` checks native destruction on the owner thread
+  after backing close, a stale generation, and successful registration retirement.
 
 ## Surface Submit Constraint Boundary
 
@@ -641,10 +670,9 @@ Remaining unsafe constructs:
 - `GBMDevice` owns the `gbm_device` pointer and the adopted render-node fd.
 - `GBMBuffer`, `GBMSurface`, and `GBMLockedSurfaceBuffer` wrap GBM pointers with
   explicit live-pointer checks.
-- `GBMDmabufExport` owns exported plane fds until each plane descriptor is
-  transferred or the export object is destroyed. It is `@unchecked Sendable`
-  only for the package-internal setup handoff from GBM export to Wayland dmabuf
-  import.
+- `GBMDmabufExport` is a move-only, checked-`Sendable` value owning the exported
+  plane fds. Its pointer-free C aggregate stores the ownership sentinels; mutating
+  takes transfer one descriptor, and destruction closes untaken descriptors.
 - CGBM shims call libgbm/libdrm functions and expose test-recording hooks only
   in explicit testing builds.
 
@@ -726,6 +754,15 @@ Audit invariant:
   through the failure callback.
 - Plane descriptors are added before `create`, add/create failures destroy the
   params object and close any plane descriptor that remains locally owned.
+- External-buffer import consumes the existing one-to-four-plane enum directly,
+  without an import-plan class, array, or raw-fd ledger. Throwing traversal restores
+  the enum before propagating the error so untouched descriptors still close.
+- The descriptor or GBM export is consumed by the synchronous owner-thread import
+  body. Raw params, listeners, and proxies are created there, not captured across
+  the actor hop.
+- Production graphics backing storage shares the retained display actor's
+  executor. Registration rejection, generation invalidation, retirement, and
+  isolated storage destruction release native buffers on that owner thread.
 - GPU presentation uses the window's surface transaction generation authority.
   software and GPU commits do not allocate independent generation sequences.
 - Submitted GPU buffer-pool slots return to availability only after the matching
@@ -754,3 +791,19 @@ Tests:
   boundary without exposing raw unsafe handles.
 - `WindowModelExternalPresentationTests` and `SurfaceTransactionStateTests`
   cover shared commit-generation rules used by software and GPU presentation.
+- `GBMDmabufExportTests` checks partial transfer and destruction of untaken planes.
+
+## Tool Process Boundary
+
+The async `Subprocess` backend owns process launch, waiting, and teardown.
+Repository-managed argv/env pointer arrays and pipe-reader callbacks are gone.
+File-descriptor sinks remain open until their executions settle. Headless
+cleanup awaits the child before Weston, then closes logs and removes the private
+runtime directory. SwiftPM plugin-host launchers remain separate outer adapters.
+
+`ProcessRunnerTests` exercises real child processes, including PATH and cwd,
+exact environments, stdin, separate large output streams, invalid UTF-8,
+signal status, and cancellation. `HeadlessWestonRunnerTests` checks readiness,
+deadlines, cancellation, five-second termination grace, reaping order, late
+diagnostics, and private-directory removal.
+

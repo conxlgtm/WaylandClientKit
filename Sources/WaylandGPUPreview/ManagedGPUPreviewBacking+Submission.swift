@@ -70,8 +70,12 @@ extension ManagedGPUPreviewBacking {
             let lockedBuffer = try renderTarget.lockFrontBuffer()
             let export = try lockedBuffer.exportDmabuf()
             // swiftlint:disable closure_parameter_position
-            let importedBuffer = try await window.withGraphicsPreviewLinuxDmabuf {
-                linuxDmabuf, syncDisplay in
+            let importedBuffer = try await window.withGraphicsPreviewLinuxDmabuf(export) {
+                (
+                    export: consuming GBMDmabufExport,
+                    linuxDmabuf: RawLinuxDmabuf,
+                    syncDisplay: (Int32) throws -> Void
+                ) in
                 try GPUDmabufBufferImport.importBuffer(
                     from: export,
                     using: linuxDmabuf,

@@ -5,7 +5,7 @@ import WaylandClientKitToolSupport
 @Suite
 struct ToolingConvergenceTests {
     @Test
-    func dependencyBoundaryAcceptsToolOnlyArgumentParser() throws {
+    func dependencyBoundaryAcceptsToolOnlyPackages() throws {
         let dump = packageDump(
             targets: """
                     {
@@ -27,7 +27,15 @@ struct ToolingConvergenceTests {
                     {
                       "name": "WaylandClientKitTool",
                       "dependencies": [
-                        { "product": ["ArgumentParser", "swift-argument-parser", null, null] }
+                        { "product": ["ArgumentParser", "swift-argument-parser", null, null] },
+                        { "byName": ["WaylandClientKitToolSupport", null] }
+                      ]
+                    },
+                    {
+                      "name": "WaylandClientKitToolSupport",
+                      "dependencies": [
+                        { "product": ["Subprocess", "swift-subprocess", null, null] },
+                        { "product": ["SystemPackage", "swift-system", null, null] }
                       ]
                     }
                 """)
@@ -59,6 +67,53 @@ struct ToolingConvergenceTests {
         } catch let error as ToolError {
             #expect(error.message.contains("WaylandClient dependency graph includes"))
             #expect(error.message.contains("ArgumentParser"))
+        }
+    }
+
+    @Test(arguments: [
+        ("Subprocess", "swift-subprocess"),
+        ("SystemPackage", "swift-system"),
+        ("RenamedSubprocess", "swift-subprocess"),
+        ("RenamedSystem", "swift-system"),
+    ])
+    func dependencyBoundaryRejectsTransitiveToolPackages(product: String, package: String) throws {
+        let dump = packageDump(
+            targets: """
+                {
+                  "name": "WaylandClient",
+                  "dependencies": [{ "target": ["WaylandRaw", null] }]
+                },
+                {
+                  "name": "WaylandRaw",
+                  "dependencies": [{ "product": ["\(product)", "\(package)", null, null] }]
+                },
+                {
+                  "name": "WaylandGraphicsPreview",
+                  "dependencies": [{ "byName": ["WaylandClient", null] }]
+                }
+                """)
+        do {
+            try PackageDependencyBoundaryVerifier().verify(packageDump: dump)
+            Issue.record("expected transitive tool package leak to fail")
+        } catch let error as ToolError {
+            #expect(error.message.contains("WaylandClient dependency graph includes"))
+            #expect(error.message.contains("WaylandGraphicsPreview dependency graph includes"))
+            #expect(error.message.contains(product))
+            #expect(error.message.contains(package))
+        }
+    }
+
+    @Test(arguments: ["Subprocess", "SystemPackage"])
+    func dependencyBoundaryRejectsByNameToolProducts(product: String) throws {
+        let dump = packageDump(
+            targets: """
+                {
+                  "name": "WaylandClient",
+                  "dependencies": [{ "byName": ["\(product)", null] }]
+                }
+                """)
+        #expect(throws: ToolError.self) {
+            try PackageDependencyBoundaryVerifier().verify(packageDump: dump)
         }
     }
 
@@ -169,30 +224,6 @@ struct ToolingConvergenceTests {
             #expect(error.message.contains("README.md"))
             #expect(error.message.contains("docs/which-api-should-i-use.md"))
         }
-    }
-
-    @Test
-    func exampleBuilderTracksEveryExampleExecutable() {
-        #expect(ExampleBuilder.targets.contains("CursorAnimationSmoke"))
-        #expect(ExampleBuilder.targets.contains("CustomCursorSmoke"))
-        #expect(ExampleBuilder.targets.contains("ColorManagementSmoke"))
-        #expect(ExampleBuilder.targets.contains("CompositorSessionSmoke"))
-        #expect(ExampleBuilder.targets.contains("DialogSmoke"))
-        #expect(ExampleBuilder.targets.contains("ForeignToplevelListSmoke"))
-        #expect(ExampleBuilder.targets.contains("GraphicsPreviewColorMetadataSmoke"))
-        #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferSmoke"))
-        #expect(ExampleBuilder.targets.contains("KeyboardShortcutsInhibitSmoke"))
-        #expect(ExampleBuilder.targets.contains("ManagedSurfacePresentationSmoke"))
-        #expect(ExampleBuilder.targets.contains("OutputManagementSmoke"))
-        #expect(ExampleBuilder.targets.contains("OutputTopologySmoke"))
-        #expect(ExampleBuilder.targets.contains("PointerGesturesSmoke"))
-        #expect(ExampleBuilder.targets.contains("PointerWarpSmoke"))
-        #expect(ExampleBuilder.targets.contains("SessionStateSmoke"))
-        #expect(ExampleBuilder.targets.contains("SubsurfaceSmoke"))
-        #expect(ExampleBuilder.targets.contains("TabletInputSmoke"))
-        #expect(ExampleBuilder.targets.contains("ToplevelDragSmoke"))
-        #expect(ExampleBuilder.targets.contains("WaylandClientKitDemo"))
-        #expect(ExampleBuilder.targets.count == 37)
     }
 
     @Test

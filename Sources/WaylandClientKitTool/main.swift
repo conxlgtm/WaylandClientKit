@@ -13,12 +13,12 @@ import WaylandClientKitToolSupport
 
 @main
 enum WaylandClientKitToolMain {
-    static func main() {
-        Wck.main()
+    static func main() async {
+        await Wck.main()
     }
 }
 
-struct Wck: ParsableCommand {
+struct Wck: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "wck",
         abstract: "WaylandClientKit repository tooling",
@@ -45,7 +45,7 @@ struct Wck: ParsableCommand {
     )
 }
 
-private protocol ToolCommand: ParsableCommand {
+private protocol ToolCommand: AsyncParsableCommand {
     var verbose: Bool { get }
 }
 
@@ -80,7 +80,7 @@ struct Tools: ParsableCommand {
         @Flag(name: .long)
         var verbose = false
 
-        func run() throws {
+        func run() async throws {
             try ProjectDoctor(context: context()).run(
                 checkProtocolTooling: protocolTooling,
                 checkNativeDependencies: nativeDependencies
@@ -103,9 +103,9 @@ struct Tools: ParsableCommand {
         @Flag(name: .long)
         var verbose = false
 
-        func run() throws {
+        func run() async throws {
             let context = try context()
-            let architecture = try context.runner.run("uname", ["-m"]).stdout
+            let architecture = try await context.runner.run("uname", ["-m"]).stdout
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let archiveArchitecture: String
             switch architecture {
@@ -124,7 +124,7 @@ struct Tools: ParsableCommand {
             let archive = temporary.appendingPathComponent("swiftlint.zip")
             let url =
                 "https://github.com/realm/SwiftLint/releases/download/\(version)/swiftlint_linux_\(archiveArchitecture).zip"
-            try context.runner.run(
+            try await context.runner.run(
                 "curl",
                 ["--fail", "--location", "--silent", "--show-error", url, "--output", archive.path])
             let expectedChecksum: String
@@ -152,7 +152,7 @@ struct Tools: ParsableCommand {
                         + "got \(actualChecksum)",
                     exitCode: ToolExitCode.data)
             }
-            try context.runner.run("unzip", ["-q", archive.path, "-d", temporary.path])
+            try await context.runner.run("unzip", ["-q", archive.path, "-d", temporary.path])
             let candidate = ["swiftlint", "swiftlint-static"]
                 .map { temporary.appendingPathComponent($0) }
                 .first { context.fileSystem.isExecutable($0) || context.fileSystem.exists($0) }
@@ -165,7 +165,7 @@ struct Tools: ParsableCommand {
             try context.fileSystem.copyItem(at: candidate, to: destinationURL)
             try FileManager.default.setAttributes(
                 [.posixPermissions: 0o755], ofItemAtPath: destinationURL.path)
-            let installed = try context.swift.runSwiftTool(
+            let installed = try await context.swift.runSwiftTool(
                 destinationURL.path, ["version"], repository: context.repository
             ).stdout
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -179,10 +179,10 @@ struct Tools: ParsableCommand {
         @Flag(name: .long)
         var verbose = false
 
-        func run() throws {
+        func run() async throws {
             let context = try context()
             context.diagnostics.info(
-                try ToolchainSmoke(context: context).report())
+                try await ToolchainSmoke(context: context).report())
         }
     }
 }
@@ -204,7 +204,7 @@ struct Protocols: ParsableCommand {
     struct List: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "list")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             let manifest = try ProtocolTooling(repository: context.repository).loadManifest()
             for entry in manifest.protocols {
@@ -224,7 +224,7 @@ struct Protocols: ParsableCommand {
     struct Sources: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "sources")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             let tooling = ProtocolTooling(
                 repository: context.repository,
@@ -232,7 +232,7 @@ struct Protocols: ParsableCommand {
                 runner: context.runner,
                 diagnostics: context.diagnostics
             )
-            for (entry, source) in try tooling.resolvedSources() {
+            for (entry, source) in try await tooling.resolvedSources() {
                 context.diagnostics.info("\(entry.name)\t\(source?.path ?? "<missing>")")
             }
         }
@@ -241,9 +241,9 @@ struct Protocols: ParsableCommand {
     struct Sync: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "sync")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
-            try ProtocolTooling(
+            try await ProtocolTooling(
                 repository: context.repository,
                 fileSystem: context.fileSystem,
                 runner: context.runner,
@@ -255,9 +255,9 @@ struct Protocols: ParsableCommand {
     struct Generate: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "generate")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
-            try ProtocolTooling(
+            try await ProtocolTooling(
                 repository: context.repository,
                 fileSystem: context.fileSystem,
                 runner: context.runner,
@@ -269,9 +269,9 @@ struct Protocols: ParsableCommand {
     struct VerifyGenerated: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify-generated")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
-            try ProtocolTooling(
+            try await ProtocolTooling(
                 repository: context.repository,
                 fileSystem: context.fileSystem,
                 runner: context.runner,
@@ -283,7 +283,7 @@ struct Protocols: ParsableCommand {
     struct VerifyManifest: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify-manifest")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             try ProtocolTooling(
                 repository: context.repository,
@@ -298,7 +298,7 @@ struct Protocols: ParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "normalize-manifest", shouldDisplay: false)
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             try ProtocolTooling(
                 repository: context.repository,
@@ -319,15 +319,15 @@ struct Docc: ParsableCommand {
     struct Verify: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runDoccVerify(context: context())
+        func run() async throws {
+            try await runDoccVerify(context: context())
         }
     }
 
     struct VerifySymbolLinks: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify-symbol-links")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             try runDoccSymbolLinks(context: context())
         }
     }
@@ -341,11 +341,11 @@ struct Coverage: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "summarize")
         @Argument var coverageJSON: String?
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             var productsDirectory: URL?
             if coverageJSON?.isEmpty != false {
-                let binPath = try context.swift.runSwift(
+                let binPath = try await context.swift.runSwift(
                     ["build", "--show-bin-path"], repository: context.repository
                 ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !binPath.isEmpty else {
@@ -353,7 +353,7 @@ struct Coverage: ParsableCommand {
                         "SwiftPM did not report build products", exitCode: ToolExitCode.data)
                 }
                 productsDirectory = URL(fileURLWithPath: binPath)
-                try SwiftBuildArtifacts(
+                try await SwiftBuildArtifacts(
                     buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
                     productsDirectory: URL(fileURLWithPath: binPath),
                     fileSystem: context.fileSystem
@@ -378,8 +378,8 @@ struct Examples: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "build")
         @Flag(name: .long) var verbose = false
 
-        func run() throws {
-            try ExampleBuilder(context: context()).buildAll()
+        func run() async throws {
+            try await ExampleBuilder(context: context()).buildAll()
         }
     }
 }
@@ -392,7 +392,7 @@ struct Compositor: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "evidence-summary")
         @Flag(name: .long) var verbose = false
 
-        func run() throws {
+        func run() async throws {
             let context = try context()
             let markdown = try context.fileSystem.readText(
                 context.repository.url("docs/compositor-matrix.md"))
@@ -411,16 +411,16 @@ struct Bootstrap: ParsableCommand {
     struct Check: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "check")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try BootstrapChecker(context: context()).check()
+        func run() async throws {
+            try await BootstrapChecker(context: context()).check()
         }
     }
 
     struct MaintainerCheck: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "maintainer-check")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try BootstrapChecker(context: context()).check(maintainer: true)
+        func run() async throws {
+            try await BootstrapChecker(context: context()).check(maintainer: true)
         }
     }
 
@@ -428,7 +428,7 @@ struct Bootstrap: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "install-command")
         @Option var packageManager: String
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             context.diagnostics.info(
                 try BootstrapChecker(context: context).installCommand(
@@ -440,16 +440,16 @@ struct Bootstrap: ParsableCommand {
 struct Format: ToolCommand {
     static let configuration = CommandConfiguration(commandName: "format")
     @Flag(name: .long) var verbose = false
-    func run() throws {
-        try runFormat(context: context())
+    func run() async throws {
+        try await runFormat(context: context())
     }
 }
 
 struct Lint: ToolCommand {
     static let configuration = CommandConfiguration(commandName: "lint")
     @Flag(name: .long) var verbose = false
-    func run() throws {
-        try runLint(context: context())
+    func run() async throws {
+        try await runLint(context: context())
     }
 }
 
@@ -459,7 +459,7 @@ struct Docs: ParsableCommand {
     struct Verify: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             try runDocsVerify(context: context())
         }
     }
@@ -472,9 +472,9 @@ struct API: ParsableCommand {
     struct Dump: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "dump")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
-            context.diagnostics.info(try PublicAPIAuditor(context: context).dump())
+            context.diagnostics.info(try await PublicAPIAuditor(context: context).dump())
         }
     }
 
@@ -482,9 +482,9 @@ struct API: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var update = false
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
-            try PublicAPIAuditor(context: context).verify(update: update)
+            try await PublicAPIAuditor(context: context).verify(update: update)
         }
     }
 }
@@ -498,7 +498,7 @@ struct Identity: ParsableCommand {
     struct Generate: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "generate")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             try IdentityGenerator(
                 repository: context.repository,
@@ -511,7 +511,7 @@ struct Identity: ParsableCommand {
     struct VerifyGenerated: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify-generated")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             try IdentityGenerator(
                 repository: context.repository,
@@ -525,7 +525,7 @@ struct Identity: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var update = false
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             try PublicIdentityAuditor(
                 repository: context.repository,
@@ -542,7 +542,7 @@ struct Imports: ParsableCommand {
     struct Verify: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             try VerificationChecks(context: context()).verifyTargetImports()
         }
     }
@@ -555,7 +555,7 @@ struct Shims: ParsableCommand {
     struct Verify: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             try VerificationChecks(context: context()).verifyShims()
         }
     }
@@ -563,8 +563,8 @@ struct Shims: ParsableCommand {
     struct VerifyReleaseSymbols: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify-release-symbols")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try VerificationChecks(context: context()).verifyReleaseShimSymbols()
+        func run() async throws {
+            try await VerificationChecks(context: context()).verifyReleaseShimSymbols()
         }
     }
 }
@@ -576,7 +576,7 @@ struct Safety: ParsableCommand {
     struct VerifyUnsafeAllowlist: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify-unsafe-allowlist")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             try VerificationChecks(context: context()).verifyUnsafeAllowlist()
         }
     }
@@ -603,33 +603,33 @@ struct Test: ParsableCommand {
     struct Unit: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "unit")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runUnitTests(context: context())
+        func run() async throws {
+            try await runUnitTests(context: context())
         }
     }
 
     struct Release: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "release")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runReleaseTests(context: context())
+        func run() async throws {
+            try await runReleaseTests(context: context())
         }
     }
 
     struct TSan: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "tsan")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runThreadSanitizerTests(context: context())
+        func run() async throws {
+            try await runThreadSanitizerTests(context: context())
         }
     }
 
     struct ASan: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "asan")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
-            try runSwiftTests(
+            try await runSwiftTests(
                 context: context,
                 command: SwiftTestCommand(sanitizer: .address)
             )
@@ -639,24 +639,24 @@ struct Test: ParsableCommand {
     struct RequestPaths: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "request-paths")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runRequestPathTests(context: context(), sanitizer: .none)
+        func run() async throws {
+            try await runRequestPathTests(context: context(), sanitizer: .none)
         }
     }
 
     struct RequestPathsTSan: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "request-paths-tsan")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runRequestPathTests(context: context(), sanitizer: .thread)
+        func run() async throws {
+            try await runRequestPathTests(context: context(), sanitizer: .thread)
         }
     }
 
     struct RequestPathsASan: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "request-paths-asan")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runRequestPathTests(context: context(), sanitizer: .address)
+        func run() async throws {
+            try await runRequestPathTests(context: context(), sanitizer: .address)
         }
     }
 
@@ -690,8 +690,8 @@ private protocol IntegrationCommand: ToolCommand {
 }
 
 extension IntegrationCommand {
-    func run() throws {
-        try runIntegrationPackage(context: context(), packagePath: Self.packagePath)
+    func run() async throws {
+        try await runIntegrationPackage(context: context(), packagePath: Self.packagePath)
     }
 }
 
@@ -704,30 +704,30 @@ struct Smoke: ParsableCommand {
     struct Live: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "live")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runSmokeLive(context: context())
+        func run() async throws {
+            try await runSmokeLive(context: context())
         }
     }
 
     struct Integration: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "integration")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runSmokeIntegration(context: context())
+        func run() async throws {
+            try await runSmokeIntegration(context: context())
         }
     }
 
     struct GPUPreview: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "gpu-preview")
         @Flag(name: .long) var verbose = false
-        func run() throws {
+        func run() async throws {
             let context = try context()
             guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
                 throw ToolError(
                     "WAYLAND_DISPLAY is not set. Run GPU preview tests under a Wayland session.",
                     exitCode: ToolExitCode.environment)
             }
-            try context.swift.runSwift(
+            try await context.swift.runSwift(
                 [
                     "test", "--filter",
                     "GPUPreviewLiveCapability|gpuSmokeDrawsDeterministicPixelWhenEnabled",
@@ -737,7 +737,7 @@ struct Smoke: ParsableCommand {
                     "WCK_RUN_GPU_SMOKE": "1", "WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS": "1",
                 ]
             )
-            try context.swift.runSwift(
+            try await context.swift.runSwift(
                 [
                     "run", "--package-path", "Examples", "--disable-index-store",
                     "GPUPreviewSmokeClient",
@@ -755,13 +755,13 @@ struct Smoke: ParsableCommand {
         @Flag(name: .long) var verbose = false
         @Argument(parsing: .remaining) var command: [String]
 
-        func run() throws {
+        func run() async throws {
             let context = try context()
             var child = command
             if child.first == "--" {
                 child.removeFirst()
             }
-            try HeadlessWestonRunner(context: context).run(command: child)
+            try await HeadlessWestonRunner(context: context).run(command: child)
         }
     }
 }
@@ -778,60 +778,60 @@ struct CI: ParsableCommand {
     struct Cheap: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "cheap")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runCheap(context: context())
+        func run() async throws {
+            try await runCheap(context: context())
         }
     }
 
     struct Required: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "required")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runRequired(context: context())
+        func run() async throws {
+            try await runRequired(context: context())
         }
     }
 
     struct CheckBase: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "check-base")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runCheckBase(context: context())
+        func run() async throws {
+            try await runCheckBase(context: context())
         }
     }
 
     struct Check: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "check")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runCheck(context: context())
+        func run() async throws {
+            try await runCheck(context: context())
         }
     }
 
     struct Release: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "release")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runRelease(context: context())
+        func run() async throws {
+            try await runRelease(context: context())
         }
     }
 
     struct FoundationCheck: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "foundation-check")
         @Flag(name: .long) var verbose = false
-        func run() throws {
-            try runFoundationCheck(context: context())
+        func run() async throws {
+            try await runFoundationCheck(context: context())
         }
     }
 }
 
-private func runFormat(context: ToolContext) throws {
-    try SwiftCommandResolver(context: context).runFormat(mode: "format")
+private func runFormat(context: ToolContext) async throws {
+    try await SwiftCommandResolver(context: context).runFormat(mode: "format")
 }
 
-private func runLint(context: ToolContext) throws {
+private func runLint(context: ToolContext) async throws {
     let resolver = SwiftCommandResolver(context: context)
-    try resolver.runFormat(mode: "lint")
-    try resolver.runSwiftLint()
+    try await resolver.runFormat(mode: "lint")
+    try await resolver.runSwiftLint()
 }
 
 private func ignoreCleanupError(_ operation: () throws -> Void) {
@@ -867,7 +867,7 @@ private func markdownDocumentationFiles(context: ToolContext) throws -> [URL] {
     return (roots + docs).sorted { $0.path < $1.path }
 }
 
-private func runDoccVerify(context: ToolContext) throws {
+private func runDoccVerify(context: ToolContext) async throws {
     let buildRoot = context.swift.swiftPMBuildRoot(repository: context.repository)
     let verifier = DocCVerifier(
         repository: context.repository,
@@ -876,7 +876,7 @@ private func runDoccVerify(context: ToolContext) throws {
     )
     try verifier.verifyCatalogExists()
     try verifier.removePublicProductSymbolGraphs()
-    let result = try context.swift.runSwift(
+    let result = try await context.swift.runSwift(
         [
             "package", "dump-symbol-graph", "--minimum-access-level", "public",
             "--skip-synthesized-members",
@@ -900,8 +900,8 @@ private func runDoccSymbolLinks(context: ToolContext) throws {
     try verifier.verifySymbolLinks()
 }
 
-private func runUnitTests(context: ToolContext) throws {
-    try runSwiftTests(
+private func runUnitTests(context: ToolContext) async throws {
+    try await runSwiftTests(
         context: context,
         command: SwiftTestCommand(
             coverage: context.runner.environment["WAYLAND_CLIENT_KIT_UNIT_COVERAGE"] == "1"
@@ -909,8 +909,8 @@ private func runUnitTests(context: ToolContext) throws {
     )
 }
 
-private func runReleaseTests(context: ToolContext) throws {
-    try runSwiftTests(
+private func runReleaseTests(context: ToolContext) async throws {
+    try await runSwiftTests(
         context: context,
         command: SwiftTestCommand(configuration: "release")
     )
@@ -979,14 +979,14 @@ private func runSwiftTests(
     context: ToolContext,
     command: SwiftTestCommand,
     baseEnvironment: [String: String] = [:]
-) throws {
+) async throws {
     var coverageArtifacts: SwiftBuildArtifacts?
     if command.coverage {
         var arguments = ["build", "--show-bin-path"]
         if let configuration = command.configuration {
             arguments.append(contentsOf: ["-c", configuration])
         }
-        let binPath = try context.swift.runSwift(
+        let binPath = try await context.swift.runSwift(
             arguments, repository: context.repository, environment: baseEnvironment
         ).stdout.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !binPath.isEmpty else {
@@ -1000,13 +1000,13 @@ private func runSwiftTests(
         if command.resetCoverage { try artifacts.resetCoverage() }
         coverageArtifacts = artifacts
     }
-    try context.swift.runSwift(
+    try await context.swift.runSwift(
         command.arguments(),
         repository: context.repository,
         environment: command.environment(base: baseEnvironment)
     )
     if let coverageArtifacts {
-        try coverageArtifacts.accumulateCoverage(
+        try await coverageArtifacts.accumulateCoverage(
             swift: context.swift, repository: context.repository)
     }
 }
@@ -1015,11 +1015,11 @@ private func runIntegrationPackage(
     context: ToolContext,
     packagePath: String,
     environment: [String: String] = [:]
-) throws {
+) async throws {
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "waylandclientkit-integration")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
-    try context.swift.runSwift(
+    try await context.swift.runSwift(
         [
             "test", "--no-parallel", "--enable-index-store", "--package-path",
             context.repository.url(packagePath).path, "--scratch-path", scratch.path,
@@ -1029,11 +1029,11 @@ private func runIntegrationPackage(
     )
 }
 
-private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) throws {
+private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) async throws {
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "waylandclientkit-invalid-graphics-policy")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
-    let result = try context.swift.runSwift(
+    let result = try await context.swift.runSwift(
         [
             "build", "--disable-index-store", "--package-path",
             context.repository.url("IntegrationTests/InvalidGraphicsPolicyClient").path,
@@ -1053,7 +1053,7 @@ private func verifyInvalidGraphicsPolicyClientIsRejected(context: ToolContext) t
     }
 }
 
-private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws {
+private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) async throws {
     let packagePath = context.repository.url(
         "IntegrationTests/InvalidGraphicsLeaseClient"
     ).path
@@ -1061,6 +1061,10 @@ private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws
         ("FrameLeaseCopyClient", "frameLease"),
         ("FrameLeaseTransferClient", "frameLease"),
         ("RenderLeaseCopyClient", "renderLease"),
+        ("FrameLeaseBorrowCancelClient", "frameLease"),
+        ("FrameLeaseBorrowSubmitClient", "frameLease"),
+        ("RenderLeaseBorrowCancelClient", "renderLease"),
+        ("RenderLeaseBorrowSubmitClient", "renderLease"),
     ]
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "waylandclientkit-invalid-graphics-leases"
@@ -1068,7 +1072,7 @@ private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
 
     for (target, variableName) in targets {
-        let result = try context.swift.runSwift(
+        let result = try await context.swift.runSwift(
             [
                 "build", "--disable-index-store", "--package-path", packagePath,
                 "--scratch-path", scratch.path, "--target", target,
@@ -1080,7 +1084,13 @@ private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws
             throw ToolError("invalid graphics lease client unexpectedly compiled \(target)")
         }
         let diagnostics = result.stdout + result.stderr
-        guard diagnostics.contains("'\(variableName)' consumed more than once") else {
+        let consumed = diagnostics.contains("'\(variableName)' consumed more than once")
+        let overlappingBorrow =
+            diagnostics.contains(variableName)
+            && (diagnostics.contains("overlapping access")
+                || diagnostics.contains("lifetime-dependent value escapes")
+                || diagnostics.contains("used after consume"))
+        guard consumed || (target.contains("Borrow") && overlappingBorrow) else {
             throw ToolError(
                 "invalid graphics lease client failed before move-only ownership was checked"
             )
@@ -1088,7 +1098,7 @@ private func verifyGraphicsLeaseOwnershipIsEnforced(context: ToolContext) throws
     }
 }
 
-private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) throws {
+private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) async throws {
     let packagePath = context.repository.url(
         "IntegrationTests/InvalidManagedIdentityClient"
     ).path
@@ -1108,7 +1118,7 @@ private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) t
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
 
     for (target, typeName) in targets {
-        let result = try context.swift.runSwift(
+        let result = try await context.swift.runSwift(
             [
                 "build", "--disable-index-store", "--package-path", packagePath,
                 "--scratch-path", scratch.path, "--target", target,
@@ -1128,7 +1138,7 @@ private func verifyManagedIdentityConstructionIsRejected(context: ToolContext) t
     }
 }
 
-private func verifyMissingApplicationIdentityIsRejected(context: ToolContext) throws {
+private func verifyMissingApplicationIdentityIsRejected(context: ToolContext) async throws {
     let packagePath = context.repository.url(
         "IntegrationTests/InvalidApplicationIdentityClient"
     ).path
@@ -1137,7 +1147,7 @@ private func verifyMissingApplicationIdentityIsRejected(context: ToolContext) th
     )
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
 
-    let result = try context.swift.runSwift(
+    let result = try await context.swift.runSwift(
         [
             "build", "--disable-index-store", "--package-path", packagePath,
             "--scratch-path", scratch.path,
@@ -1156,13 +1166,13 @@ private func verifyMissingApplicationIdentityIsRejected(context: ToolContext) th
     }
 }
 
-private func runSmokeLive(context: ToolContext) throws {
+private func runSmokeLive(context: ToolContext) async throws {
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
             "WAYLAND_DISPLAY is not set; run this under a Wayland session.",
             exitCode: ToolExitCode.environment)
     }
-    try context.swift.runSwift(
+    try await context.swift.runSwift(
         [
             "run",
             "--disable-index-store",
@@ -1174,17 +1184,17 @@ private func runSmokeLive(context: ToolContext) throws {
     )
 }
 
-private func runSmokeIntegration(context: ToolContext) throws {
+private func runSmokeIntegration(context: ToolContext) async throws {
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
             "WAYLAND_DISPLAY is not set. Run public integration tests under a Wayland session.",
             exitCode: ToolExitCode.environment)
     }
-    try runIntegrationPackage(
+    try await runIntegrationPackage(
         context: context,
         packagePath: Test.IntegrationPublicAPI.packagePath,
         environment: ["WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS": "1"])
-    try runRequestPathTests(context: context, sanitizer: .none)
+    try await runRequestPathTests(context: context, sanitizer: .none)
 }
 
 private enum RequestPathSanitizer: Equatable {
@@ -1193,7 +1203,8 @@ private enum RequestPathSanitizer: Equatable {
     case address
 }
 
-private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSanitizer) throws {
+private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSanitizer) async throws
+{
     guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
         throw ToolError(
             "WAYLAND_DISPLAY is not set. Run request-path tests under a Wayland session.",
@@ -1206,13 +1217,15 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
         "WindowDragSourcePublicRequestTests",
         "SubsurfacePublicRequestTests",
         "DesktopIntegrationPublicRequestTests",
+        "WaylandDisplayScopedConnectionTests",
+        "closedDisplayDisposesUntouchedPayload",
     ]
     let environment = requestTestEnvironment()
     switch sanitizer {
     case .none:
         break
     case .thread:
-        try runThreadSanitizerTests(
+        try await runThreadSanitizerTests(
             context: context,
             baseEnvironment: environment,
             filters: filters
@@ -1223,7 +1236,7 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
     }
 
     for (index, filter) in filters.enumerated() {
-        try runSwiftTests(
+        try await runSwiftTests(
             context: context,
             command: SwiftTestCommand(
                 sanitizer: sanitizer == .address ? .address : .none,
@@ -1241,7 +1254,7 @@ private func runThreadSanitizerTests(
     context: ToolContext,
     baseEnvironment: [String: String] = [:],
     filters: [String] = []
-) throws {
+) async throws {
     let suppressions = context.repository.url("safety/tsan-suppressions.txt")
     var environment = baseEnvironment
     environment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
@@ -1250,7 +1263,7 @@ private func runThreadSanitizerTests(
     )
 
     #if os(Linux)
-        let binPathResult = try context.swift.runSwift(
+        let binPathResult = try await context.swift.runSwift(
             ["build", "--sanitize=thread", "--show-bin-path"],
             repository: context.repository,
             environment: environment
@@ -1275,7 +1288,7 @@ private func runThreadSanitizerTests(
         {
             try context.fileSystem.removeItem(executable)
         }
-        try runSwiftTests(
+        try await runSwiftTests(
             context: context,
             command: SwiftTestCommand(
                 sanitizer: .thread,
@@ -1284,19 +1297,19 @@ private func runThreadSanitizerTests(
             ),
             baseEnvironment: environment
         )
-        try artifacts.runThreadSanitizerTests(
+        try await artifacts.runThreadSanitizerTests(
             runner: context.runner, repository: context.repository,
             environment: context.swift.swiftRuntimeEnvironment(environment), filters: filters)
     #else
         if filters.isEmpty {
-            try runSwiftTests(
+            try await runSwiftTests(
                 context: context,
                 command: SwiftTestCommand(sanitizer: .thread, jobs: 2),
                 baseEnvironment: environment
             )
         } else {
             for filter in filters {
-                try runSwiftTests(
+                try await runSwiftTests(
                     context: context,
                     command: SwiftTestCommand(
                         sanitizer: .thread,
@@ -1310,27 +1323,28 @@ private func runThreadSanitizerTests(
     #endif
 }
 
-private func runHeadlessWck(context: ToolContext, arguments: [String]) throws {
+private func runHeadlessWck(context: ToolContext, arguments: [String]) async throws {
     let swiftPath = try context.swift.swiftExecutable(environment: context.runner.environment)
-    try HeadlessWestonRunner(context: context).run(command: [swiftPath, "run", "wck"] + arguments)
+    try await HeadlessWestonRunner(context: context).run(
+        command: [swiftPath, "run", "wck"] + arguments)
 }
 
-private func runHeadlessWaylandReleaseChecks(context: ToolContext) throws {
-    try runHeadlessWck(context: context, arguments: ["smoke", "live"])
-    try runHeadlessWck(context: context, arguments: ["smoke", "integration"])
-    try runHeadlessWck(context: context, arguments: ["test", "request-paths-tsan"])
-    try runHeadlessWck(context: context, arguments: ["test", "request-paths-asan"])
+private func runHeadlessWaylandReleaseChecks(context: ToolContext) async throws {
+    try await runHeadlessWck(context: context, arguments: ["smoke", "live"])
+    try await runHeadlessWck(context: context, arguments: ["smoke", "integration"])
+    try await runHeadlessWck(context: context, arguments: ["test", "request-paths-tsan"])
+    try await runHeadlessWck(context: context, arguments: ["test", "request-paths-asan"])
 }
 
-private func runLiveWaylandReleaseChecks(context: ToolContext) throws {
-    try runSmokeLive(context: context)
-    try runSmokeIntegration(context: context)
-    try runRequestPathTests(context: context, sanitizer: .thread)
-    try runRequestPathTests(context: context, sanitizer: .address)
+private func runLiveWaylandReleaseChecks(context: ToolContext) async throws {
+    try await runSmokeLive(context: context)
+    try await runSmokeIntegration(context: context)
+    try await runRequestPathTests(context: context, sanitizer: .thread)
+    try await runRequestPathTests(context: context, sanitizer: .address)
 }
 
-private func runCheap(context: ToolContext) throws {
-    try runLint(context: context)
+private func runCheap(context: ToolContext) async throws {
+    try await runLint(context: context)
     try IdentityGenerator(
         repository: context.repository,
         fileSystem: context.fileSystem
@@ -1339,62 +1353,64 @@ private func runCheap(context: ToolContext) throws {
         repository: context.repository,
         fileSystem: context.fileSystem
     ).verify(update: false)
-    try ProtocolTooling(
+    try await ProtocolTooling(
         repository: context.repository, runner: context.runner, diagnostics: context.diagnostics
     ).verifyGenerated()
     try ProtocolTooling(repository: context.repository, diagnostics: context.diagnostics)
         .validateManifest()
     try VerificationChecks(context: context).verifyShims()
     try VerificationChecks(context: context).verifyTargetImports()
-    try VerificationChecks(context: context).verifyToolDependencyBoundaries()
+    try await VerificationChecks(context: context).verifyToolDependencyBoundaries()
     try VerificationChecks(context: context).verifyUnsafeAllowlist()
 }
 
-private func runRequired(context: ToolContext) throws {
-    try PublicAPIAuditor(context: context).verify(update: false)
-    try context.swift.runSwift(
+private func runRequired(context: ToolContext) async throws {
+    try await PublicAPIAuditor(context: context).verify(update: false)
+    try await context.swift.runSwift(
         [
             "build", "--disable-index-store", "-Xswiftc", "-strict-concurrency=complete",
             "-Xswiftc", "-warn-concurrency",
         ],
         repository: context.repository
     )
-    try runUnitTests(context: context)
-    try runIntegrationPackage(context: context, packagePath: Test.IntegrationPublicAPI.packagePath)
-    try runIntegrationPackage(
+    try await runUnitTests(context: context)
+    try await runIntegrationPackage(
+        context: context, packagePath: Test.IntegrationPublicAPI.packagePath)
+    try await runIntegrationPackage(
         context: context, packagePath: Test.IntegrationGraphicsPreview.packagePath)
-    try runIntegrationPackage(
+    try await runIntegrationPackage(
         context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
-    try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
-    try verifyInvalidGraphicsPolicyClientIsRejected(context: context)
-    try verifyGraphicsLeaseOwnershipIsEnforced(context: context)
-    try verifyManagedIdentityConstructionIsRejected(context: context)
-    try verifyMissingApplicationIdentityIsRejected(context: context)
+    try await runIntegrationPackage(
+        context: context, packagePath: Test.IntegrationTinyUI.packagePath)
+    try await verifyInvalidGraphicsPolicyClientIsRejected(context: context)
+    try await verifyGraphicsLeaseOwnershipIsEnforced(context: context)
+    try await verifyManagedIdentityConstructionIsRejected(context: context)
+    try await verifyMissingApplicationIdentityIsRejected(context: context)
 }
 
-private func runCheckBase(context: ToolContext) throws {
-    try runCheap(context: context)
+private func runCheckBase(context: ToolContext) async throws {
+    try await runCheap(context: context)
     try runDocsVerify(context: context)
-    try runDoccVerify(context: context)
-    try runRequired(context: context)
+    try await runDoccVerify(context: context)
+    try await runRequired(context: context)
 }
 
-private func runCheck(context: ToolContext) throws {
-    try runCheckBase(context: context)
+private func runCheck(context: ToolContext) async throws {
+    try await runCheckBase(context: context)
     if context.runner.environment["WAYLAND_DISPLAY"] != nil {
-        try runSmokeLive(context: context)
+        try await runSmokeLive(context: context)
     } else {
         context.diagnostics.warning(
             "Skipping live Wayland smoke check because WAYLAND_DISPLAY is not set.")
     }
 }
 
-private func runRelease(context: ToolContext) throws {
-    try runCheckBase(context: context)
-    try context.swift.runSwift(
+private func runRelease(context: ToolContext) async throws {
+    try await runCheckBase(context: context)
+    try await context.swift.runSwift(
         ["build", "--disable-index-store", "-c", "release"], repository: context.repository)
-    try ExampleBuilder(context: context).buildAll()
-    try context.swift.runSwift(
+    try await ExampleBuilder(context: context).buildAll()
+    try await context.swift.runSwift(
         [
             "build",
             "--disable-index-store",
@@ -1404,12 +1420,12 @@ private func runRelease(context: ToolContext) throws {
             "wayland-client-kit-smoke",
         ],
         repository: context.repository)
-    try runReleaseTests(context: context)
-    try VerificationChecks(context: context).verifyReleaseShimSymbols()
+    try await runReleaseTests(context: context)
+    try await VerificationChecks(context: context).verifyReleaseShimSymbols()
     if context.runner.environment["WAYLAND_DISPLAY"] != nil {
-        try runLiveWaylandReleaseChecks(context: context)
+        try await runLiveWaylandReleaseChecks(context: context)
     } else if context.runner.canFind("weston") {
-        try runHeadlessWaylandReleaseChecks(context: context)
+        try await runHeadlessWaylandReleaseChecks(context: context)
     } else if context.runner.environment["CI"] == "true"
         || context.runner.environment["REQUIRE_WAYLAND_SMOKE"] == "1"
     {
@@ -1422,15 +1438,15 @@ private func runRelease(context: ToolContext) throws {
     }
 }
 
-private func runFoundationCheck(context: ToolContext) throws {
+private func runFoundationCheck(context: ToolContext) async throws {
     context.diagnostics.info(
-        try ToolchainSmoke(context: context).report())
-    try runCheckBase(context: context)
-    try context.swift.runSwift(
+        try await ToolchainSmoke(context: context).report())
+    try await runCheckBase(context: context)
+    try await context.swift.runSwift(
         ["build", "--disable-index-store", "-c", "release"],
         repository: context.repository)
-    try ExampleBuilder(context: context).buildAll()
-    try VerificationChecks(context: context).verifyReleaseShimSymbols()
+    try await ExampleBuilder(context: context).buildAll()
+    try await VerificationChecks(context: context).verifyReleaseShimSymbols()
 
     let matrixURL = context.repository.url("docs/compositor-matrix.md")
     let markdown = try context.fileSystem.readText(matrixURL)
@@ -1446,6 +1462,7 @@ private func requestTestEnvironment() -> [String: String] {
         "WAYLAND_CLIENT_KIT_ENABLE_DND_SOURCE_REQUEST_TESTS": "1",
         "WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS": "1",
         "WAYLAND_CLIENT_KIT_ENABLE_DESKTOP_REQUEST_TESTS": "1",
+        "WAYLAND_CLIENT_KIT_ENABLE_CONNECTION_LIFETIME_TESTS": "1",
     ]
 }
 

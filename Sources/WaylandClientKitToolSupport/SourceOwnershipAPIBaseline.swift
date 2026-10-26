@@ -22,7 +22,7 @@ public struct SourceOwnershipAPIBaseline {
         self.swiftCompilerExecutable = swiftCompilerExecutable
     }
 
-    public func render(moduleSources: [String: URL]) throws -> String {
+    public func render(moduleSources: [String: URL]) async throws -> String {
         var records = Set<String>()
         for (module, root) in moduleSources {
             let sources = try fileSystem.walk(root, includingDirectories: false)
@@ -31,7 +31,7 @@ public struct SourceOwnershipAPIBaseline {
             var parsedSources: [ParsedOwnershipSource] = []
             for source in sources {
                 let sourceText = try fileSystem.readText(source)
-                let result = try runner.run(
+                let result = try await runner.run(
                     swiftCompilerExecutable,
                     [
                         "-frontend",

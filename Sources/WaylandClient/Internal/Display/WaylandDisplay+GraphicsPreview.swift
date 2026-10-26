@@ -244,14 +244,16 @@ extension WaylandDisplay {
         )
     }
 
-    package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
+    package func withGraphicsPreviewLinuxDmabuf<Payload: ~Copyable & Sendable, Result: Sendable>(
+        _ payload: consuming Payload,
         _ body:
             @Sendable (
+                consuming Payload,
                 RawLinuxDmabuf,
                 _ syncDisplay: (Int32) throws -> Void
             ) throws -> Result
     ) throws -> Result {
-        try requireCore().withGraphicsPreviewLinuxDmabuf(body)
+        try requireCore().withGraphicsPreviewLinuxDmabuf(payload, body)
     }
 }
 
@@ -349,21 +351,23 @@ extension DisplayCore {
         }
     }
 
-    func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
+    func withGraphicsPreviewLinuxDmabuf<Payload: ~Copyable & Sendable, Result: Sendable>(
+        _ payload: consuming Payload,
         _ body:
             @Sendable (
+                consuming Payload,
                 RawLinuxDmabuf,
                 _ syncDisplay: (Int32) throws -> Void
             ) throws -> Result
     ) throws -> Result {
-        try withFatalFailureFinalization {
+        try withFatalFailureFinalization(payload) { (payload: consuming Payload) in
             let session = try requireSession()
             let globals = try session.connection.bindRequiredGlobals()
             guard case .bound(let linuxDmabuf) = globals.extensions.linuxDmabuf else {
                 throw GraphicsPreviewSurfaceFeedbackError.linuxDmabufUnavailable
             }
 
-            return try body(linuxDmabuf) { timeoutMilliseconds in
+            return try body(payload, linuxDmabuf) { timeoutMilliseconds in
                 try session.connection.completeInitialDiscovery(
                     timeoutMilliseconds: timeoutMilliseconds
                 )

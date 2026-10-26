@@ -13,11 +13,7 @@ package struct GBMDmabufPlaneExport: ~Copyable {
 }
 
 @safe
-// SAFETY: GBMDmabufExport owns plane fds until they are transferred into
-// RawLinuxDmabufPlaneFileDescriptor values during one package-internal import
-// setup path. Untaken descriptors are closed on destroy.
-// swiftlint:disable:next attributes
-package final class GBMDmabufExport: @unchecked Sendable {
+package struct GBMDmabufExport: ~Copyable, Sendable {
     private var rawExport: swl_gbm_bo_export
 
     package let width: UInt32
@@ -59,15 +55,17 @@ package final class GBMDmabufExport: @unchecked Sendable {
             throw GBMAllocationError.invalidPlaneIndex(index)
         }
 
-        let planeIndex = UInt32(index)
-        return GBMDmabufPlaneLayout(
-            index: index,
-            offset: unsafe swl_gbm_bo_export_plane_offset(&rawExport, planeIndex),
-            stride: unsafe swl_gbm_bo_export_plane_stride(&rawExport, planeIndex)
-        )
+        let plane: swl_gbm_bo_plane
+        switch index {
+        case 0: plane = rawExport.planes.0
+        case 1: plane = rawExport.planes.1
+        case 2: plane = rawExport.planes.2
+        default: plane = rawExport.planes.3
+        }
+        return GBMDmabufPlaneLayout(index: index, offset: plane.offset, stride: plane.stride)
     }
 
-    package func takePlaneFileDescriptor(
+    package mutating func takePlaneFileDescriptor(
         at index: Int
     ) throws(GBMAllocationError) -> RawLinuxDmabufPlaneFileDescriptor {
         guard index >= 0, index < planeCount else {
@@ -86,7 +84,7 @@ package final class GBMDmabufExport: @unchecked Sendable {
         }
     }
 
-    package func takePlaneExport(
+    package mutating func takePlaneExport(
         at index: Int
     ) throws(GBMAllocationError) -> GBMDmabufPlaneExport {
         let layout = try planeLayout(at: index)
@@ -96,6 +94,7 @@ package final class GBMDmabufExport: @unchecked Sendable {
     }
 
     deinit {
+        var rawExport = rawExport
         unsafe swl_gbm_bo_export_close(&rawExport)
     }
 }
@@ -112,7 +111,7 @@ package final class GBMBuffer {
     }
 
     @safe
-    package func withLiveBufferPointer<Result>(
+    package func withLiveBufferPointer<Result: ~Copyable>(
         _ body: (OpaquePointer) throws(GBMAllocationError) -> Result
     ) throws(GBMAllocationError) -> Result {
         guard let bufferPointer = unsafe pointer else {

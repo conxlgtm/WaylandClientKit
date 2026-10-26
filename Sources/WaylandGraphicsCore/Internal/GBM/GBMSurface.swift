@@ -160,7 +160,7 @@ package final class GBMLockedSurfaceBuffer {
     }
 
     @safe
-    package func withLiveBufferPointer<Result>(
+    package func withLiveBufferPointer<Result: ~Copyable>(
         _ body: (OpaquePointer) throws(GBMAllocationError) -> Result
     ) throws(GBMAllocationError) -> Result {
         guard let bufferPointer = unsafe pointer else {

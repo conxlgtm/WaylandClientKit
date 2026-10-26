@@ -5,7 +5,7 @@ import WaylandClientKitToolSupport
 @Suite
 struct CoverageProfileAccumulationTests {
     @Test
-    func preservesCountersAcrossSwiftPMDirectoryReplacementAndResetsNewRuns() throws {
+    func preservesCountersAcrossSwiftPMDirectoryReplacementAndResetsNewRuns() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer {
             do {
@@ -21,20 +21,20 @@ struct CoverageProfileAccumulationTests {
         let swift = SwiftToolchain()
 
         try writeProfile("alpha\n0\n1\n2\n\n", to: managed)
-        try artifacts.accumulateCoverage(swift: swift, repository: repository)
+        try await artifacts.accumulateCoverage(swift: swift, repository: repository)
         // Simulate SwiftPM replacing the coverage directory between test filters.
         try FileManager.default.removeItem(at: managed)
         try writeProfile("alpha\n0\n1\n3\n\nbeta\n0\n1\n7\n\n", to: managed)
-        try artifacts.accumulateCoverage(swift: swift, repository: repository)
+        try await artifacts.accumulateCoverage(swift: swift, repository: repository)
         #expect(
-            try counters(swift: swift, repository: repository, products: products)
+            try await counters(swift: swift, repository: repository, products: products)
                 == ["alpha": 5, "beta": 7])
 
         try artifacts.resetCoverage()
         try writeProfile("beta\n0\n1\n2\n\n", to: managed)
-        try artifacts.accumulateCoverage(swift: swift, repository: repository)
+        try await artifacts.accumulateCoverage(swift: swift, repository: repository)
         #expect(
-            try counters(swift: swift, repository: repository, products: products)
+            try await counters(swift: swift, repository: repository, products: products)
                 == ["beta": 2])
     }
 
@@ -46,13 +46,13 @@ struct CoverageProfileAccumulationTests {
 
     private func counters(
         swift: SwiftToolchain, repository: Repository, products: URL
-    ) throws -> [String: Int] {
+    ) async throws -> [String: Int] {
         let tool = URL(
             fileURLWithPath: try swift.swiftCompilerExecutable(
                 environment: swift.runner.environment)
         ).deletingLastPathComponent().appendingPathComponent("llvm-profdata")
         let text = products.appendingPathComponent("counters.txt")
-        try swift.runSwiftTool(
+        try await swift.runSwiftTool(
             tool.path,
             [
                 "merge", "-text", products.appendingPathComponent("wck-coverage.profdata").path,

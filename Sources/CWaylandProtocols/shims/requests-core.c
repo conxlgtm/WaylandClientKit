@@ -29,6 +29,8 @@ static pthread_mutex_t swl_test_core_request_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct swl_test_core_request_record swl_test_core_request_latest;
 static uint32_t swl_test_core_request_sequence;
 static int swl_test_core_request_forwards_requests;
+static struct wl_buffer *swl_test_buffer_destroy_target;
+static uintptr_t swl_test_buffer_destroy_thread_value;
 
 static struct wl_shm_pool *swl_shm_create_pool_default(
     struct wl_shm *shm,
@@ -822,6 +824,12 @@ void swl_output_destroy(struct wl_output *output)
 void swl_buffer_destroy(struct wl_buffer *buffer)
 {
     SWL_CORE_REQUEST_LOCK();
+#ifdef SWL_ENABLE_TESTING
+    if (buffer == swl_test_buffer_destroy_target) {
+        swl_test_buffer_destroy_thread_value = (uintptr_t)pthread_self();
+        swl_test_buffer_destroy_target = NULL;
+    }
+#endif
     swl_buffer_destroy_impl(buffer);
     SWL_CORE_REQUEST_UNLOCK();
 }
@@ -928,5 +936,21 @@ struct swl_test_core_request_record swl_test_core_request_record(void)
     struct swl_test_core_request_record record = swl_test_core_request_latest;
     SWL_CORE_REQUEST_UNLOCK();
     return record;
+}
+
+void swl_test_buffer_destroy_thread_recording_begin(struct wl_buffer *buffer)
+{
+    SWL_CORE_REQUEST_LOCK();
+    swl_test_buffer_destroy_target = buffer;
+    swl_test_buffer_destroy_thread_value = 0;
+    SWL_CORE_REQUEST_UNLOCK();
+}
+
+uintptr_t swl_test_buffer_destroy_thread(void)
+{
+    SWL_CORE_REQUEST_LOCK();
+    uintptr_t thread = swl_test_buffer_destroy_thread_value;
+    SWL_CORE_REQUEST_UNLOCK();
+    return thread;
 }
 #endif

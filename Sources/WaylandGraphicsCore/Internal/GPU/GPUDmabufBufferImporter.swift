@@ -95,11 +95,12 @@ package final class GPUDmabufBufferImport {
     }
 
     package static func importBuffer(
-        from export: GBMDmabufExport,
+        from export: consuming GBMDmabufExport,
         using linuxDmabuf: RawLinuxDmabuf,
         timeoutMilliseconds: Int32,
         syncDisplay: (Int32) throws -> Void
     ) throws -> RawLinuxDmabufBuffer {
+        var export = export
         let descriptor = try importDescriptor(for: export)
         var runtimeFailure: RuntimeError?
         var importFailure: GPUDmabufBufferImportError?
@@ -147,7 +148,7 @@ package final class GPUDmabufBufferImport {
     }
 
     package static func importDescriptor(
-        for export: GBMDmabufExport
+        for export: borrowing GBMDmabufExport
     ) throws(GPUDmabufBufferImportError) -> GPUDmabufBufferImportDescriptor {
         guard export.planeCount > 0 else {
             throw GPUDmabufBufferImportError.emptyPlaneSet

@@ -1,5 +1,4 @@
 import Foundation
-import Glibc
 import WaylandClient
 import WaylandGPUPreview
 import WaylandRaw
@@ -551,14 +550,6 @@ public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
             throw capturedError
         }
     }
-
-    package mutating func planeIndices() throws -> [Int] {
-        var indices: [Int] = []
-        try withMutablePlanes { plane in
-            indices.append(plane.planeIndex)
-        }
-        return indices
-    }
 }
 
 public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
@@ -647,81 +638,24 @@ public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
     package static func validate(
         planes: inout WaylandGraphicsExternalBufferPlanes
     ) throws {
-        let indices = try planes.planeIndices()
-        guard indices.count == Set(indices).count else {
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-        }
-        guard indices.allSatisfy({ $0 >= 0 && $0 <= Int(UInt32.max) }) else {
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-        }
-        guard indices == Array(0..<indices.count) else {
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        var ordinal = 0
+        try planes.withMutablePlanes { plane in
+            guard plane.planeIndex == ordinal else {
+                throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+            }
+            ordinal += 1
         }
     }
 }
 
-package struct WaylandGraphicsExternalBufferImportPlane: Sendable {
-    package var fd: Int32?
-    package let offset: UInt32
-    package let stride: UInt32
-    package let planeIndex: Int
-
-    package init(
-        fd planeFD: Int32,
-        offset planeOffset: UInt32,
-        stride planeStride: UInt32,
-        planeIndex planeIndexValue: Int
-    ) {
-        fd = planeFD
-        offset = planeOffset
-        stride = planeStride
-        planeIndex = planeIndexValue
-    }
-
-    package mutating func takeFD() throws -> Int32 {
-        guard let currentFD = fd else {
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-        }
-
-        fd = nil
-        return currentFD
-    }
-
-    package mutating func closeIfNeeded() {
-        guard let currentFD = fd else { return }
-
-        fd = nil
-        Glibc.close(currentFD)
-    }
-}
-
-// SAFETY: the import plan owns plane descriptors during the package-internal
-// handoff into the owner-thread dmabuf import path. Descriptor transfer and
-// cleanup are synchronized by the storage submit path, and public API never
-// exposes this mutable box.
-package final class WaylandGraphicsExternalBufferImportPlan: @unchecked Sendable {
-    private let size: PositivePixelSize
-    private let format: WaylandGraphicsDRMFormat
-    private let modifier: WaylandGraphicsDRMFormatModifier
-    private var planes: [WaylandGraphicsExternalBufferImportPlane]
-
-    package init(
-        size bufferSize: PositivePixelSize,
-        format bufferFormat: WaylandGraphicsDRMFormat,
-        modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
-        planes bufferPlanes: [WaylandGraphicsExternalBufferImportPlane]
-    ) {
-        size = bufferSize
-        format = bufferFormat
-        modifier = bufferModifier
-        planes = bufferPlanes
-    }
-
-    package func importBuffer(
+extension WaylandGraphicsExternalBufferDescriptor {
+    package consuming func importBuffer(
         using linuxDmabuf: RawLinuxDmabuf,
         timeoutMilliseconds: Int32,
         syncDisplay: (Int32) throws -> Void
     ) throws -> RawLinuxDmabufBuffer {
+        var descriptor = self
+        let modifier = descriptor.modifier.rawValue
         var runtimeFailure: RuntimeError?
         var importedBuffer: RawLinuxDmabufBuffer?
         var compositorRejectedBuffer = false
@@ -738,23 +672,22 @@ package final class WaylandGraphicsExternalBufferImportPlan: @unchecked Sendable
         }
 
         do {
-            for planeIndex in planes.indices {
-                let rawDescriptor = try planes[planeIndex].takeFD()
+            try descriptor.planes.withMutablePlanes { plane in
                 var rawPlane = try RawLinuxDmabufPlaneFileDescriptor(
-                    adopting: rawDescriptor
+                    adopting: plane.fileDescriptor.releaseRawValue()
                 )
                 try params.addPlane(
                     fileDescriptor: &rawPlane,
-                    planeIndex: UInt32(planes[planeIndex].planeIndex),
-                    offset: planes[planeIndex].offset,
-                    stride: planes[planeIndex].stride,
-                    modifier: modifier.rawValue
+                    planeIndex: UInt32(plane.planeIndex),
+                    offset: plane.offset,
+                    stride: plane.stride,
+                    modifier: modifier
                 )
             }
             try params.create(
-                width: size.width.rawValue,
-                height: size.height.rawValue,
-                format: format.rawValue
+                width: descriptor.size.width.rawValue,
+                height: descriptor.size.height.rawValue,
+                format: descriptor.format.rawValue
             )
             try syncDisplay(timeoutMilliseconds)
         } catch {
@@ -773,12 +706,6 @@ package final class WaylandGraphicsExternalBufferImportPlan: @unchecked Sendable
         }
 
         return importedBuffer
-    }
-
-    deinit {
-        for index in planes.indices {
-            planes[index].closeIfNeeded()
-        }
     }
 }
 
@@ -831,36 +758,6 @@ extension WaylandGraphicsConfiguration {
 }
 
 extension WaylandGraphicsExternalBufferDescriptor {
-    package mutating func makeImportPlan()
-        throws -> WaylandGraphicsExternalBufferImportPlan
-    {
-        var importPlanes: [WaylandGraphicsExternalBufferImportPlane] = []
-        do {
-            try planes.withMutablePlanes { plane in
-                importPlanes.append(
-                    WaylandGraphicsExternalBufferImportPlane(
-                        fd: plane.fileDescriptor.releaseRawValue(),
-                        offset: plane.offset,
-                        stride: plane.stride,
-                        planeIndex: plane.planeIndex
-                    )
-                )
-            }
-        } catch {
-            for index in importPlanes.indices {
-                importPlanes[index].closeIfNeeded()
-            }
-            throw error
-        }
-
-        return WaylandGraphicsExternalBufferImportPlan(
-            size: size,
-            format: format,
-            modifier: modifier,
-            planes: importPlanes
-        )
-    }
-
     package mutating func closeFileDescriptors() throws {
         try planes.withMutablePlanes { plane in
             try plane.fileDescriptor.close()
@@ -1106,11 +1003,11 @@ public struct WaylandGraphicsExternalBufferRenderLease: ~Copyable, Sendable {
     private let lifetime: WaylandGraphicsLeaseLifetime
 
     public var buffer: WaylandGraphicsExternalBuffer {
-        borrowing get { reservedBuffer }
+        borrow { reservedBuffer }
     }
 
     public var contract: WaylandGraphicsFrameContract {
-        borrowing get { frameContract }
+        borrow { frameContract }
     }
 
     package init(
@@ -1381,15 +1278,15 @@ public struct WaylandGraphicsFrameLease: ~Copyable, Sendable {
     private let lifetime: WaylandGraphicsLeaseLifetime
 
     public var size: PositivePixelSize {
-        borrowing get { frameSize }
+        borrow { frameSize }
     }
 
     public var contract: WaylandGraphicsFrameContract {
-        borrowing get { frameContract }
+        borrow { frameContract }
     }
 
     public var runtimePath: WaylandGraphicsRuntimePath {
-        borrowing get { frameRuntimePath }
+        borrow { frameRuntimePath }
     }
 
     init(

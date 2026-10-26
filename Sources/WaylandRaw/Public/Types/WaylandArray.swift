@@ -20,21 +20,28 @@ enum WaylandArray {
     static func uint16Values(from array: UnsafeMutablePointer<wl_array>?)
         throws(RuntimeError) -> [UInt16]
     {
-        let bytes = bytes(from: array)
-        guard !bytes.isEmpty else { return [] }
+        guard
+            let array = unsafe array,
+            let data = unsafe array.pointee.data,
+            unsafe array.pointee.size > 0
+        else {
+            return []
+        }
 
+        let byteCount = unsafe Int(array.pointee.size)
         let elementSize = MemoryLayout<UInt16>.stride
-        guard bytes.count.isMultiple(of: elementSize) else {
+        guard byteCount.isMultiple(of: elementSize) else {
             throw RuntimeError.invalidWaylandArrayByteCount(
-                byteCount: bytes.count,
+                byteCount: byteCount,
                 elementSize: elementSize
             )
         }
 
-        return bytes.withUnsafeBytes { buffer in
-            stride(from: 0, to: bytes.count, by: elementSize).map { offset in
-                unsafe buffer.loadUnaligned(fromByteOffset: offset, as: UInt16.self)
-            }
+        let bytes = unsafe RawSpan(
+            _unsafeBytes: UnsafeRawBufferPointer(start: data, count: byteCount)
+        )
+        return stride(from: 0, to: byteCount, by: elementSize).map { offset in
+            bytes.load(fromByteOffset: offset, as: UInt16.self)
         }
     }
 
@@ -59,9 +66,11 @@ enum WaylandArray {
             )
         }
 
-        let bytes = unsafe UnsafeRawBufferPointer(start: data, count: byteCount)
+        let bytes = unsafe RawSpan(
+            _unsafeBytes: UnsafeRawBufferPointer(start: data, count: byteCount)
+        )
         return stride(from: 0, to: byteCount, by: elementSize).map { offset in
-            unsafe bytes.loadUnaligned(fromByteOffset: offset, as: UInt32.self)
+            bytes.load(fromByteOffset: offset, as: UInt32.self)
         }
     }
 }

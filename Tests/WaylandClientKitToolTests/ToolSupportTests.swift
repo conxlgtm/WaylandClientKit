@@ -2,7 +2,6 @@ import Foundation
 import Testing
 import WaylandClientKitToolSupport
 
-@Suite(.serialized)
 struct ToolSupportTests {
     @Test
     func repositoryRootDetectionUsesEnvironmentOverride() throws {
@@ -44,17 +43,15 @@ struct ToolSupportTests {
     }
 
     @Test
-    func processRunnerRestoresCurrentDirectoryAfterWorkingDirectoryRun() throws {
-        try withToolProcessFixtureLock {
-            let root = try temporaryRepository()
-            let shell = try ProcessRunner().executableURL(for: "sh").path
-            let originalDirectory = FileManager.default.currentDirectoryPath
+    func processRunnerRestoresCurrentDirectoryAfterWorkingDirectoryRun() async throws {
+        let root = try temporaryRepository()
+        let shell = try ProcessRunner().executableURL(for: "sh").path
+        let originalDirectory = FileManager.default.currentDirectoryPath
 
-            let result = try ProcessRunner().run(shell, ["-c", "pwd"], workingDirectory: root)
+        let result = try await ProcessRunner().run(shell, ["-c", "pwd"], workingDirectory: root)
 
-            #expect(result.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == root.path)
-            #expect(FileManager.default.currentDirectoryPath == originalDirectory)
-        }
+        #expect(result.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == root.path)
+        #expect(FileManager.default.currentDirectoryPath == originalDirectory)
     }
 
     @Test

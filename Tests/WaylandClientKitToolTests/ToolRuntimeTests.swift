@@ -7,6 +7,7 @@ struct ToolRuntimeTests {
     @Test
     func headlessWestonReadinessRejectsPlainSocketPathFiles() throws {
         let root = try temporaryRepository()
+        defer { ignoreProcessFixtureCleanup { try FileManager.default.removeItem(at: root) } }
         let socketPath = root.appendingPathComponent("wayland-0")
         try "".write(to: socketPath, atomically: true, encoding: .utf8)
 
@@ -36,12 +37,12 @@ struct ToolRuntimeTests {
         #expect(timeout == 1_200.5)
     }
 
-    @Test
-    func headlessWestonTimeoutRejectsInvalidOverrides() throws {
+    @Test(arguments: ["nope", "0", "-1", "nan", "inf"])
+    func headlessWestonTimeoutRejectsInvalidOverrides(_ value: String) throws {
         let key = HeadlessWestonRunner.requestProcessTimeoutEnvironmentKey
 
         do {
-            _ = try HeadlessWestonRunner.requestProcessTimeoutSeconds(environment: [key: "nope"])
+            _ = try HeadlessWestonRunner.requestProcessTimeoutSeconds(environment: [key: value])
             Issue.record("expected invalid timeout override to fail")
         } catch let error as ToolError {
             #expect(error.message.contains(key))

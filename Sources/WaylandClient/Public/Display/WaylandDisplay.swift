@@ -70,14 +70,8 @@ public actor WaylandDisplay {
             discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds
         )
 
-        do {
-            let result = try await body(display)
-            await display.close()
-            return result
-        } catch {
-            await display.close()
-            throw error
-        }
+        defer { await display.close() }
+        return try await body(display)
     }
 
     public static func withConnection<ResultValue: Sendable>(

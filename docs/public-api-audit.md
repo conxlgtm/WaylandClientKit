@@ -18,8 +18,8 @@ public identity constructors and stored-value access.
 Swift 6.4.0 is the minimum compiler. Packages still use Swift 6 language mode
 with the existing isolation and memory-safety settings. The ownership auditor
 records `borrow` and `mutate` accessors separately from borrowing/consuming
-getters, including public properties in copyable types. Public rendering APIs
-are unchanged.
+getters, including public properties in copyable types. Function-local types do
+not hide module-level public ownership records.
 
 Documentation coverage counts product-authored abstracts. Swift 6.4's default
 backend emits symbol graphs during compilation; the earlier backend used
@@ -36,9 +36,9 @@ Eligible symbols and product source documentation are unchanged.
 
 Swift 6.4 symbol graphs use source-form `Self` and closure-parameter labels,
 omit implicit `nonisolated(nonsending)` from closure signatures, and include
-explicit cross-module extension blocks. These changes affect the baseline's
-format; source declarations, isolation settings, ownership records, and public
-handles are unchanged.
+explicit cross-module extension blocks. These compiler-emission differences
+change baseline formatting, not isolation or public handles. Accessor ownership
+changes are recorded separately below.
 
 The private integration stream drainer calls `next(isolation: nil)`, as the
 public iterators already do. This avoids sending a potentially isolated generic
@@ -444,11 +444,15 @@ Current preview contract:
 - Backing close is nonthrowing because it only joins deterministic resource
   retirement. External buffer planes use one initializer with a defaulted zero
   plane index.
-- Frame and external-buffer render leases are move-only single-use authority.
-  Their inspection properties borrow; submit, cancel, and external reservation
-  operations consume. External reservation transfers the only frame authority
-  into the returned render lease. Failed terminal operations and abandoned
-  leases release their frame and buffer ownership inside WCK.
+- Frame and external-buffer render leases are move-only, single-use authority.
+  `WaylandGraphicsFrameLease.size`, `.contract`, and `.runtimePath`, plus
+  `WaylandGraphicsExternalBufferRenderLease.buffer` and `.contract`, use Swift
+  6.4 `borrow` accessors over stored values. This preview ownership change is
+  baseline-tracked. An owned local snapshot may outlive a lease; a `Ref` borrow
+  must end before a consuming operation.
+- Submit, cancel, and external reservation consume their lease. Reservation
+  transfers frame authority into the returned render lease. Failed terminal
+  operations and abandoned leases release their frame and buffer ownership.
 - `WaylandGraphicsError.frameLeaseActive` remains a public coordination error
   for requesting another frame while a lease is unfinished. Duplicate or stale
   lease use is no longer valid source, so the former public
@@ -586,6 +590,8 @@ Notes:
 - `SoftwareFrame` is noncopyable and borrowed by drawing callbacks. User code can draw
   through row spans or a scoped `SoftwareFrameBuffer` byte-span borrow during the
   callback, but cannot copy the frame out and mutate the SHM storage after presentation.
+  Each row span contains only visible UInt32 pixels; stride padding and trailing
+  backing bytes are not exposed through row access.
 - `SoftwareFrameBufferID` is hashable and sendable, but opaque. It identifies the
   reusable client-side software buffer, not the content revision stored in that
   buffer and not any raw Wayland or shared-memory handle.
@@ -697,6 +703,10 @@ Notes:
   compositor-specific preview requests and never run from the default smoke
   path. There is no general display-settings framework API.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
+- `WaylandDisplay.withConnection` awaits display close and window-close observers
+  before returning the body's result or error, including cancellation. Cleanup
+  stays in the calling task and on the display executor; it does not shield or
+  clear cancellation.
 - `DisplayConfiguration` and the convenience `WaylandDisplay.withConnection`
   overload require an application ID. `WindowConfiguration.default` has a plain
   title and no demo identity; a per-window app ID is only an explicit override.
